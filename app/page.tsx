@@ -31,12 +31,15 @@ export default function Home() {
       >
         Connect Gmail
       </button>
-
       <div style={{ marginTop: "100px", fontSize: "18px", color: "#444" }}>
-        <p>✓ Filter by sender & subject</p>
-        <p>✓ Move to Trash in one click</p>
-        <p>✓ No email storage</p>
-      </div>
+  <p>✓ Filter by sender & subject</p>
+  <p>✓ Move to Trash in one click</p>
+  <p>✓ No email storage</p>
+</div>
+
+<div style={{ marginTop: "80px", fontSize: "14px" }}>
+  <a href="/privacy">Privacy Policy</a>
+</div>
     </main>
   );
 }
