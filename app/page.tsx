@@ -39,6 +39,8 @@ export default function Home() {
 
 <div style={{ marginTop: "80px", fontSize: "14px" }}>
   <a href="/privacy">Privacy Policy</a>
+  {" | "}
+  <a href="/terms">Terms of Service</a>
 </div>
     </main>
   );
