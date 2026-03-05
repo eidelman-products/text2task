@@ -14,7 +14,7 @@ export default function Home() {
       </h1>
 
       <p style={{ fontSize: "22px", color: "#555" }}>
-        AI that automatically cleans your Gmail inbox
+        Rule-based Gmail cleanup
       </p>
 
       <button
@@ -33,9 +33,9 @@ export default function Home() {
       </button>
 
       <div style={{ marginTop: "100px", fontSize: "18px", color: "#444" }}>
-        <p>✓ Remove newsletters</p>
-        <p>✓ Detect spam</p>
-        <p>✓ Clean your inbox automatically</p>
+        <p>✓ Filter by sender & subject</p>
+        <p>✓ Move to Trash in one click</p>
+        <p>✓ No email storage</p>
       </div>
     </main>
   );
