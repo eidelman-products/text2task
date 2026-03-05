@@ -18,19 +18,20 @@ export default function Home() {
       </p>
 
       <button
-        style={{
-          marginTop: "40px",
-          padding: "18px 36px",
-          fontSize: "20px",
-          borderRadius: "10px",
-          border: "none",
-          background: "black",
-          color: "white",
-          cursor: "pointer",
-        }}
-      >
-        Connect Gmail
-      </button>
+  onClick={() => (window.location.href = "/api/auth/login")}
+  style={{
+    marginTop: "40px",
+    padding: "18px 36px",
+    fontSize: "20px",
+    borderRadius: "10px",
+    border: "none",
+    background: "black",
+    color: "white",
+    cursor: "pointer",
+  }}
+>
+  Connect Gmail
+</button>
       <div style={{ marginTop: "100px", fontSize: "18px", color: "#444" }}>
   <p>✓ Filter by sender & subject</p>
   <p>✓ Move to Trash in one click</p>
