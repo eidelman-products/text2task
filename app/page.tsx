@@ -388,7 +388,7 @@ export default function Home() {
     fontSize: "13px",
     color: "#64748b",
   }}
-
+>
   See exactly what will be cleaned before you apply changes.
 </div>
 
