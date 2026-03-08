@@ -1,49 +1,297 @@
 "use client";
+
 export default function Home() {
   return (
     <main
       style={{
         fontFamily: "Arial, sans-serif",
-        padding: "80px",
-        textAlign: "center",
-        maxWidth: "900px",
-        margin: "auto",
+        background: "#f8fafc",
+        minHeight: "100vh",
+        padding: "0",
+        margin: "0",
+        color: "#0f172a",
       }}
     >
-      <h1 style={{ fontSize: "56px", marginBottom: "20px" }}>
-        InboxShaper
-      </h1>
+      <section
+        style={{
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "90px 24px 70px",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            display: "inline-block",
+            background: "#e0f2fe",
+            color: "#0369a1",
+            padding: "8px 14px",
+            borderRadius: "999px",
+            fontSize: "14px",
+            fontWeight: "bold",
+            marginBottom: "24px",
+          }}
+        >
+          Gmail cleanup made simple
+        </div>
 
-      <p style={{ fontSize: "22px", color: "#555" }}>
-        Rule-based Gmail cleanup
-      </p>
+        <h1
+          style={{
+            fontSize: "64px",
+            lineHeight: "1.1",
+            marginBottom: "24px",
+            fontWeight: "bold",
+            maxWidth: "900px",
+            marginLeft: "auto",
+            marginRight: "auto",
+          }}
+        >
+          Clean your Gmail inbox in minutes.
+        </h1>
 
-      <button
-  onClick={() => (window.location.href = "/api/auth/login")}
-  style={{
-    marginTop: "40px",
-    padding: "18px 36px",
-    fontSize: "20px",
-    borderRadius: "10px",
-    border: "none",
-    background: "black",
-    color: "white",
-    cursor: "pointer",
-  }}
->
-  Connect Gmail
-</button>
-      <div style={{ marginTop: "100px", fontSize: "18px", color: "#444" }}>
-  <p>✓ Filter by sender & subject</p>
-  <p>✓ Move to Trash in one click</p>
-  <p>✓ No email storage</p>
-</div>
+        <p
+          style={{
+            fontSize: "22px",
+            color: "#475569",
+            maxWidth: "760px",
+            margin: "0 auto 36px",
+            lineHeight: "1.6",
+          }}
+        >
+          InboxShaper helps you remove clutter, unsubscribe from unwanted emails,
+          and clean your inbox faster without manual work.
+        </p>
 
-<div style={{ marginTop: "80px", fontSize: "14px" }}>
-  <a href="/privacy">Privacy Policy</a>
-  {" | "}
-  <a href="/terms">Terms of Service</a>
-</div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: "16px",
+            flexWrap: "wrap",
+            marginBottom: "42px",
+          }}
+        >
+          <button
+            onClick={() => (window.location.href = "/api/auth/login")}
+            style={{
+              padding: "18px 34px",
+              fontSize: "18px",
+              borderRadius: "14px",
+              border: "none",
+              background: "#2563eb",
+              color: "white",
+              cursor: "pointer",
+              fontWeight: "bold",
+              boxShadow: "0 10px 25px rgba(37, 99, 235, 0.25)",
+            }}
+          >
+            Sign in with Google
+          </button>
+
+          <button
+            style={{
+              padding: "18px 34px",
+              fontSize: "18px",
+              borderRadius: "14px",
+              border: "1px solid #cbd5e1",
+              background: "white",
+              color: "#0f172a",
+              cursor: "pointer",
+              fontWeight: "bold",
+            }}
+          >
+            See how it works
+          </button>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: "28px",
+            flexWrap: "wrap",
+            fontSize: "15px",
+            color: "#64748b",
+            marginBottom: "60px",
+          }}
+        >
+          <span>Google OAuth</span>
+          <span>Privacy-first</span>
+          <span>No email storage</span>
+        </div>
+
+        <div
+          style={{
+            background: "white",
+            borderRadius: "24px",
+            padding: "28px",
+            maxWidth: "900px",
+            margin: "0 auto",
+            boxShadow: "0 20px 50px rgba(15, 23, 42, 0.08)",
+            border: "1px solid #e2e8f0",
+            textAlign: "left",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "24px",
+              flexWrap: "wrap",
+              gap: "12px",
+            }}
+          >
+            <div>
+              <div style={{ fontSize: "22px", fontWeight: "bold" }}>
+                Inbox overview
+              </div>
+              <div style={{ fontSize: "14px", color: "#64748b", marginTop: "6px" }}>
+                A simple preview of your cleanup dashboard
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#dcfce7",
+                color: "#166534",
+                padding: "8px 14px",
+                borderRadius: "999px",
+                fontSize: "13px",
+                fontWeight: "bold",
+              }}
+            >
+              Ready to clean
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "16px",
+              marginBottom: "20px",
+            }}
+          >
+            <div
+              style={{
+                background: "#f8fafc",
+                borderRadius: "16px",
+                padding: "18px",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <div style={{ fontSize: "14px", color: "#64748b" }}>Promotions</div>
+              <div style={{ fontSize: "30px", fontWeight: "bold", marginTop: "8px" }}>
+                4,281
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#f8fafc",
+                borderRadius: "16px",
+                padding: "18px",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <div style={{ fontSize: "14px", color: "#64748b" }}>Newsletters</div>
+              <div style={{ fontSize: "30px", fontWeight: "bold", marginTop: "8px" }}>
+                1,932
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#f8fafc",
+                borderRadius: "16px",
+                padding: "18px",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <div style={{ fontSize: "14px", color: "#64748b" }}>Unsubscribes</div>
+              <div style={{ fontSize: "30px", fontWeight: "bold", marginTop: "8px" }}>
+                146
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: "#f8fafc",
+              borderRadius: "18px",
+              padding: "18px",
+              border: "1px solid #e2e8f0",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "16px",
+                fontWeight: "bold",
+                fontSize: "16px",
+              }}
+            >
+              <span>Top senders to clean</span>
+              <span style={{ color: "#2563eb" }}>Clean now</span>
+            </div>
+
+            <div style={{ display: "grid", gap: "12px" }}>
+              <div
+                style={{
+                  background: "white",
+                  borderRadius: "14px",
+                  padding: "14px 16px",
+                  border: "1px solid #e2e8f0",
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span>Daily Deals — 2,451 emails</span>
+                <span style={{ color: "#2563eb", fontWeight: "bold" }}>Unsubscribe</span>
+              </div>
+
+              <div
+                style={{
+                  background: "white",
+                  borderRadius: "14px",
+                  padding: "14px 16px",
+                  border: "1px solid #e2e8f0",
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span>Store Updates — 1,188 emails</span>
+                <span style={{ color: "#2563eb", fontWeight: "bold" }}>Delete</span>
+              </div>
+
+              <div
+                style={{
+                  background: "white",
+                  borderRadius: "14px",
+                  padding: "14px 16px",
+                  border: "1px solid #e2e8f0",
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span>Travel Alerts — 742 emails</span>
+                <span style={{ color: "#2563eb", fontWeight: "bold" }}>Archive</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: "50px", fontSize: "14px" }}>
+          <a href="/privacy" style={{ color: "#475569", marginRight: "16px" }}>
+            Privacy Policy
+          </a>
+          <a href="/terms" style={{ color: "#475569" }}>
+            Terms of Service
+          </a>
+        </div>
+      </section>
     </main>
   );
 }
