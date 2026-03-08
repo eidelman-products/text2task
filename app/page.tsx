@@ -233,55 +233,164 @@ export default function Home() {
                 fontSize: "16px",
               }}
             >
-              <span>Top senders to clean</span>
-              <span style={{ color: "#2563eb" }}>Clean now</span>
-            </div>
-
-            <div style={{ display: "grid", gap: "12px" }}>
               <div
-                style={{
-                  background: "white",
-                  borderRadius: "14px",
-                  padding: "14px 16px",
-                  border: "1px solid #e2e8f0",
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
-              >
-                <span>Daily Deals — 2,451 emails</span>
-                <span style={{ color: "#2563eb", fontWeight: "bold" }}>Unsubscribe</span>
-              </div>
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "16px",
+    fontWeight: "bold",
+    fontSize: "16px",
+    flexWrap: "wrap",
+    gap: "10px",
+  }}
+>
+  <span>Smart filters for faster cleanup</span>
+  <span style={{ color: "#2563eb" }}>Built for bulk cleanup</span>
+</div>
 
-              <div
-                style={{
-                  background: "white",
-                  borderRadius: "14px",
-                  padding: "14px 16px",
-                  border: "1px solid #e2e8f0",
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
-              >
-                <span>Store Updates — 1,188 emails</span>
-                <span style={{ color: "#2563eb", fontWeight: "bold" }}>Delete</span>
-              </div>
+<div
+  style={{
+    fontSize: "14px",
+    color: "#64748b",
+    marginBottom: "16px",
+    lineHeight: "1.6",
+  }}
+>
+  Filter emails by sender, date, attachment size, and category — then clean them in one click.
+</div>
 
-              <div
-                style={{
-                  background: "white",
-                  borderRadius: "14px",
-                  padding: "14px 16px",
-                  border: "1px solid #e2e8f0",
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
-              >
-                <span>Travel Alerts — 742 emails</span>
-                <span style={{ color: "#2563eb", fontWeight: "bold" }}>Archive</span>
-              </div>
-            </div>
-          </div>
-        </div>
+<div
+  style={{
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
+    marginBottom: "18px",
+  }}
+>
+  <span
+    style={{
+      background: "#eff6ff",
+      color: "#1d4ed8",
+      padding: "6px 10px",
+      borderRadius: "999px",
+      fontSize: "13px",
+      fontWeight: "bold",
+    }}
+  >
+    By sender
+  </span>
+
+  <span
+    style={{
+      background: "#f8fafc",
+      color: "#334155",
+      padding: "6px 10px",
+      borderRadius: "999px",
+      fontSize: "13px",
+      fontWeight: "bold",
+      border: "1px solid #e2e8f0",
+    }}
+  >
+    By date
+  </span>
+
+  <span
+    style={{
+      background: "#f8fafc",
+      color: "#334155",
+      padding: "6px 10px",
+      borderRadius: "999px",
+      fontSize: "13px",
+      fontWeight: "bold",
+      border: "1px solid #e2e8f0",
+    }}
+  >
+    By size
+  </span>
+
+  <span
+    style={{
+      background: "#f8fafc",
+      color: "#334155",
+      padding: "6px 10px",
+      borderRadius: "999px",
+      fontSize: "13px",
+      fontWeight: "bold",
+      border: "1px solid #e2e8f0",
+    }}
+  >
+    By category
+  </span>
+</div>
+
+<div style={{ display: "grid", gap: "12px" }}>
+  <div
+    style={{
+      background: "white",
+      borderRadius: "14px",
+      padding: "14px 16px",
+      border: "1px solid #e2e8f0",
+      display: "flex",
+      justifyContent: "space-between",
+    }}
+  >
+    <span>📩 Amazon — 248 emails</span>
+    <span style={{ color: "#2563eb", fontWeight: "bold" }}>Review</span>
+  </div>
+
+  <div
+    style={{
+      background: "white",
+      borderRadius: "14px",
+      padding: "14px 16px",
+      border: "1px solid #e2e8f0",
+      display: "flex",
+      justifyContent: "space-between",
+    }}
+  >
+    <span>🛍️ AliExpress — 516 emails</span>
+    <span style={{ color: "#2563eb", fontWeight: "bold" }}>Unsubscribe</span>
+  </div>
+
+  <div
+    style={{
+      background: "white",
+      borderRadius: "14px",
+      padding: "14px 16px",
+      border: "1px solid #e2e8f0",
+      display: "flex",
+      justifyContent: "space-between",
+    }}
+  >
+    <span>🕒 Older than 1 year — 1,942 emails</span>
+    <span style={{ color: "#2563eb", fontWeight: "bold" }}>Archive</span>
+  </div>
+
+  <div
+    style={{
+      background: "white",
+      borderRadius: "14px",
+      padding: "14px 16px",
+      border: "1px solid #e2e8f0",
+      display: "flex",
+      justifyContent: "space-between",
+    }}
+  >
+    <span>📎 Attachments over 10 MB — 73 emails</span>
+    <span style={{ color: "#2563eb", fontWeight: "bold" }}>Delete</span>
+  </div>
+</div>
+
+<div
+  style={{
+    marginTop: "16px",
+    fontSize: "13px",
+    color: "#64748b",
+  }}
+>
+  See exactly what will be cleaned before you apply changes.
+</div>
 
         <div style={{ marginTop: "50px", fontSize: "14px" }}>
           <a href="/privacy" style={{ color: "#475569", marginRight: "16px" }}>
