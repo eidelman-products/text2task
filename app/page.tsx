@@ -335,7 +335,7 @@ export default function Home() {
       justifyContent: "space-between",
     }}
   >
-    <span>📩 Amazon — 248 emails</span>
+    <span> Amazon — 248 emails</span>
     <span style={{ color: "#2563eb", fontWeight: "bold" }}>Review</span>
   </div>
 
@@ -349,7 +349,7 @@ export default function Home() {
       justifyContent: "space-between",
     }}
   >
-    <span>🛍️ AliExpress — 516 emails</span>
+    <span> AliExpress — 516 emails</span>
     <span style={{ color: "#2563eb", fontWeight: "bold" }}>Unsubscribe</span>
   </div>
 
@@ -363,7 +363,7 @@ export default function Home() {
       justifyContent: "space-between",
     }}
   >
-    <span>🕒 Older than 1 year — 1,942 emails</span>
+    <span> Older than 1 year — 1,942 emails</span>
     <span style={{ color: "#2563eb", fontWeight: "bold" }}>Archive</span>
   </div>
 
@@ -377,7 +377,7 @@ export default function Home() {
       justifyContent: "space-between",
     }}
   >
-    <span>📎 Attachments over 10 MB — 73 emails</span>
+    <span> Attachments over 10 MB — 73 emails</span>
     <span style={{ color: "#2563eb", fontWeight: "bold" }}>Delete</span>
   </div>
 </div>
@@ -388,7 +388,7 @@ export default function Home() {
     fontSize: "13px",
     color: "#64748b",
   }}
->
+
   See exactly what will be cleaned before you apply changes.
 </div>
 
