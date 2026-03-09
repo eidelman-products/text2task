@@ -388,7 +388,7 @@ export default function Home() {
     color: "#64748b",
   }}
 >
-  See exactly what will be cleaned before you apply changes.
+  {"See exactly what will be cleaned before you apply changes."}
 </div>
 
         <div style={{ marginTop: "50px", fontSize: "14px" }}>
