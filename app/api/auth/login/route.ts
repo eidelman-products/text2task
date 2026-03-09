@@ -1,5 +1,3 @@
 export async function GET() {
-  return new Response("Login route works", {
-    status: 200,
-  });
+  return Response.redirect(new URL("/api/auth/google", "https://inboxshaper.com"));
 }
