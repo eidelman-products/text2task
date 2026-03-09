@@ -380,7 +380,6 @@ export default function Home() {
     <span> Attachments over 10 MB — 73 emails</span>
     <span style={{ color: "#2563eb", fontWeight: "bold" }}>Delete</span>
   </div>
-</div>
 
 <div
   style={{
