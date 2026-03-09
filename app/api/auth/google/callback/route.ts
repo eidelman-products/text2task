@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
   // Call Gmail API
   const gmailResponse = await fetch(
-    "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5",
+    "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in%3Ainbox&maxResults=20",
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
