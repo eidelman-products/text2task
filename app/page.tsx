@@ -146,7 +146,13 @@ export default function Home() {
               <div style={{ fontSize: "22px", fontWeight: "bold" }}>
                 Inbox overview
               </div>
-              <div style={{ fontSize: "14px", color: "#64748b", marginTop: "6px" }}>
+              <div
+                style={{
+                  fontSize: "14px",
+                  color: "#64748b",
+                  marginTop: "6px",
+                }}
+              >
                 A simple preview of your cleanup dashboard
               </div>
             </div>
@@ -181,8 +187,16 @@ export default function Home() {
                 border: "1px solid #e2e8f0",
               }}
             >
-              <div style={{ fontSize: "14px", color: "#64748b" }}>Promotions</div>
-              <div style={{ fontSize: "30px", fontWeight: "bold", marginTop: "8px" }}>
+              <div style={{ fontSize: "14px", color: "#64748b" }}>
+                Promotions
+              </div>
+              <div
+                style={{
+                  fontSize: "30px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
                 4,281
               </div>
             </div>
@@ -195,8 +209,16 @@ export default function Home() {
                 border: "1px solid #e2e8f0",
               }}
             >
-              <div style={{ fontSize: "14px", color: "#64748b" }}>Newsletters</div>
-              <div style={{ fontSize: "30px", fontWeight: "bold", marginTop: "8px" }}>
+              <div style={{ fontSize: "14px", color: "#64748b" }}>
+                Newsletters
+              </div>
+              <div
+                style={{
+                  fontSize: "30px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
                 1,932
               </div>
             </div>
@@ -209,8 +231,16 @@ export default function Home() {
                 border: "1px solid #e2e8f0",
               }}
             >
-              <div style={{ fontSize: "14px", color: "#64748b" }}>Unsubscribes</div>
-              <div style={{ fontSize: "30px", fontWeight: "bold", marginTop: "8px" }}>
+              <div style={{ fontSize: "14px", color: "#64748b" }}>
+                Unsubscribes
+              </div>
+              <div
+                style={{
+                  fontSize: "30px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
                 146
               </div>
             </div>
@@ -228,173 +258,177 @@ export default function Home() {
               style={{
                 display: "flex",
                 justifyContent: "space-between",
+                alignItems: "center",
                 marginBottom: "16px",
                 fontWeight: "bold",
                 fontSize: "16px",
+                flexWrap: "wrap",
+                gap: "10px",
               }}
             >
+              <span>Smart filters for faster cleanup</span>
+              <span style={{ color: "#2563eb" }}>Built for bulk cleanup</span>
+            </div>
+
+            <div
+              style={{
+                fontSize: "14px",
+                color: "#64748b",
+                marginBottom: "16px",
+                lineHeight: "1.6",
+              }}
+            >
+              Filter emails by sender, date, attachment size, and category —
+              then clean them in one click.
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                flexWrap: "wrap",
+                marginBottom: "18px",
+              }}
+            >
+              <span
+                style={{
+                  background: "#eff6ff",
+                  color: "#1d4ed8",
+                  padding: "6px 10px",
+                  borderRadius: "999px",
+                  fontSize: "13px",
+                  fontWeight: "bold",
+                }}
+              >
+                By sender
+              </span>
+
+              <span
+                style={{
+                  background: "#f8fafc",
+                  color: "#334155",
+                  padding: "6px 10px",
+                  borderRadius: "999px",
+                  fontSize: "13px",
+                  fontWeight: "bold",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                By date
+              </span>
+
+              <span
+                style={{
+                  background: "#f8fafc",
+                  color: "#334155",
+                  padding: "6px 10px",
+                  borderRadius: "999px",
+                  fontSize: "13px",
+                  fontWeight: "bold",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                By size
+              </span>
+
+              <span
+                style={{
+                  background: "#f8fafc",
+                  color: "#334155",
+                  padding: "6px 10px",
+                  borderRadius: "999px",
+                  fontSize: "13px",
+                  fontWeight: "bold",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                By category
+              </span>
+            </div>
+
+            <div style={{ display: "grid", gap: "12px" }}>
               <div
-  style={{
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "16px",
-    fontWeight: "bold",
-    fontSize: "16px",
-    flexWrap: "wrap",
-    gap: "10px",
-  }}
->
-  <span>Smart filters for faster cleanup</span>
-  <span style={{ color: "#2563eb" }}>Built for bulk cleanup</span>
-</div>
+                style={{
+                  background: "white",
+                  borderRadius: "14px",
+                  padding: "14px 16px",
+                  border: "1px solid #e2e8f0",
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span>Amazon — 248 emails</span>
+                <span style={{ color: "#2563eb", fontWeight: "bold" }}>
+                  Review
+                </span>
+              </div>
 
-<div
-  style={{
-    fontSize: "14px",
-    color: "#64748b",
-    marginBottom: "16px",
-    lineHeight: "1.6",
-  }}
->
-  Filter emails by sender, date, attachment size, and category — then clean them in one click.
-</div>
+              <div
+                style={{
+                  background: "white",
+                  borderRadius: "14px",
+                  padding: "14px 16px",
+                  border: "1px solid #e2e8f0",
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span>AliExpress — 516 emails</span>
+                <span style={{ color: "#2563eb", fontWeight: "bold" }}>
+                  Unsubscribe
+                </span>
+              </div>
 
-<div
-  style={{
-    display: "flex",
-    gap: "10px",
-    flexWrap: "wrap",
-    marginBottom: "18px",
-  }}
->
-  <span
-    style={{
-      background: "#eff6ff",
-      color: "#1d4ed8",
-      padding: "6px 10px",
-      borderRadius: "999px",
-      fontSize: "13px",
-      fontWeight: "bold",
-    }}
-  >
-    By sender
-  </span>
+              <div
+                style={{
+                  background: "white",
+                  borderRadius: "14px",
+                  padding: "14px 16px",
+                  border: "1px solid #e2e8f0",
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span>Older than 1 year — 1,942 emails</span>
+                <span style={{ color: "#2563eb", fontWeight: "bold" }}>
+                  Archive
+                </span>
+              </div>
 
-  <span
-    style={{
-      background: "#f8fafc",
-      color: "#334155",
-      padding: "6px 10px",
-      borderRadius: "999px",
-      fontSize: "13px",
-      fontWeight: "bold",
-      border: "1px solid #e2e8f0",
-    }}
-  >
-    By date
-  </span>
+              <div
+                style={{
+                  background: "white",
+                  borderRadius: "14px",
+                  padding: "14px 16px",
+                  border: "1px solid #e2e8f0",
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span>Attachments over 10 MB — 73 emails</span>
+                <span style={{ color: "#2563eb", fontWeight: "bold" }}>
+                  Delete
+                </span>
+              </div>
+            </div>
 
-  <span
-    style={{
-      background: "#f8fafc",
-      color: "#334155",
-      padding: "6px 10px",
-      borderRadius: "999px",
-      fontSize: "13px",
-      fontWeight: "bold",
-      border: "1px solid #e2e8f0",
-    }}
-  >
-    By size
-  </span>
-
-  <span
-    style={{
-      background: "#f8fafc",
-      color: "#334155",
-      padding: "6px 10px",
-      borderRadius: "999px",
-      fontSize: "13px",
-      fontWeight: "bold",
-      border: "1px solid #e2e8f0",
-    }}
-  >
-    By category
-  </span>
-</div>
-
-<div style={{ display: "grid", gap: "12px" }}>
-  <div
-    style={{
-      background: "white",
-      borderRadius: "14px",
-      padding: "14px 16px",
-      border: "1px solid #e2e8f0",
-      display: "flex",
-      justifyContent: "space-between",
-    }}
-  >
-    <span> Amazon — 248 emails</span>
-    <span style={{ color: "#2563eb", fontWeight: "bold" }}>Review</span>
-  </div>
-
-  <div
-    style={{
-      background: "white",
-      borderRadius: "14px",
-      padding: "14px 16px",
-      border: "1px solid #e2e8f0",
-      display: "flex",
-      justifyContent: "space-between",
-    }}
-  >
-    <span> AliExpress — 516 emails</span>
-    <span style={{ color: "#2563eb", fontWeight: "bold" }}>Unsubscribe</span>
-  </div>
-
-  <div
-    style={{
-      background: "white",
-      borderRadius: "14px",
-      padding: "14px 16px",
-      border: "1px solid #e2e8f0",
-      display: "flex",
-      justifyContent: "space-between",
-    }}
-  >
-    <span> Older than 1 year — 1,942 emails</span>
-    <span style={{ color: "#2563eb", fontWeight: "bold" }}>Archive</span>
-  </div>
-
-  <div
-    style={{
-      background: "white",
-      borderRadius: "14px",
-      padding: "14px 16px",
-      border: "1px solid #e2e8f0",
-      display: "flex",
-      justifyContent: "space-between",
-    }}
-  >
-    <span> Attachments over 10 MB — 73 emails</span>
-    <span style={{ color: "#2563eb", fontWeight: "bold" }}>Delete</span>
-  </div>
-
-<div
-  style={{
-    marginTop: "16px",
-    fontSize: "13px",
-    color: "#64748b",
-  }}
->
-  {"See exactly what will be cleaned before you apply changes."}
-</div>
+            <div
+              style={{
+                marginTop: "16px",
+                fontSize: "13px",
+                color: "#64748b",
+              }}
+            >
+              See exactly what will be cleaned before you apply changes.
+            </div>
+          </div>
+        </div>
 
         <div style={{ marginTop: "50px", fontSize: "14px" }}>
           <a href="/privacy" style={{ color: "#475569", marginRight: "16px" }}>
             Privacy Policy
           </a>
+
           <a href="/terms" style={{ color: "#475569" }}>
             Terms of Service
           </a>
