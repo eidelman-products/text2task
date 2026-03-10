@@ -42,7 +42,7 @@ let nextPageToken: string | null = null;
 
 do {
   const gmailUrl = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
-gmailUrl.searchParams.set("q", "in:inbox");  
+gmailUrl.searchParams.set("labelIds", "INBOX");  
 gmailUrl.searchParams.set("maxResults", PAGE_SIZE.toString());
 
   if (nextPageToken) {
