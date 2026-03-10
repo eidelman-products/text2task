@@ -34,17 +34,40 @@ export async function GET(req: NextRequest) {
   const tokenData = await tokenResponse.json();
   const accessToken = tokenData.access_token;
 
-  const gmailResponse = await fetch(
-    "https://gmail.googleapis.com/gmail/v1/users/me/messages?labelIds=INBOX&maxResults=20",
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
+const MAX_EMAILS = 2000;
+const PAGE_SIZE = 100;
+
+let allMessages: { id: string; threadId: string }[] = [];
+let nextPageToken: string | null = null;
+
+do {
+  const gmailUrl = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
+  gmailUrl.searchParams.set("labelIds", "INBOX");
+  gmailUrl.searchParams.set("maxResults", PAGE_SIZE.toString());
+
+  if (nextPageToken) {
+    gmailUrl.searchParams.set("pageToken", nextPageToken);
+  }
+
+  const gmailResponse = await fetch(gmailUrl.toString(), {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
 
   const gmailData = await gmailResponse.json();
   const messages = gmailData.messages || [];
+
+  allMessages = [...allMessages, ...messages];
+  nextPageToken = gmailData.nextPageToken || null;
+
+  if (allMessages.length >= MAX_EMAILS) {
+    allMessages = allMessages.slice(0, MAX_EMAILS);
+    break;
+  }
+} while (nextPageToken);
+
+const messages = allMessages;
 
   const detailedMessages = await Promise.all(
     messages.map(async (message: { id: string; threadId: string }) => {
@@ -94,8 +117,8 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    resultSizeEstimate: gmailData.resultSizeEstimate || 0,
-    nextPageToken: gmailData.nextPageToken || null,
+resultSizeEstimate: messages.length,
+nextPageToken: nextPageToken,
     messages: detailedMessages,
     topSenders,
   });
