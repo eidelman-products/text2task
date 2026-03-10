@@ -34,8 +34,8 @@ export async function GET(req: NextRequest) {
   const tokenData = await tokenResponse.json();
   const accessToken = tokenData.access_token;
 
-const MAX_EMAILS = 2000;
-const PAGE_SIZE = 100;
+const MAX_EMAILS = 100;
+const PAGE_SIZE = 25;
 
 let allMessages: { id: string; threadId: string }[] = [];
 let nextPageToken: string | null = null;
