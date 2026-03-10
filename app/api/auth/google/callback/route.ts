@@ -17,7 +17,6 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Exchange code for access token
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: {
@@ -33,12 +32,10 @@ export async function GET(req: NextRequest) {
   });
 
   const tokenData = await tokenResponse.json();
-
   const accessToken = tokenData.access_token;
 
-  // Call Gmail API
   const gmailResponse = await fetch(
-    "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in%3Ainbox&maxResults=20",
+    "https://gmail.googleapis.com/gmail/v1/users/me/messages?labelIds=INBOX&maxResults=20",
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -47,9 +44,59 @@ export async function GET(req: NextRequest) {
   );
 
   const gmailData = await gmailResponse.json();
+  const messages = gmailData.messages || [];
+
+  const detailedMessages = await Promise.all(
+    messages.map(async (message: { id: string; threadId: string }) => {
+      const detailResponse = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const detailData = await detailResponse.json();
+      const headers = detailData.payload?.headers || [];
+
+      const fromHeader =
+        headers.find((h: { name: string; value: string }) => h.name === "From")
+          ?.value || "Unknown Sender";
+
+      const subjectHeader =
+        headers.find((h: { name: string; value: string }) => h.name === "Subject")
+          ?.value || "(No Subject)";
+
+      const dateHeader =
+        headers.find((h: { name: string; value: string }) => h.name === "Date")
+          ?.value || "";
+
+      return {
+        id: message.id,
+        threadId: message.threadId,
+        from: fromHeader,
+        subject: subjectHeader,
+        date: dateHeader,
+      };
+    })
+  );
+
+  const senderCounts: Record<string, number> = {};
+
+  detailedMessages.forEach((message) => {
+    senderCounts[message.from] = (senderCounts[message.from] || 0) + 1;
+  });
+
+  const topSenders = Object.entries(senderCounts)
+    .map(([from, count]) => ({ from, count }))
+    .sort((a, b) => b.count - a.count);
 
   return NextResponse.json({
     success: true,
-    gmailData,
+    resultSizeEstimate: gmailData.resultSizeEstimate || 0,
+    nextPageToken: gmailData.nextPageToken || null,
+    messages: detailedMessages,
+    topSenders,
   });
 }
