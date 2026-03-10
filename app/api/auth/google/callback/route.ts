@@ -1,5 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 
+function normalizeSender(from: string) {
+  const lowerFrom = from.toLowerCase();
+
+  if (lowerFrom.includes("aliexpress")) return "AliExpress";
+  if (lowerFrom.includes("amazon")) return "Amazon";
+  if (lowerFrom.includes("linkedin")) return "LinkedIn";
+  if (lowerFrom.includes("youtube")) return "YouTube";
+  if (lowerFrom.includes("vercel")) return "Vercel";
+  if (lowerFrom.includes("binance")) return "Binance";
+  if (lowerFrom.includes("github")) return "GitHub";
+  if (lowerFrom.includes("semrush")) return "Semrush";
+  if (lowerFrom.includes("alibaba")) return "Alibaba";
+  if (lowerFrom.includes("tubespanner")) return "TubeSpanner";
+
+  const cleaned = from
+    .replace(/<.*?>/g, "")
+    .replace(/["']/g, "")
+    .trim();
+
+  return cleaned || "Unknown Sender";
+}
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
 
@@ -108,8 +129,9 @@ const messages = allMessages;
   const senderCounts: Record<string, number> = {};
 
   detailedMessages.forEach((message) => {
-    senderCounts[message.from] = (senderCounts[message.from] || 0) + 1;
-  });
+  const normalizedSender = normalizeSender(message.from);
+  senderCounts[normalizedSender] = (senderCounts[normalizedSender] || 0) + 1;
+});
 
   const topSenders = Object.entries(senderCounts)
     .map(([from, count]) => ({ from, count }))
