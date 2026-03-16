@@ -3,13 +3,13 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getCleanupStatus, addCleanupUsage } from "@/lib/supabase/quota";
 
-type DeleteBySenderBody = {
+type ArchiveBySenderBody = {
   ids?: string[];
 };
 
 export async function POST(req: NextRequest) {
   try {
-    const body: DeleteBySenderBody = await req.json();
+    const body: ArchiveBySenderBody = await req.json();
     const ids = Array.isArray(body.ids) ? body.ids.filter(Boolean) : [];
 
     if (!ids.length) {
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const gmailRes = await fetch(
+    const archiveRes = await fetch(
       "https://gmail.googleapis.com/gmail/v1/users/me/messages/batchModify",
       {
         method: "POST",
@@ -86,18 +86,18 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           ids,
-          addLabelIds: ["TRASH"],
+          removeLabelIds: ["INBOX"],
         }),
         cache: "no-store",
       }
     );
 
-    if (!gmailRes.ok) {
-      const errorText = await gmailRes.text();
-      console.error("delete-by-sender Gmail error:", errorText);
+    if (!archiveRes.ok) {
+      const errorText = await archiveRes.text();
+      console.error("archive-by-sender Gmail error:", errorText);
 
       return NextResponse.json(
-        { error: "Failed to move emails to Trash" },
+        { error: "Failed to archive emails" },
         { status: 500 }
       );
     }
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      deleted: ids.length,
+      archived: ids.length,
       plan: updatedStatus.plan,
       weekly_cleanup_used: updatedStatus.weekly_cleanup_used,
       remaining: updatedStatus.remaining,
@@ -116,10 +116,10 @@ export async function POST(req: NextRequest) {
       upgradeRequired: false,
     });
   } catch (error: any) {
-    console.error("delete-by-sender route error:", error);
+    console.error("archive-by-sender route error:", error);
 
     return NextResponse.json(
-      { error: error?.message || "Delete failed" },
+      { error: error?.message || "Archive failed" },
       { status: 500 }
     );
   }
