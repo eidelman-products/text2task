@@ -4,21 +4,24 @@ import { createClient } from "@/lib/supabase/server";
 import { getCleanupStatus, addCleanupUsage } from "@/lib/supabase/quota";
 
 type ArchiveBySenderBody = {
-  ids?: string[];
+  ids?: unknown;
 };
+
+const MAX_ARCHIVE_IDS_PER_REQUEST = 500;
+
+function normalizeIds(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+
+  const cleaned = input
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  return [...new Set(cleaned)];
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const body: ArchiveBySenderBody = await req.json();
-    const ids = Array.isArray(body.ids) ? body.ids.filter(Boolean) : [];
-
-    if (!ids.length) {
-      return NextResponse.json(
-        { error: "No email ids provided" },
-        { status: 400 }
-      );
-    }
-
     const supabase = await createClient();
 
     const {
@@ -30,6 +33,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Not authenticated" },
         { status: 401 }
+      );
+    }
+
+    const body: ArchiveBySenderBody = await req.json();
+    const ids = normalizeIds(body.ids);
+
+    if (!ids.length) {
+      return NextResponse.json(
+        { error: "No valid email ids provided" },
+        { status: 400 }
+      );
+    }
+
+    if (ids.length > MAX_ARCHIVE_IDS_PER_REQUEST) {
+      return NextResponse.json(
+        {
+          error: `Too many email ids in one request. Maximum allowed is ${MAX_ARCHIVE_IDS_PER_REQUEST}.`,
+          code: "TOO_MANY_IDS",
+          maxAllowed: MAX_ARCHIVE_IDS_PER_REQUEST,
+          requested: ids.length,
+        },
+        { status: 400 }
       );
     }
 

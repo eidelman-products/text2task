@@ -4,21 +4,24 @@ import { createClient } from "@/lib/supabase/server";
 import { getCleanupStatus, addCleanupUsage } from "@/lib/supabase/quota";
 
 type DeleteBySenderBody = {
-  ids?: string[];
+  ids?: unknown;
 };
+
+const MAX_DELETE_IDS_PER_REQUEST = 500;
+
+function normalizeIds(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+
+  const cleaned = input
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  return [...new Set(cleaned)];
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const body: DeleteBySenderBody = await req.json();
-    const ids = Array.isArray(body.ids) ? body.ids.filter(Boolean) : [];
-
-    if (!ids.length) {
-      return NextResponse.json(
-        { error: "No email ids provided" },
-        { status: 400 }
-      );
-    }
-
     const supabase = await createClient();
 
     const {
@@ -30,6 +33,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Not authenticated" },
         { status: 401 }
+      );
+    }
+
+    const body: DeleteBySenderBody = await req.json();
+    const ids = normalizeIds(body.ids);
+
+    if (!ids.length) {
+      return NextResponse.json(
+        { error: "No valid email ids provided" },
+        { status: 400 }
+      );
+    }
+
+    if (ids.length > MAX_DELETE_IDS_PER_REQUEST) {
+      return NextResponse.json(
+        {
+          error: `Too many email ids in one request. Maximum allowed is ${MAX_DELETE_IDS_PER_REQUEST}.`,
+          code: "TOO_MANY_IDS",
+          maxAllowed: MAX_DELETE_IDS_PER_REQUEST,
+          requested: ids.length,
+        },
+        { status: 400 }
       );
     }
 
@@ -76,24 +101,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const gmailRes = await fetch(
-      "https://gmail.googleapis.com/gmail/v1/users/me/messages/batchModify",
+    const deleteRes = await fetch(
+      "https://gmail.googleapis.com/gmail/v1/users/me/messages/batchDelete",
       {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ids,
-          addLabelIds: ["TRASH"],
-        }),
+        body: JSON.stringify({ ids }),
         cache: "no-store",
       }
     );
 
-    if (!gmailRes.ok) {
-      const errorText = await gmailRes.text();
+    if (!deleteRes.ok) {
+      const errorText = await deleteRes.text();
       console.error("delete-by-sender Gmail error:", errorText);
 
       return NextResponse.json(
