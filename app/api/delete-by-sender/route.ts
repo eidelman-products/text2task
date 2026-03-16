@@ -8,6 +8,7 @@ type DeleteBySenderBody = {
 };
 
 const MAX_DELETE_IDS_PER_REQUEST = 500;
+const TRASH_CONCURRENCY = 10;
 
 function normalizeIds(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
@@ -18,6 +19,58 @@ function normalizeIds(input: unknown): string[] {
     .filter((value) => value.length > 0);
 
   return [...new Set(cleaned)];
+}
+
+async function moveMessageToTrash(accessToken: string, id: string) {
+  const res = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(id)}/trash`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: "no-store",
+    }
+  );
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed for message ${id}: ${errorText}`);
+  }
+}
+
+async function moveMessagesToTrashInBatches(accessToken: string, ids: string[]) {
+  const failed: { id: string; error: string }[] = [];
+  let successCount = 0;
+
+  for (let i = 0; i < ids.length; i += TRASH_CONCURRENCY) {
+    const chunk = ids.slice(i, i + TRASH_CONCURRENCY);
+
+    const results = await Promise.allSettled(
+      chunk.map((id) => moveMessageToTrash(accessToken, id))
+    );
+
+    results.forEach((result, index) => {
+      const id = chunk[index];
+
+      if (result.status === "fulfilled") {
+        successCount += 1;
+      } else {
+        failed.push({
+          id,
+          error:
+            result.reason instanceof Error
+              ? result.reason.message
+              : "Unknown error",
+        });
+      }
+    });
+  }
+
+  return {
+    successCount,
+    failed,
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -101,36 +154,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const deleteRes = await fetch(
-      "https://gmail.googleapis.com/gmail/v1/users/me/messages/batchDelete",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ids }),
-        cache: "no-store",
-      }
+    const { successCount, failed } = await moveMessagesToTrashInBatches(
+      accessToken,
+      ids
     );
 
-    if (!deleteRes.ok) {
-      const errorText = await deleteRes.text();
-      console.error("delete-by-sender Gmail error:", errorText);
+    if (successCount === 0) {
+      console.error("delete-by-sender Gmail trash error:", failed);
 
       return NextResponse.json(
-        { error: "Failed to move emails to Trash" },
+        {
+          error: "Failed to move emails to Trash",
+          failedCount: failed.length,
+          failed,
+        },
         { status: 500 }
       );
     }
 
-    await addCleanupUsage(user.id, ids.length);
+    await addCleanupUsage(user.id, successCount);
 
     const updatedStatus = await getCleanupStatus(user.id, user.email);
 
     return NextResponse.json({
       success: true,
-      deleted: ids.length,
+      movedToTrash: successCount,
+      failedCount: failed.length,
+      failed,
       plan: updatedStatus.plan,
       weekly_cleanup_used: updatedStatus.weekly_cleanup_used,
       remaining: updatedStatus.remaining,
@@ -141,7 +191,7 @@ export async function POST(req: NextRequest) {
     console.error("delete-by-sender route error:", error);
 
     return NextResponse.json(
-      { error: error?.message || "Delete failed" },
+      { error: error?.message || "Move to Trash failed" },
       { status: 500 }
     );
   }
