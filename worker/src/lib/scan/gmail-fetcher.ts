@@ -6,9 +6,10 @@ import type {
 
 const GMAIL_BASE = "https://gmail.googleapis.com/gmail/v1/users/me";
 
-const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
+const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
+const FETCH_TIMEOUT_MS = 20000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -33,13 +34,19 @@ async function gmailFetch<T>(
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
     try {
       const res = await fetch(url, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
         cache: "no-store",
+        signal: controller.signal,
       });
+
+      clearTimeout(timeout);
 
       if (res.ok) {
         return (await res.json()) as T;
@@ -73,18 +80,35 @@ async function gmailFetch<T>(
 
       await sleep(delayMs);
     } catch (error) {
+      clearTimeout(timeout);
+
       const message =
         error instanceof Error ? error.message : String(error);
 
-      lastError =
-        error instanceof Error ? error : new Error(message);
+      const isAbortError =
+        error instanceof Error &&
+        (error.name === "AbortError" || message.includes("aborted"));
 
       const isNetworkLikeError =
+        isAbortError ||
         message.includes("fetch failed") ||
         message.includes("network") ||
         message.includes("timeout") ||
         message.includes("ECONNRESET") ||
         message.includes("ETIMEDOUT");
+
+      lastError =
+        error instanceof Error
+          ? error
+          : new Error(message);
+
+      console.warn("Gmail request failed", {
+        attempt,
+        url,
+        isAbortError,
+        isNetworkLikeError,
+        error: message,
+      });
 
       if (!isNetworkLikeError || attempt === MAX_RETRIES) {
         throw lastError;
@@ -92,12 +116,11 @@ async function gmailFetch<T>(
 
       const delayMs = getRetryDelayMs(attempt, null);
 
-      console.warn("Retrying Gmail request after network error", {
+      console.warn("Retrying Gmail request after network/timeout error", {
         attempt: attempt + 1,
         maxRetries: MAX_RETRIES,
         delayMs,
         url,
-        error: message,
       });
 
       await sleep(delayMs);
