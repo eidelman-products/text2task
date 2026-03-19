@@ -1,11 +1,46 @@
-import { buildScanResult } from "./scan-aggregator";
+import {
+  addMessagesToAggregate,
+  buildScanResultFromAggregate,
+  createScanAggregateState,
+  setAggregateTotalInboxCount,
+} from "./scan-aggregator";
 import { fetchMessagesPageWithMetadata } from "./gmail-fetcher";
 import {
+  DEFAULT_FULL_SCAN_PAGE_SIZE,
+  DEFAULT_METADATA_CONCURRENCY,
+  DEFAULT_SAMPLE_SCAN_PAGE_SIZE,
   SAMPLE_SCAN_LIMIT,
-  type GmailMessageMetadata,
   type RunScanOptions,
+  type ScanProgress,
   type ScanResult,
 } from "./scan-types";
+
+function clampPercent(value: number): number {
+  return Math.max(1, Math.min(99, Math.floor(value)));
+}
+
+function calculateProgress(params: {
+  scannedCount: number;
+  estimatedTotal: number | null;
+  mode: "sample" | "full";
+  sampleLimit: number;
+  completed: boolean;
+}): number {
+  if (params.completed) {
+    return 100;
+  }
+
+  if (params.mode === "sample") {
+    const denominator = Math.max(1, params.sampleLimit);
+    return clampPercent((params.scannedCount / denominator) * 100);
+  }
+
+  if (params.estimatedTotal && params.estimatedTotal > 0) {
+    return clampPercent((params.scannedCount / params.estimatedTotal) * 100);
+  }
+
+  return clampPercent(10 + params.scannedCount / 20);
+}
 
 export async function runScan({
   userId,
@@ -13,6 +48,11 @@ export async function runScan({
   mode,
   sampleLimit = SAMPLE_SCAN_LIMIT,
   maxPages,
+  pageToken = null,
+  pageSize,
+  metadataConcurrency = DEFAULT_METADATA_CONCURRENCY,
+  onProgress,
+  onPartialResult,
 }: RunScanOptions): Promise<ScanResult> {
   if (!userId) {
     throw new Error("Missing userId");
@@ -22,48 +62,95 @@ export async function runScan({
     throw new Error("Missing Gmail access token");
   }
 
+  const effectivePageSize =
+    pageSize ??
+    (mode === "sample"
+      ? DEFAULT_SAMPLE_SCAN_PAGE_SIZE
+      : DEFAULT_FULL_SCAN_PAGE_SIZE);
+
   const limit = mode === "sample" ? sampleLimit : Number.POSITIVE_INFINITY;
 
-  const allMessages: GmailMessageMetadata[] = [];
-  let nextPageToken: string | null = null;
-  let pageCount = 0;
-  let totalInboxCount: number | null = null;
+  const aggregate = createScanAggregateState({
+    mode,
+  });
 
-  while (allMessages.length < limit) {
+  let nextPageToken: string | null = pageToken ?? null;
+  let pageCount = 0;
+  let completed = false;
+
+  while (aggregate.processedMessages < limit) {
     if (typeof maxPages === "number" && pageCount >= maxPages) {
       break;
     }
 
-    const page = await fetchMessagesPageWithMetadata(
-      gmailAccessToken,
-      nextPageToken
-    );
+    const remaining =
+      mode === "sample"
+        ? Math.max(0, sampleLimit - aggregate.processedMessages)
+        : effectivePageSize;
 
-    if (totalInboxCount === null && page.resultSizeEstimate != null) {
-      totalInboxCount = page.resultSizeEstimate;
-    }
-
-    if (!page.messages.length) {
+    if (mode === "sample" && remaining === 0) {
+      completed = true;
       break;
     }
 
-    allMessages.push(...page.messages);
+    const currentPageSize =
+      mode === "sample"
+        ? Math.min(effectivePageSize, remaining)
+        : effectivePageSize;
+
+    const page = await fetchMessagesPageWithMetadata(gmailAccessToken, nextPageToken, {
+      maxResults: currentPageSize,
+      metadataConcurrency,
+    });
+
+    setAggregateTotalInboxCount(aggregate, page.resultSizeEstimate);
+
+    if (!page.messages.length) {
+      completed = true;
+      nextPageToken = null;
+      break;
+    }
+
+    addMessagesToAggregate(aggregate, page.messages);
+
     pageCount += 1;
     nextPageToken = page.nextPageToken;
 
-    if (!nextPageToken) {
+    if (mode === "sample" && aggregate.processedMessages >= sampleLimit) {
+      completed = true;
+      nextPageToken = null;
+    } else if (!nextPageToken) {
+      completed = true;
+    }
+
+    const progress: ScanProgress = {
+      scannedCount: aggregate.processedMessages,
+      estimatedTotal: aggregate.totalInboxCount,
+      progressPercent: calculateProgress({
+        scannedCount: aggregate.processedMessages,
+        estimatedTotal: aggregate.totalInboxCount,
+        mode,
+        sampleLimit,
+        completed,
+      }),
+      nextPageToken,
+      pageCount,
+      completed,
+    };
+
+    if (onProgress) {
+      await onProgress(progress);
+    }
+
+    if (onPartialResult) {
+      const partialResult = buildScanResultFromAggregate(aggregate, completed);
+      await onPartialResult(partialResult, progress);
+    }
+
+    if (completed) {
       break;
     }
   }
 
-  const slicedMessages =
-    mode === "sample" ? allMessages.slice(0, sampleLimit) : allMessages;
-
-  return buildScanResult({
-    mode,
-    messages: slicedMessages,
-    totalInboxCount,
-    fullInboxPromotionsCount: null,
-    completed: !nextPageToken,
-  });
+  return buildScanResultFromAggregate(aggregate, completed);
 }

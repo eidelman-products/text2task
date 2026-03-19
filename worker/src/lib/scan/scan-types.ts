@@ -66,6 +66,15 @@ export type ScanJob = {
   updatedAt: string;
 };
 
+export type ScanProgress = {
+  scannedCount: number;
+  estimatedTotal: number | null;
+  progressPercent: number;
+  nextPageToken: string | null;
+  pageCount: number;
+  completed: boolean;
+};
+
 export type RunScanOptions = {
   userId: string;
   gmailAccessToken: string;
@@ -73,7 +82,11 @@ export type RunScanOptions = {
   sampleLimit?: number;
   maxPages?: number;
   pageToken?: string | null;
+  pageSize?: number;
+  metadataConcurrency?: number;
   resumeScanId?: string | null;
+  onProgress?: (progress: ScanProgress) => Promise<void> | void;
+  onPartialResult?: (result: ScanResult, progress: ScanProgress) => Promise<void> | void;
 };
 
 export type GmailMessageHeader = {
@@ -102,11 +115,23 @@ export type GmailListPage = {
   resultSizeEstimate: number | null;
 };
 
-export type ScanProgress = {
-  scannedCount: number;
-  estimatedTotal: number | null;
-  progressPercent: number;
-  nextPageToken: string | null;
+export type ScanAggregateState = {
+  mode: ScanMode;
+  scanned: number;
+  totalInboxCount: number | null;
+  topSenders: SenderGroup[];
+  promotionsSenders: SenderGroup[];
+  promotionsFound: number;
+  promotionsFoundInSampleScan: number;
+  fullInboxPromotionsCount: number | null;
+  senderGroups: number;
+  largestSenderCount: number;
+  healthScore: number;
+  smartViews: SmartViews;
+  smartViewIds: SmartViewIds;
 };
 
 export const SAMPLE_SCAN_LIMIT = 1000;
+export const DEFAULT_FULL_SCAN_PAGE_SIZE = 25;
+export const DEFAULT_SAMPLE_SCAN_PAGE_SIZE = 25;
+export const DEFAULT_METADATA_CONCURRENCY = 5;

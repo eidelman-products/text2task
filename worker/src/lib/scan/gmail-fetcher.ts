@@ -15,7 +15,10 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function getRetryDelayMs(attempt: number, retryAfterHeader: string | null): number {
+function getRetryDelayMs(
+  attempt: number,
+  retryAfterHeader: string | null
+): number {
   if (retryAfterHeader) {
     const retryAfterSeconds = Number(retryAfterHeader);
     if (!Number.isNaN(retryAfterSeconds) && retryAfterSeconds > 0) {
@@ -98,9 +101,7 @@ async function gmailFetch<T>(
         message.includes("ETIMEDOUT");
 
       lastError =
-        error instanceof Error
-          ? error
-          : new Error(message);
+        error instanceof Error ? error : new Error(message);
 
       console.warn("Gmail request failed", {
         attempt,
@@ -130,14 +131,44 @@ async function gmailFetch<T>(
   throw lastError ?? new Error("Unknown Gmail fetch failure");
 }
 
+async function mapWithConcurrency<TInput, TOutput>(
+  items: TInput[],
+  concurrency: number,
+  mapper: (item: TInput, index: number) => Promise<TOutput>
+): Promise<TOutput[]> {
+  const safeConcurrency = Math.max(1, concurrency);
+  const results: TOutput[] = new Array(items.length);
+  let currentIndex = 0;
+
+  async function worker(): Promise<void> {
+    while (true) {
+      const index = currentIndex;
+      currentIndex += 1;
+
+      if (index >= items.length) {
+        return;
+      }
+
+      results[index] = await mapper(items[index], index);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(safeConcurrency, items.length) }, () => worker())
+  );
+
+  return results;
+}
+
 export async function listMessagePage(
   accessToken: string,
   pageToken?: string | null,
-  maxResults: number = 100
+  maxResults: number = 25
 ): Promise<GmailListPage> {
   const params = new URLSearchParams({
     maxResults: String(maxResults),
     q: "label:INBOX",
+    fields: "messages/id,messages/threadId,nextPageToken,resultSizeEstimate",
   });
 
   if (pageToken) {
@@ -157,34 +188,43 @@ export async function listMessagePage(
 
 export async function getMessagesMetadata(
   accessToken: string,
-  ids: string[]
+  ids: string[],
+  concurrency: number = 5
 ): Promise<GmailMessageMetadata[]> {
-  const results: GmailMessageMetadata[] = [];
+  if (!ids.length) {
+    return [];
+  }
 
-  for (const id of ids) {
+  return mapWithConcurrency(ids, concurrency, async (id) => {
     const url =
       `${GMAIL_BASE}/messages/${id}` +
       `?format=metadata` +
       `&metadataHeaders=From` +
       `&metadataHeaders=Subject` +
-      `&metadataHeaders=List-Unsubscribe`;
+      `&metadataHeaders=List-Unsubscribe` +
+      `&fields=id,threadId,labelIds,payload/headers`;
 
-    const data = await gmailFetch<GmailMessageMetadata>(accessToken, url);
-    results.push(data);
-  }
-
-  return results;
+    return gmailFetch<GmailMessageMetadata>(accessToken, url);
+  });
 }
 
 export async function fetchMessagesPageWithMetadata(
   accessToken: string,
-  pageToken?: string | null
+  pageToken?: string | null,
+  options?: {
+    maxResults?: number;
+    metadataConcurrency?: number;
+  }
 ): Promise<{
   messages: GmailMessageMetadata[];
   nextPageToken: string | null;
   resultSizeEstimate: number | null;
 }> {
-  const page = await listMessagePage(accessToken, pageToken);
+  const page = await listMessagePage(
+    accessToken,
+    pageToken,
+    options?.maxResults ?? 25
+  );
 
   if (!page.messages.length) {
     return {
@@ -195,7 +235,11 @@ export async function fetchMessagesPageWithMetadata(
   }
 
   const ids = page.messages.map((m) => m.id);
-  const metadata = await getMessagesMetadata(accessToken, ids);
+  const metadata = await getMessagesMetadata(
+    accessToken,
+    ids,
+    options?.metadataConcurrency ?? 5
+  );
 
   return {
     messages: metadata,
