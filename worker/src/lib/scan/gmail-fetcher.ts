@@ -6,24 +6,105 @@ import type {
 
 const GMAIL_BASE = "https://gmail.googleapis.com/gmail/v1/users/me";
 
+const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
+const MAX_RETRIES = 5;
+const BASE_DELAY_MS = 1000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getRetryDelayMs(attempt: number, retryAfterHeader: string | null): number {
+  if (retryAfterHeader) {
+    const retryAfterSeconds = Number(retryAfterHeader);
+    if (!Number.isNaN(retryAfterSeconds) && retryAfterSeconds > 0) {
+      return retryAfterSeconds * 1000;
+    }
+  }
+
+  const jitter = Math.floor(Math.random() * 250);
+  return BASE_DELAY_MS * 2 ** attempt + jitter;
+}
+
 async function gmailFetch<T>(
   accessToken: string,
   url: string
 ): Promise<T> {
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-    cache: "no-store",
-  });
+  let lastError: Error | null = null;
 
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("🚨 GMAIL ERROR:", res.status, text);
-    throw new Error(`Gmail API error: ${res.status} ${text}`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: "no-store",
+      });
+
+      if (res.ok) {
+        return (await res.json()) as T;
+      }
+
+      const text = await res.text();
+      const retryAfter = res.headers.get("retry-after");
+      const isRetryable = RETRYABLE_STATUS_CODES.has(res.status);
+
+      console.error("🚨 GMAIL ERROR:", {
+        status: res.status,
+        retryable: isRetryable,
+        attempt,
+        url,
+        body: text,
+      });
+
+      if (!isRetryable || attempt === MAX_RETRIES) {
+        throw new Error(`Gmail API error: ${res.status} ${text}`);
+      }
+
+      const delayMs = getRetryDelayMs(attempt, retryAfter);
+
+      console.warn("Retrying Gmail request after delay", {
+        attempt: attempt + 1,
+        maxRetries: MAX_RETRIES,
+        delayMs,
+        status: res.status,
+        url,
+      });
+
+      await sleep(delayMs);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : String(error);
+
+      lastError =
+        error instanceof Error ? error : new Error(message);
+
+      const isNetworkLikeError =
+        message.includes("fetch failed") ||
+        message.includes("network") ||
+        message.includes("timeout") ||
+        message.includes("ECONNRESET") ||
+        message.includes("ETIMEDOUT");
+
+      if (!isNetworkLikeError || attempt === MAX_RETRIES) {
+        throw lastError;
+      }
+
+      const delayMs = getRetryDelayMs(attempt, null);
+
+      console.warn("Retrying Gmail request after network error", {
+        attempt: attempt + 1,
+        maxRetries: MAX_RETRIES,
+        delayMs,
+        url,
+        error: message,
+      });
+
+      await sleep(delayMs);
+    }
   }
 
-  return res.json();
+  throw lastError ?? new Error("Unknown Gmail fetch failure");
 }
 
 export async function listMessagePage(
