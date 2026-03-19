@@ -6,6 +6,8 @@ type TopSender = {
   count: number;
   ids?: string[];
   unsubscribeAvailable?: boolean;
+  unsubscribeTarget?: string;
+  unsubscribeMethod?: "url" | "mailto" | null;
 };
 
 type SenderBucket =
@@ -22,8 +24,10 @@ type TopSendersViewProps = {
   deletingSender: string | null;
   archivingSender: string | null;
   plan: "free" | "pro";
+  unsubscribedSenders?: Record<string, boolean>;
   onDelete: (item: TopSender) => void;
   onArchive: (item: TopSender) => void;
+  onUnsubscribe: (item: TopSender) => void;
 };
 
 export default function TopSendersView({
@@ -34,8 +38,10 @@ export default function TopSendersView({
   deletingSender,
   archivingSender,
   plan,
+  unsubscribedSenders = {},
   onDelete,
   onArchive,
+  onUnsubscribe,
 }: TopSendersViewProps) {
   const orderedSections: SenderBucket[] = [
     "1000+ messages",
@@ -124,8 +130,10 @@ export default function TopSendersView({
                   archivingSender={archivingSender}
                   remainingWeeklyCleanup={remainingWeeklyCleanup}
                   plan={plan}
+                  unsubscribedSenders={unsubscribedSenders}
                   onDelete={onDelete}
                   onArchive={onArchive}
+                  onUnsubscribe={onUnsubscribe}
                 />
               </div>
             );

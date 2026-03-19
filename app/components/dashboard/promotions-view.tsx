@@ -9,6 +9,8 @@ type TopSender = {
   count: number;
   ids?: string[];
   unsubscribeAvailable?: boolean;
+  unsubscribeTarget?: string;
+  unsubscribeMethod?: "url" | "mailto" | null;
 };
 
 type PromotionsViewProps = {
@@ -21,8 +23,10 @@ type PromotionsViewProps = {
   deletingSender: string | null;
   archivingSender: string | null;
   plan: "free" | "pro";
+  unsubscribedSenders?: Record<string, boolean>;
   onDelete: (item: TopSender) => void;
   onArchive: (item: TopSender) => void;
+  onUnsubscribe: (item: TopSender) => void;
   onCleanPromotionsBulk: () => void;
 };
 
@@ -40,8 +44,10 @@ export default function PromotionsView({
   deletingSender,
   archivingSender,
   plan,
+  unsubscribedSenders = {},
   onDelete,
   onArchive,
+  onUnsubscribe,
   onCleanPromotionsBulk,
 }: PromotionsViewProps) {
   return (
@@ -114,13 +120,21 @@ export default function PromotionsView({
           }}
         >
           <div>Cleaning promotions...</div>
-          <div style={{ opacity: cleaningPromotionsStep === "checking" ? 1 : 0.55 }}>
+          <div
+            style={{ opacity: cleaningPromotionsStep === "checking" ? 1 : 0.55 }}
+          >
             1/3 Checking free cleanup quota
           </div>
-          <div style={{ opacity: cleaningPromotionsStep === "cleaning" ? 1 : 0.55 }}>
+          <div
+            style={{ opacity: cleaningPromotionsStep === "cleaning" ? 1 : 0.55 }}
+          >
             2/3 Cleaning emails in Gmail
           </div>
-          <div style={{ opacity: cleaningPromotionsStep === "refreshing" ? 1 : 0.55 }}>
+          <div
+            style={{
+              opacity: cleaningPromotionsStep === "refreshing" ? 1 : 0.55,
+            }}
+          >
             3/3 Refreshing dashboard results
           </div>
         </div>
@@ -152,7 +166,8 @@ export default function PromotionsView({
           <b>Promotions</b> inside the sample scan.
         </div>
         <div>
-          Free users can clean up to <b>{remainingWeeklyCleanup}</b> emails this week.
+          Free users can clean up to <b>{remainingWeeklyCleanup}</b> emails this
+          week.
         </div>
       </div>
 
@@ -175,8 +190,10 @@ export default function PromotionsView({
           archivingSender={archivingSender}
           remainingWeeklyCleanup={remainingWeeklyCleanup}
           plan={plan}
+          unsubscribedSenders={unsubscribedSenders}
           onDelete={onDelete}
           onArchive={onArchive}
+          onUnsubscribe={onUnsubscribe}
         />
       )}
     </SectionCard>

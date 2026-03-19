@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { runScan } from "@/lib/scan/scan-engine";
 import { getValidAccessToken } from "@/lib/gmail/token-manager";
 
-export type GetSendersResult = {
+export type GetFullScanResult = {
   scanned: number;
   topSenders: Array<{
     sender: string;
@@ -33,9 +33,11 @@ export type GetSendersResult = {
     shopping: string[];
   };
   fullInboxPromotionsCount: number | null;
+  mode: "full";
+  completed: boolean;
 };
 
-function emptyResult(): GetSendersResult {
+function emptyResult(): GetFullScanResult {
   return {
     scanned: 0,
     topSenders: [],
@@ -53,6 +55,8 @@ function emptyResult(): GetSendersResult {
       shopping: [],
     },
     fullInboxPromotionsCount: null,
+    mode: "full",
+    completed: false,
   };
 }
 
@@ -70,6 +74,8 @@ async function fetchExactLabelCount(
   });
 
   if (!res.ok) {
+    const text = await res.text();
+    console.error("Failed to fetch exact label count:", res.status, text);
     return 0;
   }
 
@@ -77,7 +83,7 @@ async function fetchExactLabelCount(
   return data.messagesTotal || 0;
 }
 
-export async function getSenders(): Promise<GetSendersResult> {
+export async function getFullScan(): Promise<GetFullScanResult> {
   const supabase = await createClient();
 
   const {
@@ -86,6 +92,7 @@ export async function getSenders(): Promise<GetSendersResult> {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
+    console.error("No authenticated user in getFullScan:", userError);
     return emptyResult();
   }
 
@@ -94,7 +101,7 @@ export async function getSenders(): Promise<GetSendersResult> {
   const scanResult = await runScan({
     userId: user.id,
     gmailAccessToken: accessToken,
-    mode: "sample",
+    mode: "full",
   });
 
   const fullInboxPromotionsCount = await fetchExactLabelCount(
@@ -109,5 +116,7 @@ export async function getSenders(): Promise<GetSendersResult> {
     smartViews: scanResult.smartViews,
     smartViewIds: scanResult.smartViewIds,
     fullInboxPromotionsCount,
+    mode: "full",
+    completed: scanResult.completed,
   };
 }

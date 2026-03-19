@@ -1,23 +1,31 @@
-export async function GET() {
-  const clientId = process.env.GOOGLE_CLIENT_ID!;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI!;
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
-  const scopes = [
-    "https://www.googleapis.com/auth/gmail.modify",
-    "https://www.googleapis.com/auth/userinfo.email",
-    "openid",
-  ];
+export async function GET(req: NextRequest) {
+  const origin = new URL(req.url).origin;
+  const supabase = await createClient();
 
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: "code",
-    access_type: "offline",
-    prompt: "consent",
-    scope: scopes.join(" "),
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${origin}/api/auth/google/callback`,
+      scopes: [
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "openid",
+      ].join(" "),
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+        include_granted_scopes: "true",
+      },
+    },
   });
 
-  const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  if (error || !data.url) {
+    console.error("Failed to start Google OAuth:", error);
+    return NextResponse.redirect(`${origin}/?error=google_oauth_start_failed`);
+  }
 
-  return Response.redirect(url);
+  return NextResponse.redirect(data.url);
 }

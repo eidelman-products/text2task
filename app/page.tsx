@@ -1,19 +1,10 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 export default function Home() {
-  const supabase = createClient();
+  function signInWithGoogle() {
+    window.location.href = "/api/auth/login";
+  }
 
-async function signInWithGoogle() {
-  await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-  redirectTo: `${window.location.origin}/auth/callback`,
-  scopes: "https://www.googleapis.com/auth/gmail.modify",
-},
-  });
-
-}
   return (
     <main
       style={{
@@ -47,21 +38,23 @@ async function signInWithGoogle() {
         >
           Gmail cleanup made simple
         </div>
-<button
-  onClick={signInWithGoogle}
-  style={{
-    marginTop: "40px",
-    padding: "14px 28px",
-    fontSize: "16px",
-    borderRadius: "8px",
-    border: "none",
-    background: "#111",
-    color: "white",
-    cursor: "pointer"
-  }}
->
-  Continue with Google
-</button>
+
+        <button
+          onClick={signInWithGoogle}
+          style={{
+            marginTop: "40px",
+            padding: "14px 28px",
+            fontSize: "16px",
+            borderRadius: "8px",
+            border: "none",
+            background: "#111",
+            color: "white",
+            cursor: "pointer",
+          }}
+        >
+          Continue with Google
+        </button>
+
         <h1
           style={{
             fontSize: "64px",
@@ -98,8 +91,6 @@ async function signInWithGoogle() {
             marginBottom: "42px",
           }}
         >
-          
-
           <button
             style={{
               padding: "18px 34px",

@@ -5,13 +5,6 @@ export async function POST() {
   try {
     const result = await getSenders();
 
-    if (!result.scanned) {
-      return NextResponse.json(
-        { error: "Not authenticated or no messages found" },
-        { status: 401 }
-      );
-    }
-
     return NextResponse.json(
       {
         scanned: result.scanned,

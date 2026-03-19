@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import ScanBanner from "./dashboard/scan-banner";
 import DashboardSidebar from "./dashboard/dashboard-sidebar";
 import EmptyStateCard from "./dashboard/empty-state-card";
-import NoScanState from "./dashboard/no-scan-state";
 import PrivacyTrust from "./dashboard/privacy-trust";
 import SmartViewPage from "./dashboard/smart-view-page";
 import DashboardOverview from "./dashboard/dashboard-overview";
@@ -12,6 +11,8 @@ import ScanResultsView from "./dashboard/scan-results-view";
 import TopSendersView from "./dashboard/top-senders-view";
 import PromotionsView from "./dashboard/promotions-view";
 import DashboardHeader from "./dashboard/dashboard-header";
+import SampleScanCta from "./dashboard/sample-scan-cta";
+import { runUnsubscribeFlow } from "./dashboard/unsubscribe-actions";
 import {
   FREE_WEEKLY_LIMIT,
   calculateHealthScore,
@@ -21,19 +22,49 @@ import {
 } from "./dashboard/dashboard-utils";
 import type {
   ActiveNav,
-  ScanResult,
   SenderBucket,
   SmartViewIds,
   SmartViews,
-  TopSender,
 } from "./dashboard/dashboard-types";
 
 type DashboardClientProps = {
   email: string;
 };
 
+type DashboardTopSender = {
+  sender: string;
+  count: number;
+  ids?: string[];
+  unsubscribeAvailable?: boolean;
+  unsubscribeTarget?: string;
+  unsubscribeMethod?: "url" | "mailto" | null;
+};
+
+type DashboardScanResult = {
+  mode?: "sample" | "full";
+  scanned: number;
+  topSenders: DashboardTopSender[];
+  promotionsSenders: DashboardTopSender[];
+  promotionsFound: number;
+  promotionsFoundInSampleScan: number;
+  fullInboxPromotionsCount: number | null;
+  senderGroups: number;
+  largestSenderCount: number;
+  healthScore: number;
+  smartViews: SmartViews;
+  smartViewIds: SmartViewIds;
+};
+
+type ActiveScanJob = {
+  scanId: string;
+  scanType: "sample" | "full";
+  status: "queued" | "running" | "completed" | "failed" | "cancelled";
+  progress: number;
+  currentStep: string;
+} | null;
+
 export default function DashboardClient({ email }: DashboardClientProps) {
-  const [plan] = useState<"free" | "pro">("free");
+  const [plan] = useState<"free" | "pro">("pro");
   const [activeNav, setActiveNav] = useState<ActiveNav>("dashboard");
 
   const [loadingScan, setLoadingScan] = useState(false);
@@ -47,9 +78,13 @@ export default function DashboardClient({ email }: DashboardClientProps) {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [unsubscribedSenders, setUnsubscribedSenders] = useState<
+    Record<string, boolean>
+  >({});
 
   const [weeklyCleanupUsed, setWeeklyCleanupUsed] = useState(0);
-  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanResult, setScanResult] = useState<DashboardScanResult | null>(null);
+  const [activeScanJob, setActiveScanJob] = useState<ActiveScanJob>(null);
 
   async function loadQuotaStatus() {
     try {
@@ -88,7 +123,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
   }, [scanResult]);
 
   const groupedTopSenders = useMemo(() => {
-    const buckets: Record<SenderBucket, TopSender[]> = {
+    const buckets: Record<SenderBucket, DashboardTopSender[]> = {
       "1000+ messages": [],
       "500–999 messages": [],
       "100–499 messages": [],
@@ -108,13 +143,13 @@ export default function DashboardClient({ email }: DashboardClientProps) {
     return buckets;
   }, [scanResult]);
 
-  function getSmartViewRows(view: keyof SmartViewIds): TopSender[] {
+  function getSmartViewRows(view: keyof SmartViewIds): DashboardTopSender[] {
     if (!scanResult) return [];
 
     const ids = new Set(scanResult.smartViewIds[view] || []);
     if (!ids.size) return [];
 
-    const rows: TopSender[] = [];
+    const rows: DashboardTopSender[] = [];
 
     for (const sender of scanResult.topSenders) {
       const senderIds = Array.isArray(sender.ids) ? sender.ids : [];
@@ -127,6 +162,8 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         count: matchedIds.length,
         ids: matchedIds,
         unsubscribeAvailable: sender.unsubscribeAvailable,
+        unsubscribeTarget: sender.unsubscribeTarget,
+        unsubscribeMethod: sender.unsubscribeMethod ?? null,
       });
     }
 
@@ -170,113 +207,52 @@ export default function DashboardClient({ email }: DashboardClientProps) {
       setError("");
       setSuccess("");
 
-      const res = await fetch("/api/gmail/scan", {
-        method: "GET",
+      const scanType = plan === "pro" ? "full" : "sample";
+
+      const res = await fetch("/api/scans/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         cache: "no-store",
+        body: JSON.stringify({ scanType }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Sample Scan failed");
+        setError(data.error || "Failed to start scan");
         return;
       }
 
-      const topSenders: TopSender[] = Array.isArray(data.topSenders)
-        ? data.topSenders.map((item: any) => ({
-            sender: String(item.sender || "Unknown Sender"),
-            count: Number(item.count || 0),
-            ids: Array.isArray(item.ids) ? item.ids : [],
-            unsubscribeAvailable: Boolean(item.unsubscribeAvailable),
-          }))
-        : [];
-
-      const promotionsSenders: TopSender[] = Array.isArray(data.promotionsSenders)
-        ? data.promotionsSenders.map((item: any) => ({
-            sender: String(item.sender || "Unknown Sender"),
-            count: Number(item.count || 0),
-            ids: Array.isArray(item.ids) ? item.ids : [],
-            unsubscribeAvailable: Boolean(item.unsubscribeAvailable),
-          }))
-        : [];
-
-      const scanned = Number(data.scanned || 0);
-      const senderGroups = topSenders.length;
-      const largestSenderCount = topSenders.length
-        ? Math.max(...topSenders.map((s) => s.count))
-        : 0;
-
-      const promotionsFoundInSampleScan = promotionsSenders.reduce(
-        (sum: number, row: TopSender) => sum + row.count,
-        0
-      );
-
-      const fullInboxPromotionsCount =
-        typeof data.fullInboxPromotionsCount === "number"
-          ? data.fullInboxPromotionsCount
-          : null;
-
-      const smartViewIds: SmartViewIds = {
-        unread: Array.isArray(data.smartViewIds?.unread)
-          ? data.smartViewIds.unread
-          : [],
-        social: Array.isArray(data.smartViewIds?.social)
-          ? data.smartViewIds.social
-          : [],
-        jobSearch: Array.isArray(data.smartViewIds?.jobSearch)
-          ? data.smartViewIds.jobSearch
-          : [],
-        shopping: Array.isArray(data.smartViewIds?.shopping)
-          ? data.smartViewIds.shopping
-          : [],
-      };
-
-      const smartViews: SmartViews = {
-        unread:
-          typeof data.smartViews?.unread === "number"
-            ? data.smartViews.unread
-            : smartViewIds.unread.length,
-        social:
-          typeof data.smartViews?.social === "number"
-            ? data.smartViews.social
-            : smartViewIds.social.length,
-        jobSearch:
-          typeof data.smartViews?.jobSearch === "number"
-            ? data.smartViews.jobSearch
-            : smartViewIds.jobSearch.length,
-        shopping:
-          typeof data.smartViews?.shopping === "number"
-            ? data.smartViews.shopping
-            : smartViewIds.shopping.length,
-      };
-
-      const healthScore = calculateHealthScore(
-        scanned,
-        senderGroups,
-        promotionsFoundInSampleScan
-      );
-
-      setScanResult({
-        scanned,
-        topSenders,
-        promotionsSenders,
-        promotionsFound: promotionsFoundInSampleScan,
-        promotionsFoundInSampleScan,
-        fullInboxPromotionsCount,
-        senderGroups,
-        largestSenderCount,
-        healthScore,
-        smartViews,
-        smartViewIds,
+      setActiveScanJob({
+        scanId: String(data.scanId),
+        scanType: data.scanType === "full" ? "full" : "sample",
+        status:
+          data.status === "running" ||
+          data.status === "completed" ||
+          data.status === "failed" ||
+          data.status === "cancelled"
+            ? data.status
+            : "queued",
+        progress: typeof data.progress === "number" ? data.progress : 0,
+        currentStep:
+          typeof data.currentStep === "string"
+            ? data.currentStep
+            : "Starting scan...",
       });
 
-      setSuccess(`Sample Scan completed. Analyzed ${scanned} emails.`);
+      setSuccess(
+        scanType === "full"
+          ? "Full Scan started successfully."
+          : "Sample Scan started successfully."
+      );
 
       if (!options?.preserveActiveNav) {
         setActiveNav("dashboard");
       }
     } catch (err: any) {
-      setError(err.message || "Sample Scan failed");
+      setError(err.message || "Failed to start scan");
     } finally {
       setLoadingScan(false);
     }
@@ -284,7 +260,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
 
   async function handleCleanPromotionsBulk() {
     if (!scanResult) {
-      setError("Run Sample Scan first.");
+      setError("Run a scan first.");
       return;
     }
 
@@ -345,7 +321,6 @@ export default function DashboardClient({ email }: DashboardClientProps) {
       setSuccess(data.message || `Moved ${cleaned} Promotions emails to Trash.`);
 
       setCleaningPromotionsStep("refreshing");
-      await runSampleScan({ preserveActiveNav: true });
       setActiveNav("promotions");
     } catch (err: any) {
       setError(err.message || "Failed to clean Promotions");
@@ -355,7 +330,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
     }
   }
 
-  async function handleDeleteBySender(item: TopSender) {
+  async function handleDeleteBySender(item: DashboardTopSender) {
     if (plan === "free" && item.count > remainingWeeklyCleanup) {
       setError(
         `Free plan can clean up to ${remainingWeeklyCleanup} more emails this week. Upgrade to Pro for larger cleanup.`
@@ -391,16 +366,16 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         return;
       }
 
-      const deleted = Number(data.deleted || item.count);
+      const movedToTrash = Number(
+        data.movedToTrash ?? data.deleted ?? item.count
+      );
       const updatedUsed =
         typeof data.weekly_cleanup_used === "number"
           ? data.weekly_cleanup_used
-          : Math.min(FREE_WEEKLY_LIMIT, weeklyCleanupUsed + deleted);
+          : Math.min(FREE_WEEKLY_LIMIT, weeklyCleanupUsed + movedToTrash);
 
       setWeeklyCleanupUsed(updatedUsed);
-      setSuccess(`Moved ${deleted} emails from ${item.sender} to Trash.`);
-
-      await runSampleScan({ preserveActiveNav: true });
+      setSuccess(`Moved ${movedToTrash} emails from ${item.sender} to Trash.`);
     } catch (err: any) {
       setError(err.message || "Failed to move emails to Trash");
     } finally {
@@ -408,7 +383,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
     }
   }
 
-  async function handleArchiveBySender(item: TopSender) {
+  async function handleArchiveBySender(item: DashboardTopSender) {
     if (plan === "free" && item.count > remainingWeeklyCleanup) {
       setError(
         `Free plan can clean up to ${remainingWeeklyCleanup} more emails this week. Upgrade to Pro for larger cleanup.`
@@ -452,8 +427,6 @@ export default function DashboardClient({ email }: DashboardClientProps) {
 
       setWeeklyCleanupUsed(updatedUsed);
       setSuccess(`Archived ${archived} emails from ${item.sender}.`);
-
-      await runSampleScan({ preserveActiveNav: true });
     } catch (err: any) {
       setError(err.message || "Failed to archive emails");
     } finally {
@@ -461,11 +434,24 @@ export default function DashboardClient({ email }: DashboardClientProps) {
     }
   }
 
+  function handleUnsubscribe(item: DashboardTopSender) {
+    setError("");
+    setSuccess("");
+
+    runUnsubscribeFlow(item, setError, setSuccess, () => {
+      setUnsubscribedSenders((prev) => ({
+        ...prev,
+        [item.sender]: true,
+      }));
+    });
+  }
+
   function renderNoScanState() {
     return (
-      <NoScanState
+      <SampleScanCta
         loadingScan={loadingScan}
         onRunSampleScan={() => runSampleScan()}
+        plan={plan}
       />
     );
   }
@@ -517,7 +503,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
     if (!scanResult) {
       return renderEmptyStateCard(
         "Top Senders",
-        "Review sender groups by size after running a Sample Scan."
+        "Review sender groups by size after running a scan."
       );
     }
 
@@ -530,8 +516,10 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         deletingSender={deletingSender}
         archivingSender={archivingSender}
         plan={plan}
+        unsubscribedSenders={unsubscribedSenders}
         onDelete={handleDeleteBySender}
         onArchive={handleArchiveBySender}
+        onUnsubscribe={handleUnsubscribe}
       />
     );
   }
@@ -555,8 +543,10 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         deletingSender={deletingSender}
         archivingSender={archivingSender}
         plan={plan}
+        unsubscribedSenders={unsubscribedSenders}
         onDelete={handleDeleteBySender}
         onArchive={handleArchiveBySender}
+        onUnsubscribe={handleUnsubscribe}
         onCleanPromotionsBulk={handleCleanPromotionsBulk}
       />
     );
@@ -588,8 +578,10 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         archivingSender={archivingSender}
         remainingWeeklyCleanup={remainingWeeklyCleanup}
         plan={plan}
+        unsubscribedSenders={unsubscribedSenders}
         onDelete={handleDeleteBySender}
         onArchive={handleArchiveBySender}
+        onUnsubscribe={handleUnsubscribe}
       />
     );
   }
@@ -611,7 +603,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
           "Unread",
           scanResult?.smartViews.unread || 0,
           "unread",
-          "Unread emails found in your current inbox and matched inside the latest sample scan."
+          "Unread emails found in your current inbox and matched inside the latest scan."
         );
       case "social-notifications":
         return renderSmartViewPage(
@@ -625,14 +617,14 @@ export default function DashboardClient({ email }: DashboardClientProps) {
           "Job Search",
           scanResult?.smartViews.jobSearch || 0,
           "jobSearch",
-          "Job-related emails matched inside your latest sample scan."
+          "Job-related emails matched inside your latest scan."
         );
       case "online-shopping":
         return renderSmartViewPage(
           "Online Shopping",
           scanResult?.smartViews.shopping || 0,
           "shopping",
-          "Shopping-related emails matched inside your latest sample scan."
+          "Shopping-related emails matched inside your latest scan."
         );
       case "privacy-trust":
         return renderPrivacyTrust();
@@ -676,7 +668,14 @@ export default function DashboardClient({ email }: DashboardClientProps) {
           isDisconnecting={isDisconnecting}
         />
 
-        <ScanBanner error={error} success={success} />
+        <ScanBanner
+          error={error}
+          success={
+            activeScanJob
+              ? `${success} ${activeScanJob.currentStep} (${activeScanJob.progress}%)`
+              : success
+          }
+        />
 
         {renderContent()}
       </div>
