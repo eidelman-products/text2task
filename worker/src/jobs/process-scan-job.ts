@@ -1,8 +1,6 @@
 import { supabaseAdmin } from "../supabase";
 import { logger } from "../logger";
 import { getValidAccessToken } from "../lib/get-valid-access-token";
-
-// נייבא את runScan מהאפליקציה (בהמשך נעתיק אותו ל-worker)
 import { runScan } from "../lib/scan/scan-engine";
 
 export type ScanJobPayload = {
@@ -14,7 +12,6 @@ export async function processScanJob(payload: ScanJobPayload) {
 
   logger.info("Starting scan job", { scanJobId });
 
-  // 1. להביא את ה-job
   const { data: job, error: fetchError } = await supabaseAdmin
     .from("scan_jobs")
     .select("*")
@@ -41,8 +38,7 @@ export async function processScanJob(payload: ScanJobPayload) {
 
   const startedAt = new Date().toISOString();
 
-  // 2. עדכון ל-running
-  await supabaseAdmin
+  const { error: runningError } = await supabaseAdmin
     .from("scan_jobs")
     .update({
       status: "running",
@@ -50,52 +46,99 @@ export async function processScanJob(payload: ScanJobPayload) {
       progress_percent: 5,
       started_at: job.started_at ?? startedAt,
       updated_at: startedAt,
+      error_message: null,
+      finished_at: null,
     })
     .eq("id", scanJobId);
 
+  if (runningError) {
+    throw new Error(`Failed updating job to running: ${runningError.message}`);
+  }
+
   try {
-    // 3. קבלת access token
     const accessToken = await getValidAccessToken(userId);
 
-    await supabaseAdmin
+    const { error: scanStartError } = await supabaseAdmin
       .from("scan_jobs")
       .update({
         current_step: "Scanning Gmail messages",
         progress_percent: 15,
+        updated_at: new Date().toISOString(),
       })
       .eq("id", scanJobId);
 
-    // 4. הרצת scan אמיתי 🔥
+    if (scanStartError) {
+      throw new Error(`Failed updating scan start state: ${scanStartError.message}`);
+    }
+
     const scanResult = await runScan({
       userId,
       gmailAccessToken: accessToken,
       mode: "full",
     });
 
-    await supabaseAdmin
+    const { error: savingStateError } = await supabaseAdmin
       .from("scan_jobs")
       .update({
         current_step: "Saving results",
         progress_percent: 85,
+        updated_at: new Date().toISOString(),
       })
       .eq("id", scanJobId);
 
-    // 5. שמירת תוצאה
-    await supabaseAdmin.from("scan_results").upsert({
-      scan_id: scanJobId,
-      user_id: userId,
+    if (savingStateError) {
+      throw new Error(`Failed updating saving state: ${savingStateError.message}`);
+    }
+
+    const inboxHealthSummary = {
       mode: "full",
       scanned: scanResult.scanned,
-      top_senders: scanResult.topSenders,
-      promotions_senders: scanResult.promotionsSenders,
-      smart_views: scanResult.smartViews,
-      smart_view_ids: scanResult.smartViewIds,
-      full_inbox_promotions_count: null,
       completed: scanResult.completed,
-    });
+    };
 
-    // 6. סיום
-    await supabaseAdmin
+    const promotionsSummary = {
+      senders: scanResult.promotionsSenders,
+      count: scanResult.promotionsSenders.length,
+    };
+
+    const smartViewsSummary = {
+      counts: scanResult.smartViews,
+      ids: scanResult.smartViewIds,
+    };
+
+    const rawSummaryJson = {
+      scanned: scanResult.scanned,
+      completed: scanResult.completed,
+      topSenders: scanResult.topSenders,
+      promotionsSenders: scanResult.promotionsSenders,
+      smartViews: scanResult.smartViews,
+      smartViewIds: scanResult.smartViewIds,
+      mode: "full",
+    };
+
+    const { error: resultsError } = await supabaseAdmin
+      .from("scan_results")
+      .upsert(
+        {
+          job_id: scanJobId,
+          user_id: userId,
+          top_senders: scanResult.topSenders,
+          promotions_summary: promotionsSummary,
+          smart_views_summary: smartViewsSummary,
+          inbox_health_summary: inboxHealthSummary,
+          raw_summary_json: rawSummaryJson,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "job_id",
+        }
+      );
+
+    if (resultsError) {
+      throw new Error(`Failed saving scan_results: ${resultsError.message}`);
+    }
+
+    const { error: completedError } = await supabaseAdmin
       .from("scan_jobs")
       .update({
         status: "completed",
@@ -103,8 +146,13 @@ export async function processScanJob(payload: ScanJobPayload) {
         progress_percent: 100,
         finished_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        error_message: null,
       })
       .eq("id", scanJobId);
+
+    if (completedError) {
+      throw new Error(`Failed updating job to completed: ${completedError.message}`);
+    }
 
     logger.info("Completed scan job", { scanJobId });
   } catch (error: any) {
@@ -120,6 +168,7 @@ export async function processScanJob(payload: ScanJobPayload) {
         current_step: "Scan failed",
         error_message: error.message,
         finished_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .eq("id", scanJobId);
 
