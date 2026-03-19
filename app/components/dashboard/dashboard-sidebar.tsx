@@ -1,47 +1,4 @@
-type ActiveNav =
-  | "dashboard"
-  | "scan-results"
-  | "top-senders"
-  | "promotions"
-  | "unread"
-  | "social-notifications"
-  | "job-search"
-  | "online-shopping"
-  | "privacy-trust";
-
-type ScanResult = {
-  scanned: number;
-  topSenders: {
-    sender: string;
-    count: number;
-    ids?: string[];
-    unsubscribeAvailable?: boolean;
-  }[];
-  promotionsSenders: {
-    sender: string;
-    count: number;
-    ids?: string[];
-    unsubscribeAvailable?: boolean;
-  }[];
-  promotionsFound: number;
-  promotionsFoundInSampleScan: number;
-  fullInboxPromotionsCount: number | null;
-  senderGroups: number;
-  largestSenderCount: number;
-  healthScore: number;
-  smartViews: {
-    unread: number;
-    social: number;
-    jobSearch: number;
-    shopping: number;
-  };
-  smartViewIds: {
-    unread: string[];
-    social: string[];
-    jobSearch: string[];
-    shopping: string[];
-  };
-};
+import type { ActiveNav, ScanResult } from "./dashboard-types";
 
 type DashboardSidebarProps = {
   email: string;

@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
     const { data: existingJobs, error: existingJobsError } = await supabase
       .from("scan_jobs")
-      .select("id, status, scan_type")
+      .select("id, status, scan_type, current_step, progress_percent")
       .eq("user_id", user.id)
       .in("status", ["queued", "running"]);
 
@@ -65,6 +65,8 @@ export async function POST(request: Request) {
           scanId: existingJob.id,
           status: existingJob.status,
           scanType: existingJob.scan_type,
+          progress: existingJob.progress_percent ?? 0,
+          currentStep: existingJob.current_step ?? "",
         },
         { status: 400 }
       );
@@ -85,7 +87,11 @@ export async function POST(request: Request) {
           progress_percent: 0,
           current_step: initialStep,
           processed_messages: 0,
-          total_messages_estimate: 0,
+          total_messages_estimate: null,
+          next_page_token: null,
+          error_message: null,
+          started_at: null,
+          finished_at: null,
           result_snapshot: {},
         },
       ])
@@ -116,8 +122,8 @@ export async function POST(request: Request) {
       scanId: newJob.id,
       scanType: newJob.scan_type,
       status: newJob.status,
-      progress: newJob.progress_percent,
-      currentStep: newJob.current_step,
+      progress: newJob.progress_percent ?? 0,
+      currentStep: newJob.current_step ?? "",
     });
   } catch (err: any) {
     return NextResponse.json(

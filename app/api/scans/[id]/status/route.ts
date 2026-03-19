@@ -44,11 +44,16 @@ export async function GET(
     }
 
     return NextResponse.json({
+      scanId: job.id,
+      scanType: job.scan_type,
       status: job.status,
-      progress: job.progress_percent,
-      currentStep: job.current_step,
-      processedMessages: job.processed_messages,
-      totalMessages: job.total_messages_estimate,
+      progress: job.progress_percent ?? 0,
+      currentStep: job.current_step ?? "",
+      processedMessages: job.processed_messages ?? 0,
+      nextPageToken: job.next_page_token ?? null,
+      startedAt: job.started_at ?? null,
+      finishedAt: job.finished_at ?? null,
+      errorMessage: job.error_message ?? null,
     });
   } catch (err: any) {
     return NextResponse.json(

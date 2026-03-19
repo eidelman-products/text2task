@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ScanBanner from "./dashboard/scan-banner";
 import DashboardSidebar from "./dashboard/dashboard-sidebar";
 import EmptyStateCard from "./dashboard/empty-state-card";
@@ -15,7 +15,6 @@ import SampleScanCta from "./dashboard/sample-scan-cta";
 import { runUnsubscribeFlow } from "./dashboard/unsubscribe-actions";
 import {
   FREE_WEEKLY_LIMIT,
-  calculateHealthScore,
   getHealthTone,
   getSenderBucketLabel,
   getToneStyles,
@@ -43,6 +42,7 @@ type DashboardTopSender = {
 type DashboardScanResult = {
   mode?: "sample" | "full";
   scanned: number;
+  totalInboxCount?: number | null;
   topSenders: DashboardTopSender[];
   promotionsSenders: DashboardTopSender[];
   promotionsFound: number;
@@ -53,6 +53,7 @@ type DashboardScanResult = {
   healthScore: number;
   smartViews: SmartViews;
   smartViewIds: SmartViewIds;
+  completed?: boolean;
 };
 
 type ActiveScanJob = {
@@ -61,7 +62,26 @@ type ActiveScanJob = {
   status: "queued" | "running" | "completed" | "failed" | "cancelled";
   progress: number;
   currentStep: string;
+  processedMessages?: number;
+  nextPageToken?: string | null;
+  errorMessage?: string | null;
 } | null;
+
+type ScanStatusResponse = {
+  scanId: string;
+  scanType: "sample" | "full";
+  status: "queued" | "running" | "completed" | "failed" | "cancelled";
+  progress: number;
+  currentStep: string;
+  processedMessages?: number;
+  nextPageToken?: string | null;
+  errorMessage?: string | null;
+};
+
+type ScanResultsResponse = {
+  exists: boolean;
+  result: DashboardScanResult | null;
+};
 
 export default function DashboardClient({ email }: DashboardClientProps) {
   const [plan] = useState<"free" | "pro">("pro");
@@ -85,6 +105,8 @@ export default function DashboardClient({ email }: DashboardClientProps) {
   const [weeklyCleanupUsed, setWeeklyCleanupUsed] = useState(0);
   const [scanResult, setScanResult] = useState<DashboardScanResult | null>(null);
   const [activeScanJob, setActiveScanJob] = useState<ActiveScanJob>(null);
+
+  const pollingRef = useRef<number | null>(null);
 
   async function loadQuotaStatus() {
     try {
@@ -112,6 +134,14 @@ export default function DashboardClient({ email }: DashboardClientProps) {
 
   useEffect(() => {
     loadQuotaStatus();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        window.clearInterval(pollingRef.current);
+      }
+    };
   }, []);
 
   const healthTone = getHealthTone(scanResult?.healthScore ?? 0);
@@ -142,6 +172,84 @@ export default function DashboardClient({ email }: DashboardClientProps) {
 
     return buckets;
   }, [scanResult]);
+
+  function stopPolling() {
+    if (pollingRef.current) {
+      window.clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  }
+
+  async function loadScanResults(scanId: string) {
+    try {
+      const res = await fetch(`/api/scans/${scanId}/results`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data: ScanResultsResponse = await res.json();
+
+      if (!res.ok) return;
+      if (!data.exists || !data.result) return;
+
+      setScanResult(data.result);
+    } catch (err) {
+      console.error("Failed to load scan results", err);
+    }
+  }
+
+  async function loadScanStatus(scanId: string) {
+    try {
+      const res = await fetch(`/api/scans/${scanId}/status`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data: ScanStatusResponse = await res.json();
+
+      if (!res.ok) {
+        if ("error" in (data as any)) {
+          setError((data as any).error || "Failed to load scan status");
+        }
+        return;
+      }
+
+      setActiveScanJob({
+        scanId: data.scanId,
+        scanType: data.scanType,
+        status: data.status,
+        progress: data.progress ?? 0,
+        currentStep: data.currentStep ?? "",
+        processedMessages: data.processedMessages ?? 0,
+        nextPageToken: data.nextPageToken ?? null,
+        errorMessage: data.errorMessage ?? null,
+      });
+
+      await loadScanResults(scanId);
+
+      if (data.status === "completed") {
+        stopPolling();
+        setSuccess("Full Scan completed successfully.");
+      }
+
+      if (data.status === "failed" || data.status === "cancelled") {
+        stopPolling();
+        setError(data.errorMessage || `Scan ${data.status}.`);
+      }
+    } catch (err) {
+      console.error("Failed to load scan status", err);
+    }
+  }
+
+  function startPolling(scanId: string) {
+    stopPolling();
+
+    void loadScanStatus(scanId);
+
+    pollingRef.current = window.setInterval(() => {
+      void loadScanStatus(scanId);
+    }, 2500);
+  }
 
   function getSmartViewRows(view: keyof SmartViewIds): DashboardTopSender[] {
     if (!scanResult) return [];
@@ -181,6 +289,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
       setIsDisconnecting(true);
       setError("");
       setSuccess("");
+      stopPolling();
 
       const res = await fetch("/api/disconnect", {
         method: "POST",
@@ -225,8 +334,10 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         return;
       }
 
+      const newScanId = String(data.scanId);
+
       setActiveScanJob({
-        scanId: String(data.scanId),
+        scanId: newScanId,
         scanType: data.scanType === "full" ? "full" : "sample",
         status:
           data.status === "running" ||
@@ -240,6 +351,9 @@ export default function DashboardClient({ email }: DashboardClientProps) {
           typeof data.currentStep === "string"
             ? data.currentStep
             : "Starting scan...",
+        processedMessages: 0,
+        nextPageToken: null,
+        errorMessage: null,
       });
 
       setSuccess(
@@ -251,6 +365,8 @@ export default function DashboardClient({ email }: DashboardClientProps) {
       if (!options?.preserveActiveNav) {
         setActiveNav("dashboard");
       }
+
+      startPolling(newScanId);
     } catch (err: any) {
       setError(err.message || "Failed to start scan");
     } finally {

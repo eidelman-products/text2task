@@ -3,6 +3,8 @@ export type TopSender = {
   count: number;
   ids?: string[];
   unsubscribeAvailable?: boolean;
+  unsubscribeTarget?: string;
+  unsubscribeMethod?: "url" | "mailto" | null;
 };
 
 export type SmartViews = {
@@ -31,7 +33,9 @@ export type ActiveNav =
   | "privacy-trust";
 
 export type ScanResult = {
+  mode?: "sample" | "full";
   scanned: number;
+  totalInboxCount?: number | null;
   topSenders: TopSender[];
   promotionsSenders: TopSender[];
   promotionsFound: number;
@@ -42,6 +46,7 @@ export type ScanResult = {
   healthScore: number;
   smartViews: SmartViews;
   smartViewIds: SmartViewIds;
+  completed?: boolean;
 };
 
 export type SenderBucket =
