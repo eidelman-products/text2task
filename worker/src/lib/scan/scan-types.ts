@@ -80,13 +80,17 @@ export type RunScanOptions = {
   gmailAccessToken: string;
   mode: ScanMode;
   sampleLimit?: number;
+  maxEmails?: number | null;
   maxPages?: number;
   pageToken?: string | null;
   pageSize?: number;
   metadataConcurrency?: number;
   resumeScanId?: string | null;
   onProgress?: (progress: ScanProgress) => Promise<void> | void;
-  onPartialResult?: (result: ScanResult, progress: ScanProgress) => Promise<void> | void;
+  onPartialResult?: (
+    result: ScanResult,
+    progress: ScanProgress
+  ) => Promise<void> | void;
 };
 
 export type GmailMessageHeader = {

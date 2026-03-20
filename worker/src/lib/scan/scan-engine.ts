@@ -23,16 +23,15 @@ function calculateProgress(params: {
   scannedCount: number;
   estimatedTotal: number | null;
   mode: "sample" | "full";
-  sampleLimit: number;
+  effectiveLimit: number | null;
   completed: boolean;
 }): number {
   if (params.completed) {
     return 100;
   }
 
-  if (params.mode === "sample") {
-    const denominator = Math.max(1, params.sampleLimit);
-    return clampPercent((params.scannedCount / denominator) * 100);
+  if (params.effectiveLimit && params.effectiveLimit > 0) {
+    return clampPercent((params.scannedCount / params.effectiveLimit) * 100);
   }
 
   if (params.estimatedTotal && params.estimatedTotal > 0) {
@@ -47,6 +46,7 @@ export async function runScan({
   gmailAccessToken,
   mode,
   sampleLimit = SAMPLE_SCAN_LIMIT,
+  maxEmails = null,
   maxPages,
   pageToken = null,
   pageSize,
@@ -68,7 +68,12 @@ export async function runScan({
       ? DEFAULT_SAMPLE_SCAN_PAGE_SIZE
       : DEFAULT_FULL_SCAN_PAGE_SIZE);
 
-  const limit = mode === "sample" ? sampleLimit : Number.POSITIVE_INFINITY;
+  const effectiveLimit =
+    typeof maxEmails === "number"
+      ? maxEmails
+      : mode === "sample"
+      ? sampleLimit
+      : null;
 
   const aggregate = createScanAggregateState({
     mode,
@@ -78,30 +83,44 @@ export async function runScan({
   let pageCount = 0;
   let completed = false;
 
-  while (aggregate.processedMessages < limit) {
+  while (true) {
     if (typeof maxPages === "number" && pageCount >= maxPages) {
       break;
     }
 
+    if (
+      typeof effectiveLimit === "number" &&
+      aggregate.processedMessages >= effectiveLimit
+    ) {
+      completed = true;
+      nextPageToken = null;
+      break;
+    }
+
     const remaining =
-      mode === "sample"
-        ? Math.max(0, sampleLimit - aggregate.processedMessages)
+      typeof effectiveLimit === "number"
+        ? Math.max(0, effectiveLimit - aggregate.processedMessages)
         : effectivePageSize;
 
-    if (mode === "sample" && remaining === 0) {
+    if (typeof effectiveLimit === "number" && remaining === 0) {
       completed = true;
+      nextPageToken = null;
       break;
     }
 
     const currentPageSize =
-      mode === "sample"
+      typeof effectiveLimit === "number"
         ? Math.min(effectivePageSize, remaining)
         : effectivePageSize;
 
-    const page = await fetchMessagesPageWithMetadata(gmailAccessToken, nextPageToken, {
-      maxResults: currentPageSize,
-      metadataConcurrency,
-    });
+    const page = await fetchMessagesPageWithMetadata(
+      gmailAccessToken,
+      nextPageToken,
+      {
+        maxResults: currentPageSize,
+        metadataConcurrency,
+      }
+    );
 
     setAggregateTotalInboxCount(aggregate, page.resultSizeEstimate);
 
@@ -116,7 +135,10 @@ export async function runScan({
     pageCount += 1;
     nextPageToken = page.nextPageToken;
 
-    if (mode === "sample" && aggregate.processedMessages >= sampleLimit) {
+    if (
+      typeof effectiveLimit === "number" &&
+      aggregate.processedMessages >= effectiveLimit
+    ) {
       completed = true;
       nextPageToken = null;
     } else if (!nextPageToken) {
@@ -125,12 +147,15 @@ export async function runScan({
 
     const progress: ScanProgress = {
       scannedCount: aggregate.processedMessages,
-      estimatedTotal: aggregate.totalInboxCount,
+      estimatedTotal:
+        typeof effectiveLimit === "number"
+          ? effectiveLimit
+          : aggregate.totalInboxCount,
       progressPercent: calculateProgress({
         scannedCount: aggregate.processedMessages,
         estimatedTotal: aggregate.totalInboxCount,
         mode,
-        sampleLimit,
+        effectiveLimit,
         completed,
       }),
       nextPageToken,

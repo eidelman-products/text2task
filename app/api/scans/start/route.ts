@@ -72,10 +72,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const maxEmails = scanType === "sample" ? 1000 : null;
+
     const initialStep =
       scanType === "full"
-        ? "Starting full scan..."
-        : "Starting sample scan...";
+        ? "Starting full inbox scan..."
+        : "Starting free scan (up to 1,000 emails)...";
 
     const { data: newJob, error: insertError } = await supabase
       .from("scan_jobs")
@@ -87,12 +89,15 @@ export async function POST(request: Request) {
           progress_percent: 0,
           current_step: initialStep,
           processed_messages: 0,
-          total_messages_estimate: null,
+          total_messages_estimate: maxEmails,
           next_page_token: null,
           error_message: null,
           started_at: null,
           finished_at: null,
-          result_snapshot: {},
+          result_snapshot: {
+            scanMode: scanType,
+            maxEmails,
+          },
         },
       ])
       .select()
@@ -109,6 +114,9 @@ export async function POST(request: Request) {
       "scan-inbox",
       {
         scanJobId: newJob.id,
+        userId: user.id,
+        scanType,
+        maxEmails,
       },
       {
         jobId: newJob.id,
@@ -124,6 +132,7 @@ export async function POST(request: Request) {
       status: newJob.status,
       progress: newJob.progress_percent ?? 0,
       currentStep: newJob.current_step ?? "",
+      maxEmails,
     });
   } catch (err: any) {
     return NextResponse.json(

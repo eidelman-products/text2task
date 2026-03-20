@@ -5,82 +5,150 @@ import SecondaryButton from "./secondary-button";
 type NoScanStateProps = {
   loadingScan: boolean;
   onRunSampleScan: () => void;
+  onRunFullScan?: () => void;
 };
 
 export default function NoScanState({
   loadingScan,
   onRunSampleScan,
+  onRunFullScan,
 }: NoScanStateProps) {
   return (
     <SectionCard
       title="No scan yet"
-      subtitle="Run your first Sample Scan to analyze your inbox and unlock cleanup insights."
+      subtitle="Choose a free sample scan or unlock a full inbox scan."
     >
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1.2fr 0.8fr",
+          gridTemplateColumns: "1.15fr 0.85fr",
           gap: "22px",
         }}
       >
         <div
           style={{
-            background: "#f8fbff",
-            border: "1px solid #dbe7ff",
-            borderRadius: "22px",
-            padding: "26px",
+            display: "grid",
+            gap: "18px",
           }}
         >
           <div
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              background: "#dbeafe",
-              color: "#1d4ed8",
-              border: "1px solid #bfd3ff",
-              padding: "8px 14px",
-              borderRadius: "999px",
-              fontWeight: 700,
-              fontSize: "14px",
-              marginBottom: "18px",
+              background: "#f8fbff",
+              border: "1px solid #dbe7ff",
+              borderRadius: "22px",
+              padding: "26px",
             }}
           >
-            Sample Scan required
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                background: "#dcfce7",
+                color: "#166534",
+                border: "1px solid #bbf7d0",
+                padding: "8px 14px",
+                borderRadius: "999px",
+                fontWeight: 700,
+                fontSize: "14px",
+                marginBottom: "18px",
+              }}
+            >
+              Free Scan available
+            </div>
+
+            <div
+              style={{
+                fontSize: "32px",
+                fontWeight: 800,
+                color: "#0f172a",
+                lineHeight: 1.08,
+                marginBottom: "14px",
+                maxWidth: "560px",
+              }}
+            >
+              Scan up to 1,000 emails for free
+            </div>
+
+            <div
+              style={{
+                fontSize: "16px",
+                color: "#475569",
+                lineHeight: 1.8,
+                marginBottom: "22px",
+                maxWidth: "700px",
+              }}
+            >
+              InboxShaper does not scan automatically. Start with a{" "}
+              <b>Free Scan</b> to analyze up to <b>1,000 emails</b>, see your
+              top senders, detect promotions, and unlock cleanup insights.
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              <PrimaryButton onClick={onRunSampleScan} disabled={loadingScan}>
+                {loadingScan ? "Scanning..." : "Run Free Scan"}
+              </PrimaryButton>
+            </div>
           </div>
 
           <div
             style={{
-              fontSize: "34px",
-              fontWeight: 800,
-              color: "#0f172a",
-              lineHeight: 1.05,
-              marginBottom: "16px",
-              maxWidth: "560px",
+              background: "#ffffff",
+              border: "1px solid #dbe7ff",
+              borderRadius: "22px",
+              padding: "26px",
             }}
           >
-            Start by scanning your inbox
-          </div>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                background: "#e0e7ff",
+                color: "#3730a3",
+                border: "1px solid #c7d2fe",
+                padding: "8px 14px",
+                borderRadius: "999px",
+                fontWeight: 700,
+                fontSize: "14px",
+                marginBottom: "18px",
+              }}
+            >
+              Pro Full Scan available
+            </div>
 
-          <div
-            style={{
-              fontSize: "16px",
-              color: "#475569",
-              lineHeight: 1.8,
-              marginBottom: "24px",
-              maxWidth: "700px",
-            }}
-          >
-            InboxShaper does not scan automatically. Nothing is analyzed until
-            you click <b>Run Sample Scan</b>. Free plan analyzes up to{" "}
-            <b>1000 emails</b> and lets you clean up to{" "}
-            <b>250 emails per week</b>.
-          </div>
+            <div
+              style={{
+                fontSize: "30px",
+                fontWeight: 800,
+                color: "#0f172a",
+                lineHeight: 1.08,
+                marginBottom: "14px",
+                maxWidth: "560px",
+              }}
+            >
+              Run a full scan of your inbox
+            </div>
 
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            <PrimaryButton onClick={onRunSampleScan} disabled={loadingScan}>
-              {loadingScan ? "Scanning..." : "Run Sample Scan"}
-            </PrimaryButton>
-            <SecondaryButton>Unlock Full Scan (Pro)</SecondaryButton>
+            <div
+              style={{
+                fontSize: "16px",
+                color: "#475569",
+                lineHeight: 1.8,
+                marginBottom: "22px",
+                maxWidth: "700px",
+              }}
+            >
+              Pro plan analyzes your <b>full inbox</b> and unlocks deeper
+              cleanup, better visibility, and bulk actions across your account.
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              <SecondaryButton
+                onClick={onRunFullScan}
+                disabled={loadingScan || !onRunFullScan}
+              >
+                {loadingScan ? "Scanning..." : "Run Full Scan"}
+              </SecondaryButton>
+            </div>
           </div>
         </div>
 
@@ -105,11 +173,21 @@ export default function NoScanState({
 
           <div style={{ display: "grid", gap: "12px" }}>
             {[
-              ["Inbox Health", "See a clear health score and cleanup opportunities."],
-              ["Top Senders", "Review senders grouped by email volume."],
+              [
+                "Inbox Health",
+                "See a clear health score and cleanup opportunities.",
+              ],
+              [
+                "Top Senders",
+                "Review senders grouped by email volume and take action faster.",
+              ],
               [
                 "Promotions",
-                "See exact results from Gmail Promotions and a full inbox Promotions count from Gmail.",
+                "See exact Gmail Promotions results and cleanup opportunities.",
+              ],
+              [
+                "Smart Views",
+                "Quickly review unread, social, shopping, and job-related emails.",
               ],
             ].map(([title, desc]) => (
               <div

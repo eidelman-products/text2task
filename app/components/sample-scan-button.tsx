@@ -2,59 +2,87 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const SCAN_STEPS = [
-  "Connecting to Gmail...",
-  "Reading recent inbox emails...",
-  "Grouping top senders...",
-  "Preparing smart views...",
-  "Finalizing scan results...",
-];
+type ScanStatusResponse = {
+  scanId: string;
+  scanType: "sample" | "full";
+  status: "queued" | "running" | "completed" | "failed" | "cancelled";
+  progress: number;
+  currentStep: string;
+  processedMessages?: number;
+  nextPageToken?: string | null;
+  errorMessage?: string | null;
+};
 
 export default function SampleScanButton() {
   const [loading, setLoading] = useState(false);
+  const [scanId, setScanId] = useState<string | null>(null);
   const [result, setResult] = useState<number | null>(null);
   const [error, setError] = useState<string>("");
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState("");
 
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const statusIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingRef = useRef<number | null>(null);
 
-  function clearTimers() {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
-    }
-
-    if (statusIntervalRef.current) {
-      clearInterval(statusIntervalRef.current);
-      statusIntervalRef.current = null;
+  function stopPolling() {
+    if (pollingRef.current) {
+      window.clearInterval(pollingRef.current);
+      pollingRef.current = null;
     }
   }
 
-  function startFakeProgress() {
-    setProgress(6);
-    setStatusText(SCAN_STEPS[0]);
-
-    let currentStep = 0;
-
-    progressIntervalRef.current = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 92) return prev;
-
-        if (prev < 30) return prev + 6;
-        if (prev < 55) return prev + 4;
-        if (prev < 75) return prev + 3;
-        if (prev < 88) return prev + 2;
-
-        return prev + 1;
+  async function loadScanStatus(currentScanId: string) {
+    try {
+      const res = await fetch(`/api/scans/${currentScanId}/status`, {
+        method: "GET",
+        cache: "no-store",
       });
-    }, 350);
 
-    statusIntervalRef.current = setInterval(() => {
-      currentStep = (currentStep + 1) % SCAN_STEPS.length;
-      setStatusText(SCAN_STEPS[currentStep]);
-    }, 1400);
+      const data: ScanStatusResponse = await res.json();
+
+      if (!res.ok) {
+        setError((data as any)?.error || "Failed to load scan status");
+        setLoading(false);
+        stopPolling();
+        return;
+      }
+
+      setProgress(typeof data.progress === "number" ? data.progress : 0);
+      setStatusText(
+        typeof data.currentStep === "string" && data.currentStep
+          ? data.currentStep
+          : "Scanning..."
+      );
+
+      if (data.status === "completed") {
+        setLoading(false);
+        setResult(typeof data.processedMessages === "number" ? data.processedMessages : 0);
+        setStatusText("Free Scan completed successfully.");
+        stopPolling();
+        return;
+      }
+
+      if (data.status === "failed" || data.status === "cancelled") {
+        setLoading(false);
+        setError(data.errorMessage || `Scan ${data.status}.`);
+        setStatusText("");
+        stopPolling();
+      }
+    } catch (err) {
+      setLoading(false);
+      setError("Failed to load scan status");
+      setStatusText("");
+      stopPolling();
+    }
+  }
+
+  function startPolling(newScanId: string) {
+    stopPolling();
+
+    void loadScanStatus(newScanId);
+
+    pollingRef.current = window.setInterval(() => {
+      void loadScanStatus(newScanId);
+    }, 2500);
   }
 
   async function runScan() {
@@ -63,46 +91,47 @@ export default function SampleScanButton() {
       setResult(null);
       setError("");
       setProgress(0);
-      setStatusText("");
+      setStatusText("Starting free scan...");
 
-      startFakeProgress();
-
-      const res = await fetch("/api/scan/sample", {
+      const res = await fetch("/api/scans/start", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({ scanType: "sample" }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        clearTimers();
-        setError(data.error || "Scan failed");
-        setProgress(0);
+        setError(data.error || "Failed to start free scan");
+        setLoading(false);
         setStatusText("");
         return;
       }
 
-      clearTimers();
-      setProgress(100);
-      setStatusText("Scan completed.");
+      const newScanId = String(data.scanId);
+      setScanId(newScanId);
+      setProgress(typeof data.progress === "number" ? data.progress : 0);
+      setStatusText(
+        typeof data.currentStep === "string" && data.currentStep
+          ? data.currentStep
+          : "Starting free scan..."
+      );
 
-      setResult(data.scanned ?? 0);
-
-      setTimeout(() => {
-        setStatusText("");
-      }, 1200);
+      startPolling(newScanId);
     } catch (err) {
-      clearTimers();
-      setError("Something went wrong while starting the scan");
+      setLoading(false);
+      setError("Something went wrong while starting the free scan");
       setProgress(0);
       setStatusText("");
-    } finally {
-      setLoading(false);
     }
   }
 
   useEffect(() => {
     return () => {
-      clearTimers();
+      stopPolling();
     };
   }, []);
 
@@ -128,7 +157,7 @@ export default function SampleScanButton() {
           transition: "all 0.2s ease",
         }}
       >
-        {loading ? "Scanning inbox..." : "Run Sample Scan"}
+        {loading ? "Scanning inbox..." : "Run Free Scan"}
       </button>
 
       {loading && (
@@ -166,6 +195,18 @@ export default function SampleScanButton() {
             <span>{statusText || "Scanning..."}</span>
             <span>{progress}%</span>
           </div>
+
+          {scanId && (
+            <div
+              style={{
+                marginTop: "8px",
+                fontSize: "12px",
+                color: "#64748b",
+              }}
+            >
+              Scan ID: {scanId}
+            </div>
+          )}
         </div>
       )}
 
@@ -182,7 +223,7 @@ export default function SampleScanButton() {
             fontWeight: 500,
           }}
         >
-          Sample scan completed. Scanned {result} emails.
+          Free scan completed. Scanned {result} emails.
         </p>
       )}
 

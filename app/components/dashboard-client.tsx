@@ -11,7 +11,7 @@ import ScanResultsView from "./dashboard/scan-results-view";
 import TopSendersView from "./dashboard/top-senders-view";
 import PromotionsView from "./dashboard/promotions-view";
 import DashboardHeader from "./dashboard/dashboard-header";
-import SampleScanCta from "./dashboard/sample-scan-cta";
+import NoScanState from "./dashboard/no-scan-state";
 import { runUnsubscribeFlow } from "./dashboard/unsubscribe-actions";
 import {
   FREE_WEEKLY_LIMIT,
@@ -229,7 +229,11 @@ export default function DashboardClient({ email }: DashboardClientProps) {
 
       if (data.status === "completed") {
         stopPolling();
-        setSuccess("Full Scan completed successfully.");
+        setSuccess(
+          data.scanType === "sample"
+            ? "Free Scan completed successfully."
+            : "Full Scan completed successfully."
+        );
       }
 
       if (data.status === "failed" || data.status === "cancelled") {
@@ -316,7 +320,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
       setError("");
       setSuccess("");
 
-      const scanType = plan === "pro" ? "full" : "sample";
+      const scanType = "sample";
 
       const res = await fetch("/api/scans/start", {
         method: "POST",
@@ -350,17 +354,13 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         currentStep:
           typeof data.currentStep === "string"
             ? data.currentStep
-            : "Starting scan...",
+            : "Starting free scan...",
         processedMessages: 0,
         nextPageToken: null,
         errorMessage: null,
       });
 
-      setSuccess(
-        scanType === "full"
-          ? "Full Scan started successfully."
-          : "Sample Scan started successfully."
-      );
+      setSuccess("Free Scan started successfully.");
 
       if (!options?.preserveActiveNav) {
         setActiveNav("dashboard");
@@ -369,6 +369,64 @@ export default function DashboardClient({ email }: DashboardClientProps) {
       startPolling(newScanId);
     } catch (err: any) {
       setError(err.message || "Failed to start scan");
+    } finally {
+      setLoadingScan(false);
+    }
+  }
+
+  async function runFullScan(options?: { preserveActiveNav?: boolean }) {
+    try {
+      setLoadingScan(true);
+      setError("");
+      setSuccess("");
+
+      const res = await fetch("/api/scans/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({ scanType: "full" }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to start full scan");
+        return;
+      }
+
+      const newScanId = String(data.scanId);
+
+      setActiveScanJob({
+        scanId: newScanId,
+        scanType: data.scanType === "full" ? "full" : "sample",
+        status:
+          data.status === "running" ||
+          data.status === "completed" ||
+          data.status === "failed" ||
+          data.status === "cancelled"
+            ? data.status
+            : "queued",
+        progress: typeof data.progress === "number" ? data.progress : 0,
+        currentStep:
+          typeof data.currentStep === "string"
+            ? data.currentStep
+            : "Starting full scan...",
+        processedMessages: 0,
+        nextPageToken: null,
+        errorMessage: null,
+      });
+
+      setSuccess("Full Scan started successfully.");
+
+      if (!options?.preserveActiveNav) {
+        setActiveNav("dashboard");
+      }
+
+      startPolling(newScanId);
+    } catch (err: any) {
+      setError(err.message || "Failed to start full scan");
     } finally {
       setLoadingScan(false);
     }
@@ -564,10 +622,10 @@ export default function DashboardClient({ email }: DashboardClientProps) {
 
   function renderNoScanState() {
     return (
-      <SampleScanCta
+      <NoScanState
         loadingScan={loadingScan}
         onRunSampleScan={() => runSampleScan()}
-        plan={plan}
+        onRunFullScan={() => runFullScan()}
       />
     );
   }

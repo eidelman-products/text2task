@@ -1,7 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
-import { runScan } from "@/lib/scan/scan-engine";
-import { getValidAccessToken } from "@/lib/gmail/token-manager";
-
 export type GetSendersResult = {
   scanned: number;
   topSenders: Array<{
@@ -35,79 +31,8 @@ export type GetSendersResult = {
   fullInboxPromotionsCount: number | null;
 };
 
-function emptyResult(): GetSendersResult {
-  return {
-    scanned: 0,
-    topSenders: [],
-    promotionsSenders: [],
-    smartViews: {
-      unread: 0,
-      social: 0,
-      jobSearch: 0,
-      shopping: 0,
-    },
-    smartViewIds: {
-      unread: [],
-      social: [],
-      jobSearch: [],
-      shopping: [],
-    },
-    fullInboxPromotionsCount: null,
-  };
-}
-
-async function fetchExactLabelCount(
-  accessToken: string,
-  labelId: string
-): Promise<number> {
-  const url = `https://gmail.googleapis.com/gmail/v1/users/me/labels/${labelId}`;
-
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    return 0;
-  }
-
-  const data = await res.json();
-  return data.messagesTotal || 0;
-}
-
 export async function getSenders(): Promise<GetSendersResult> {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return emptyResult();
-  }
-
-  const accessToken = await getValidAccessToken(user.id);
-
-  const scanResult = await runScan({
-    userId: user.id,
-    gmailAccessToken: accessToken,
-    mode: "sample",
-  });
-
-  const fullInboxPromotionsCount = await fetchExactLabelCount(
-    accessToken,
-    "CATEGORY_PROMOTIONS"
+  throw new Error(
+    "Legacy getSenders() is disabled. Use the V2 scan flow via /api/scans/start with scanType='sample'."
   );
-
-  return {
-    scanned: scanResult.scanned,
-    topSenders: scanResult.topSenders,
-    promotionsSenders: scanResult.promotionsSenders,
-    smartViews: scanResult.smartViews,
-    smartViewIds: scanResult.smartViewIds,
-    fullInboxPromotionsCount,
-  };
 }

@@ -6,6 +6,9 @@ import type { ScanProgress, ScanResult } from "../lib/scan/scan-types";
 
 export type ScanJobPayload = {
   scanJobId: string;
+  userId?: string;
+  scanType?: "sample" | "full";
+  maxEmails?: number | null;
 };
 
 function buildScanResultsRow(params: {
@@ -106,9 +109,13 @@ async function updateJobProgress(scanJobId: string, progress: ScanProgress) {
 }
 
 export async function processScanJob(payload: ScanJobPayload) {
-  const { scanJobId } = payload;
+  const { scanJobId, scanType: payloadScanType, maxEmails: payloadMaxEmails } = payload;
 
-  logger.info("Starting scan job", { scanJobId });
+  logger.info("Starting scan job", {
+    scanJobId,
+    payloadScanType,
+    payloadMaxEmails,
+  });
 
   const { data: job, error: fetchError } = await supabaseAdmin
     .from("scan_jobs")
@@ -134,20 +141,42 @@ export async function processScanJob(payload: ScanJobPayload) {
     throw new Error("Missing user_id in scan_jobs");
   }
 
+  const resolvedScanType: "sample" | "full" =
+    job.scan_type === "sample" || job.scan_type === "full"
+      ? job.scan_type
+      : payloadScanType === "sample"
+      ? "sample"
+      : "full";
+
+  const resolvedMaxEmails =
+    typeof payloadMaxEmails === "number"
+      ? payloadMaxEmails
+      : resolvedScanType === "sample"
+      ? 1000
+      : null;
+
   const startedAt = new Date().toISOString();
 
   const { error: runningError } = await supabaseAdmin
     .from("scan_jobs")
     .update({
       status: "running",
-      current_step: "Loading Gmail access token",
+      current_step:
+        resolvedScanType === "sample"
+          ? "Loading Gmail access token for free scan"
+          : "Loading Gmail access token for full scan",
       progress_percent: 5,
       processed_messages: 0,
-      total_messages_estimate: 0,
+      total_messages_estimate: resolvedMaxEmails,
       started_at: job.started_at ?? startedAt,
       updated_at: startedAt,
       error_message: null,
       finished_at: null,
+      result_snapshot: {
+        ...(job.result_snapshot ?? {}),
+        scanMode: resolvedScanType,
+        maxEmails: resolvedMaxEmails,
+      },
     })
     .eq("id", scanJobId);
 
@@ -161,7 +190,10 @@ export async function processScanJob(payload: ScanJobPayload) {
     const { error: scanStartError } = await supabaseAdmin
       .from("scan_jobs")
       .update({
-        current_step: "Scanning Gmail messages",
+        current_step:
+          resolvedScanType === "sample"
+            ? "Scanning up to 1,000 Gmail messages"
+            : "Scanning Gmail messages",
         progress_percent: 10,
         updated_at: new Date().toISOString(),
       })
@@ -174,7 +206,8 @@ export async function processScanJob(payload: ScanJobPayload) {
     const scanResult = await runScan({
       userId,
       gmailAccessToken: accessToken,
-      mode: "full",
+      mode: resolvedScanType,
+      maxEmails: resolvedMaxEmails,
       pageSize: 25,
       metadataConcurrency: 5,
       onProgress: async (progress) => {
@@ -215,18 +248,31 @@ export async function processScanJob(payload: ScanJobPayload) {
       scanResult,
     });
 
+    const finalTotalEstimate =
+      resolvedScanType === "sample"
+        ? resolvedMaxEmails ?? scanResult.scanned
+        : scanResult.totalInboxCount ?? scanResult.scanned;
+
     const { error: completedError } = await supabaseAdmin
       .from("scan_jobs")
       .update({
         status: "completed",
-        current_step: "Scan completed successfully",
+        current_step:
+          resolvedScanType === "sample"
+            ? "Free scan completed successfully"
+            : "Full scan completed successfully",
         progress_percent: 100,
         processed_messages: scanResult.scanned,
-        total_messages_estimate:
-          scanResult.totalInboxCount ?? scanResult.scanned,
+        total_messages_estimate: finalTotalEstimate,
         finished_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         error_message: null,
+        result_snapshot: {
+          ...(job.result_snapshot ?? {}),
+          scanMode: resolvedScanType,
+          maxEmails: resolvedMaxEmails,
+          completedScanned: scanResult.scanned,
+        },
       })
       .eq("id", scanJobId);
 
@@ -234,11 +280,18 @@ export async function processScanJob(payload: ScanJobPayload) {
       throw new Error(`Failed updating job to completed: ${completedError.message}`);
     }
 
-    logger.info("Completed scan job", { scanJobId });
+    logger.info("Completed scan job", {
+      scanJobId,
+      resolvedScanType,
+      resolvedMaxEmails,
+      scanned: scanResult.scanned,
+    });
   } catch (error: any) {
     logger.error("Scan failed", {
       scanJobId,
       error: error.message,
+      payloadScanType,
+      payloadMaxEmails,
     });
 
     await supabaseAdmin
