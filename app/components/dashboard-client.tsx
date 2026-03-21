@@ -83,6 +83,99 @@ type ScanResultsResponse = {
   result: DashboardScanResult | null;
 };
 
+function getHealthScoreFromScanned(scanned: number): number {
+  if (scanned <= 0) return 100;
+  const raw = 100 - scanned / 20;
+  return Math.max(0, Math.min(100, Math.round(raw)));
+}
+
+function removeIdsFromSenderRows(
+  rows: DashboardTopSender[],
+  idsToRemove: Set<string>
+): DashboardTopSender[] {
+  return rows
+    .map((row) => {
+      const originalIds = Array.isArray(row.ids) ? row.ids : [];
+      const nextIds = originalIds.filter((id) => !idsToRemove.has(id));
+      const nextCount =
+        originalIds.length > 0 ? nextIds.length : Math.max(0, row.count);
+
+      return {
+        ...row,
+        ids: nextIds,
+        count: nextCount,
+      };
+    })
+    .filter((row) => row.count > 0);
+}
+
+function removeIdsFromSmartViewIds(
+  smartViewIds: SmartViewIds,
+  idsToRemove: Set<string>
+): SmartViewIds {
+  return {
+    unread: smartViewIds.unread.filter((id) => !idsToRemove.has(id)),
+    social: smartViewIds.social.filter((id) => !idsToRemove.has(id)),
+    jobSearch: smartViewIds.jobSearch.filter((id) => !idsToRemove.has(id)),
+    shopping: smartViewIds.shopping.filter((id) => !idsToRemove.has(id)),
+  };
+}
+
+function buildSmartViewsFromIds(smartViewIds: SmartViewIds): SmartViews {
+  return {
+    unread: smartViewIds.unread.length,
+    social: smartViewIds.social.length,
+    jobSearch: smartViewIds.jobSearch.length,
+    shopping: smartViewIds.shopping.length,
+  };
+}
+
+function applyIdsRemovalToScanResult(
+  current: DashboardScanResult,
+  idsToRemoveList: string[]
+): DashboardScanResult {
+  const idsToRemove = new Set(idsToRemoveList);
+
+  const nextTopSenders = removeIdsFromSenderRows(current.topSenders, idsToRemove);
+  const nextPromotionsSenders = removeIdsFromSenderRows(
+    current.promotionsSenders,
+    idsToRemove
+  );
+
+  const nextSmartViewIds = removeIdsFromSmartViewIds(
+    current.smartViewIds,
+    idsToRemove
+  );
+  const nextSmartViews = buildSmartViewsFromIds(nextSmartViewIds);
+
+  const nextScanned = Math.max(0, current.scanned - idsToRemove.size);
+  const nextSenderGroups = nextTopSenders.length;
+  const nextLargestSenderCount =
+    nextTopSenders.length > 0
+      ? Math.max(...nextTopSenders.map((row) => row.count))
+      : 0;
+
+  return {
+    ...current,
+    scanned: nextScanned,
+    topSenders: nextTopSenders,
+    promotionsSenders: nextPromotionsSenders,
+    promotionsFound: nextPromotionsSenders.reduce(
+      (sum, row) => sum + row.count,
+      0
+    ),
+    promotionsFoundInSampleScan: nextPromotionsSenders.reduce(
+      (sum, row) => sum + row.count,
+      0
+    ),
+    senderGroups: nextSenderGroups,
+    largestSenderCount: nextLargestSenderCount,
+    healthScore: getHealthScoreFromScanned(nextScanned),
+    smartViews: nextSmartViews,
+    smartViewIds: nextSmartViewIds,
+  };
+}
+
 export default function DashboardClient({ email }: DashboardClientProps) {
   const [plan] = useState<"free" | "pro">("pro");
   const [activeNav, setActiveNav] = useState<ActiveNav>("dashboard");
@@ -280,6 +373,15 @@ export default function DashboardClient({ email }: DashboardClientProps) {
     }
 
     return rows.sort((a, b) => b.count - a.count);
+  }
+
+  function applyLiveRemoval(idsToRemove: string[]) {
+    if (!idsToRemove.length) return;
+
+    setScanResult((current) => {
+      if (!current) return current;
+      return applyIdsRemovalToScanResult(current, idsToRemove);
+    });
   }
 
   async function handleDisconnectGmail() {
@@ -492,6 +594,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
           : Math.min(FREE_WEEKLY_LIMIT, weeklyCleanupUsed + cleaned);
 
       setWeeklyCleanupUsed(updatedUsed);
+      applyLiveRemoval(promotionIds);
       setSuccess(data.message || `Moved ${cleaned} Promotions emails to Trash.`);
 
       setCleaningPromotionsStep("refreshing");
@@ -522,6 +625,8 @@ export default function DashboardClient({ email }: DashboardClientProps) {
       setError("");
       setSuccess("");
 
+      const idsToRemove = Array.isArray(item.ids) ? item.ids : [];
+
       const res = await fetch("/api/delete-by-sender", {
         method: "POST",
         headers: {
@@ -529,7 +634,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         },
         body: JSON.stringify({
           sender: item.sender,
-          ids: item.ids || [],
+          ids: idsToRemove,
         }),
       });
 
@@ -541,7 +646,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
       }
 
       const movedToTrash = Number(
-        data.movedToTrash ?? data.deleted ?? item.count
+        data.movedToTrash ?? data.deleted ?? idsToRemove.length ?? item.count
       );
       const updatedUsed =
         typeof data.weekly_cleanup_used === "number"
@@ -549,6 +654,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
           : Math.min(FREE_WEEKLY_LIMIT, weeklyCleanupUsed + movedToTrash);
 
       setWeeklyCleanupUsed(updatedUsed);
+      applyLiveRemoval(idsToRemove);
       setSuccess(`Moved ${movedToTrash} emails from ${item.sender} to Trash.`);
     } catch (err: any) {
       setError(err.message || "Failed to move emails to Trash");
@@ -575,6 +681,8 @@ export default function DashboardClient({ email }: DashboardClientProps) {
       setError("");
       setSuccess("");
 
+      const idsToRemove = Array.isArray(item.ids) ? item.ids : [];
+
       const res = await fetch("/api/archive-by-sender", {
         method: "POST",
         headers: {
@@ -582,7 +690,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         },
         body: JSON.stringify({
           sender: item.sender,
-          ids: item.ids || [],
+          ids: idsToRemove,
         }),
       });
 
@@ -593,13 +701,14 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         return;
       }
 
-      const archived = Number(data.archived || item.count);
+      const archived = Number(data.archived || idsToRemove.length || item.count);
       const updatedUsed =
         typeof data.weekly_cleanup_used === "number"
           ? data.weekly_cleanup_used
           : Math.min(FREE_WEEKLY_LIMIT, weeklyCleanupUsed + archived);
 
       setWeeklyCleanupUsed(updatedUsed);
+      applyLiveRemoval(idsToRemove);
       setSuccess(`Archived ${archived} emails from ${item.sender}.`);
     } catch (err: any) {
       setError(err.message || "Failed to archive emails");
