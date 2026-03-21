@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getCleanupStatus, addCleanupUsage } from "@/lib/supabase/quota";
+import { getValidAccessToken } from "@/lib/gmail/token-manager";
 
 type ArchiveBySenderBody = {
   ids?: unknown;
@@ -30,10 +30,7 @@ export async function POST(req: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (userError || !user?.id || !user?.email) {
-      return NextResponse.json(
-        { error: "Not authenticated" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     const body: ArchiveBySenderBody = await req.json();
@@ -91,8 +88,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get("gmail_provider_token")?.value;
+    const accessToken = await getValidAccessToken(user.id);
 
     if (!accessToken) {
       return NextResponse.json(

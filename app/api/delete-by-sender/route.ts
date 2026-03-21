@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getCleanupStatus, addCleanupUsage } from "@/lib/supabase/quota";
+import { getValidAccessToken } from "@/lib/gmail/token-manager";
 
 type DeleteBySenderBody = {
   ids?: unknown;
@@ -23,7 +23,9 @@ function normalizeIds(input: unknown): string[] {
 
 async function moveMessageToTrash(accessToken: string, id: string) {
   const res = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(id)}/trash`,
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(
+      id
+    )}/trash`,
     {
       method: "POST",
       headers: {
@@ -83,10 +85,7 @@ export async function POST(req: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (userError || !user?.id || !user?.email) {
-      return NextResponse.json(
-        { error: "Not authenticated" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     const body: DeleteBySenderBody = await req.json();
@@ -144,8 +143,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get("gmail_provider_token")?.value;
+    const accessToken = await getValidAccessToken(user.id);
 
     if (!accessToken) {
       return NextResponse.json(
