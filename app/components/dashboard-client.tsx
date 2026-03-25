@@ -285,7 +285,7 @@ export default function DashboardClient({
 
     async function refreshPlan() {
       try {
-        const currentPlan = await getUserPlan(email);
+        const currentPlan = await getUserPlan(userId);
         if (!mounted) return;
 
         setPlan((prev) => {
