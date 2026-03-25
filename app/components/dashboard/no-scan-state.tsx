@@ -1,4 +1,5 @@
-import SectionCard from "./section-card";
+"use client";
+
 import PrimaryButton from "./primary-button";
 import SecondaryButton from "./secondary-button";
 
@@ -8,221 +9,239 @@ type NoScanStateProps = {
   onRunFullScan?: () => void;
 };
 
+const scanBenefits = [
+  {
+    title: "Inbox Health",
+    text: "See a clear inbox health score and cleanup opportunities.",
+    dot: "#2563eb",
+  },
+  {
+    title: "Top Senders",
+    text: "Review who fills your inbox the most, grouped by email volume.",
+    dot: "#7c3aed",
+  },
+  {
+    title: "Promotions",
+    text: "See promotions clearly and understand cleanup potential fast.",
+    dot: "#f97316",
+  },
+  {
+    title: "Smart Views",
+    text: "Quickly review unread, social, shopping, and job-related emails.",
+    dot: "#10b981",
+  },
+];
+
 export default function NoScanState({
   loadingScan,
   onRunSampleScan,
   onRunFullScan,
 }: NoScanStateProps) {
   return (
-    <SectionCard
-      title="No scan yet"
-      subtitle="Choose a free sample scan or unlock a full inbox scan."
+    <div
+      style={{
+        display: "grid",
+        gap: "30px",
+        paddingBottom: "30px",
+      }}
     >
-      <div
+      <section
         style={{
-          display: "grid",
-          gridTemplateColumns: "1.15fr 0.85fr",
-          gap: "22px",
+          padding: "6px 4px 0 4px",
         }}
       >
         <div
           style={{
-            display: "grid",
-            gap: "18px",
+            fontSize: "18px",
+            fontWeight: 900,
+            color: "#0f172a",
+            marginBottom: "10px",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Get started
+        </div>
+
+        <div
+          style={{
+            fontSize: "16px",
+            color: "#475569",
+            maxWidth: "860px",
+            lineHeight: 1.8,
+          }}
+        >
+          Start with a free sample scan to analyze up to 1,000 emails, discover
+          cleanup opportunities, and unlock real inbox insights.
+        </div>
+      </section>
+
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1.2fr) minmax(320px, 0.8fr)",
+          gap: "28px",
+          alignItems: "stretch",
+        }}
+      >
+        <div
+          style={{
+            padding: "28px 28px 26px 28px",
+            borderRadius: "28px",
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.74) 100%)",
+            border: "1px solid rgba(226,232,240,0.92)",
+            boxShadow: "0 18px 40px rgba(15,23,42,0.06)",
+            backdropFilter: "blur(10px)",
+            minHeight: "100%",
           }}
         >
           <div
             style={{
-              background: "#f8fbff",
-              border: "1px solid #dbe7ff",
-              borderRadius: "22px",
-              padding: "26px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              borderRadius: "999px",
+              background: "#dcfce7",
+              color: "#166534",
+              padding: "8px 14px",
+              fontWeight: 800,
+              fontSize: "13px",
+              marginBottom: "18px",
+              boxShadow: "0 6px 14px rgba(22,101,52,0.08)",
             }}
           >
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                background: "#dcfce7",
-                color: "#166534",
-                border: "1px solid #bbf7d0",
-                padding: "8px 14px",
-                borderRadius: "999px",
-                fontWeight: 700,
-                fontSize: "14px",
-                marginBottom: "18px",
-              }}
-            >
-              Free Scan available
-            </div>
-
-            <div
-              style={{
-                fontSize: "32px",
-                fontWeight: 800,
-                color: "#0f172a",
-                lineHeight: 1.08,
-                marginBottom: "14px",
-                maxWidth: "560px",
-              }}
-            >
-              Scan up to 1,000 emails for free
-            </div>
-
-            <div
-              style={{
-                fontSize: "16px",
-                color: "#475569",
-                lineHeight: 1.8,
-                marginBottom: "22px",
-                maxWidth: "700px",
-              }}
-            >
-              InboxShaper does not scan automatically. Start with a{" "}
-              <b>Free Scan</b> to analyze up to <b>1,000 emails</b>, see your
-              top senders, detect promotions, and unlock cleanup insights.
-            </div>
-
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              <PrimaryButton onClick={onRunSampleScan} disabled={loadingScan}>
-                {loadingScan ? "Scanning..." : "Run Free Scan"}
-              </PrimaryButton>
-            </div>
+            Free Scan available
           </div>
 
           <div
             style={{
-              background: "#ffffff",
-              border: "1px solid #dbe7ff",
-              borderRadius: "22px",
-              padding: "26px",
+              fontSize: "40px",
+              lineHeight: 1.06,
+              fontWeight: 900,
+              color: "#0f172a",
+              letterSpacing: "-0.05em",
+              marginBottom: "16px",
+              maxWidth: "680px",
             }}
           >
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                background: "#e0e7ff",
-                color: "#3730a3",
-                border: "1px solid #c7d2fe",
-                padding: "8px 14px",
-                borderRadius: "999px",
-                fontWeight: 700,
-                fontSize: "14px",
-                marginBottom: "18px",
-              }}
-            >
-              Pro Full Scan available
-            </div>
+            Start with a free inbox scan
+          </div>
 
-            <div
-              style={{
-                fontSize: "30px",
-                fontWeight: 800,
-                color: "#0f172a",
-                lineHeight: 1.08,
-                marginBottom: "14px",
-                maxWidth: "560px",
-              }}
-            >
-              Run a full scan of your inbox
-            </div>
+          <div
+            style={{
+              fontSize: "18px",
+              color: "#475569",
+              lineHeight: 1.8,
+              maxWidth: "740px",
+              marginBottom: "24px",
+            }}
+          >
+            InboxShaper does not scan automatically. Start with a free scan to
+            see top senders, detect promotions, and understand what’s filling up
+            your inbox.
+          </div>
 
-            <div
-              style={{
-                fontSize: "16px",
-                color: "#475569",
-                lineHeight: 1.8,
-                marginBottom: "22px",
-                maxWidth: "700px",
-              }}
-            >
-              Pro plan analyzes your <b>full inbox</b> and unlocks deeper
-              cleanup, better visibility, and bulk actions across your account.
-            </div>
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              flexWrap: "wrap",
+            }}
+          >
+            <PrimaryButton onClick={onRunSampleScan} disabled={loadingScan}>
+              {loadingScan ? "Scanning..." : "Run Free Scan"}
+            </PrimaryButton>
 
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              <SecondaryButton
-                onClick={onRunFullScan}
-                disabled={loadingScan || !onRunFullScan}
-              >
-                {loadingScan ? "Scanning..." : "Run Full Scan"}
+            {onRunFullScan ? (
+              <SecondaryButton onClick={onRunFullScan}>
+                Unlock Full Scan (Pro)
               </SecondaryButton>
-            </div>
+            ) : null}
           </div>
         </div>
 
         <div
           style={{
-            background: "#ffffff",
-            border: "1px solid #dbe7ff",
-            borderRadius: "22px",
-            padding: "22px",
+            padding: "26px 24px",
+            borderRadius: "28px",
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(248,250,252,0.84) 100%)",
+            border: "1px solid rgba(226,232,240,0.96)",
+            boxShadow: "0 18px 40px rgba(15,23,42,0.07)",
+            backdropFilter: "blur(10px)",
+            minHeight: "100%",
           }}
         >
           <div
             style={{
-              fontSize: "17px",
-              fontWeight: 800,
+              fontSize: "22px",
+              fontWeight: 900,
               color: "#0f172a",
-              marginBottom: "14px",
+              marginBottom: "18px",
+              letterSpacing: "-0.03em",
             }}
           >
-            What happens after the scan
+            What you’ll unlock after the scan
           </div>
 
-          <div style={{ display: "grid", gap: "12px" }}>
-            {[
-              [
-                "Inbox Health",
-                "See a clear health score and cleanup opportunities.",
-              ],
-              [
-                "Top Senders",
-                "Review senders grouped by email volume and take action faster.",
-              ],
-              [
-                "Promotions",
-                "See exact Gmail Promotions results and cleanup opportunities.",
-              ],
-              [
-                "Smart Views",
-                "Quickly review unread, social, shopping, and job-related emails.",
-              ],
-            ].map(([title, desc]) => (
+          <div
+            style={{
+              display: "grid",
+              gap: "12px",
+            }}
+          >
+            {scanBenefits.map((item, index) => (
               <div
-                key={title}
+                key={item.title}
                 style={{
-                  background: "#f8fafc",
-                  border: "1px solid #e5eefc",
-                  borderRadius: "16px",
-                  padding: "14px",
+                  display: "grid",
+                  gridTemplateColumns: "14px 1fr",
+                  gap: "12px",
+                  alignItems: "start",
+                  padding: "14px 0",
+                  borderBottom:
+                    index !== scanBenefits.length - 1
+                      ? "1px solid rgba(226,232,240,0.82)"
+                      : "none",
                 }}
               >
-                <div
+                <span
                   style={{
-                    fontSize: "13px",
-                    color: "#64748b",
-                    fontWeight: 700,
-                    marginBottom: "6px",
+                    width: "10px",
+                    height: "10px",
+                    borderRadius: "999px",
+                    background: item.dot,
+                    marginTop: "6px",
+                    boxShadow: `0 0 0 5px ${item.dot}14`,
                   }}
-                >
-                  {title}
-                </div>
-                <div
-                  style={{
-                    color: "#0f172a",
-                    fontWeight: 700,
-                    lineHeight: 1.55,
-                  }}
-                >
-                  {desc}
+                />
+
+                <div>
+                  <div
+                    style={{
+                      fontSize: "15px",
+                      fontWeight: 900,
+                      color: "#0f172a",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {item.title}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "15px",
+                      color: "#475569",
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    {item.text}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
-    </SectionCard>
+      </section>
+    </div>
   );
 }

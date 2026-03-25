@@ -30,7 +30,8 @@ export type ActiveNav =
   | "social-notifications"
   | "job-search"
   | "online-shopping"
-  | "privacy-trust";
+  | "privacy-trust"
+  | "billing";
 
 export type ScanResult = {
   mode?: "sample" | "full";

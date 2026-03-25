@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getCleanupStatus, addCleanupUsage } from "@/lib/supabase/quota";
+import { getValidAccessToken } from "@/lib/gmail/token-manager";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,9 +18,10 @@ export async function POST(req: NextRequest) {
 
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser();
 
-    if (!user?.id || !user?.email) {
+    if (userError || !user?.id || !user?.email) {
       return NextResponse.json(
         { error: "Not authenticated" },
         { status: 401 }
@@ -41,15 +42,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get("gmail_provider_token")?.value;
-
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: "Missing Gmail token" },
-        { status: 401 }
-      );
-    }
+    // 🔥 במקום לקחת טוקן ישירות מה-DB — משתמשים במנהל הטוקנים
+    const accessToken = await getValidAccessToken(user.id);
 
     const idsToDelete = ids.slice(0, allowed);
 
@@ -89,7 +83,7 @@ export async function POST(req: NextRequest) {
       remaining: updatedStatus.remaining,
     });
   } catch (err: any) {
-    console.error(err);
+    console.error("Cleanup route error:", err);
 
     return NextResponse.json(
       { error: err.message || "Cleanup failed" },

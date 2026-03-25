@@ -1,99 +1,189 @@
-import type { ActiveNav, ScanResult } from "./dashboard-types";
+"use client";
+
+import { useState } from "react";
+import type { ActiveNav, SmartViewIds, SmartViews } from "./dashboard-types";
+
+type DashboardTopSender = {
+  sender: string;
+  count: number;
+  ids?: string[];
+  unsubscribeAvailable?: boolean;
+  unsubscribeTarget?: string;
+  unsubscribeMethod?: "url" | "mailto" | null;
+};
+
+type DashboardScanResult = {
+  mode?: "sample" | "full";
+  scanned: number;
+  totalInboxCount?: number | null;
+  topSenders: DashboardTopSender[];
+  promotionsSenders: DashboardTopSender[];
+  promotionsFound: number;
+  promotionsFoundInSampleScan: number;
+  fullInboxPromotionsCount: number | null;
+  senderGroups: number;
+  largestSenderCount: number;
+  healthScore: number;
+  smartViews: SmartViews;
+  smartViewIds: SmartViewIds;
+  completed?: boolean;
+};
 
 type DashboardSidebarProps = {
   email: string;
   activeNav: ActiveNav;
-  setActiveNav: (value: ActiveNav) => void;
+  setActiveNav: (nav: ActiveNav) => void;
   setError: (value: string) => void;
   setSuccess: (value: string) => void;
   weeklyCleanupUsed: number;
   remainingWeeklyCleanup: number;
   freeWeeklyLimit: number;
-  scanResult: ScanResult | null;
+  weeklyUnreadUsed: number;
+  remainingWeeklyUnread: number;
+  freeWeeklyUnreadLimit: number;
+  scanResult: DashboardScanResult | null;
+  onUpgradeClick: () => void;
 };
+
+function getInitial(email: string) {
+  if (!email) return "U";
+  return email[0]?.toUpperCase() || "U";
+}
+
+function badgeStyle(isActive: boolean) {
+  return {
+    minWidth: "34px",
+    height: "28px",
+    borderRadius: "999px",
+    background: isActive
+      ? "rgba(255,255,255,0.18)"
+      : "rgba(255,255,255,0.10)",
+    color: "#ffffff",
+    fontSize: "13px",
+    fontWeight: 800,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0 10px",
+    flexShrink: 0 as const,
+    boxShadow: isActive ? "0 6px 14px rgba(15,23,42,0.12)" : "none",
+    transition: "all 160ms ease",
+  };
+}
+
+function navItemStyle(isActive: boolean, isHovered: boolean) {
+  const active = isActive || isHovered;
+
+  return {
+    width: "100%",
+    border: isActive
+      ? "1px solid rgba(96,165,250,0.30)"
+      : active
+      ? "1px solid rgba(148,163,184,0.20)"
+      : "1px solid transparent",
+    background: isActive
+      ? "linear-gradient(90deg, rgba(37,99,235,0.34) 0%, rgba(59,130,246,0.16) 100%)"
+      : isHovered
+      ? "linear-gradient(90deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%)"
+      : "transparent",
+    color: "#e5eefc",
+    borderRadius: "18px",
+    padding: "14px 16px",
+    fontSize: "15px",
+    fontWeight: 800,
+    cursor: "pointer" as const,
+    textAlign: "left" as const,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    transition:
+      "all 160ms ease, transform 120ms ease, box-shadow 120ms ease",
+    transform: isHovered ? "translateX(2px)" : "translateX(0)",
+    boxShadow: isActive
+      ? "0 10px 24px rgba(37,99,235,0.12)"
+      : isHovered
+      ? "0 8px 18px rgba(15,23,42,0.10)"
+      : "none",
+  };
+}
+
+type SidebarNavButtonProps = {
+  label: string;
+  count?: number | string;
+  isActive: boolean;
+  onClick: () => void;
+};
+
+function SidebarNavButton({
+  label,
+  count,
+  isActive,
+  onClick,
+}: SidebarNavButtonProps) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <button
+      style={navItemStyle(isActive, hovered)}
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <span>{label}</span>
+      {count !== undefined ? <span style={badgeStyle(isActive)}>{count}</span> : null}
+    </button>
+  );
+}
 
 export default function DashboardSidebar({
   email,
   activeNav,
   setActiveNav,
-  setError,
-  setSuccess,
   weeklyCleanupUsed,
   remainingWeeklyCleanup,
   freeWeeklyLimit,
+  weeklyUnreadUsed,
+  remainingWeeklyUnread,
+  freeWeeklyUnreadLimit,
   scanResult,
+  onUpgradeClick,
 }: DashboardSidebarProps) {
-  const navItem = (
-    label: string,
-    key: ActiveNav,
-    badge?: string | number
-  ) => {
-    const active = activeNav === key;
-
-    return (
-      <button
-        onClick={() => {
-          setActiveNav(key);
-          setError("");
-          setSuccess("");
-        }}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "13px 14px",
-          borderRadius: "16px",
-          border: active
-            ? "1px solid rgba(255,255,255,0.16)"
-            : "1px solid transparent",
-          background: active
-            ? "linear-gradient(135deg, rgba(37,99,235,0.26) 0%, rgba(59,130,246,0.16) 100%)"
-            : "transparent",
-          color: active ? "#ffffff" : "rgba(255,255,255,0.84)",
-          cursor: "pointer",
-          fontWeight: active ? 800 : 600,
-          fontSize: "15px",
-          marginBottom: "6px",
-          textAlign: "left",
-        }}
-      >
-        <span>{label}</span>
-
-        {badge !== undefined ? (
-          <span
-            style={{
-              background: active
-                ? "rgba(255,255,255,0.16)"
-                : "rgba(255,255,255,0.1)",
-              color: "#ffffff",
-              borderRadius: "999px",
-              padding: "3px 10px",
-              fontSize: "12px",
-              fontWeight: 800,
-              minWidth: "28px",
-              textAlign: "center",
-            }}
-          >
-            {badge}
-          </span>
-        ) : null}
-      </button>
-    );
+  const smartViews = scanResult?.smartViews || {
+    unread: 0,
+    social: 0,
+    jobSearch: 0,
+    shopping: 0,
   };
+
+  const cleanupPercent = Math.min(
+    100,
+    (weeklyCleanupUsed / Math.max(freeWeeklyLimit, 1)) * 100
+  );
+
+  const unreadPercent = Math.min(
+    100,
+    (weeklyUnreadUsed / Math.max(freeWeeklyUnreadLimit, 1)) * 100
+  );
+
+  const [upgradeHovered, setUpgradeHovered] = useState(false);
 
   return (
     <aside
       style={{
         width: "300px",
-        minWidth: "300px",
-        background: "linear-gradient(180deg, #0f172a 0%, #111827 100%)",
-        borderRight: "1px solid rgba(255,255,255,0.06)",
-        padding: "20px 16px",
-        alignSelf: "stretch",
+        height: "100vh",
         position: "sticky",
         top: 0,
-        minHeight: "100vh",
+        overflowY: "auto",
+        flexShrink: 0,
+        background:
+          "radial-gradient(circle at top left, rgba(59,130,246,0.18) 0%, rgba(15,23,42,1) 22%, rgba(2,8,23,1) 100%)",
+        color: "#ffffff",
+        padding: "20px 18px",
+        boxShadow: "inset -1px 0 0 rgba(255,255,255,0.06)",
+        backdropFilter: "blur(10px)",
+        borderRight: "1px solid rgba(255,255,255,0.05)",
       }}
     >
       <div
@@ -106,41 +196,40 @@ export default function DashboardSidebar({
       >
         <div
           style={{
-            width: "44px",
-            height: "44px",
+            width: "42px",
+            height: "42px",
             borderRadius: "999px",
-            background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)",
-            color: "white",
+            background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontWeight: 800,
+            fontWeight: 900,
             fontSize: "18px",
+            boxShadow: "0 10px 20px rgba(99,102,241,0.32)",
+            flexShrink: 0,
           }}
         >
-          {email?.charAt(0)?.toUpperCase() || "U"}
+          {getInitial(email)}
         </div>
 
         <div style={{ minWidth: 0 }}>
           <div
             style={{
-              fontWeight: 800,
-              color: "#ffffff",
+              fontWeight: 900,
               fontSize: "15px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              lineHeight: 1.2,
+              color: "#ffffff",
+              marginBottom: "4px",
+              wordBreak: "break-word",
             }}
           >
-            {email.split("@")[0] || "InboxShaper user"}
+            {email.split("@")[0] || "Connected User"}
           </div>
           <div
             style={{
               fontSize: "13px",
-              color: "rgba(255,255,255,0.65)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              color: "rgba(226,232,240,0.88)",
+              wordBreak: "break-word",
             }}
           >
             {email}
@@ -150,71 +239,67 @@ export default function DashboardSidebar({
 
       <div
         style={{
-          background: "rgba(255,255,255,0.06)",
+          borderRadius: "24px",
+          padding: "18px",
+          background: "rgba(15,23,42,0.56)",
           border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: "20px",
-          padding: "16px",
-          marginBottom: "16px",
-          color: "#ffffff",
+          marginBottom: "14px",
+          boxShadow: "0 14px 30px rgba(0,0,0,0.18)",
         }}
       >
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            fontSize: "16px",
-            fontWeight: 800,
-            color: "#ffffff",
-            marginBottom: "14px",
+            fontSize: "13px",
+            fontWeight: 900,
+            letterSpacing: "0.04em",
+            color: "#f8fafc",
+            marginBottom: "12px",
           }}
         >
-          <span>🔒</span>
-          <span>Privacy First</span>
+          🔒 Privacy First
         </div>
 
         <div
           style={{
             fontSize: "14px",
             lineHeight: 1.75,
-            color: "rgba(255,255,255,0.92)",
-            marginBottom: "14px",
+            color: "rgba(226,232,240,0.95)",
+            fontWeight: 600,
           }}
         >
-          <div>InboxShaper only scans Gmail metadata and never stores email content.</div>
-          <div>All actions require your confirmation.</div>
-          <div>You can disconnect Gmail anytime.</div>
+          InboxShaper only scans Gmail metadata and never stores email content.
+          All actions require your confirmation. You can disconnect Gmail anytime.
         </div>
 
         <div
           style={{
+            marginTop: "14px",
             fontSize: "13px",
-            color: "#93c5fd",
-            fontWeight: 800,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
+            fontWeight: 900,
+            color: "#60a5fa",
           }}
         >
-          Free Plan
+          FREE PLAN
         </div>
       </div>
 
       <div
         style={{
+          borderRadius: "24px",
+          padding: "18px",
           background:
-            "linear-gradient(180deg, rgba(37,99,235,0.16) 0%, rgba(59,130,246,0.08) 100%)",
-          border: "1px solid rgba(96,165,250,0.35)",
-          borderRadius: "20px",
-          padding: "16px",
-          marginBottom: "18px",
+            "linear-gradient(180deg, rgba(30,64,175,0.34) 0%, rgba(15,23,42,0.42) 100%)",
+          border: "1px solid rgba(59,130,246,0.45)",
+          marginBottom: "14px",
+          boxShadow: "0 18px 34px rgba(2,8,23,0.22)",
         }}
       >
         <div
           style={{
             fontSize: "14px",
-            color: "#93c5fd",
             fontWeight: 800,
-            marginBottom: "10px",
+            color: "#93c5fd",
+            marginBottom: "12px",
           }}
         >
           Weekly cleanup used
@@ -222,10 +307,11 @@ export default function DashboardSidebar({
 
         <div
           style={{
-            fontSize: "32px",
-            fontWeight: 800,
-            color: "#ffffff",
-            marginBottom: "12px",
+            fontSize: "30px",
+            fontWeight: 900,
+            lineHeight: 1,
+            letterSpacing: "-0.04em",
+            marginBottom: "14px",
           }}
         >
           {weeklyCleanupUsed} / {freeWeeklyLimit}
@@ -235,17 +321,21 @@ export default function DashboardSidebar({
           style={{
             width: "100%",
             height: "8px",
+            background: "rgba(148,163,184,0.28)",
             borderRadius: "999px",
-            background: "rgba(255,255,255,0.12)",
             overflow: "hidden",
-            marginBottom: "10px",
+            marginBottom: "12px",
+            boxShadow: "inset 0 1px 2px rgba(15,23,42,0.12)",
           }}
         >
           <div
             style={{
-              width: `${(weeklyCleanupUsed / freeWeeklyLimit) * 100}%`,
+              width: `${cleanupPercent}%`,
               height: "100%",
+              borderRadius: "999px",
               background: "linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%)",
+              boxShadow: "0 0 16px rgba(59,130,246,0.22)",
+              transition: "width 180ms ease",
             }}
           />
         </div>
@@ -253,115 +343,225 @@ export default function DashboardSidebar({
         <div
           style={{
             fontSize: "14px",
-            color: "rgba(255,255,255,0.76)",
-            fontWeight: 700,
+            fontWeight: 800,
+            color: "#e2e8f0",
           }}
         >
-          {remainingWeeklyCleanup} emails left this week
+          {remainingWeeklyCleanup} cleanup emails left this week
+        </div>
+      </div>
+
+      <div
+        style={{
+          borderRadius: "24px",
+          padding: "18px",
+          background:
+            "linear-gradient(180deg, rgba(8,145,178,0.26) 0%, rgba(15,23,42,0.42) 100%)",
+          border: "1px solid rgba(34,211,238,0.35)",
+          marginBottom: "22px",
+          boxShadow: "0 18px 34px rgba(2,8,23,0.18)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "14px",
+            fontWeight: 800,
+            color: "#67e8f9",
+            marginBottom: "12px",
+          }}
+        >
+          Weekly unread actions used
+        </div>
+
+        <div
+          style={{
+            fontSize: "30px",
+            fontWeight: 900,
+            lineHeight: 1,
+            letterSpacing: "-0.04em",
+            marginBottom: "14px",
+          }}
+        >
+          {weeklyUnreadUsed} / {freeWeeklyUnreadLimit}
+        </div>
+
+        <div
+          style={{
+            width: "100%",
+            height: "8px",
+            background: "rgba(148,163,184,0.28)",
+            borderRadius: "999px",
+            overflow: "hidden",
+            marginBottom: "12px",
+            boxShadow: "inset 0 1px 2px rgba(15,23,42,0.12)",
+          }}
+        >
+          <div
+            style={{
+              width: `${unreadPercent}%`,
+              height: "100%",
+              borderRadius: "999px",
+              background: "linear-gradient(90deg, #22d3ee 0%, #06b6d4 100%)",
+              boxShadow: "0 0 16px rgba(34,211,238,0.18)",
+              transition: "width 180ms ease",
+            }}
+          />
+        </div>
+
+        <div
+          style={{
+            fontSize: "14px",
+            fontWeight: 800,
+            color: "#e2e8f0",
+          }}
+        >
+          {remainingWeeklyUnread} unread actions left this week
         </div>
       </div>
 
       <div
         style={{
           fontSize: "12px",
-          fontWeight: 800,
-          color: "rgba(255,255,255,0.42)",
-          letterSpacing: "0.12em",
-          marginBottom: "10px",
+          color: "rgba(148,163,184,0.9)",
+          fontWeight: 900,
+          letterSpacing: "0.08em",
+          marginBottom: "12px",
         }}
       >
         OVERVIEW
       </div>
 
-      {navItem("Dashboard", "dashboard")}
-      {navItem("Scan Results", "scan-results", scanResult ? "Ready" : undefined)}
+      <div style={{ display: "grid", gap: "8px", marginBottom: "22px" }}>
+        <SidebarNavButton
+          label="Dashboard"
+          isActive={activeNav === "dashboard"}
+          onClick={() => setActiveNav("dashboard")}
+        />
+      </div>
 
       <div
         style={{
           fontSize: "12px",
-          fontWeight: 800,
-          color: "rgba(255,255,255,0.42)",
-          letterSpacing: "0.12em",
-          marginTop: "16px",
-          marginBottom: "10px",
+          color: "rgba(148,163,184,0.9)",
+          fontWeight: 900,
+          letterSpacing: "0.08em",
+          marginBottom: "12px",
         }}
       >
         SMART VIEWS
       </div>
 
-      {navItem(
-        "Top Senders",
-        "top-senders",
-        scanResult ? scanResult.senderGroups : undefined
-      )}
-      {navItem(
-        "Promotions",
-        "promotions",
-        scanResult ? scanResult.promotionsFoundInSampleScan : undefined
-      )}
-      {navItem(
-        "Unread",
-        "unread",
-        scanResult ? scanResult.smartViews.unread : undefined
-      )}
-      {navItem(
-        "Social Notifications",
-        "social-notifications",
-        scanResult ? scanResult.smartViews.social : undefined
-      )}
-      {navItem(
-        "Job Search",
-        "job-search",
-        scanResult ? scanResult.smartViews.jobSearch : undefined
-      )}
-      {navItem(
-        "Online Shopping",
-        "online-shopping",
-        scanResult ? scanResult.smartViews.shopping : undefined
-      )}
+      <div style={{ display: "grid", gap: "8px", marginBottom: "22px" }}>
+        <SidebarNavButton
+          label="Top Senders"
+          count={scanResult?.senderGroups || 0}
+          isActive={activeNav === "top-senders"}
+          onClick={() => setActiveNav("top-senders")}
+        />
+
+        <SidebarNavButton
+          label="Promotions"
+          count={
+            scanResult?.fullInboxPromotionsCount ??
+            scanResult?.promotionsFoundInSampleScan ??
+            0
+          }
+          isActive={activeNav === "promotions"}
+          onClick={() => setActiveNav("promotions")}
+        />
+
+        <SidebarNavButton
+          label="Unread"
+          count={smartViews.unread}
+          isActive={activeNav === "unread"}
+          onClick={() => setActiveNav("unread")}
+        />
+
+        <SidebarNavButton
+          label="Social Notifications"
+          count={smartViews.social}
+          isActive={activeNav === "social-notifications"}
+          onClick={() => setActiveNav("social-notifications")}
+        />
+
+        <SidebarNavButton
+          label="Job Search"
+          count={smartViews.jobSearch}
+          isActive={activeNav === "job-search"}
+          onClick={() => setActiveNav("job-search")}
+        />
+
+        <SidebarNavButton
+          label="Online Shopping"
+          count={smartViews.shopping}
+          isActive={activeNav === "online-shopping"}
+          onClick={() => setActiveNav("online-shopping")}
+        />
+      </div>
 
       <div
         style={{
           fontSize: "12px",
-          fontWeight: 800,
-          color: "rgba(255,255,255,0.42)",
-          letterSpacing: "0.12em",
-          marginTop: "16px",
-          marginBottom: "10px",
+          color: "rgba(148,163,184,0.9)",
+          fontWeight: 900,
+          letterSpacing: "0.08em",
+          marginBottom: "12px",
         }}
       >
         SYSTEM
       </div>
 
-      {navItem("Privacy & Trust", "privacy-trust")}
+      <div style={{ display: "grid", gap: "8px", marginBottom: "18px" }}>
+        <SidebarNavButton
+          label="Privacy & Trust"
+          isActive={activeNav === "privacy-trust"}
+          onClick={() => setActiveNav("privacy-trust")}
+        />
+      </div>
 
-      <div style={{ marginTop: "18px" }}>
+      <div
+        style={{
+          marginTop: "10px",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          paddingTop: "18px",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "14px",
+            fontWeight: 700,
+            color: "#e2e8f0",
+            marginBottom: "14px",
+            lineHeight: 1.6,
+          }}
+        >
+          Full Scan, unlimited cleanup, unlimited unread actions, bulk actions,
+          and better progress.
+        </div>
+
         <button
+          onClick={onUpgradeClick}
+          onMouseEnter={() => setUpgradeHovered(true)}
+          onMouseLeave={() => setUpgradeHovered(false)}
           style={{
             width: "100%",
-            background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)",
-            color: "white",
             border: "none",
             borderRadius: "18px",
-            padding: "15px",
-            fontWeight: 800,
+            padding: "16px 18px",
+            background: "linear-gradient(135deg, #2563eb 0%, #4f8cff 100%)",
+            color: "#ffffff",
+            fontWeight: 900,
             fontSize: "16px",
             cursor: "pointer",
+            boxShadow: upgradeHovered
+              ? "0 20px 36px rgba(37,99,235,0.40)"
+              : "0 16px 30px rgba(37,99,235,0.32)",
+            transform: upgradeHovered ? "translateY(-2px)" : "translateY(0)",
+            transition: "all 180ms ease",
           }}
         >
           Upgrade to Pro
         </button>
-
-        <div
-          style={{
-            marginTop: "12px",
-            fontSize: "14px",
-            color: "rgba(255,255,255,0.58)",
-            lineHeight: 1.7,
-          }}
-        >
-          Full Scan, unlimited cleanup, bulk actions, and better progress.
-        </div>
       </div>
     </aside>
   );

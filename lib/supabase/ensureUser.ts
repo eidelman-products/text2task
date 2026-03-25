@@ -8,7 +8,9 @@ type EnsureUserInput = {
 export async function ensureUser({ id, email }: EnsureUserInput) {
   const { data: existingUser, error: selectError } = await supabaseAdmin
     .from("users")
-    .select("id, email, plan, weekly_cleanup_used, weekly_reset_date")
+    .select(
+      "id, email, plan, weekly_cleanup_used, weekly_reset_date, weekly_unread_used, weekly_unread_reset_date"
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -28,8 +30,11 @@ export async function ensureUser({ id, email }: EnsureUserInput) {
       email,
       plan: "free",
       weekly_cleanup_used: 0,
+      weekly_unread_used: 0,
     })
-    .select("id, email, plan, weekly_cleanup_used, weekly_reset_date")
+    .select(
+      "id, email, plan, weekly_cleanup_used, weekly_reset_date, weekly_unread_used, weekly_unread_reset_date"
+    )
     .single();
 
   if (insertError) {

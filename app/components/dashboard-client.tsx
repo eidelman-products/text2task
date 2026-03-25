@@ -7,11 +7,11 @@ import EmptyStateCard from "./dashboard/empty-state-card";
 import PrivacyTrust from "./dashboard/privacy-trust";
 import SmartViewPage from "./dashboard/smart-view-page";
 import DashboardOverview from "./dashboard/dashboard-overview";
-import ScanResultsView from "./dashboard/scan-results-view";
 import TopSendersView from "./dashboard/top-senders-view";
 import PromotionsView from "./dashboard/promotions-view";
 import DashboardHeader from "./dashboard/dashboard-header";
 import NoScanState from "./dashboard/no-scan-state";
+import UpgradeModal from "./dashboard/upgrade-modal";
 import { runUnsubscribeFlow } from "./dashboard/unsubscribe-actions";
 import {
   FREE_WEEKLY_LIMIT,
@@ -25,9 +25,12 @@ import type {
   SmartViewIds,
   SmartViews,
 } from "./dashboard/dashboard-types";
+import { getUserPlan } from "@/app/lib/billing/get-user-plan";
+import { prepareBulkClean } from "@/app/lib/cleanup/bulk-clean";
 
 type DashboardClientProps = {
   email: string;
+  userId: string;
 };
 
 type DashboardTopSender = {
@@ -160,10 +163,7 @@ function applyIdsRemovalToScanResult(
     scanned: nextScanned,
     topSenders: nextTopSenders,
     promotionsSenders: nextPromotionsSenders,
-    promotionsFound: nextPromotionsSenders.reduce(
-      (sum, row) => sum + row.count,
-      0
-    ),
+    promotionsFound: nextPromotionsSenders.reduce((sum, row) => sum + row.count, 0),
     promotionsFoundInSampleScan: nextPromotionsSenders.reduce(
       (sum, row) => sum + row.count,
       0
@@ -176,13 +176,17 @@ function applyIdsRemovalToScanResult(
   };
 }
 
-export default function DashboardClient({ email }: DashboardClientProps) {
-  const [plan] = useState<"free" | "pro">("pro");
+export default function DashboardClient({
+  email,
+  userId,
+}: DashboardClientProps) {
+  const [plan, setPlan] = useState<"free" | "pro">("free");
   const [activeNav, setActiveNav] = useState<ActiveNav>("dashboard");
 
   const [loadingScan, setLoadingScan] = useState(false);
   const [deletingSender, setDeletingSender] = useState<string | null>(null);
   const [archivingSender, setArchivingSender] = useState<string | null>(null);
+  const [readingSender, setReadingSender] = useState<string | null>(null);
   const [cleaningPromotions, setCleaningPromotions] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [cleaningPromotionsStep, setCleaningPromotionsStep] = useState<
@@ -196,10 +200,43 @@ export default function DashboardClient({ email }: DashboardClientProps) {
   >({});
 
   const [weeklyCleanupUsed, setWeeklyCleanupUsed] = useState(0);
+  const [weeklyUnreadUsed, setWeeklyUnreadUsed] = useState(0);
   const [scanResult, setScanResult] = useState<DashboardScanResult | null>(null);
   const [activeScanJob, setActiveScanJob] = useState<ActiveScanJob>(null);
 
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [upgradeModalTitle, setUpgradeModalTitle] = useState(
+    "You’ve reached your weekly limit"
+  );
+  const [upgradeModalDescription, setUpgradeModalDescription] = useState(
+    "Upgrade to Pro to continue cleaning your inbox without limits."
+  );
+
   const pollingRef = useRef<number | null>(null);
+
+  function openUpgradeModal(title: string, description: string) {
+    setUpgradeModalTitle(title);
+    setUpgradeModalDescription(description);
+    setUpgradeModalOpen(true);
+  }
+
+  function closeUpgradeModal() {
+    setUpgradeModalOpen(false);
+  }
+
+  function handleUpgradeClick() {
+    setUpgradeModalOpen(false);
+
+    
+    const checkoutUrl =
+      "https://inboxshaper.lemonsqueezy.com/checkout/buy/6a31c56c-eb35-492e-9268-087535a7f2f1";
+
+    const url = `${checkoutUrl}?checkout[custom][user_id]=${encodeURIComponent(
+      userId
+    )}`;
+
+    window.location.href = url;
+  }
 
   async function loadQuotaStatus() {
     try {
@@ -215,6 +252,10 @@ export default function DashboardClient({ email }: DashboardClientProps) {
       if (typeof data.weekly_cleanup_used === "number") {
         setWeeklyCleanupUsed(data.weekly_cleanup_used);
       }
+
+      if (typeof data.weekly_unread_used === "number") {
+        setWeeklyUnreadUsed(data.weekly_unread_used);
+      }
     } catch (err) {
       console.error("Failed to load quota status", err);
     }
@@ -225,9 +266,36 @@ export default function DashboardClient({ email }: DashboardClientProps) {
     FREE_WEEKLY_LIMIT - weeklyCleanupUsed
   );
 
+  const remainingWeeklyUnread = Math.max(
+    0,
+    FREE_WEEKLY_LIMIT - weeklyUnreadUsed
+  );
+
   useEffect(() => {
     loadQuotaStatus();
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadPlan() {
+      try {
+        const currentPlan = await getUserPlan(email);
+        if (!mounted) return;
+        setPlan(currentPlan);
+      } catch (err) {
+        console.error("Failed to load user plan", err);
+        if (!mounted) return;
+        setPlan("free");
+      }
+    }
+
+    loadPlan();
+
+    return () => {
+      mounted = false;
+    };
+  }, [email]);
 
   useEffect(() => {
     return () => {
@@ -324,8 +392,8 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         stopPolling();
         setSuccess(
           data.scanType === "sample"
-            ? "Free Scan completed successfully."
-            : "Full Scan completed successfully."
+            ? "Scan complete — your inbox snapshot is ready."
+            : "Full scan complete — your entire inbox is now analyzed."
         );
       }
 
@@ -422,15 +490,13 @@ export default function DashboardClient({ email }: DashboardClientProps) {
       setError("");
       setSuccess("");
 
-      const scanType = "sample";
-
       const res = await fetch("/api/scans/start", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         cache: "no-store",
-        body: JSON.stringify({ scanType }),
+        body: JSON.stringify({ scanType: "sample" }),
       });
 
       const data = await res.json();
@@ -462,7 +528,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         errorMessage: null,
       });
 
-      setSuccess("Free Scan started successfully.");
+      setSuccess("Free scan started.");
 
       if (!options?.preserveActiveNav) {
         setActiveNav("dashboard");
@@ -477,6 +543,14 @@ export default function DashboardClient({ email }: DashboardClientProps) {
   }
 
   async function runFullScan(options?: { preserveActiveNav?: boolean }) {
+    if (plan === "free") {
+      openUpgradeModal(
+        "Unlock Full Scan with Pro",
+        "Full inbox scan is available on Pro. Upgrade to scan your full Gmail inbox, unlock unlimited cleanup, and use bulk actions without weekly limits."
+      );
+      return;
+    }
+
     try {
       setLoadingScan(true);
       setError("");
@@ -520,7 +594,7 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         errorMessage: null,
       });
 
-      setSuccess("Full Scan started successfully.");
+      setSuccess("Full scan started.");
 
       if (!options?.preserveActiveNav) {
         setActiveNav("dashboard");
@@ -534,33 +608,38 @@ export default function DashboardClient({ email }: DashboardClientProps) {
     }
   }
 
-  async function handleCleanPromotionsBulk() {
+  async function handleCleanPromotionsBulk(selectedRows?: DashboardTopSender[]) {
     if (!scanResult) {
       setError("Run a scan first.");
       return;
     }
 
-    if (remainingWeeklyCleanup <= 0) {
-      setError(
-        "Free plan weekly cleanup limit reached. Upgrade to Pro for unlimited cleanup."
+    const rowsToClean =
+      selectedRows && selectedRows.length > 0 ? selectedRows : promotionRows;
+
+    const totalSelectedEmails = rowsToClean.reduce((sum, row) => sum + row.count, 0);
+
+    if (plan === "free" && totalSelectedEmails > remainingWeeklyCleanup) {
+      openUpgradeModal(
+        "You’ve reached your weekly cleanup limit",
+        `Your Free plan can clean ${remainingWeeklyCleanup} more emails this week. Upgrade to Pro to clean all ${totalSelectedEmails} selected promotion emails at once.`
       );
       return;
     }
 
-    const promotionIds = promotionRows
-      .flatMap((item) => item.ids || [])
-      .slice(0, remainingWeeklyCleanup);
-
-    if (!promotionIds.length) {
-      setError("No promotion email ids available to clean.");
+    let prepared;
+    try {
+      prepared = prepareBulkClean(rowsToClean, plan, remainingWeeklyCleanup);
+    } catch (err: any) {
+      openUpgradeModal(
+        "Upgrade to continue bulk cleanup",
+        err.message ||
+          "Upgrade to Pro to continue bulk cleanup without weekly limits."
+      );
       return;
     }
 
-    const confirmed = window.confirm(
-      `Move up to ${promotionIds.length} Promotions emails to Trash?`
-    );
-
-    if (!confirmed) return;
+    const { ids: promotionIds } = prepared;
 
     try {
       setCleaningPromotions(true);
@@ -591,11 +670,16 @@ export default function DashboardClient({ email }: DashboardClientProps) {
       const updatedUsed =
         typeof data.weekly_cleanup_used === "number"
           ? data.weekly_cleanup_used
+          : plan === "pro"
+          ? weeklyCleanupUsed
           : Math.min(FREE_WEEKLY_LIMIT, weeklyCleanupUsed + cleaned);
 
       setWeeklyCleanupUsed(updatedUsed);
       applyLiveRemoval(promotionIds);
-      setSuccess(data.message || `Moved ${cleaned} Promotions emails to Trash.`);
+      setSuccess(
+        data.message ||
+          `Nice work — ${cleaned} promotion emails are now out of your inbox.`
+      );
 
       setCleaningPromotionsStep("refreshing");
       setActiveNav("promotions");
@@ -609,8 +693,9 @@ export default function DashboardClient({ email }: DashboardClientProps) {
 
   async function handleDeleteBySender(item: DashboardTopSender) {
     if (plan === "free" && item.count > remainingWeeklyCleanup) {
-      setError(
-        `Free plan can clean up to ${remainingWeeklyCleanup} more emails this week. Upgrade to Pro for larger cleanup.`
+      openUpgradeModal(
+        "You’ve reached your weekly cleanup limit",
+        `Your Free plan can clean ${remainingWeeklyCleanup} more emails this week. Upgrade to Pro to move all ${item.count} emails from ${item.sender} to Trash now.`
       );
       return;
     }
@@ -665,8 +750,9 @@ export default function DashboardClient({ email }: DashboardClientProps) {
 
   async function handleArchiveBySender(item: DashboardTopSender) {
     if (plan === "free" && item.count > remainingWeeklyCleanup) {
-      setError(
-        `Free plan can clean up to ${remainingWeeklyCleanup} more emails this week. Upgrade to Pro for larger cleanup.`
+      openUpgradeModal(
+        "You’ve reached your weekly cleanup limit",
+        `Your Free plan can clean ${remainingWeeklyCleanup} more emails this week. Upgrade to Pro to archive all ${item.count} emails from ${item.sender} now.`
       );
       return;
     }
@@ -717,6 +803,63 @@ export default function DashboardClient({ email }: DashboardClientProps) {
     }
   }
 
+  async function handleMarkReadBySender(item: DashboardTopSender) {
+    if (plan === "free" && item.count > remainingWeeklyUnread) {
+      openUpgradeModal(
+        "You’ve reached your weekly unread limit",
+        `Your Free plan can mark ${remainingWeeklyUnread} more emails as read this week. Upgrade to Pro to mark all ${item.count} emails from ${item.sender} as read now.`
+      );
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Mark ${item.count} emails from ${item.sender} as read?`
+    );
+    if (!confirmed) return;
+
+    try {
+      setReadingSender(item.sender);
+      setError("");
+      setSuccess("");
+
+      const idsToRemove = Array.isArray(item.ids) ? item.ids : [];
+
+      const res = await fetch("/api/mark-read-by-sender", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: item.sender,
+          ids: idsToRemove,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to mark emails as read");
+        return;
+      }
+
+      const markedRead = Number(data.markedRead || idsToRemove.length || item.count);
+      const updatedUnreadUsed =
+        typeof data.weekly_unread_used === "number"
+          ? data.weekly_unread_used
+          : plan === "pro"
+          ? weeklyUnreadUsed
+          : Math.min(FREE_WEEKLY_LIMIT, weeklyUnreadUsed + markedRead);
+
+      setWeeklyUnreadUsed(updatedUnreadUsed);
+      applyLiveRemoval(idsToRemove);
+      setSuccess(`Marked ${markedRead} emails from ${item.sender} as read.`);
+    } catch (err: any) {
+      setError(err.message || "Failed to mark emails as read");
+    } finally {
+      setReadingSender(null);
+    }
+  }
+
   function handleUnsubscribe(item: DashboardTopSender) {
     setError("");
     setSuccess("");
@@ -749,6 +892,16 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         loadingScan={loadingScan}
         toneStyles={toneStyles}
         onRunSampleScan={() => runSampleScan()}
+        onRunFullScan={() => runFullScan()}
+        onGoToPromotions={() => setActiveNav("promotions")}
+        onGoToTopSenders={() => setActiveNav("top-senders")}
+        onGoToUnsubscribe={() => setActiveNav("top-senders")}
+        onUpgradeClick={() =>
+          openUpgradeModal(
+            "Unlock Pro features",
+            "Upgrade to Pro to unlock full inbox scan, unlimited cleanup, unlimited unread actions, and bulk actions without weekly limits."
+          )
+        }
       />
     );
   }
@@ -760,24 +913,6 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         description={description}
         loadingScan={loadingScan}
         onRunSampleScan={() => runSampleScan()}
-      />
-    );
-  }
-
-  function renderScanResults() {
-    if (!scanResult) {
-      return renderEmptyStateCard(
-        "Scan Results",
-        "Review what the latest scan found. No scan has been run yet."
-      );
-    }
-
-    return (
-      <ScanResultsView
-        scanned={scanResult.scanned}
-        senderGroups={scanResult.senderGroups}
-        promotionsFoundInSampleScan={scanResult.promotionsFoundInSampleScan}
-        fullInboxPromotionsCount={scanResult.fullInboxPromotionsCount}
       />
     );
   }
@@ -831,6 +966,12 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         onArchive={handleArchiveBySender}
         onUnsubscribe={handleUnsubscribe}
         onCleanPromotionsBulk={handleCleanPromotionsBulk}
+        onUpgradeClick={() =>
+          openUpgradeModal(
+            "Upgrade to Pro",
+            "Upgrade to Pro to unlock full inbox scan, unlimited cleanup, unlimited unread actions, and bulk actions without weekly limits."
+          )
+        }
       />
     );
   }
@@ -859,12 +1000,16 @@ export default function DashboardClient({ email }: DashboardClientProps) {
         rows={rows}
         deletingSender={deletingSender}
         archivingSender={archivingSender}
-        remainingWeeklyCleanup={remainingWeeklyCleanup}
+        readingSender={readingSender}
+        remainingWeeklyCleanup={
+          viewKey === "unread" ? remainingWeeklyUnread : remainingWeeklyCleanup
+        }
         plan={plan}
         unsubscribedSenders={unsubscribedSenders}
         onDelete={handleDeleteBySender}
         onArchive={handleArchiveBySender}
         onUnsubscribe={handleUnsubscribe}
+        onMarkRead={handleMarkReadBySender}
       />
     );
   }
@@ -873,10 +1018,109 @@ export default function DashboardClient({ email }: DashboardClientProps) {
     return <PrivacyTrust />;
   }
 
+  function renderBilling() {
+    return (
+      <div
+        style={{
+          border: "1px solid #e2e8f0",
+          background: "#ffffff",
+          borderRadius: "24px",
+          padding: "28px",
+          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.06)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "28px",
+            fontWeight: 800,
+            color: "#0f172a",
+            marginBottom: "8px",
+          }}
+        >
+          Billing
+        </div>
+
+        <div
+          style={{
+            fontSize: "16px",
+            lineHeight: 1.7,
+            color: "#64748b",
+            marginBottom: "24px",
+            maxWidth: "680px",
+          }}
+        >
+          Manage your InboxShaper plan, upgrade to Pro, and review your
+          subscription status.
+        </div>
+
+        <div
+          style={{
+            border: "1px solid #e2e8f0",
+            borderRadius: "20px",
+            padding: "22px",
+            background: "#f8fafc",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "14px",
+              fontWeight: 700,
+              color: "#94a3b8",
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+              marginBottom: "10px",
+            }}
+          >
+            Current plan
+          </div>
+
+          <div
+            style={{
+              fontSize: "24px",
+              fontWeight: 800,
+              color: "#0f172a",
+              marginBottom: "8px",
+            }}
+          >
+            {plan === "pro" ? "Pro" : "Free"}
+          </div>
+
+          <div
+            style={{
+              fontSize: "15px",
+              color: "#64748b",
+              lineHeight: 1.7,
+              marginBottom: "18px",
+            }}
+          >
+            {plan === "pro"
+              ? "Your Pro plan is active. Full Scan and unlimited cleanup are available."
+              : "You are currently on the Free plan. Upgrade to Pro to unlock Full Scan and unlimited cleanup."}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setUpgradeModalOpen(true)}
+            style={{
+              border: "none",
+              background: "#0f172a",
+              color: "#ffffff",
+              borderRadius: "14px",
+              padding: "14px 18px",
+              fontSize: "15px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            {plan === "pro" ? "Manage Plan" : "Upgrade to Pro"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   function renderContent() {
     switch (activeNav) {
-      case "scan-results":
-        return renderScanResults();
       case "top-senders":
         return renderTopSenders();
       case "promotions":
@@ -909,6 +1153,8 @@ export default function DashboardClient({ email }: DashboardClientProps) {
           "shopping",
           "Shopping-related emails matched inside your latest scan."
         );
+      case "billing":
+        return renderBilling();
       case "privacy-trust":
         return renderPrivacyTrust();
       case "dashboard":
@@ -918,50 +1164,80 @@ export default function DashboardClient({ email }: DashboardClientProps) {
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 0,
-        alignItems: "stretch",
-        minHeight: "100vh",
-        background: "#f5f7fb",
-      }}
-    >
-      <DashboardSidebar
-        email={email}
-        activeNav={activeNav}
-        setActiveNav={setActiveNav}
-        setError={setError}
-        setSuccess={setSuccess}
-        weeklyCleanupUsed={weeklyCleanupUsed}
-        remainingWeeklyCleanup={remainingWeeklyCleanup}
-        freeWeeklyLimit={FREE_WEEKLY_LIMIT}
-        scanResult={scanResult}
-      />
-
+    <>
       <div
         style={{
-          flex: 1,
-          minWidth: 0,
-          padding: "26px",
+          display: "flex",
+          alignItems: "flex-start",
+          minHeight: "100vh",
+          background:
+            "radial-gradient(circle at top left, #eef4ff 0%, #f7f9fc 40%, #f8fafc 100%)",
         }}
       >
-        <DashboardHeader
-          onDisconnect={handleDisconnectGmail}
-          isDisconnecting={isDisconnecting}
-        />
-
-        <ScanBanner
-          error={error}
-          success={
-            activeScanJob
-              ? `${success} ${activeScanJob.currentStep} (${activeScanJob.progress}%)`
-              : success
+        <DashboardSidebar
+          email={email}
+          activeNav={activeNav}
+          setActiveNav={setActiveNav}
+          setError={setError}
+          setSuccess={setSuccess}
+          weeklyCleanupUsed={weeklyCleanupUsed}
+          remainingWeeklyCleanup={remainingWeeklyCleanup}
+          freeWeeklyLimit={FREE_WEEKLY_LIMIT}
+          weeklyUnreadUsed={weeklyUnreadUsed}
+          remainingWeeklyUnread={remainingWeeklyUnread}
+          freeWeeklyUnreadLimit={FREE_WEEKLY_LIMIT}
+          scanResult={scanResult}
+          onUpgradeClick={() =>
+            openUpgradeModal(
+              "Upgrade to Pro",
+              "Upgrade to Pro to unlock full inbox scan, unlimited cleanup, unlimited unread actions, and bulk actions without weekly limits."
+            )
           }
         />
 
-        {renderContent()}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: "26px 28px 34px 28px",
+          }}
+        >
+          <DashboardHeader
+            userEmail={email}
+            onBilling={() => setActiveNav("billing")}
+            onDisconnect={handleDisconnectGmail}
+            onLogout={() => {
+              window.location.href = "/";
+            }}
+            isDisconnecting={isDisconnecting}
+          />
+
+          <ScanBanner
+            error={error}
+            success={success}
+            progress={
+              activeScanJob &&
+              (activeScanJob.status === "queued" ||
+                activeScanJob.status === "running")
+                ? {
+                    step: activeScanJob.currentStep,
+                    progress: activeScanJob.progress,
+                  }
+                : null
+            }
+          />
+
+          {renderContent()}
+        </div>
       </div>
-    </div>
+
+      <UpgradeModal
+        open={upgradeModalOpen}
+        title={upgradeModalTitle}
+        description={upgradeModalDescription}
+        onClose={closeUpgradeModal}
+        onUpgrade={handleUpgradeClick}
+      />
+    </>
   );
 }
