@@ -227,20 +227,21 @@ export default function DashboardClient({
   }
 
   function handleUpgradeClick() {
-    setUpgradeModalOpen(false);
+  setUpgradeModalOpen(false);
 
-    const checkoutUrl =
-      "https://inboxshaper.lemonsqueezy.com/checkout/buy/6a31c56c-eb35-492e-9268-087535a7f2f1";
+  const checkoutUrl =
+    "https://inboxshaper.lemonsqueezy.com/checkout/buy/6a31c56c-eb35-492e-9268-087535a7f2f1";
 
-    const returnTo = `${window.location.origin}/dashboard`;
+  const returnTo = `${window.location.origin}/dashboard`;
 
-    const url =
-      `${checkoutUrl}` +
-      `?checkout[custom][user_id]=${encodeURIComponent(userId)}` +
-      `&checkout[success_url]=${encodeURIComponent(returnTo)}`;
+  const url =
+    `${checkoutUrl}` +
+    `?checkout[email]=${encodeURIComponent(email)}` +
+    `&checkout[custom][user_id]=${encodeURIComponent(userId)}` +
+    `&checkout[success_url]=${encodeURIComponent(returnTo)}`;
 
-    window.location.href = url;
-  }
+  window.location.href = url;
+}
 
   async function loadQuotaStatus() {
     try {
