@@ -60,6 +60,7 @@ type DashboardOverviewProps = {
   onGoToPromotions: () => void;
   onGoToTopSenders: () => void;
   onGoToUnsubscribe: () => void;
+  onUpgradeClick: () => void;
 };
 
 type VolumeHistoryPoint = {
@@ -312,6 +313,7 @@ export default function DashboardOverview({
   onGoToPromotions,
   onGoToTopSenders,
   onGoToUnsubscribe,
+  onUpgradeClick,
 }: DashboardOverviewProps) {
   const categoryData = useMemo(() => getCategoryData(scanResult), [scanResult]);
   const dominantCategory = useMemo(
@@ -510,8 +512,8 @@ export default function DashboardOverview({
               <PrimaryButton onClick={onRunSampleScan} disabled={loadingScan}>
                 {loadingScan ? "Scanning..." : "Run New Sample Scan"}
               </PrimaryButton>
-              <SecondaryButton onClick={onRunFullScan}>
-                Unlock Full Scan (Pro)
+              <SecondaryButton onClick={onUpgradeClick}>
+                Upgrade to Pro
               </SecondaryButton>
             </div>
           </div>
