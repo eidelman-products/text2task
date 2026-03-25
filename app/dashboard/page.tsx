@@ -11,5 +11,10 @@ export default async function DashboardPage() {
 
   const connectedEmail = user?.email ?? null;
 
-  return <DashboardClient email={connectedEmail || "Not connected"} />;
+  return (
+  <DashboardClient
+    email={connectedEmail || "Not connected"}
+    userId={user?.id || ""}
+  />
+);
 }
