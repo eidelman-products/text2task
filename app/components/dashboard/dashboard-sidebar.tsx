@@ -31,6 +31,7 @@ type DashboardScanResult = {
 
 type DashboardSidebarProps = {
   email: string;
+  plan: "free" | "pro";
   activeNav: ActiveNav;
   setActiveNav: (nav: ActiveNav) => void;
   setError: (value: string) => void;
@@ -125,6 +126,7 @@ function SidebarNavButton({
 
   return (
     <button
+      type="button"
       style={navItemStyle(isActive, hovered)}
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
@@ -138,6 +140,7 @@ function SidebarNavButton({
 
 export default function DashboardSidebar({
   email,
+  plan,
   activeNav,
   setActiveNav,
   weeklyCleanupUsed,
@@ -156,15 +159,15 @@ export default function DashboardSidebar({
     shopping: 0,
   };
 
-  const cleanupPercent = Math.min(
-    100,
-    (weeklyCleanupUsed / Math.max(freeWeeklyLimit, 1)) * 100
-  );
+  const cleanupPercent =
+    plan === "pro"
+      ? 100
+      : Math.min(100, (weeklyCleanupUsed / Math.max(freeWeeklyLimit, 1)) * 100);
 
-  const unreadPercent = Math.min(
-    100,
-    (weeklyUnreadUsed / Math.max(freeWeeklyUnreadLimit, 1)) * 100
-  );
+  const unreadPercent =
+    plan === "pro"
+      ? 100
+      : Math.min(100, (weeklyUnreadUsed / Math.max(freeWeeklyUnreadLimit, 1)) * 100);
 
   const [upgradeHovered, setUpgradeHovered] = useState(false);
 
@@ -276,10 +279,10 @@ export default function DashboardSidebar({
             marginTop: "14px",
             fontSize: "13px",
             fontWeight: 900,
-            color: "#60a5fa",
+            color: plan === "pro" ? "#86efac" : "#60a5fa",
           }}
         >
-          FREE PLAN
+          {plan === "pro" ? "PRO PLAN ACTIVE" : "FREE PLAN"}
         </div>
       </div>
 
@@ -288,8 +291,13 @@ export default function DashboardSidebar({
           borderRadius: "24px",
           padding: "18px",
           background:
-            "linear-gradient(180deg, rgba(30,64,175,0.34) 0%, rgba(15,23,42,0.42) 100%)",
-          border: "1px solid rgba(59,130,246,0.45)",
+            plan === "pro"
+              ? "linear-gradient(180deg, rgba(34,197,94,0.22) 0%, rgba(15,23,42,0.42) 100%)"
+              : "linear-gradient(180deg, rgba(30,64,175,0.34) 0%, rgba(15,23,42,0.42) 100%)",
+          border:
+            plan === "pro"
+              ? "1px solid rgba(34,197,94,0.35)"
+              : "1px solid rgba(59,130,246,0.45)",
           marginBottom: "14px",
           boxShadow: "0 18px 34px rgba(2,8,23,0.22)",
         }}
@@ -298,7 +306,7 @@ export default function DashboardSidebar({
           style={{
             fontSize: "14px",
             fontWeight: 800,
-            color: "#93c5fd",
+            color: plan === "pro" ? "#86efac" : "#93c5fd",
             marginBottom: "12px",
           }}
         >
@@ -314,7 +322,7 @@ export default function DashboardSidebar({
             marginBottom: "14px",
           }}
         >
-          {weeklyCleanupUsed} / {freeWeeklyLimit}
+          {plan === "pro" ? "Unlimited" : `${weeklyCleanupUsed} / ${freeWeeklyLimit}`}
         </div>
 
         <div
@@ -333,8 +341,14 @@ export default function DashboardSidebar({
               width: `${cleanupPercent}%`,
               height: "100%",
               borderRadius: "999px",
-              background: "linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%)",
-              boxShadow: "0 0 16px rgba(59,130,246,0.22)",
+              background:
+                plan === "pro"
+                  ? "linear-gradient(90deg, #22c55e 0%, #16a34a 100%)"
+                  : "linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%)",
+              boxShadow:
+                plan === "pro"
+                  ? "0 0 16px rgba(34,197,94,0.22)"
+                  : "0 0 16px rgba(59,130,246,0.22)",
               transition: "width 180ms ease",
             }}
           />
@@ -347,7 +361,9 @@ export default function DashboardSidebar({
             color: "#e2e8f0",
           }}
         >
-          {remainingWeeklyCleanup} cleanup emails left this week
+          {plan === "pro"
+            ? "Unlimited cleanup available"
+            : `${remainingWeeklyCleanup} cleanup emails left this week`}
         </div>
       </div>
 
@@ -356,8 +372,13 @@ export default function DashboardSidebar({
           borderRadius: "24px",
           padding: "18px",
           background:
-            "linear-gradient(180deg, rgba(8,145,178,0.26) 0%, rgba(15,23,42,0.42) 100%)",
-          border: "1px solid rgba(34,211,238,0.35)",
+            plan === "pro"
+              ? "linear-gradient(180deg, rgba(16,185,129,0.18) 0%, rgba(15,23,42,0.42) 100%)"
+              : "linear-gradient(180deg, rgba(8,145,178,0.26) 0%, rgba(15,23,42,0.42) 100%)",
+          border:
+            plan === "pro"
+              ? "1px solid rgba(16,185,129,0.30)"
+              : "1px solid rgba(34,211,238,0.35)",
           marginBottom: "22px",
           boxShadow: "0 18px 34px rgba(2,8,23,0.18)",
         }}
@@ -366,7 +387,7 @@ export default function DashboardSidebar({
           style={{
             fontSize: "14px",
             fontWeight: 800,
-            color: "#67e8f9",
+            color: plan === "pro" ? "#6ee7b7" : "#67e8f9",
             marginBottom: "12px",
           }}
         >
@@ -382,7 +403,7 @@ export default function DashboardSidebar({
             marginBottom: "14px",
           }}
         >
-          {weeklyUnreadUsed} / {freeWeeklyUnreadLimit}
+          {plan === "pro" ? "Unlimited" : `${weeklyUnreadUsed} / ${freeWeeklyUnreadLimit}`}
         </div>
 
         <div
@@ -401,8 +422,14 @@ export default function DashboardSidebar({
               width: `${unreadPercent}%`,
               height: "100%",
               borderRadius: "999px",
-              background: "linear-gradient(90deg, #22d3ee 0%, #06b6d4 100%)",
-              boxShadow: "0 0 16px rgba(34,211,238,0.18)",
+              background:
+                plan === "pro"
+                  ? "linear-gradient(90deg, #10b981 0%, #059669 100%)"
+                  : "linear-gradient(90deg, #22d3ee 0%, #06b6d4 100%)",
+              boxShadow:
+                plan === "pro"
+                  ? "0 0 16px rgba(16,185,129,0.20)"
+                  : "0 0 16px rgba(34,211,238,0.18)",
               transition: "width 180ms ease",
             }}
           />
@@ -415,7 +442,9 @@ export default function DashboardSidebar({
             color: "#e2e8f0",
           }}
         >
-          {remainingWeeklyUnread} unread actions left this week
+          {plan === "pro"
+            ? "Unlimited unread actions available"
+            : `${remainingWeeklyUnread} unread actions left this week`}
         </div>
       </div>
 
@@ -519,50 +548,76 @@ export default function DashboardSidebar({
         />
       </div>
 
-      <div
-        style={{
-          marginTop: "10px",
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          paddingTop: "18px",
-        }}
-      >
+      {plan === "free" ? (
         <div
           style={{
-            fontSize: "14px",
-            fontWeight: 700,
-            color: "#e2e8f0",
-            marginBottom: "14px",
-            lineHeight: 1.6,
+            marginTop: "10px",
+            borderTop: "1px solid rgba(255,255,255,0.08)",
+            paddingTop: "18px",
           }}
         >
-          Full Scan, unlimited cleanup, unlimited unread actions, bulk actions,
-          and better progress.
-        </div>
+          <div
+            style={{
+              fontSize: "14px",
+              fontWeight: 700,
+              color: "#e2e8f0",
+              marginBottom: "14px",
+              lineHeight: 1.6,
+            }}
+          >
+            Full Scan, unlimited cleanup, unlimited unread actions, bulk actions,
+            and better progress.
+          </div>
 
-        <button
-          onClick={onUpgradeClick}
-          onMouseEnter={() => setUpgradeHovered(true)}
-          onMouseLeave={() => setUpgradeHovered(false)}
+          <button
+            type="button"
+            onClick={onUpgradeClick}
+            onMouseEnter={() => setUpgradeHovered(true)}
+            onMouseLeave={() => setUpgradeHovered(false)}
+            style={{
+              width: "100%",
+              border: "none",
+              borderRadius: "18px",
+              padding: "16px 18px",
+              background: "linear-gradient(135deg, #2563eb 0%, #4f8cff 100%)",
+              color: "#ffffff",
+              fontWeight: 900,
+              fontSize: "16px",
+              cursor: "pointer",
+              boxShadow: upgradeHovered
+                ? "0 20px 36px rgba(37,99,235,0.40)"
+                : "0 16px 30px rgba(37,99,235,0.32)",
+              transform: upgradeHovered ? "translateY(-2px)" : "translateY(0)",
+              transition: "all 180ms ease",
+            }}
+          >
+            Upgrade to Pro
+          </button>
+        </div>
+      ) : (
+        <div
           style={{
-            width: "100%",
-            border: "none",
-            borderRadius: "18px",
-            padding: "16px 18px",
-            background: "linear-gradient(135deg, #2563eb 0%, #4f8cff 100%)",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "16px",
-            cursor: "pointer",
-            boxShadow: upgradeHovered
-              ? "0 20px 36px rgba(37,99,235,0.40)"
-              : "0 16px 30px rgba(37,99,235,0.32)",
-            transform: upgradeHovered ? "translateY(-2px)" : "translateY(0)",
-            transition: "all 180ms ease",
+            marginTop: "10px",
+            borderTop: "1px solid rgba(255,255,255,0.08)",
+            paddingTop: "18px",
           }}
         >
-          Upgrade to Pro
-        </button>
-      </div>
+          <div
+            style={{
+              borderRadius: "18px",
+              padding: "16px 16px",
+              background: "rgba(34,197,94,0.14)",
+              border: "1px solid rgba(34,197,94,0.24)",
+              color: "#dcfce7",
+              fontSize: "14px",
+              fontWeight: 800,
+              lineHeight: 1.6,
+            }}
+          >
+            Pro is active. Full Scan and unlimited cleanup are unlocked.
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

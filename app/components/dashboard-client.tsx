@@ -31,6 +31,7 @@ import { prepareBulkClean } from "@/app/lib/cleanup/bulk-clean";
 type DashboardClientProps = {
   email: string;
   userId: string;
+  initialPlan: "free" | "pro";
 };
 
 type DashboardTopSender = {
@@ -179,8 +180,9 @@ function applyIdsRemovalToScanResult(
 export default function DashboardClient({
   email,
   userId,
+  initialPlan,
 }: DashboardClientProps) {
-  const [plan, setPlan] = useState<"free" | "pro">("free");
+  const [plan, setPlan] = useState<"free" | "pro">(initialPlan);
   const [activeNav, setActiveNav] = useState<ActiveNav>("dashboard");
 
   const [loadingScan, setLoadingScan] = useState(false);
@@ -227,13 +229,15 @@ export default function DashboardClient({
   function handleUpgradeClick() {
     setUpgradeModalOpen(false);
 
-    
     const checkoutUrl =
       "https://inboxshaper.lemonsqueezy.com/checkout/buy/6a31c56c-eb35-492e-9268-087535a7f2f1";
 
-    const url = `${checkoutUrl}?checkout[custom][user_id]=${encodeURIComponent(
-      userId
-    )}`;
+    const returnTo = `${window.location.origin}/dashboard`;
+
+    const url =
+      `${checkoutUrl}` +
+      `?checkout[custom][user_id]=${encodeURIComponent(userId)}` +
+      `&checkout[success_url]=${encodeURIComponent(returnTo)}`;
 
     window.location.href = url;
   }
@@ -277,25 +281,54 @@ export default function DashboardClient({
 
   useEffect(() => {
     let mounted = true;
+    let intervalId: number | null = null;
 
-    async function loadPlan() {
+    async function refreshPlan() {
       try {
         const currentPlan = await getUserPlan(email);
         if (!mounted) return;
-        setPlan(currentPlan);
+
+        setPlan((prev) => {
+          if (prev !== currentPlan) {
+            if (currentPlan === "pro") {
+              setSuccess("Your Pro plan is now active.");
+            }
+            return currentPlan;
+          }
+          return prev;
+        });
       } catch (err) {
         console.error("Failed to load user plan", err);
-        if (!mounted) return;
-        setPlan("free");
       }
     }
 
-    loadPlan();
+    void refreshPlan();
+
+    const handleVisibilityOrFocus = () => {
+      void refreshPlan();
+    };
+
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    if (initialPlan === "free") {
+      intervalId = window.setInterval(() => {
+        if (document.visibilityState === "visible") {
+          void refreshPlan();
+        }
+      }, 5000);
+    }
 
     return () => {
       mounted = false;
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+
+      if (intervalId) {
+        window.clearInterval(intervalId);
+      }
     };
-  }, [email]);
+  }, [email, initialPlan]);
 
   useEffect(() => {
     return () => {
@@ -1174,8 +1207,9 @@ export default function DashboardClient({
             "radial-gradient(circle at top left, #eef4ff 0%, #f7f9fc 40%, #f8fafc 100%)",
         }}
       >
-        <DashboardSidebar
+                <DashboardSidebar
           email={email}
+          plan={plan}
           activeNav={activeNav}
           setActiveNav={setActiveNav}
           setError={setError}
