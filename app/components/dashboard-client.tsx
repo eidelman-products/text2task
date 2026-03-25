@@ -240,6 +240,9 @@ export default function DashboardClient({
     `&checkout[custom][user_id]=${encodeURIComponent(userId)}` +
     `&checkout[success_url]=${encodeURIComponent(returnTo)}`;
 
+console.log("LEMON CHECKOUT URL:", url);
+alert(url);
+
   window.location.href = url;
 }
 
