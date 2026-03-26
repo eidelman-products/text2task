@@ -226,24 +226,36 @@ export default function DashboardClient({
     setUpgradeModalOpen(false);
   }
 
-  function handleUpgradeClick() {
-  setUpgradeModalOpen(false);
+  async function handleUpgradeClick() {
+  try {
+    setUpgradeModalOpen(false);
+    setError("");
+    setSuccess("");
 
-  const checkoutUrl =
-    "https://inboxshaper.lemonsqueezy.com/checkout/buy/6a31c56c-eb35-492e-9268-087535a7f2f1";
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
 
-  const returnTo = `${window.location.origin}/dashboard`;
+    const data = await res.json();
 
-  const url =
-    `${checkoutUrl}` +
-    `?checkout[email]=${encodeURIComponent(email)}` +
-    `&checkout[custom][user_id]=${encodeURIComponent(userId)}` +
-    `&checkout[success_url]=${encodeURIComponent(returnTo)}`;
+    if (!res.ok) {
+      setError(data.error || "Failed to start checkout");
+      return;
+    }
 
-console.log("LEMON CHECKOUT URL:", url);
-alert(url);
+    if (!data.url) {
+      setError("Checkout URL was not returned");
+      return;
+    }
 
-  window.location.href = url;
+    window.location.href = data.url;
+  } catch (err: any) {
+    setError(err.message || "Failed to start checkout");
+  }
 }
 
   async function loadQuotaStatus() {
