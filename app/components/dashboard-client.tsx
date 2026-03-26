@@ -25,7 +25,6 @@ import type {
   SmartViewIds,
   SmartViews,
 } from "./dashboard/dashboard-types";
-import { getUserPlan } from "@/app/lib/billing/get-user-plan";
 import { prepareBulkClean } from "@/app/lib/cleanup/bulk-clean";
 
 type DashboardClientProps = {
@@ -85,6 +84,10 @@ type ScanStatusResponse = {
 type ScanResultsResponse = {
   exists: boolean;
   result: DashboardScanResult | null;
+};
+
+type BillingPlanResponse = {
+  plan?: "free" | "pro";
 };
 
 function getHealthScoreFromScanned(scanned: number): number {
@@ -217,6 +220,7 @@ export default function DashboardClient({
   );
 
   const pollingRef = useRef<number | null>(null);
+  const planPollingRef = useRef<number | null>(null);
 
   function openUpgradeModal(title: string, description: string) {
     setUpgradeModalTitle(title);
@@ -252,6 +256,82 @@ export default function DashboardClient({
 
     void refreshCurrentUser();
   }, []);
+
+  async function fetchPlanFromServer(options?: { silent?: boolean }) {
+    try {
+      const res = await fetch("/api/billing/plan", {
+        method: "GET",
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      });
+
+      const data = (await res.json().catch(() => null)) as BillingPlanResponse | null;
+
+      if (!res.ok) {
+        if (!options?.silent) {
+          console.error("Failed to fetch plan from server");
+        }
+        return;
+      }
+
+      const nextPlan = data?.plan === "pro" ? "pro" : "free";
+
+      setPlan((prev) => {
+        if (prev !== nextPlan && nextPlan === "pro") {
+          setSuccess("Your Pro plan is now active.");
+        }
+        return nextPlan;
+      });
+    } catch (err) {
+      if (!options?.silent) {
+        console.error("Failed to fetch plan from server", err);
+      }
+    }
+  }
+
+  function stopPlanPolling() {
+    if (planPollingRef.current) {
+      window.clearInterval(planPollingRef.current);
+      planPollingRef.current = null;
+    }
+  }
+
+  useEffect(() => {
+    let mounted = true;
+
+    const handleVisibilityOrFocus = () => {
+      if (!mounted) return;
+      void fetchPlanFromServer({ silent: true });
+    };
+
+    void fetchPlanFromServer({ silent: true });
+
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    if (initialPlan === "free") {
+      planPollingRef.current = window.setInterval(() => {
+        if (document.visibilityState === "visible") {
+          void fetchPlanFromServer({ silent: true });
+        }
+      }, 5000);
+    }
+
+    return () => {
+      mounted = false;
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+      stopPlanPolling();
+    };
+  }, [initialPlan]);
+
+  useEffect(() => {
+    if (plan === "pro") {
+      stopPlanPolling();
+    }
+  }, [plan]);
 
   async function handleUpgradeClick() {
     try {
@@ -327,63 +407,11 @@ export default function DashboardClient({
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-    let intervalId: number | null = null;
-
-    async function refreshPlan() {
-      try {
-        if (!currentUserId) return;
-
-        const currentPlan = await getUserPlan(currentUserId);
-        if (!mounted) return;
-
-        setPlan((prev) => {
-          if (prev !== currentPlan) {
-            if (currentPlan === "pro") {
-              setSuccess("Your Pro plan is now active.");
-            }
-            return currentPlan;
-          }
-          return prev;
-        });
-      } catch (err) {
-        console.error("Failed to load user plan", err);
-      }
-    }
-
-    void refreshPlan();
-
-    const handleVisibilityOrFocus = () => {
-      void refreshPlan();
-    };
-
-    window.addEventListener("focus", handleVisibilityOrFocus);
-    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
-
-    if (initialPlan === "free") {
-      intervalId = window.setInterval(() => {
-        if (document.visibilityState === "visible") {
-          void refreshPlan();
-        }
-      }, 5000);
-    }
-
-    return () => {
-      mounted = false;
-      window.removeEventListener("focus", handleVisibilityOrFocus);
-      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
-
-      if (intervalId) {
-        window.clearInterval(intervalId);
-      }
-    };
-  }, [currentUserId, initialPlan]);
-
-  useEffect(() => {
     return () => {
       if (pollingRef.current) {
         window.clearInterval(pollingRef.current);
       }
+      stopPlanPolling();
     };
   }, []);
 
@@ -546,6 +574,7 @@ export default function DashboardClient({
       setError("");
       setSuccess("");
       stopPolling();
+      stopPlanPolling();
 
       const res = await fetch("/api/disconnect", {
         method: "POST",
