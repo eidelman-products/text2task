@@ -340,16 +340,13 @@ export default function DashboardClient({
       setSuccess("");
 
       const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-        body: JSON.stringify({
-          email: currentEmail,
-          userId: currentUserId,
-        }),
-      });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  cache: "no-store",
+  body: JSON.stringify({}),
+});
 
       const data = await res.json();
 

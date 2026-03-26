@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 type LemonCreateCheckoutResponse = {
   data?: {
@@ -12,18 +13,24 @@ type LemonCreateCheckoutResponse = {
   }>;
 };
 
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   try {
-    const body = await req.json().catch(() => null);
-    const email = body?.email;
-    const userId = body?.userId;
+    const supabase = await createClient();
 
-    if (!userId || !email) {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user?.id || !user?.email) {
       return NextResponse.json(
-        { error: "Missing checkout user data" },
-        { status: 400 }
+        { error: "You must be signed in to start checkout" },
+        { status: 401 }
       );
     }
+
+    const email = user.email;
+    const userId = user.id;
 
     const apiKey = process.env.LEMON_SQUEEZY_API_KEY;
     const storeId = process.env.LEMON_SQUEEZY_STORE_ID;
@@ -36,12 +43,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const origin =
-      req.headers.get("origin") ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      "https://www.inboxshaper.com";
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL || "https://www.inboxshaper.com";
 
-    const redirectUrl = `${origin}/dashboard`;
+    const redirectUrl = `${appUrl}/dashboard`;
 
     const lemonRes = await fetch("https://api.lemonsqueezy.com/v1/checkouts", {
       method: "POST",
@@ -55,7 +60,7 @@ export async function POST(req: NextRequest) {
           type: "checkouts",
           attributes: {
             checkout_data: {
-              email: email,
+              email,
               custom: {
                 user_id: userId,
               },
