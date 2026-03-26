@@ -238,6 +238,10 @@ export default function DashboardClient({
         "Content-Type": "application/json",
       },
       cache: "no-store",
+      body: JSON.stringify({
+        email,
+        userId,
+      }),
     });
 
     const data = await res.json();

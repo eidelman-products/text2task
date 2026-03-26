@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 
 type LemonCreateCheckoutResponse = {
   data?: {
@@ -15,18 +14,15 @@ type LemonCreateCheckoutResponse = {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
+    const body = await req.json().catch(() => null);
+    const email = body?.email;
+    const userId = body?.userId;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    console.log("CHECKOUT USER:", {
-  id: user?.id,
-  email: user?.email,
-});
-
-    if (!user?.id || !user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId || !email) {
+      return NextResponse.json(
+        { error: "Missing checkout user data" },
+        { status: 400 }
+      );
     }
 
     const apiKey = process.env.LEMON_SQUEEZY_API_KEY;
@@ -59,9 +55,9 @@ export async function POST(req: NextRequest) {
           type: "checkouts",
           attributes: {
             checkout_data: {
-              email: user.email,
+              email: email,
               custom: {
-                user_id: user.id,
+                user_id: userId,
               },
             },
             product_options: {
