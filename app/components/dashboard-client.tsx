@@ -1257,15 +1257,15 @@ export default function DashboardClient({
   onBilling={() => setActiveNav("billing")}
   onDisconnect={handleDisconnectGmail}
   onLogout={async () => {
-    try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      await supabase.auth.signOut();
-      window.location.href = "/";
-    } catch {
-      window.location.href = "/";
-    }
-  }}
+  try {
+    await fetch("/api/disconnect", {
+      method: "POST",
+    });
+    window.location.href = "/";
+  } catch {
+    window.location.href = "/";
+  }
+}}
   isDisconnecting={isDisconnecting}
 />
 
