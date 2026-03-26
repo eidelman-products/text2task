@@ -32,10 +32,6 @@ export async function POST(_req: NextRequest) {
     const email = user.email;
     const userId = user.id;
 
-console.log("CHECKOUT SESSION USER:", {
-  email,
-  userId,
-});
 
     const apiKey = process.env.LEMON_SQUEEZY_API_KEY;
     const storeId = process.env.LEMON_SQUEEZY_STORE_ID;
