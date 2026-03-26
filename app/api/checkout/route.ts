@@ -112,7 +112,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ url: checkoutUrl });
+    return NextResponse.json({
+  url: checkoutUrl + "&reset=1",
+});
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || "Failed to create checkout" },
