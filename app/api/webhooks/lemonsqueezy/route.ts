@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!webhookSecret || !supabaseUrl || !serviceRoleKey) {
+    console.error("❌ Missing env variables");
     return NextResponse.json(
       { error: "Missing webhook configuration" },
       { status: 500 }
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
   const signature = req.headers.get("x-signature");
 
   if (!signature) {
+    console.error("❌ Missing signature");
     return NextResponse.json(
       { error: "Missing X-Signature header" },
       { status: 400 }
@@ -76,6 +78,7 @@ export async function POST(req: NextRequest) {
   const rawBody = await req.text();
 
   if (!verifySignature(rawBody, signature, webhookSecret)) {
+    console.error("❌ Invalid signature");
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
@@ -84,24 +87,26 @@ export async function POST(req: NextRequest) {
   try {
     payload = JSON.parse(rawBody);
   } catch {
+    console.error("❌ Invalid JSON");
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const eventName = payload.meta?.event_name;
-  const userId = payload.meta?.custom_data?.user_id;
+  let userId = payload.meta?.custom_data?.user_id;
   const subscriptionId = payload.data?.id ?? null;
   const userEmail = payload.data?.attributes?.user_email ?? null;
   const subscriptionStatus = payload.data?.attributes?.status ?? null;
 
+  console.log("🔥 WEBHOOK EVENT:", {
+    eventName,
+    userId,
+    userEmail,
+    subscriptionId,
+    subscriptionStatus,
+  });
+
   if (!eventName) {
     return NextResponse.json({ error: "Missing event_name" }, { status: 400 });
-  }
-
-  if (!userId) {
-    return NextResponse.json(
-      { error: "Missing custom_data.user_id" },
-      { status: 400 }
-    );
   }
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
@@ -112,83 +117,77 @@ export async function POST(req: NextRequest) {
   });
 
   try {
+    // 🧠 fallback: אם אין userId → חפש לפי email
+    if (!userId && userEmail) {
+      const { data: userByEmail } = await supabaseAdmin
+        .from("users")
+        .select("id")
+        .eq("email", userEmail)
+        .single();
+
+      if (userByEmail?.id) {
+        userId = userByEmail.id;
+        console.log("✅ Found user by email:", userId);
+      }
+    }
+
+    if (!userId) {
+      console.error("❌ No userId found");
+      return NextResponse.json(
+        { error: "Missing user identification" },
+        { status: 400 }
+      );
+    }
+
+    // 🔥 ACTIVE
     if (isActiveEvent(eventName)) {
-      const { error: userUpdateError } = await supabaseAdmin
+      console.log("🟢 ACTIVE EVENT");
+
+      await supabaseAdmin
         .from("users")
         .update({ plan: "pro" })
         .eq("id", userId);
 
-      if (userUpdateError) {
-        console.error("Failed to update user to pro", userUpdateError);
-        return NextResponse.json(
-          { error: "Failed updating user plan to pro" },
-          { status: 500 }
-        );
-      }
-
-      const { error: billingUpsertError } = await supabaseAdmin
-        .from("billing_subscriptions")
-        .upsert(
-          {
-            user_id: userId,
-            lemon_subscription_id: subscriptionId,
-            lemon_customer_email: userEmail,
-            status: subscriptionStatus || "active",
-            plan: "pro",
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id" }
-        );
-
-      if (billingUpsertError) {
-        console.error("Failed to upsert billing row", billingUpsertError);
-        return NextResponse.json(
-          { error: "Failed saving billing subscription" },
-          { status: 500 }
-        );
-      }
+      await supabaseAdmin.from("billing_subscriptions").upsert(
+        {
+          user_id: userId,
+          lemon_subscription_id: subscriptionId,
+          lemon_customer_email: userEmail,
+          status: subscriptionStatus || "active",
+          plan: "pro",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
     }
 
+    // 🔴 INACTIVE
     if (isInactiveEvent(eventName)) {
-      const { error: userUpdateError } = await supabaseAdmin
+      console.log("🔴 INACTIVE EVENT");
+
+      await supabaseAdmin
         .from("users")
         .update({ plan: "free" })
         .eq("id", userId);
 
-      if (userUpdateError) {
-        console.error("Failed to update user to free", userUpdateError);
-        return NextResponse.json(
-          { error: "Failed updating user plan to free" },
-          { status: 500 }
-        );
-      }
-
-      const { error: billingUpsertError } = await supabaseAdmin
-        .from("billing_subscriptions")
-        .upsert(
-          {
-            user_id: userId,
-            lemon_subscription_id: subscriptionId,
-            lemon_customer_email: userEmail,
-            status: subscriptionStatus || "inactive",
-            plan: "free",
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id" }
-        );
-
-      if (billingUpsertError) {
-        console.error("Failed to upsert billing row", billingUpsertError);
-        return NextResponse.json(
-          { error: "Failed saving billing subscription" },
-          { status: 500 }
-        );
-      }
+      await supabaseAdmin.from("billing_subscriptions").upsert(
+        {
+          user_id: userId,
+          lemon_subscription_id: subscriptionId,
+          lemon_customer_email: userEmail,
+          status: subscriptionStatus || "inactive",
+          plan: "free",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
     }
+
+    console.log("✅ Webhook processed successfully");
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("Webhook processing failed", error);
+    console.error("❌ Webhook processing failed", error);
     return NextResponse.json(
       { error: "Webhook processing failed" },
       { status: 500 }
