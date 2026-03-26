@@ -1253,14 +1253,21 @@ export default function DashboardClient({
           }}
         >
           <DashboardHeader
-            userEmail={email}
-            onBilling={() => setActiveNav("billing")}
-            onDisconnect={handleDisconnectGmail}
-            onLogout={() => {
-              window.location.href = "/";
-            }}
-            isDisconnecting={isDisconnecting}
-          />
+  userEmail={email}
+  onBilling={() => setActiveNav("billing")}
+  onDisconnect={handleDisconnectGmail}
+  onLogout={async () => {
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } catch {
+      window.location.href = "/";
+    }
+  }}
+  isDisconnecting={isDisconnecting}
+/>
 
           <ScanBanner
             error={error}
