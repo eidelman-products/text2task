@@ -33,6 +33,13 @@ export async function POST(req: NextRequest) {
     const updateSubscriptionUrl =
       attributes?.urls?.customer_portal_update_subscription || null;
 
+console.log("PORTAL URL DEBUG:", {
+  customerPortalUrl,
+  updatePaymentUrl,
+  updateSubscriptionUrl,
+  rawUrls: attributes?.urls,
+});
+
     const userId =
       body?.meta?.custom_data?.user_id || null;
 
