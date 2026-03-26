@@ -182,6 +182,8 @@ export default function DashboardClient({
   userId,
   initialPlan,
 }: DashboardClientProps) {
+  const [currentEmail, setCurrentEmail] = useState(email);
+  const [currentUserId, setCurrentUserId] = useState(userId);
   const [plan, setPlan] = useState<"free" | "pro">(initialPlan);
   const [activeNav, setActiveNav] = useState<ActiveNav>("dashboard");
 
@@ -226,41 +228,66 @@ export default function DashboardClient({
     setUpgradeModalOpen(false);
   }
 
+  useEffect(() => {
+    async function refreshCurrentUser() {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user?.email) {
+          setCurrentEmail(user.email);
+        }
+
+        if (user?.id) {
+          setCurrentUserId(user.id);
+        }
+      } catch (err) {
+        console.error("Failed to refresh current user", err);
+      }
+    }
+
+    void refreshCurrentUser();
+  }, []);
+
   async function handleUpgradeClick() {
-  try {
-    setUpgradeModalOpen(false);
-    setError("");
-    setSuccess("");
+    try {
+      setUpgradeModalOpen(false);
+      setError("");
+      setSuccess("");
 
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-      body: JSON.stringify({
-        email,
-        userId,
-      }),
-    });
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({
+          email: currentEmail,
+          userId: currentUserId,
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      setError(data.error || "Failed to start checkout");
-      return;
+      if (!res.ok) {
+        setError(data.error || "Failed to start checkout");
+        return;
+      }
+
+      if (!data.url) {
+        setError("Checkout URL was not returned");
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch (err: any) {
+      setError(err.message || "Failed to start checkout");
     }
-
-    if (!data.url) {
-      setError("Checkout URL was not returned");
-      return;
-    }
-
-    window.location.href = data.url;
-  } catch (err: any) {
-    setError(err.message || "Failed to start checkout");
   }
-}
 
   async function loadQuotaStatus() {
     try {
@@ -305,7 +332,9 @@ export default function DashboardClient({
 
     async function refreshPlan() {
       try {
-        const currentPlan = await getUserPlan(userId);
+        if (!currentUserId) return;
+
+        const currentPlan = await getUserPlan(currentUserId);
         if (!mounted) return;
 
         setPlan((prev) => {
@@ -348,7 +377,7 @@ export default function DashboardClient({
         window.clearInterval(intervalId);
       }
     };
-  }, [email, initialPlan]);
+  }, [currentUserId, initialPlan]);
 
   useEffect(() => {
     return () => {
@@ -941,7 +970,7 @@ export default function DashboardClient({
     return (
       <DashboardOverview
         scanResult={scanResult}
-        email={email}
+        email={currentEmail}
         loadingScan={loadingScan}
         toneStyles={toneStyles}
         onRunSampleScan={() => runSampleScan()}
@@ -1227,8 +1256,8 @@ export default function DashboardClient({
             "radial-gradient(circle at top left, #eef4ff 0%, #f7f9fc 40%, #f8fafc 100%)",
         }}
       >
-                <DashboardSidebar
-          email={email}
+        <DashboardSidebar
+          email={currentEmail}
           plan={plan}
           activeNav={activeNav}
           setActiveNav={setActiveNav}
@@ -1257,21 +1286,21 @@ export default function DashboardClient({
           }}
         >
           <DashboardHeader
-  userEmail={email}
-  onBilling={() => setActiveNav("billing")}
-  onDisconnect={handleDisconnectGmail}
-  onLogout={async () => {
-  try {
-    await fetch("/api/disconnect", {
-      method: "POST",
-    });
-    window.location.href = "/";
-  } catch {
-    window.location.href = "/";
-  }
-}}
-  isDisconnecting={isDisconnecting}
-/>
+            userEmail={currentEmail}
+            onBilling={() => setActiveNav("billing")}
+            onDisconnect={handleDisconnectGmail}
+            onLogout={async () => {
+              try {
+                await fetch("/api/disconnect", {
+                  method: "POST",
+                });
+                window.location.href = "/";
+              } catch {
+                window.location.href = "/";
+              }
+            }}
+            isDisconnecting={isDisconnecting}
+          />
 
           <ScanBanner
             error={error}
