@@ -45,8 +45,7 @@ export default function DashboardHeader({
     };
   }, []);
 
-  const avatarLetter =
-    userEmail?.trim()?.charAt(0)?.toUpperCase() || "Y";
+  const avatarLetter = userEmail?.trim()?.charAt(0)?.toUpperCase() || "Y";
 
   return (
     <div
@@ -202,7 +201,7 @@ export default function DashboardHeader({
               role="menuitem"
               style={menuItemStyle}
             >
-              Billing
+              Manage Subscription
             </button>
 
             <button

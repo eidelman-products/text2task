@@ -90,6 +90,14 @@ type BillingPlanResponse = {
   plan?: "free" | "pro";
 };
 
+type BillingPortalResponse = {
+  plan?: "free" | "pro";
+  status?: string | null;
+  customerPortalUrl?: string | null;
+  updatePaymentMethodUrl?: string | null;
+  updateSubscriptionUrl?: string | null;
+};
+
 function getHealthScoreFromScanned(scanned: number): number {
   if (scanned <= 0) return 100;
   const raw = 100 - scanned / 20;
@@ -211,6 +219,16 @@ export default function DashboardClient({
   const [scanResult, setScanResult] = useState<DashboardScanResult | null>(null);
   const [activeScanJob, setActiveScanJob] = useState<ActiveScanJob>(null);
 
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [customerPortalUrl, setCustomerPortalUrl] = useState<string | null>(null);
+  const [updatePaymentMethodUrl, setUpdatePaymentMethodUrl] = useState<string | null>(
+    null
+  );
+  const [updateSubscriptionUrl, setUpdateSubscriptionUrl] = useState<string | null>(
+    null
+  );
+
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeModalTitle, setUpgradeModalTitle] = useState(
     "You’ve reached your weekly limit"
@@ -291,6 +309,48 @@ export default function DashboardClient({
     }
   }
 
+  async function fetchPortalFromServer(options?: { silent?: boolean }) {
+    try {
+      setPortalLoading(true);
+
+      const res = await fetch("/api/billing/portal", {
+        method: "GET",
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      });
+
+      const data = (await res.json().catch(() => null)) as BillingPortalResponse | null;
+
+      if (!res.ok) {
+        if (!options?.silent) {
+          console.error("Failed to load subscription portal");
+        }
+        setSubscriptionStatus(null);
+        setCustomerPortalUrl(null);
+        setUpdatePaymentMethodUrl(null);
+        setUpdateSubscriptionUrl(null);
+        return;
+      }
+
+      setSubscriptionStatus(typeof data?.status === "string" ? data.status : null);
+      setCustomerPortalUrl(data?.customerPortalUrl || null);
+      setUpdatePaymentMethodUrl(data?.updatePaymentMethodUrl || null);
+      setUpdateSubscriptionUrl(data?.updateSubscriptionUrl || null);
+    } catch (err) {
+      if (!options?.silent) {
+        console.error("Failed to load subscription portal", err);
+      }
+      setSubscriptionStatus(null);
+      setCustomerPortalUrl(null);
+      setUpdatePaymentMethodUrl(null);
+      setUpdateSubscriptionUrl(null);
+    } finally {
+      setPortalLoading(false);
+    }
+  }
+
   function stopPlanPolling() {
     if (planPollingRef.current) {
       window.clearInterval(planPollingRef.current);
@@ -333,6 +393,12 @@ export default function DashboardClient({
     }
   }, [plan]);
 
+  useEffect(() => {
+    if (activeNav === "billing" && plan === "pro") {
+      void fetchPortalFromServer({ silent: true });
+    }
+  }, [activeNav, plan]);
+
   async function handleUpgradeClick() {
     try {
       setUpgradeModalOpen(false);
@@ -340,13 +406,13 @@ export default function DashboardClient({
       setSuccess("");
 
       const res = await fetch("/api/checkout", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  cache: "no-store",
-  body: JSON.stringify({}),
-});
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({}),
+      });
 
       const data = await res.json();
 
@@ -1127,6 +1193,10 @@ export default function DashboardClient({
   }
 
   function renderBilling() {
+    const statusLabel = subscriptionStatus
+      ? subscriptionStatus.charAt(0).toUpperCase() + subscriptionStatus.slice(1)
+      : "Unknown";
+
     return (
       <div
         style={{
@@ -1145,7 +1215,7 @@ export default function DashboardClient({
             marginBottom: "8px",
           }}
         >
-          Billing
+          Manage Subscription
         </div>
 
         <div
@@ -1157,8 +1227,8 @@ export default function DashboardClient({
             maxWidth: "680px",
           }}
         >
-          Manage your InboxShaper plan, upgrade to Pro, and review your
-          subscription status.
+          Review your current plan, manage your subscription, update your payment
+          method, or open your secure billing portal.
         </div>
 
         <div
@@ -1184,13 +1254,35 @@ export default function DashboardClient({
 
           <div
             style={{
-              fontSize: "24px",
-              fontWeight: 800,
-              color: "#0f172a",
-              marginBottom: "8px",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              flexWrap: "wrap",
+              marginBottom: "10px",
             }}
           >
-            {plan === "pro" ? "Pro" : "Free"}
+            <div
+              style={{
+                fontSize: "24px",
+                fontWeight: 800,
+                color: "#0f172a",
+              }}
+            >
+              {plan === "pro" ? "Pro" : "Free"}
+            </div>
+
+            <div
+              style={{
+                borderRadius: "999px",
+                padding: "6px 10px",
+                fontSize: "12px",
+                fontWeight: 700,
+                background: plan === "pro" ? "#dcfce7" : "#e2e8f0",
+                color: plan === "pro" ? "#166534" : "#475569",
+              }}
+            >
+              {plan === "pro" ? statusLabel : "No active subscription"}
+            </div>
           </div>
 
           <div
@@ -1202,26 +1294,112 @@ export default function DashboardClient({
             }}
           >
             {plan === "pro"
-              ? "Your Pro plan is active. Full Scan and unlimited cleanup are available."
-              : "You are currently on the Free plan. Upgrade to Pro to unlock Full Scan and unlimited cleanup."}
+              ? "Your Pro subscription is active. You can manage billing, payment details, and subscription settings from the customer portal."
+              : "You are currently on the Free plan. Upgrade to Pro to unlock Full Scan, unlimited cleanup, and advanced subscription features."}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setUpgradeModalOpen(true)}
-            style={{
-              border: "none",
-              background: "#0f172a",
-              color: "#ffffff",
-              borderRadius: "14px",
-              padding: "14px 18px",
-              fontSize: "15px",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            {plan === "pro" ? "Manage Plan" : "Upgrade to Pro"}
-          </button>
+          {plan === "pro" ? (
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                disabled={portalLoading || !customerPortalUrl}
+                onClick={() => {
+                  if (customerPortalUrl) {
+                    window.location.href = customerPortalUrl;
+                  }
+                }}
+                style={{
+                  border: "none",
+                  background: "#0f172a",
+                  color: "#ffffff",
+                  borderRadius: "14px",
+                  padding: "14px 18px",
+                  fontSize: "15px",
+                  fontWeight: 700,
+                  cursor:
+                    portalLoading || !customerPortalUrl ? "not-allowed" : "pointer",
+                  opacity: portalLoading || !customerPortalUrl ? 0.6 : 1,
+                }}
+              >
+                {portalLoading ? "Loading..." : "Open Customer Portal"}
+              </button>
+
+              <button
+                type="button"
+                disabled={portalLoading || !updatePaymentMethodUrl}
+                onClick={() => {
+                  if (updatePaymentMethodUrl) {
+                    window.location.href = updatePaymentMethodUrl;
+                  }
+                }}
+                style={{
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#0f172a",
+                  borderRadius: "14px",
+                  padding: "14px 18px",
+                  fontSize: "15px",
+                  fontWeight: 700,
+                  cursor:
+                    portalLoading || !updatePaymentMethodUrl
+                      ? "not-allowed"
+                      : "pointer",
+                  opacity: portalLoading || !updatePaymentMethodUrl ? 0.6 : 1,
+                }}
+              >
+                Update Payment Method
+              </button>
+
+              <button
+                type="button"
+                disabled={portalLoading || !updateSubscriptionUrl}
+                onClick={() => {
+                  if (updateSubscriptionUrl) {
+                    window.location.href = updateSubscriptionUrl;
+                  }
+                }}
+                style={{
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#0f172a",
+                  borderRadius: "14px",
+                  padding: "14px 18px",
+                  fontSize: "15px",
+                  fontWeight: 700,
+                  cursor:
+                    portalLoading || !updateSubscriptionUrl
+                      ? "not-allowed"
+                      : "pointer",
+                  opacity: portalLoading || !updateSubscriptionUrl ? 0.6 : 1,
+                }}
+              >
+                Manage Plan
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setUpgradeModalOpen(true)}
+              style={{
+                border: "none",
+                background: "#0f172a",
+                color: "#ffffff",
+                borderRadius: "14px",
+                padding: "14px 18px",
+                fontSize: "15px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Upgrade to Pro
+            </button>
+          )}
         </div>
       </div>
     );
