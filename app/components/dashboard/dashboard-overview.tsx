@@ -511,25 +511,34 @@ export default function DashboardOverview({
             </div>
 
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <PrimaryButton onClick={onRunSampleScan} disabled={loadingScan}>
-                {loadingScan ? "Scanning..." : "Run New Sample Scan"}
-              </PrimaryButton>
-              {plan === "free" ? (
-  <SecondaryButton onClick={onUpgradeClick}>
-    Upgrade to Pro
-  </SecondaryButton>
-) : (
-  <div
-    style={{
-      fontSize: "14px",
-      fontWeight: 800,
-      color: "#16a34a",
-    }}
-  >
-    Pro plan active ✓
-  </div>
-)}
-            </div>
+  <PrimaryButton onClick={onRunSampleScan} disabled={loadingScan}>
+    {loadingScan ? "Scanning..." : "Run New Sample Scan"}
+  </PrimaryButton>
+
+  {plan === "free" ? (
+    <SecondaryButton onClick={onUpgradeClick}>
+      Upgrade to Pro
+    </SecondaryButton>
+  ) : (
+    <>
+      <SecondaryButton onClick={onRunFullScan} disabled={loadingScan}>
+        {loadingScan ? "Scanning..." : "Run Full Scan"}
+      </SecondaryButton>
+
+      <div
+        style={{
+          fontSize: "14px",
+          fontWeight: 800,
+          color: "#16a34a",
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        Pro plan active ✓
+      </div>
+    </>
+  )}
+</div>
           </div>
 
           <div

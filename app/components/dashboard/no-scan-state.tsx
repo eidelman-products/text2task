@@ -154,11 +154,11 @@ export default function NoScanState({
               {loadingScan ? "Scanning..." : "Run Free Scan"}
             </PrimaryButton>
 
-            {plan === "free" && onRunFullScan ? (
-              <SecondaryButton onClick={onRunFullScan}>
-                Unlock Full Scan (Pro)
-              </SecondaryButton>
-            ) : null}
+            {onRunFullScan ? (
+  <SecondaryButton onClick={onRunFullScan}>
+    {plan === "pro" ? "Run Full Scan" : "Unlock Full Scan (Pro)"}
+  </SecondaryButton>
+) : null}
           </div>
         </div>
 
