@@ -9,7 +9,7 @@ export async function POST() {
         "x-api-key": process.env.CREEM_API_KEY!,
       },
       body: JSON.stringify({
-        product_id: "prod_xHbuwovzw1JMhEZDlAEn3",
+       product_id: "prod_xHbuWozvwlJMhEZD1AEn3",
       }),
     });
 
