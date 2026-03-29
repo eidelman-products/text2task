@@ -9,15 +9,20 @@ export async function POST() {
         "x-api-key": process.env.CREEM_API_KEY!,
       },
       body: JSON.stringify({
-        product_id:"prod_xHbuWozvwlJMhEZD1AEn3",
+        product_id: "prod_xHbuwovzw1JMhEZDlAEn3",
       }),
     });
 
     const data = await response.json();
 
-    return NextResponse.json({ url: data.checkout_url });
+    console.log("CREEM RESPONSE:", data);
+
+    return NextResponse.json(data); // 🔥 חשוב
   } catch (error) {
     console.error("Creem checkout error:", error);
-    return NextResponse.json({ error: "Failed to create checkout" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create checkout" },
+      { status: 500 }
+    );
   }
 }
