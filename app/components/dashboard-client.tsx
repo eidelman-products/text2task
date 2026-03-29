@@ -400,37 +400,33 @@ export default function DashboardClient({
   }, [activeNav, plan]);
 
   async function handleUpgradeClick() {
-    try {
-      setUpgradeModalOpen(false);
-      setError("");
-      setSuccess("");
+  try {
+    setUpgradeModalOpen(false);
+    setError("");
+    setSuccess("");
 
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-        body: JSON.stringify({}),
-      });
+    const res = await fetch("/api/creem/checkout", {
+      method: "POST",
+      cache: "no-store",
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) {
-        setError(data.error || "Failed to start checkout");
-        return;
-      }
-
-      if (!data.url) {
-        setError("Checkout URL was not returned");
-        return;
-      }
-
-      window.location.href = data.url;
-    } catch (err: any) {
-      setError(err.message || "Failed to start checkout");
+    if (!res.ok) {
+      setError(data.error || "Failed to start checkout");
+      return;
     }
+
+    if (!data.url) {
+      setError("Checkout URL was not returned");
+      return;
+    }
+
+    window.location.href = data.url;
+  } catch (err: any) {
+    setError(err.message || "Failed to start checkout");
   }
+}
 
   async function loadQuotaStatus() {
     try {
