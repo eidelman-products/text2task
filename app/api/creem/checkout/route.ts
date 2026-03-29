@@ -9,7 +9,7 @@ export async function POST() {
         "x-api-key": process.env.CREEM_API_KEY!,
       },
       body: JSON.stringify({
-        product_id: "prod_xHbuWozvwlJMhEZD1AEn3",
+        product_id: "prod_xHbuwovzw1JMhEZDlAEn3",
       }),
     });
 
@@ -17,7 +17,15 @@ export async function POST() {
 
     console.log("CREEM RESPONSE:", data);
 
-    return NextResponse.json(data); // 🔥 חשוב
+    return NextResponse.json({
+      url:
+        data.checkout_url ||
+        data.url ||
+        data.hosted_checkout_url ||
+        data.hosted_url ||
+        null,
+      raw: data,
+    });
   } catch (error) {
     console.error("Creem checkout error:", error);
     return NextResponse.json(
