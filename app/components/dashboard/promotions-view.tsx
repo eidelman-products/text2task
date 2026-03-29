@@ -607,9 +607,11 @@ export default function PromotionsView({
 
               <ActionBadge>Recommended</ActionBadge>
 
-              <SecondaryButton onClick={onUpgradeClick}>
-                Upgrade to Pro
-              </SecondaryButton>
+              {plan === "free" && (
+  <SecondaryButton onClick={onUpgradeClick}>
+    Upgrade to Pro
+  </SecondaryButton>
+)}
             </div>
 
             <div

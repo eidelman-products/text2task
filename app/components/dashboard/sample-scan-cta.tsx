@@ -13,12 +13,14 @@ export default function SampleScanCta({
   loadingScan,
   onRunSampleScan,
   onRunFullScan,
+  plan,
 }: SampleScanCtaProps) {
   return (
     <NoScanState
       loadingScan={loadingScan}
       onRunSampleScan={onRunSampleScan}
       onRunFullScan={onRunFullScan}
+      plan={plan || "free"}
     />
   );
 }

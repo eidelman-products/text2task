@@ -1045,10 +1045,11 @@ export default function DashboardClient({
   function renderNoScanState() {
     return (
       <NoScanState
-        loadingScan={loadingScan}
-        onRunSampleScan={() => runSampleScan()}
-        onRunFullScan={() => runFullScan()}
-      />
+  loadingScan={loadingScan}
+  onRunSampleScan={runSampleScan}
+  onRunFullScan={runFullScan}
+  plan={plan}
+/>
     );
   }
 
@@ -1072,6 +1073,7 @@ export default function DashboardClient({
             "Upgrade to Pro to unlock full inbox scan, unlimited cleanup, unlimited unread actions, and bulk actions without weekly limits."
           )
         }
+      plan={plan}
       />
     );
   }

@@ -7,6 +7,7 @@ type NoScanStateProps = {
   loadingScan: boolean;
   onRunSampleScan: () => void;
   onRunFullScan?: () => void;
+  plan: "free" | "pro";
 };
 
 const scanBenefits = [
@@ -36,6 +37,7 @@ export default function NoScanState({
   loadingScan,
   onRunSampleScan,
   onRunFullScan,
+  plan,
 }: NoScanStateProps) {
   return (
     <div
@@ -152,7 +154,7 @@ export default function NoScanState({
               {loadingScan ? "Scanning..." : "Run Free Scan"}
             </PrimaryButton>
 
-            {onRunFullScan ? (
+            {plan === "free" && onRunFullScan ? (
               <SecondaryButton onClick={onRunFullScan}>
                 Unlock Full Scan (Pro)
               </SecondaryButton>
