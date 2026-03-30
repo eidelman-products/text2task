@@ -184,16 +184,20 @@ export async function POST(request: NextRequest) {
       null;
 
     const currentPeriodStart = toIsoOrNull(
-      object.current_period_start ||
-        object.period_start ||
-        object.currentPeriodStart
-    );
+  object.current_period_start_date ||
+    object.current_period_start ||
+    object.period_start ||
+    object.currentPeriodStart ||
+    object.last_transaction?.period_start
+);
 
-    const currentPeriodEnd = toIsoOrNull(
-      object.current_period_end ||
-        object.period_end ||
-        object.currentPeriodEnd
-    );
+const currentPeriodEnd = toIsoOrNull(
+  object.current_period_end_date ||
+    object.current_period_end ||
+    object.period_end ||
+    object.currentPeriodEnd ||
+    object.last_transaction?.period_end
+);
 
     const canceledAt = toIsoOrNull(
       object.canceled_at || object.cancelled_at || object.canceledAt
