@@ -16,14 +16,14 @@ export async function POST() {
       );
     }
 
-    const response = await fetch("https://test-api.creem.io/v1/checkouts", {
+    const response = await fetch("https://api.creem.io/v1/checkouts", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": process.env.CREEM_API_KEY!,
       },
       body: JSON.stringify({
-        product_id: "prod_xHbuWozvwlJMhEZD1AEn3",
+        product_id: "prod_4cVD39q7GyCybf8vjv5U4n",
         customer: {
           email: user.email,
         },

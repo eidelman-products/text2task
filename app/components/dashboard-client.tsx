@@ -10,6 +10,7 @@ import DashboardOverview from "./dashboard/dashboard-overview";
 import TopSendersView from "./dashboard/top-senders-view";
 import PromotionsView from "./dashboard/promotions-view";
 import DashboardHeader from "./dashboard/dashboard-header";
+import ManageSubscription from "./dashboard/manage-subscription";
 import NoScanState from "./dashboard/no-scan-state";
 import UpgradeModal from "./dashboard/upgrade-modal";
 import { runUnsubscribeFlow } from "./dashboard/unsubscribe-actions";
@@ -1190,218 +1191,7 @@ export default function DashboardClient({
     return <PrivacyTrust />;
   }
 
-  function renderBilling() {
-    const statusLabel = subscriptionStatus
-      ? subscriptionStatus.charAt(0).toUpperCase() + subscriptionStatus.slice(1)
-      : "Unknown";
-
-    return (
-      <div
-        style={{
-          border: "1px solid #e2e8f0",
-          background: "#ffffff",
-          borderRadius: "24px",
-          padding: "28px",
-          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.06)",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "28px",
-            fontWeight: 800,
-            color: "#0f172a",
-            marginBottom: "8px",
-          }}
-        >
-          Manage Subscription
-        </div>
-
-        <div
-          style={{
-            fontSize: "16px",
-            lineHeight: 1.7,
-            color: "#64748b",
-            marginBottom: "24px",
-            maxWidth: "680px",
-          }}
-        >
-          Review your current plan, manage your subscription, update your payment
-          method, or open your secure billing portal.
-        </div>
-
-        <div
-          style={{
-            border: "1px solid #e2e8f0",
-            borderRadius: "20px",
-            padding: "22px",
-            background: "#f8fafc",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "#94a3b8",
-              textTransform: "uppercase",
-              letterSpacing: "0.04em",
-              marginBottom: "10px",
-            }}
-          >
-            Current plan
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              flexWrap: "wrap",
-              marginBottom: "10px",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "24px",
-                fontWeight: 800,
-                color: "#0f172a",
-              }}
-            >
-              {plan === "pro" ? "Pro" : "Free"}
-            </div>
-
-            <div
-              style={{
-                borderRadius: "999px",
-                padding: "6px 10px",
-                fontSize: "12px",
-                fontWeight: 700,
-                background: plan === "pro" ? "#dcfce7" : "#e2e8f0",
-                color: plan === "pro" ? "#166534" : "#475569",
-              }}
-            >
-              {plan === "pro" ? statusLabel : "No active subscription"}
-            </div>
-          </div>
-
-          <div
-            style={{
-              fontSize: "15px",
-              color: "#64748b",
-              lineHeight: 1.7,
-              marginBottom: "18px",
-            }}
-          >
-            {plan === "pro"
-              ? "Your Pro subscription is active. You can manage billing, payment details, and subscription settings from the customer portal."
-              : "You are currently on the Free plan. Upgrade to Pro to unlock Full Scan, unlimited cleanup, and advanced subscription features."}
-          </div>
-
-          {plan === "pro" ? (
-            <div
-              style={{
-                display: "flex",
-                gap: "12px",
-                flexWrap: "wrap",
-              }}
-            >
-              <button
-                type="button"
-                disabled={portalLoading || !customerPortalUrl}
-                onClick={() => {
-                  if (customerPortalUrl) {
-                    window.location.href = customerPortalUrl;
-                  }
-                }}
-                style={{
-                  border: "none",
-                  background: "#0f172a",
-                  color: "#ffffff",
-                  borderRadius: "14px",
-                  padding: "14px 18px",
-                  fontSize: "15px",
-                  fontWeight: 700,
-                  cursor:
-                    portalLoading || !customerPortalUrl ? "not-allowed" : "pointer",
-                  opacity: portalLoading || !customerPortalUrl ? 0.6 : 1,
-                }}
-              >
-                {portalLoading ? "Loading..." : "Open Customer Portal"}
-              </button>
-
-              <button
-                type="button"
-                disabled={portalLoading || !updatePaymentMethodUrl}
-                onClick={() => {
-                  if (updatePaymentMethodUrl) {
-                    window.location.href = updatePaymentMethodUrl;
-                  }
-                }}
-                style={{
-                  border: "1px solid #cbd5e1",
-                  background: "#ffffff",
-                  color: "#0f172a",
-                  borderRadius: "14px",
-                  padding: "14px 18px",
-                  fontSize: "15px",
-                  fontWeight: 700,
-                  cursor:
-                    portalLoading || !updatePaymentMethodUrl
-                      ? "not-allowed"
-                      : "pointer",
-                  opacity: portalLoading || !updatePaymentMethodUrl ? 0.6 : 1,
-                }}
-              >
-                Update Payment Method
-              </button>
-
-              <button
-                type="button"
-                disabled={portalLoading || !updateSubscriptionUrl}
-                onClick={() => {
-                  if (updateSubscriptionUrl) {
-                    window.location.href = updateSubscriptionUrl;
-                  }
-                }}
-                style={{
-                  border: "1px solid #cbd5e1",
-                  background: "#ffffff",
-                  color: "#0f172a",
-                  borderRadius: "14px",
-                  padding: "14px 18px",
-                  fontSize: "15px",
-                  fontWeight: 700,
-                  cursor:
-                    portalLoading || !updateSubscriptionUrl
-                      ? "not-allowed"
-                      : "pointer",
-                  opacity: portalLoading || !updateSubscriptionUrl ? 0.6 : 1,
-                }}
-              >
-                Manage Plan
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setUpgradeModalOpen(true)}
-              style={{
-                border: "none",
-                background: "#0f172a",
-                color: "#ffffff",
-                borderRadius: "14px",
-                padding: "14px 18px",
-                fontSize: "15px",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              Upgrade to Pro
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
+  
 
   function renderContent() {
     switch (activeNav) {
@@ -1438,7 +1228,7 @@ export default function DashboardClient({
           "Shopping-related emails matched inside your latest scan."
         );
       case "billing":
-        return renderBilling();
+  return <ManageSubscription />;
       case "privacy-trust":
         return renderPrivacyTrust();
       case "dashboard":
