@@ -69,6 +69,37 @@ function buildScanResultsRow(params: {
   };
 }
 
+function buildScanSnapshotRow(params: {
+  scanJobId: string;
+  userId: string;
+  scanType: "sample" | "full";
+  scanResult: ScanResult;
+}) {
+  const { scanJobId, userId, scanType, scanResult } = params;
+
+  const readyForCleanupCount =
+    typeof scanResult.promotionsFound === "number"
+      ? scanResult.promotionsFound
+      : 0;
+
+  const topSenderCount =
+    Array.isArray(scanResult.topSenders) && scanResult.topSenders.length > 0
+      ? Number(scanResult.topSenders[0]?.count ?? 0)
+      : 0;
+
+  return {
+    user_id: userId,
+    scan_job_id: scanJobId,
+    scan_type: scanType,
+    emails_analyzed: Number(scanResult.scanned ?? 0),
+    promotions_count: Number(scanResult.promotionsFound ?? 0),
+    sender_groups_count: Number(scanResult.senderGroups ?? 0),
+    inbox_health_score: Number(scanResult.healthScore ?? 0),
+    ready_for_cleanup_count: Number(readyForCleanupCount),
+    top_sender_count: Number(topSenderCount),
+  };
+}
+
 async function savePartialResults(params: {
   scanJobId: string;
   userId: string;
@@ -82,6 +113,23 @@ async function savePartialResults(params: {
 
   if (error) {
     throw new Error(`Failed saving scan_results: ${error.message}`);
+  }
+}
+
+async function saveScanSnapshot(params: {
+  scanJobId: string;
+  userId: string;
+  scanType: "sample" | "full";
+  scanResult: ScanResult;
+}) {
+  const row = buildScanSnapshotRow(params);
+
+  const { error } = await supabaseAdmin
+    .from("scan_snapshots")
+    .insert(row);
+
+  if (error) {
+    throw new Error(`Failed saving scan_snapshots: ${error.message}`);
   }
 }
 
@@ -109,7 +157,11 @@ async function updateJobProgress(scanJobId: string, progress: ScanProgress) {
 }
 
 export async function processScanJob(payload: ScanJobPayload) {
-  const { scanJobId, scanType: payloadScanType, maxEmails: payloadMaxEmails } = payload;
+  const {
+    scanJobId,
+    scanType: payloadScanType,
+    maxEmails: payloadMaxEmails,
+  } = payload;
 
   logger.info("Starting scan job", {
     scanJobId,
@@ -245,6 +297,13 @@ export async function processScanJob(payload: ScanJobPayload) {
     await savePartialResults({
       scanJobId,
       userId,
+      scanResult,
+    });
+
+    await saveScanSnapshot({
+      scanJobId,
+      userId,
+      scanType: resolvedScanType,
       scanResult,
     });
 

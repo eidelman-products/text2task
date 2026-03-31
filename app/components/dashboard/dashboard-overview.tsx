@@ -1,20 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts";
+import { useMemo, useState } from "react";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import PrimaryButton from "./primary-button";
 import SecondaryButton from "./secondary-button";
+import DashboardScanChangesCard from "./dashboard-scan-changes-card";
 
 type DashboardTopSender = {
   sender: string;
@@ -42,9 +32,25 @@ type ScanResult = {
   smartViews: SmartViews;
 };
 
+type ScanSnapshot = {
+  id: string;
+  user_id: string;
+  scan_job_id: string | null;
+  scan_type: "sample" | "full";
+  emails_analyzed: number;
+  promotions_count: number;
+  sender_groups_count: number;
+  inbox_health_score: number;
+  ready_for_cleanup_count: number;
+  top_sender_count: number;
+  created_at: string;
+};
+
 type DashboardOverviewProps = {
   scanResult: ScanResult;
   email: string;
+  latestSnapshot: ScanSnapshot | null;
+  previousSnapshot: ScanSnapshot | null;
   loadingScan: boolean;
   toneStyles: {
     cardBg: string;
@@ -62,12 +68,6 @@ type DashboardOverviewProps = {
   onGoToUnsubscribe: () => void;
   onUpgradeClick: () => void;
   plan: "free" | "pro";
-};
-
-type VolumeHistoryPoint = {
-  label: string;
-  scanned: number;
-  promotions: number;
 };
 
 function formatNumber(value: number) {
@@ -164,28 +164,6 @@ function getDominantCategory(categoryData: ReturnType<typeof getCategoryData>) {
   return [...categoryData].sort((a, b) => b.value - a.value)[0];
 }
 
-function historyStorageKey(email: string) {
-  return `inboxshaper-volume-history:${email}`;
-}
-
-function normalizeHistory(history: VolumeHistoryPoint[]) {
-  return history.slice(-7).map((item, index) => ({
-    label: item.label || `Scan ${index + 1}`,
-    scanned: Number(item.scanned || 0),
-    promotions: Number(item.promotions || 0),
-  }));
-}
-
-function buildFallbackHistory(scanResult: ScanResult): VolumeHistoryPoint[] {
-  return [
-    {
-      label: "Latest scan",
-      scanned: scanResult.scanned,
-      promotions: scanResult.promotionsFoundInSampleScan,
-    },
-  ];
-}
-
 function CustomPieTooltip({
   active,
   payload,
@@ -210,38 +188,6 @@ function CustomPieTooltip({
     >
       <div style={{ fontWeight: 800 }}>{item.name}</div>
       <div>{formatNumber(item.value)} emails</div>
-    </div>
-  );
-}
-
-function CustomAreaTooltip({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: Array<{ name: string; value: number }>;
-  label?: string;
-}) {
-  if (!active || !payload || !payload.length) return null;
-
-  return (
-    <div
-      style={{
-        background: "#0f172a",
-        color: "#fff",
-        borderRadius: "14px",
-        padding: "12px 14px",
-        fontSize: "13px",
-        boxShadow: "0 12px 30px rgba(15,23,42,0.22)",
-      }}
-    >
-      <div style={{ fontWeight: 800, marginBottom: "6px" }}>{label}</div>
-      {payload.map((entry) => (
-        <div key={entry.name} style={{ marginTop: "4px" }}>
-          {entry.name}: {formatNumber(Number(entry.value || 0))}
-        </div>
-      ))}
     </div>
   );
 }
@@ -307,6 +253,8 @@ function SenderLogo({
 export default function DashboardOverview({
   scanResult,
   email,
+  latestSnapshot,
+  previousSnapshot,
   loadingScan,
   toneStyles,
   onRunSampleScan,
@@ -346,46 +294,8 @@ export default function DashboardOverview({
     [scanResult.topSenders]
   );
 
-  const [emailVolumeData, setEmailVolumeData] = useState<VolumeHistoryPoint[]>(
-    buildFallbackHistory(scanResult)
-  );
-
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
   const [hoveredSender, setHoveredSender] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!email) return;
-
-    const nextPoint: VolumeHistoryPoint = {
-      label: new Date().toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-      }),
-      scanned: scanResult.scanned,
-      promotions: scanResult.promotionsFoundInSampleScan,
-    };
-
-    try {
-      const key = historyStorageKey(email);
-      const raw = localStorage.getItem(key);
-      const parsed: VolumeHistoryPoint[] = raw ? JSON.parse(raw) : [];
-
-      const alreadyExists = parsed.some(
-        (item) =>
-          item.scanned === nextPoint.scanned &&
-          item.promotions === nextPoint.promotions
-      );
-
-      const nextHistory = alreadyExists
-        ? normalizeHistory(parsed)
-        : normalizeHistory([...parsed, nextPoint]);
-
-      localStorage.setItem(key, JSON.stringify(nextHistory));
-      setEmailVolumeData(nextHistory);
-    } catch {
-      setEmailVolumeData(buildFallbackHistory(scanResult));
-    }
-  }, [email, scanResult.scanned, scanResult.promotionsFoundInSampleScan]);
 
   const inlineStats = [
     {
@@ -511,34 +421,34 @@ export default function DashboardOverview({
             </div>
 
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-  <PrimaryButton onClick={onRunSampleScan} disabled={loadingScan}>
-    {loadingScan ? "Scanning..." : "Run New Sample Scan"}
-  </PrimaryButton>
+              <PrimaryButton onClick={onRunSampleScan} disabled={loadingScan}>
+                {loadingScan ? "Scanning..." : "Run New Sample Scan"}
+              </PrimaryButton>
 
-  {plan === "free" ? (
-    <SecondaryButton onClick={onUpgradeClick}>
-      Upgrade to Pro
-    </SecondaryButton>
-  ) : (
-    <>
-      <SecondaryButton onClick={onRunFullScan} disabled={loadingScan}>
-        {loadingScan ? "Scanning..." : "Run Full Scan"}
-      </SecondaryButton>
+              {plan === "free" ? (
+                <SecondaryButton onClick={onUpgradeClick}>
+                  Upgrade to Pro
+                </SecondaryButton>
+              ) : (
+                <>
+                  <SecondaryButton onClick={onRunFullScan} disabled={loadingScan}>
+                    {loadingScan ? "Scanning..." : "Run Full Scan"}
+                  </SecondaryButton>
 
-      <div
-        style={{
-          fontSize: "14px",
-          fontWeight: 800,
-          color: "#16a34a",
-          display: "flex",
-          alignItems: "center",
-        }}
-      >
-        Pro plan active ✓
-      </div>
-    </>
-  )}
-</div>
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 800,
+                      color: "#16a34a",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    Pro plan active ✓
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           <div
@@ -653,8 +563,7 @@ export default function DashboardOverview({
             {dominantCategory ? (
               <>
                 Your inbox is dominated by{" "}
-                <span style={{ fontWeight: 900 }}>{dominantCategory.name}</span>{" "}
-                (
+                <span style={{ fontWeight: 900 }}>{dominantCategory.name}</span> (
                 {Math.round(
                   (dominantCategory.value / Math.max(scanResult.scanned, 1)) * 100
                 )}
@@ -785,120 +694,10 @@ export default function DashboardOverview({
           </div>
         </div>
 
-        <div
-          style={{
-            padding: "20px 20px 18px 20px",
-            borderRadius: "26px",
-            background:
-              "linear-gradient(180deg, rgba(255,255,255,0.84) 0%, rgba(255,255,255,0.64) 100%)",
-            border: "1px solid rgba(226,232,240,0.9)",
-            boxShadow: "0 16px 34px rgba(15,23,42,0.05)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "12px",
-              flexWrap: "wrap",
-              marginBottom: "10px",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "16px",
-                fontWeight: 900,
-                color: "#0f172a",
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Email Volume
-            </div>
-
-            <div
-              style={{
-                background: "#eff6ff",
-                color: "#2563eb",
-                borderRadius: "999px",
-                padding: "7px 12px",
-                fontSize: "12px",
-                fontWeight: 800,
-              }}
-            >
-              Real scan history
-            </div>
-          </div>
-
-          <div
-            style={{
-              fontSize: "15px",
-              color: "#334155",
-              marginBottom: "16px",
-              lineHeight: 1.55,
-            }}
-          >
-            This chart grows over time with real scan data from this inbox.
-          </div>
-
-          <div
-            style={{
-              width: "100%",
-              height: 250,
-              background:
-                "linear-gradient(to top, rgba(59,130,246,0.035), transparent)",
-              borderRadius: "20px",
-            }}
-          >
-            <ResponsiveContainer>
-              <AreaChart
-                data={emailVolumeData}
-                margin={{ top: 8, right: 8, left: -18, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="scannedFillFinal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563eb" stopOpacity={0.18} />
-                    <stop offset="100%" stopColor="#2563eb" stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="promotionsFillFinal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.16} />
-                    <stop offset="100%" stopColor="#14b8a6" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-
-                <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fill: "#64748b", fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fill: "#64748b", fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip content={<CustomAreaTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="scanned"
-                  stroke="#2563eb"
-                  strokeWidth={3}
-                  fill="url(#scannedFillFinal)"
-                  name="Emails scanned"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="promotions"
-                  stroke="#14b8a6"
-                  strokeWidth={3}
-                  fill="url(#promotionsFillFinal)"
-                  name="Promotions found"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        <DashboardScanChangesCard
+          latestSnapshot={latestSnapshot}
+          previousSnapshot={previousSnapshot}
+        />
       </section>
 
       <section

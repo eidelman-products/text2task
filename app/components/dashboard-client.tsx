@@ -99,6 +99,26 @@ type BillingPortalResponse = {
   updateSubscriptionUrl?: string | null;
 };
 
+type ScanSnapshot = {
+  id: string;
+  user_id: string;
+  scan_job_id: string | null;
+  scan_type: "sample" | "full";
+  emails_analyzed: number;
+  promotions_count: number;
+  sender_groups_count: number;
+  inbox_health_score: number;
+  ready_for_cleanup_count: number;
+  top_sender_count: number;
+  created_at: string;
+};
+
+type ScanChangesResponse = {
+  latest: ScanSnapshot | null;
+  previous: ScanSnapshot | null;
+  hasComparison: boolean;
+};
+
 function getHealthScoreFromScanned(scanned: number): number {
   if (scanned <= 0) return 100;
   const raw = 100 - scanned / 20;
@@ -219,6 +239,10 @@ export default function DashboardClient({
   const [weeklyUnreadUsed, setWeeklyUnreadUsed] = useState(0);
   const [scanResult, setScanResult] = useState<DashboardScanResult | null>(null);
   const [activeScanJob, setActiveScanJob] = useState<ActiveScanJob>(null);
+  const [latestSnapshot, setLatestSnapshot] = useState<ScanSnapshot | null>(null);
+  const [previousSnapshot, setPreviousSnapshot] = useState<ScanSnapshot | null>(
+    null
+  );
 
   const [portalLoading, setPortalLoading] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
@@ -401,33 +425,33 @@ export default function DashboardClient({
   }, [activeNav, plan]);
 
   async function handleUpgradeClick() {
-  try {
-    setUpgradeModalOpen(false);
-    setError("");
-    setSuccess("");
+    try {
+      setUpgradeModalOpen(false);
+      setError("");
+      setSuccess("");
 
-    const res = await fetch("/api/creem/checkout", {
-      method: "POST",
-      cache: "no-store",
-    });
+      const res = await fetch("/api/creem/checkout", {
+        method: "POST",
+        cache: "no-store",
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      setError(data.error || "Failed to start checkout");
-      return;
+      if (!res.ok) {
+        setError(data.error || "Failed to start checkout");
+        return;
+      }
+
+      if (!data.url) {
+        setError("Checkout URL was not returned");
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch (err: any) {
+      setError(err.message || "Failed to start checkout");
     }
-
-    if (!data.url) {
-      setError("Checkout URL was not returned");
-      return;
-    }
-
-    window.location.href = data.url;
-  } catch (err: any) {
-    setError(err.message || "Failed to start checkout");
   }
-}
 
   async function loadQuotaStatus() {
     try {
@@ -452,6 +476,26 @@ export default function DashboardClient({
     }
   }
 
+  async function loadScanChanges() {
+    try {
+      const res = await fetch("/api/dashboard/scan-changes", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data: ScanChangesResponse = await res.json();
+
+      if (!res.ok) {
+        return;
+      }
+
+      setLatestSnapshot(data.latest ?? null);
+      setPreviousSnapshot(data.previous ?? null);
+    } catch (err) {
+      console.error("Failed to load scan changes", err);
+    }
+  }
+
   const remainingWeeklyCleanup = Math.max(
     0,
     FREE_WEEKLY_LIMIT - weeklyCleanupUsed
@@ -464,6 +508,7 @@ export default function DashboardClient({
 
   useEffect(() => {
     loadQuotaStatus();
+    void loadScanChanges();
   }, []);
 
   useEffect(() => {
@@ -560,6 +605,7 @@ export default function DashboardClient({
 
       if (data.status === "completed") {
         stopPolling();
+        await loadScanChanges();
         setSuccess(
           data.scanType === "sample"
             ? "Scan complete — your inbox snapshot is ready."
@@ -1046,11 +1092,11 @@ export default function DashboardClient({
   function renderNoScanState() {
     return (
       <NoScanState
-  loadingScan={loadingScan}
-  onRunSampleScan={runSampleScan}
-  onRunFullScan={runFullScan}
-  plan={plan}
-/>
+        loadingScan={loadingScan}
+        onRunSampleScan={runSampleScan}
+        onRunFullScan={runFullScan}
+        plan={plan}
+      />
     );
   }
 
@@ -1061,6 +1107,8 @@ export default function DashboardClient({
       <DashboardOverview
         scanResult={scanResult}
         email={currentEmail}
+        latestSnapshot={latestSnapshot}
+        previousSnapshot={previousSnapshot}
         loadingScan={loadingScan}
         toneStyles={toneStyles}
         onRunSampleScan={() => runSampleScan()}
@@ -1074,7 +1122,7 @@ export default function DashboardClient({
             "Upgrade to Pro to unlock full inbox scan, unlimited cleanup, unlimited unread actions, and bulk actions without weekly limits."
           )
         }
-      plan={plan}
+        plan={plan}
       />
     );
   }
@@ -1191,8 +1239,6 @@ export default function DashboardClient({
     return <PrivacyTrust />;
   }
 
-  
-
   function renderContent() {
     switch (activeNav) {
       case "top-senders":
@@ -1228,7 +1274,7 @@ export default function DashboardClient({
           "Shopping-related emails matched inside your latest scan."
         );
       case "billing":
-  return <ManageSubscription />;
+        return <ManageSubscription />;
       case "privacy-trust":
         return renderPrivacyTrust();
       case "dashboard":
