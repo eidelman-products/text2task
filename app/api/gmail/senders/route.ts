@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
+import { getValidAccessToken } from "@/lib/gmail/token-manager";
 
 type GmailHeader = {
   name: string;
   value: string;
+};
+
+type GmailListResponse = {
+  messages?: { id: string }[];
 };
 
 type GmailMessage = {
@@ -26,49 +31,31 @@ function extractSender(fromHeader: string): string {
 }
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get("gmail_provider_token")?.value;
+  try {
+    const supabase = await createClient();
 
-  if (!accessToken) {
-    return NextResponse.json(
-      { error: "Missing Google provider token" },
-      { status: 401 }
-    );
-  }
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-  const MAX_RESULTS = 1000;
-
-  const listRes = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${MAX_RESULTS}`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      cache: "no-store",
+    if (userError || !user?.id || !user?.email) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
-  );
 
-  if (!listRes.ok) {
-    const errorText = await listRes.text();
+    const accessToken = await getValidAccessToken(user.id);
 
-    return NextResponse.json(
-      { error: "Failed to list Gmail messages", details: errorText },
-      { status: 500 }
-    );
-  }
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Missing Gmail access token" },
+        { status: 401 }
+      );
+    }
 
-  const listData = await listRes.json();
-  const messages = listData.messages || [];
+    const MAX_RESULTS = 1000;
 
-  if (!messages.length) {
-    return NextResponse.json({ senders: [] });
-  }
-
-  const senderCounts: Record<string, number> = {};
-
-  for (const message of messages) {
-    const msgRes = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=metadata&metadataHeaders=From`,
+    const listRes = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${MAX_RESULTS}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -77,28 +64,62 @@ export async function GET() {
       }
     );
 
-    if (!msgRes.ok) continue;
+    if (!listRes.ok) {
+      const errorText = await listRes.text();
+      return NextResponse.json(
+        { error: "Failed to list Gmail messages", details: errorText },
+        { status: 500 }
+      );
+    }
 
-    const msgData: GmailMessage = await msgRes.json();
-    const headers = msgData.payload?.headers || [];
+    const listData: GmailListResponse = await listRes.json();
+    const messages = listData.messages || [];
 
-    const fromHeader =
-      headers.find((h) => h.name === "From")?.value || "";
+    if (!messages.length) {
+      return NextResponse.json({ senders: [] });
+    }
 
-    const sender = extractSender(fromHeader);
+    const senderCounts: Record<string, number> = {};
 
-    senderCounts[sender] = (senderCounts[sender] || 0) + 1;
+    for (const message of messages) {
+      const msgRes = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=metadata&metadataHeaders=From`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          cache: "no-store",
+        }
+      );
+
+      if (!msgRes.ok) continue;
+
+      const msgData: GmailMessage = await msgRes.json();
+      const headers = msgData.payload?.headers || [];
+
+      const fromHeader = headers.find((h) => h.name === "From")?.value || "";
+      const sender = extractSender(fromHeader);
+
+      senderCounts[sender] = (senderCounts[sender] || 0) + 1;
+    }
+
+    const senders = Object.entries(senderCounts)
+      .map(([sender, count], index) => ({
+        id: index.toString(),
+        sender,
+        emails: count,
+        domain: sender.toLowerCase(),
+        unsubscribable: true,
+      }))
+      .sort((a, b) => b.emails - a.emails);
+
+    return NextResponse.json({ senders });
+  } catch (error: any) {
+    console.error("gmail/senders route error:", error);
+
+    return NextResponse.json(
+      { error: error?.message || "Failed to load senders" },
+      { status: 500 }
+    );
   }
-
-  const senders = Object.entries(senderCounts)
-    .map(([sender, count], index) => ({
-      id: index.toString(),
-      sender,
-      emails: count,
-      domain: sender.toLowerCase(),
-      unsubscribable: true,
-    }))
-    .sort((a, b) => b.emails - a.emails);
-
-  return NextResponse.json({ senders });
 }

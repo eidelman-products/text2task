@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
+
 type ScanBannerProps = {
   error?: string;
   success?: string;
   progress?: {
     step: string;
     progress: number;
+    scanId: string;
   } | null;
 };
 
@@ -14,6 +17,31 @@ export default function ScanBanner({
   success,
   progress,
 }: ScanBannerProps) {
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  async function handleCancelScan() {
+    if (!progress?.scanId || isCancelling) return;
+
+    try {
+      setIsCancelling(true);
+
+      const res = await fetch(`/api/scans/${progress.scanId}/status`, {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to cancel scan");
+      }
+    } catch (err: any) {
+      console.error("Cancel scan failed:", err);
+      alert(err?.message || "Failed to cancel scan");
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
   if (!error && !success && !progress) return null;
 
   if (error) {
@@ -176,17 +204,46 @@ export default function ScanBanner({
 
             <div
               style={{
-                fontSize: "12px",
-                fontWeight: 900,
-                color: "#15803d",
-                background: "#dcfce7",
-                border: "1px solid #bbf7d0",
-                borderRadius: "999px",
-                padding: "4px 8px",
-                lineHeight: 1,
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                flexWrap: "wrap",
               }}
             >
-              {progress.progress}%
+              <div
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 900,
+                  color: "#15803d",
+                  background: "#dcfce7",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: "999px",
+                  padding: "4px 8px",
+                  lineHeight: 1,
+                }}
+              >
+                {progress.progress}%
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCancelScan}
+                disabled={isCancelling}
+                style={{
+                  border: "1px solid #fca5a5",
+                  background: isCancelling ? "#fee2e2" : "#fff1f2",
+                  color: "#b91c1c",
+                  borderRadius: "999px",
+                  padding: "5px 10px",
+                  fontSize: "12px",
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  cursor: isCancelling ? "not-allowed" : "pointer",
+                  opacity: isCancelling ? 0.7 : 1,
+                }}
+              >
+                {isCancelling ? "Cancelling..." : "Cancel"}
+              </button>
             </div>
           </div>
 

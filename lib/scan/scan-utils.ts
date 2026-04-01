@@ -19,13 +19,48 @@ export function getHeaderValue(
   return found?.value;
 }
 
+function extractEmailFromFromHeader(rawFrom: string): string | null {
+  const angleBracketMatch = rawFrom.match(/<([^>]+)>/);
+  if (angleBracketMatch?.[1]) {
+    return angleBracketMatch[1].trim().toLowerCase();
+  }
+
+  const plainEmailMatch = rawFrom.match(
+    /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
+  );
+
+  if (plainEmailMatch?.[1]) {
+    return plainEmailMatch[1].trim().toLowerCase();
+  }
+
+  return null;
+}
+
+function normalizeDomain(domain: string): string {
+  return domain
+    .toLowerCase()
+    .replace(/^(mail|m|newsletter|news|updates|email)\./, "")
+    .trim();
+}
+
 export function normalizeSender(rawFrom: string | undefined): string {
   if (!rawFrom) return "Unknown Sender";
 
   const trimmed = rawFrom.trim();
   if (!trimmed) return "Unknown Sender";
 
-  return trimmed;
+  const email = extractEmailFromFromHeader(trimmed);
+
+  if (!email) {
+    return trimmed;
+  }
+
+  const domain = email.split("@")[1];
+  if (!domain) {
+    return email;
+  }
+
+  return normalizeDomain(domain);
 }
 
 export function parseListUnsubscribe(
@@ -163,13 +198,18 @@ export function calculateHealthScore(
 ): number {
   if (scanned <= 0) return 0;
 
-  const senderDensity = Math.min(100, Math.round((senderGroups / scanned) * 1000));
+  const senderDensity = Math.min(
+    100,
+    Math.round((senderGroups / scanned) * 1000)
+  );
   const promotionsRatio = Math.min(
     100,
     Math.round((promotionsFound / scanned) * 100)
   );
 
-  const rawScore = 100 - Math.round(senderDensity * 0.35 + promotionsRatio * 0.65);
+  const rawScore =
+    100 - Math.round(senderDensity * 0.35 + promotionsRatio * 0.65);
+
   return Math.max(0, Math.min(100, rawScore));
 }
 

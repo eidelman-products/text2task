@@ -225,6 +225,7 @@ export default function DashboardClient({
   const [readingSender, setReadingSender] = useState<string | null>(null);
   const [cleaningPromotions, setCleaningPromotions] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [cleaningPromotionsStep, setCleaningPromotionsStep] = useState<
     "idle" | "checking" | "cleaning" | "refreshing"
   >("idle");
@@ -698,6 +699,33 @@ export default function DashboardClient({
       setError(err.message || "Failed to disconnect Gmail");
     } finally {
       setIsDisconnecting(false);
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      setIsLoggingOut(true);
+      setError("");
+      setSuccess("");
+      stopPolling();
+      stopPlanPolling();
+
+      const res = await fetch("/api/logout", {
+        method: "POST",
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setError(data?.error || "Failed to logout");
+        return;
+      }
+
+      window.location.href = "/";
+    } catch (err: any) {
+      setError(err.message || "Failed to logout");
+    } finally {
+      setIsLoggingOut(false);
     }
   }
 
@@ -1327,17 +1355,9 @@ export default function DashboardClient({
             userEmail={currentEmail}
             onBilling={() => setActiveNav("billing")}
             onDisconnect={handleDisconnectGmail}
-            onLogout={async () => {
-              try {
-                await fetch("/api/disconnect", {
-                  method: "POST",
-                });
-                window.location.href = "/";
-              } catch {
-                window.location.href = "/";
-              }
-            }}
+            onLogout={handleLogout}
             isDisconnecting={isDisconnecting}
+            isLoggingOut={isLoggingOut}
           />
 
           <ScanBanner
@@ -1350,6 +1370,7 @@ export default function DashboardClient({
                 ? {
                     step: activeScanJob.currentStep,
                     progress: activeScanJob.progress,
+                    scanId: activeScanJob.scanId,
                   }
                 : null
             }

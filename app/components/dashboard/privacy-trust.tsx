@@ -1,113 +1,505 @@
 export default function PrivacyTrust() {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-      
-      <section
-        style={{
-          background: "#ffffff",
-          borderRadius: "22px",
-          padding: "28px",
-          border: "1px solid #e2e8f0",
-        }}
-      >
-        <h1 style={{ margin: 0, fontSize: "36px", fontWeight: 800 }}>
-          Privacy & Trust
-        </h1>
+  const sectionStyle = {
+    background: "#ffffff",
+    borderRadius: "24px",
+    padding: "30px",
+    border: "1px solid #e2e8f0",
+    boxShadow: "0 10px 30px rgba(15,23,42,0.04)",
+  } as const;
 
-        <p style={{ marginTop: "10px", color: "#64748b", lineHeight: 1.7 }}>
-          InboxShaper is designed to help you clean your Gmail inbox while
-          respecting your privacy. We only access the Gmail data required to
-          provide inbox organization features, and nothing happens without your
-          permission.
-        </p>
+  const smallCardStyle = {
+    background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+    border: "1px solid #e2e8f0",
+    borderRadius: "18px",
+    padding: "18px",
+    minHeight: "138px",
+    boxShadow: "0 6px 18px rgba(15,23,42,0.04)",
+  } as const;
+
+  const cardTitleStyle = {
+    margin: "0 0 10px 0",
+    fontSize: "18px",
+    fontWeight: 800,
+    color: "#0f172a",
+  } as const;
+
+  const cardTextStyle = {
+    margin: 0,
+    color: "#475569",
+    lineHeight: 1.7,
+    fontSize: "15px",
+  } as const;
+
+  const listStyle = {
+    margin: "14px 0 0 0",
+    paddingLeft: "18px",
+    color: "#334155",
+    lineHeight: 1.9,
+    fontSize: "16px",
+  } as const;
+
+  const statPillStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px 12px",
+    borderRadius: "999px",
+    background: "#eff6ff",
+    border: "1px solid #bfdbfe",
+    color: "#1d4ed8",
+    fontWeight: 800,
+    fontSize: "13px",
+    letterSpacing: "0.01em",
+  } as const;
+
+  const linkButtonStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "12px 16px",
+    borderRadius: "14px",
+    fontWeight: 800,
+    textDecoration: "none",
+    fontSize: "15px",
+  } as const;
+
+  const backButtonStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "10px 14px",
+    borderRadius: "12px",
+    background: "#f8fafc",
+    border: "1px solid #cbd5e1",
+    color: "#0f172a",
+    fontWeight: 800,
+    textDecoration: "none",
+    fontSize: "14px",
+    lineHeight: 1,
+  } as const;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
+      <section style={sectionStyle}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: "18px",
+            marginBottom: "22px",
+          }}
+        >
+          <div style={{ maxWidth: "920px" }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: "12px",
+                marginBottom: "12px",
+              }}
+            >
+              <a href="/dashboard" style={backButtonStyle}>
+                ← Back to Dashboard
+              </a>
+
+              <div style={statPillStyle}>
+                <span
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "999px",
+                    background: "#2563eb",
+                  }}
+                />
+                Metadata access only
+              </div>
+            </div>
+
+            <h1
+              style={{
+                margin: 0,
+                fontSize: "42px",
+                fontWeight: 900,
+                letterSpacing: "-0.03em",
+                color: "#0f172a",
+              }}
+            >
+              Privacy & Trust at InboxShaper
+            </h1>
+
+            <p
+              style={{
+                marginTop: "14px",
+                marginBottom: "10px",
+                color: "#64748b",
+                lineHeight: 1.8,
+                fontSize: "18px",
+                maxWidth: "980px",
+              }}
+            >
+              InboxShaper is designed to help you organize and clean your Gmail
+              inbox while respecting your privacy. We only access the Gmail data
+              required to provide inbox cleanup features, and every action stays
+              under your control.
+            </p>
+
+            <p
+              style={{
+                margin: 0,
+                color: "#334155",
+                lineHeight: 1.8,
+                fontSize: "17px",
+                fontWeight: 700,
+                maxWidth: "980px",
+              }}
+            >
+              InboxShaper only accesses Gmail metadata required to provide its
+              functionality. It does not read or permanently store email
+              content.
+            </p>
+          </div>
+        </div>
 
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3,1fr)",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
             gap: "16px",
-            marginTop: "24px",
           }}
         >
-          <div className="trust-card">
-            <h3>Metadata only</h3>
-            <p>
-              InboxShaper analyzes sender, subject, labels, and message metadata
-              required for inbox organization.
+          <div style={smallCardStyle}>
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "12px",
+                background: "#eff6ff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "18px",
+                marginBottom: "14px",
+              }}
+            >
+              🔎
+            </div>
+            <h3 style={cardTitleStyle}>Metadata only</h3>
+            <p style={cardTextStyle}>
+              InboxShaper analyzes sender, subject line, labels, categories,
+              and other message metadata required for inbox organization.
             </p>
           </div>
 
-          <div className="trust-card">
-            <h3>No automatic actions</h3>
-            <p>
-              Emails are never deleted, archived, or modified automatically.
-              Every action requires your confirmation.
+          <div style={smallCardStyle}>
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "12px",
+                background: "#fef2f2",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "18px",
+                marginBottom: "14px",
+              }}
+            >
+              🛡️
+            </div>
+            <h3 style={cardTitleStyle}>No automatic actions</h3>
+            <p style={cardTextStyle}>
+              Emails are never deleted, archived, modified, or cleaned
+              automatically. Every action requires your confirmation.
             </p>
           </div>
 
-          <div className="trust-card">
-            <h3>Disconnect anytime</h3>
-            <p>
-              You can disconnect your Gmail account anytime from the dashboard.
+          <div style={smallCardStyle}>
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "12px",
+                background: "#ecfdf5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "18px",
+                marginBottom: "14px",
+              }}
+            >
+              🔌
+            </div>
+            <h3 style={cardTitleStyle}>Disconnect anytime</h3>
+            <p style={cardTextStyle}>
+              You can disconnect your Gmail account anytime from your account
+              settings or your Google permissions page.
             </p>
           </div>
         </div>
       </section>
 
-      <section
-        style={{
-          background: "#ffffff",
-          borderRadius: "22px",
-          padding: "28px",
-          border: "1px solid #e2e8f0",
-        }}
-      >
-        <h2>How InboxShaper protects your data</h2>
+      <section style={sectionStyle}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1.15fr 0.85fr",
+            gap: "22px",
+            alignItems: "start",
+          }}
+        >
+          <div>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "28px",
+                fontWeight: 850,
+                color: "#0f172a",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              How InboxShaper protects your data
+            </h2>
 
-        <ul style={{ lineHeight: 1.8 }}>
-          <li>InboxShaper does not permanently store email content.</li>
-          <li>All Gmail data processing happens in real time.</li>
-          <li>Scan results are temporary and exist only during your session.</li>
-          <li>InboxShaper does not build a database of your emails.</li>
-          <li>No Gmail user data is sold or transferred to third parties.</li>
-        </ul>
+            <p
+              style={{
+                marginTop: "10px",
+                marginBottom: 0,
+                color: "#64748b",
+                lineHeight: 1.75,
+                fontSize: "16px",
+              }}
+            >
+              Our product is built around limited access, user-controlled
+              actions, and minimal data handling.
+            </p>
+
+            <ul style={listStyle}>
+              <li>InboxShaper does not permanently store email content.</li>
+              <li>All Gmail data processing happens in real time.</li>
+              <li>Scan results are session-based and not kept as email archives.</li>
+              <li>InboxShaper does not build a database of your email bodies.</li>
+              <li>No Gmail user data is sold or transferred to third parties.</li>
+            </ul>
+          </div>
+
+          <div
+            style={{
+              borderRadius: "20px",
+              border: "1px solid #dbeafe",
+              background:
+                "linear-gradient(180deg, rgba(239,246,255,1) 0%, rgba(248,250,252,1) 100%)",
+              padding: "20px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "13px",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "#2563eb",
+                marginBottom: "10px",
+              }}
+            >
+              Google data handling
+            </div>
+
+            <div
+              style={{
+                fontSize: "15px",
+                lineHeight: 1.75,
+                color: "#334155",
+                fontWeight: 600,
+              }}
+            >
+              InboxShaper only accesses the Gmail data necessary to provide inbox
+              cleanup and organization features. It does not use Gmail data for
+              advertising, marketing, profiling, or unrelated purposes.
+            </div>
+
+            <div
+              style={{
+                marginTop: "14px",
+                paddingTop: "14px",
+                borderTop: "1px solid #dbeafe",
+                fontSize: "14px",
+                lineHeight: 1.7,
+                color: "#1e3a8a",
+                fontWeight: 700,
+              }}
+            >
+              InboxShaper complies with the Google API Services User Data Policy.
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section
-        style={{
-          background: "#ffffff",
-          borderRadius: "22px",
-          padding: "28px",
-          border: "1px solid #e2e8f0",
-        }}
-      >
-        <h2>Your control</h2>
+      <section style={sectionStyle}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "22px",
+            alignItems: "start",
+          }}
+        >
+          <div>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "28px",
+                fontWeight: 850,
+                color: "#0f172a",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Your control
+            </h2>
 
-        <p style={{ color: "#64748b", lineHeight: 1.7 }}>
-          InboxShaper only works when you start a scan. The system never scans
-          your inbox automatically in the background.
+            <p
+              style={{
+                marginTop: "10px",
+                color: "#64748b",
+                lineHeight: 1.75,
+                fontSize: "16px",
+              }}
+            >
+              InboxShaper only works when you start a scan. The system never
+              scans your inbox automatically in the background.
+            </p>
+
+            <ul style={listStyle}>
+              <li>You decide when to start a scan.</li>
+              <li>You decide which emails to review.</li>
+              <li>You decide which cleanup action to apply.</li>
+            </ul>
+          </div>
+
+          <div
+            style={{
+              borderRadius: "20px",
+              border: "1px solid #e2e8f0",
+              background: "#f8fafc",
+              padding: "20px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "13px",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "#475569",
+                marginBottom: "12px",
+              }}
+            >
+              What InboxShaper never does
+            </div>
+
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: "18px",
+                color: "#334155",
+                lineHeight: 1.85,
+                fontSize: "15px",
+                fontWeight: 600,
+              }}
+            >
+              <li>Never starts scans without the user.</li>
+              <li>Never auto-deletes or auto-archives emails.</li>
+              <li>Never stores email content as a permanent archive.</li>
+              <li>Never sells Gmail user data.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section style={sectionStyle}>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: "24px",
+            fontWeight: 850,
+            color: "#0f172a",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Helpful links
+        </h2>
+
+        <p
+          style={{
+            marginTop: "10px",
+            marginBottom: "16px",
+            color: "#64748b",
+            lineHeight: 1.7,
+            fontSize: "15px",
+          }}
+        >
+          Review our legal documents and public policy pages.
         </p>
 
-        <ul style={{ lineHeight: 1.8 }}>
-          <li>You decide when to start a scan.</li>
-          <li>You decide which emails to review.</li>
-          <li>You decide which cleanup action to apply.</li>
-        </ul>
-      </section>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "12px",
+            marginBottom: "18px",
+          }}
+        >
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              ...linkButtonStyle,
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
+              color: "#1d4ed8",
+            }}
+          >
+            Privacy Policy
+          </a>
 
-      <section
-        style={{
-          background: "#ffffff",
-          borderRadius: "22px",
-          padding: "28px",
-          border: "1px solid #e2e8f0",
-        }}
-      >
-        <h2>Helpful links</h2>
+          <a
+            href="/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              ...linkButtonStyle,
+              background: "#f8fafc",
+              border: "1px solid #cbd5e1",
+              color: "#0f172a",
+            }}
+          >
+            Terms of Service
+          </a>
+        </div>
 
-        <div style={{ display: "flex", gap: "14px", marginTop: "10px" }}>
-          <a href="/privacy">Privacy Policy</a>
-          <a href="/terms">Terms of Service</a>
+        <div
+          style={{
+            paddingTop: "16px",
+            borderTop: "1px solid #e2e8f0",
+            fontSize: "15px",
+            color: "#475569",
+            lineHeight: 1.7,
+          }}
+        >
+          Questions? Contact us at{" "}
+          <a
+            href="mailto:support@inboxshaper.com"
+            style={{
+              color: "#2563eb",
+              fontWeight: 800,
+              textDecoration: "none",
+            }}
+          >
+            support@inboxshaper.com
+          </a>
         </div>
       </section>
     </div>

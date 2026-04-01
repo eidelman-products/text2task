@@ -11,6 +11,29 @@ export type ScanJobPayload = {
   maxEmails?: number | null;
 };
 
+const SCAN_CANCELLED_ERROR = "SCAN_CANCELLED";
+
+async function isScanCancelled(scanJobId: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("scan_jobs")
+    .select("status")
+    .eq("id", scanJobId)
+    .single();
+
+  if (error) {
+    throw new Error(`Failed checking scan cancel state: ${error.message}`);
+  }
+
+  return data?.status === "cancelled";
+}
+
+async function throwIfCancelled(scanJobId: string) {
+  const cancelled = await isScanCancelled(scanJobId);
+  if (cancelled) {
+    throw new Error(SCAN_CANCELLED_ERROR);
+  }
+}
+
 function buildScanResultsRow(params: {
   scanJobId: string;
   userId: string;
@@ -237,7 +260,11 @@ export async function processScanJob(payload: ScanJobPayload) {
   }
 
   try {
+    await throwIfCancelled(scanJobId);
+
     const accessToken = await getValidAccessToken(userId);
+
+    await throwIfCancelled(scanJobId);
 
     const { error: scanStartError } = await supabaseAdmin
       .from("scan_jobs")
@@ -252,7 +279,9 @@ export async function processScanJob(payload: ScanJobPayload) {
       .eq("id", scanJobId);
 
     if (scanStartError) {
-      throw new Error(`Failed updating scan start state: ${scanStartError.message}`);
+      throw new Error(
+        `Failed updating scan start state: ${scanStartError.message}`
+      );
     }
 
     const scanResult = await runScan({
@@ -263,9 +292,12 @@ export async function processScanJob(payload: ScanJobPayload) {
       pageSize: 25,
       metadataConcurrency: 5,
       onProgress: async (progress) => {
+        await throwIfCancelled(scanJobId);
         await updateJobProgress(scanJobId, progress);
       },
       onPartialResult: async (partialResult, progress) => {
+        await throwIfCancelled(scanJobId);
+
         await savePartialResults({
           scanJobId,
           userId,
@@ -281,6 +313,8 @@ export async function processScanJob(payload: ScanJobPayload) {
       },
     });
 
+    await throwIfCancelled(scanJobId);
+
     const { error: savingStateError } = await supabaseAdmin
       .from("scan_jobs")
       .update({
@@ -291,14 +325,20 @@ export async function processScanJob(payload: ScanJobPayload) {
       .eq("id", scanJobId);
 
     if (savingStateError) {
-      throw new Error(`Failed updating saving state: ${savingStateError.message}`);
+      throw new Error(
+        `Failed updating saving state: ${savingStateError.message}`
+      );
     }
+
+    await throwIfCancelled(scanJobId);
 
     await savePartialResults({
       scanJobId,
       userId,
       scanResult,
     });
+
+    await throwIfCancelled(scanJobId);
 
     await saveScanSnapshot({
       scanJobId,
@@ -311,6 +351,8 @@ export async function processScanJob(payload: ScanJobPayload) {
       resolvedScanType === "sample"
         ? resolvedMaxEmails ?? scanResult.scanned
         : scanResult.totalInboxCount ?? scanResult.scanned;
+
+    await throwIfCancelled(scanJobId);
 
     const { error: completedError } = await supabaseAdmin
       .from("scan_jobs")
@@ -336,7 +378,9 @@ export async function processScanJob(payload: ScanJobPayload) {
       .eq("id", scanJobId);
 
     if (completedError) {
-      throw new Error(`Failed updating job to completed: ${completedError.message}`);
+      throw new Error(
+        `Failed updating job to completed: ${completedError.message}`
+      );
     }
 
     logger.info("Completed scan job", {
@@ -346,6 +390,29 @@ export async function processScanJob(payload: ScanJobPayload) {
       scanned: scanResult.scanned,
     });
   } catch (error: any) {
+    if (error?.message === SCAN_CANCELLED_ERROR) {
+      logger.info("Scan cancelled by user", {
+        scanJobId,
+        payloadScanType,
+        payloadMaxEmails,
+      });
+
+      const now = new Date().toISOString();
+
+      await supabaseAdmin
+        .from("scan_jobs")
+        .update({
+          status: "cancelled",
+          current_step: "Scan cancelled by user",
+          finished_at: now,
+          updated_at: now,
+          error_message: null,
+        })
+        .eq("id", scanJobId);
+
+      return;
+    }
+
     logger.error("Scan failed", {
       scanJobId,
       error: error.message,
