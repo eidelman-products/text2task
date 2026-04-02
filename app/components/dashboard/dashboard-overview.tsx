@@ -318,30 +318,33 @@ export default function DashboardOverview({
   const actionItems = [
     {
       id: "promotions",
-      title: "Clean Promotions",
+      title: "Review Promotions",
       value: `${formatNumber(scanResult.promotionsFoundInSampleScan)} emails`,
-      cta: "Clean Now →",
+      cta: "Open Promotions →",
       accent: "#f97316",
       glow: "rgba(249,115,22,0.18)",
       onClick: onGoToPromotions,
+      helper: "User-controlled cleanup only",
     },
     {
       id: "senders",
       title: "Review Top Senders",
       value: `${formatNumber(scanResult.largestSenderCount)} senders`,
-      cta: "Review Senders →",
+      cta: "Open Sender Review →",
       accent: "#2563eb",
       glow: "rgba(37,99,235,0.18)",
       onClick: onGoToTopSenders,
+      helper: "No automatic actions",
     },
     {
       id: "unsubscribe",
-      title: "Unsubscribe",
-      value: `${formatNumber(unsubscribeCount)} subscriptions`,
-      cta: "Review Unsubscribes →",
+      title: "Review Subscriptions",
+      value: `${formatNumber(unsubscribeCount)} senders`,
+      cta: "Open Unsubscribe Review →",
       accent: "#10b981",
       glow: "rgba(16,185,129,0.18)",
       onClick: onGoToUnsubscribe,
+      helper: "You confirm each step",
     },
   ];
 
@@ -416,7 +419,17 @@ export default function DashboardOverview({
                 }}
               >
                 {formatNumber(scanResult.promotionsFoundInSampleScan)} emails ready for
-                cleanup
+                user-reviewed cleanup
+              </div>
+
+              <div
+                style={{
+                  fontSize: "13px",
+                  color: "#64748b",
+                  fontWeight: 600,
+                }}
+              >
+                Scans and cleanup actions only run when you start them.
               </div>
             </div>
 
@@ -562,7 +575,7 @@ export default function DashboardOverview({
           >
             {dominantCategory ? (
               <>
-                Your inbox is dominated by{" "}
+                Your inbox is currently dominated by{" "}
                 <span style={{ fontWeight: 900 }}>{dominantCategory.name}</span> (
                 {Math.round(
                   (dominantCategory.value / Math.max(scanResult.scanned, 1)) * 100
@@ -633,7 +646,7 @@ export default function DashboardOverview({
                     color: "#64748b",
                   }}
                 >
-                  Total emails
+                  Total emails analyzed
                 </div>
               </div>
             </div>
@@ -688,7 +701,7 @@ export default function DashboardOverview({
                   color: "#64748b",
                 }}
               >
-                Based on the latest real scan for <b>{email}</b>
+                Based on the latest scan summary for <b>{email}</b>
               </div>
             </div>
           </div>
@@ -770,11 +783,22 @@ export default function DashboardOverview({
                   fontSize: "15px",
                   fontWeight: 700,
                   color: "#475569",
-                  marginBottom: "14px",
+                  marginBottom: "10px",
                   lineHeight: 1.45,
                 }}
               >
                 {card.value}
+              </div>
+              <div
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  color: "#64748b",
+                  marginBottom: "14px",
+                  lineHeight: 1.5,
+                }}
+              >
+                {card.helper}
               </div>
               <div
                 style={{
@@ -827,7 +851,7 @@ export default function DashboardOverview({
                 fontWeight: 600,
               }}
             >
-              Real sender breakdown from the latest scan
+              Sender breakdown from the latest scan summary
             </div>
           </div>
 

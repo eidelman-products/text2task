@@ -12,7 +12,7 @@ export default function PrivacyTrust() {
     border: "1px solid #e2e8f0",
     borderRadius: "18px",
     padding: "18px",
-    minHeight: "138px",
+    minHeight: "150px",
     boxShadow: "0 6px 18px rgba(15,23,42,0.04)",
   } as const;
 
@@ -140,10 +140,10 @@ export default function PrivacyTrust() {
                 maxWidth: "980px",
               }}
             >
-              InboxShaper is designed to help you organize and clean your Gmail
-              inbox while respecting your privacy. We only access the Gmail data
-              required to provide inbox cleanup features, and every action stays
-              under your control.
+              InboxShaper is built to help you organize and clean your Gmail
+              inbox while keeping you in control. Access is limited, actions are
+              user-initiated, and privacy is treated as a core product
+              principle.
             </p>
 
             <p
@@ -156,9 +156,9 @@ export default function PrivacyTrust() {
                 maxWidth: "980px",
               }}
             >
-              InboxShaper only accesses Gmail metadata required to provide its
-              functionality. It does not read or permanently store email
-              content.
+              InboxShaper only accesses Gmail metadata required to provide inbox
+              analysis and cleanup features. It does not read or permanently
+              store email content or message bodies.
             </p>
           </div>
         </div>
@@ -189,7 +189,7 @@ export default function PrivacyTrust() {
             <h3 style={cardTitleStyle}>Metadata only</h3>
             <p style={cardTextStyle}>
               InboxShaper analyzes sender, subject line, labels, categories,
-              and other message metadata required for inbox organization.
+              and other metadata required for inbox organization and analytics.
             </p>
           </div>
 
@@ -212,7 +212,7 @@ export default function PrivacyTrust() {
             <h3 style={cardTitleStyle}>No automatic actions</h3>
             <p style={cardTextStyle}>
               Emails are never deleted, archived, modified, or cleaned
-              automatically. Every action requires your confirmation.
+              automatically. Every action requires explicit user confirmation.
             </p>
           </div>
 
@@ -230,12 +230,13 @@ export default function PrivacyTrust() {
                 marginBottom: "14px",
               }}
             >
-              🔌
+              🔐
             </div>
-            <h3 style={cardTitleStyle}>Disconnect anytime</h3>
+            <h3 style={cardTitleStyle}>Encrypted connection tokens</h3>
             <p style={cardTextStyle}>
-              You can disconnect your Gmail account anytime from your account
-              settings or your Google permissions page.
+              Gmail connection tokens are stored securely in encrypted form and
+              are used only to keep your account connected and perform
+              user-requested actions.
             </p>
           </div>
         </div>
@@ -272,16 +273,19 @@ export default function PrivacyTrust() {
                 fontSize: "16px",
               }}
             >
-              Our product is built around limited access, user-controlled
-              actions, and minimal data handling.
+              The service is designed around limited access, minimal retention,
+              and user-controlled behavior.
             </p>
 
             <ul style={listStyle}>
-              <li>InboxShaper does not permanently store email content.</li>
-              <li>All Gmail data processing happens in real time.</li>
-              <li>Scan results are session-based and not kept as email archives.</li>
-              <li>InboxShaper does not build a database of your email bodies.</li>
-              <li>No Gmail user data is sold or transferred to third parties.</li>
+              <li>InboxShaper does not store email content or message bodies.</li>
+              <li>Gmail metadata is accessed only as needed to provide the service.</li>
+              <li>
+                Aggregated scan analytics such as counts, sender groups, and
+                category summaries may be stored to power dashboard insights.
+              </li>
+              <li>InboxShaper does not build a permanent archive of your inbox.</li>
+              <li>No Gmail user data is sold or used for advertising.</li>
             </ul>
           </div>
 
@@ -304,7 +308,7 @@ export default function PrivacyTrust() {
                 marginBottom: "10px",
               }}
             >
-              Google data handling
+              Gmail permission usage
             </div>
 
             <div
@@ -315,9 +319,9 @@ export default function PrivacyTrust() {
                 fontWeight: 600,
               }}
             >
-              InboxShaper only accesses the Gmail data necessary to provide inbox
-              cleanup and organization features. It does not use Gmail data for
-              advertising, marketing, profiling, or unrelated purposes.
+              InboxShaper requests Gmail modification access only to perform
+              actions explicitly initiated by the user, such as archiving
+              emails, moving messages to trash, or marking messages as read.
             </div>
 
             <div
@@ -331,7 +335,8 @@ export default function PrivacyTrust() {
                 fontWeight: 700,
               }}
             >
-              InboxShaper complies with the Google API Services User Data Policy.
+              InboxShaper’s use of Google API data follows the Google API
+              Services User Data Policy, including Limited Use requirements.
             </div>
           </div>
         </div>
@@ -367,14 +372,16 @@ export default function PrivacyTrust() {
                 fontSize: "16px",
               }}
             >
-              InboxShaper only works when you start a scan. The system never
+              InboxShaper only works when you choose to use it. The system never
               scans your inbox automatically in the background.
             </p>
 
             <ul style={listStyle}>
+              <li>You decide when to connect Gmail.</li>
               <li>You decide when to start a scan.</li>
-              <li>You decide which emails to review.</li>
+              <li>You decide which emails or senders to review.</li>
               <li>You decide which cleanup action to apply.</li>
+              <li>You can revoke access at any time.</li>
             </ul>
           </div>
 
@@ -413,7 +420,97 @@ export default function PrivacyTrust() {
               <li>Never auto-deletes or auto-archives emails.</li>
               <li>Never stores email content as a permanent archive.</li>
               <li>Never sells Gmail user data.</li>
+              <li>Never uses Gmail data for advertising or profiling.</li>
             </ul>
+          </div>
+        </div>
+      </section>
+
+      <section style={sectionStyle}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "22px",
+            alignItems: "start",
+          }}
+        >
+          <div>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "24px",
+                fontWeight: 850,
+                color: "#0f172a",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Data deletion & disconnect
+            </h2>
+
+            <p
+              style={{
+                marginTop: "10px",
+                color: "#64748b",
+                lineHeight: 1.75,
+                fontSize: "16px",
+              }}
+            >
+              You can revoke InboxShaper’s access to your Gmail account at any
+              time through your Google Account permissions or from within the
+              product when disconnect options are available.
+            </p>
+
+            <p
+              style={{
+                marginTop: "12px",
+                marginBottom: 0,
+                color: "#334155",
+                lineHeight: 1.75,
+                fontSize: "15px",
+                fontWeight: 600,
+              }}
+            >
+              If you need help removing access or requesting deletion of related
+              app data, contact support and we will assist you.
+            </p>
+          </div>
+
+          <div
+            style={{
+              borderRadius: "20px",
+              border: "1px solid #e2e8f0",
+              background: "#ffffff",
+              padding: "20px",
+              boxShadow: "0 6px 18px rgba(15,23,42,0.04)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "13px",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "#475569",
+                marginBottom: "12px",
+              }}
+            >
+              Trusted infrastructure
+            </div>
+
+            <div
+              style={{
+                color: "#334155",
+                lineHeight: 1.8,
+                fontSize: "15px",
+                fontWeight: 600,
+              }}
+            >
+              InboxShaper uses trusted infrastructure providers such as hosting,
+              database, and queue services to operate the product securely.
+              These services process data only as needed to provide the
+              functionality of InboxShaper.
+            </div>
           </div>
         </div>
       </section>

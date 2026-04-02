@@ -18,22 +18,6 @@ export default function TermsPage() {
     boxShadow: "0 10px 30px rgba(15,23,42,0.04)",
   } as const;
 
-  const backButtonStyle = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "10px 14px",
-    borderRadius: "12px",
-    background: "#f8fafc",
-    border: "1px solid #cbd5e1",
-    color: "#0f172a",
-    fontWeight: 800,
-    textDecoration: "none",
-    fontSize: "14px",
-    lineHeight: 1,
-    marginBottom: "18px",
-  } as const;
-
   const pillStyle = {
     display: "inline-flex",
     alignItems: "center",
@@ -87,10 +71,6 @@ export default function TermsPage() {
     <main style={pageStyle}>
       <div style={containerStyle}>
         <div style={cardStyle}>
-          <a href="/dashboard" style={backButtonStyle}>
-            ← Back to Dashboard
-          </a>
-
           <div style={pillStyle}>Terms of Service</div>
 
           <h1
