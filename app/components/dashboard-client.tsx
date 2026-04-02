@@ -606,6 +606,7 @@ export default function DashboardClient({
 
       if (data.status === "completed") {
         stopPolling();
+        setError("");
         await loadScanChanges();
         setSuccess(
           data.scanType === "sample"
@@ -614,9 +615,16 @@ export default function DashboardClient({
         );
       }
 
-      if (data.status === "failed" || data.status === "cancelled") {
+      if (data.status === "cancelled") {
         stopPolling();
-        setError(data.errorMessage || `Scan ${data.status}.`);
+        setError("");
+        setSuccess("Scan cancelled successfully.");
+      }
+
+      if (data.status === "failed") {
+        stopPolling();
+        setSuccess("");
+        setError(data.errorMessage || "Scan failed.");
       }
     } catch (err) {
       console.error("Failed to load scan status", err);

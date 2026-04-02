@@ -13,12 +13,97 @@ export type ScanJobPayload = {
 
 const SCAN_CANCELLED_ERROR = "SCAN_CANCELLED";
 
+const DB_RETRY_MAX_ATTEMPTS = 4;
+const DB_RETRY_INITIAL_DELAY_MS = 400;
+const DB_RETRY_MAX_DELAY_MS = 4000;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getBackoffDelayMs(attempt: number) {
+  const base = Math.min(
+    DB_RETRY_INITIAL_DELAY_MS * Math.pow(2, attempt),
+    DB_RETRY_MAX_DELAY_MS
+  );
+  const jitter = Math.floor(Math.random() * 200);
+  return Math.min(base + jitter, DB_RETRY_MAX_DELAY_MS);
+}
+
+function isRetryableDbError(error: unknown): boolean {
+  const message =
+    error instanceof Error ? error.message : String(error ?? "");
+
+  const normalized = message.toLowerCase();
+
+  return (
+    normalized.includes("fetch failed") ||
+    normalized.includes("network") ||
+    normalized.includes("timeout") ||
+    normalized.includes("timed out") ||
+    normalized.includes("connection") ||
+    normalized.includes("socket") ||
+    normalized.includes("econnreset") ||
+    normalized.includes("etimedout") ||
+    normalized.includes("service unavailable") ||
+    normalized.includes("temporarily unavailable") ||
+    normalized.includes("gateway") ||
+    normalized.includes("deadlock")
+  );
+}
+
+async function withDbRetry<T>(
+  operationName: string,
+  fn: () => PromiseLike<T>
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < DB_RETRY_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      const isLastAttempt = attempt === DB_RETRY_MAX_ATTEMPTS - 1;
+
+      if (!isRetryableDbError(error) || isLastAttempt) {
+        logger.error("Database operation failed", {
+          operationName,
+          attempt: attempt + 1,
+          maxAttempts: DB_RETRY_MAX_ATTEMPTS,
+          error:
+            error instanceof Error ? error.message : String(error ?? "Unknown"),
+        });
+        throw error;
+      }
+
+      const delayMs = getBackoffDelayMs(attempt);
+
+      logger.warn("Retrying database operation", {
+        operationName,
+        attempt: attempt + 1,
+        maxAttempts: DB_RETRY_MAX_ATTEMPTS,
+        delayMs,
+        error:
+          error instanceof Error ? error.message : String(error ?? "Unknown"),
+      });
+
+      await sleep(delayMs);
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(`Database operation failed: ${operationName}`);
+}
+
 async function isScanCancelled(scanJobId: string): Promise<boolean> {
-  const { data, error } = await supabaseAdmin
-    .from("scan_jobs")
-    .select("status")
-    .eq("id", scanJobId)
-    .single();
+  const { data, error } = await withDbRetry("scan_jobs.select.status", () =>
+    supabaseAdmin
+      .from("scan_jobs")
+      .select("status")
+      .eq("id", scanJobId)
+      .single()
+  );
 
   if (error) {
     throw new Error(`Failed checking scan cancel state: ${error.message}`);
@@ -130,9 +215,9 @@ async function savePartialResults(params: {
 }) {
   const row = buildScanResultsRow(params);
 
-  const { error } = await supabaseAdmin
-    .from("scan_results")
-    .upsert(row, { onConflict: "job_id" });
+  const { error } = await withDbRetry("scan_results.upsert", () =>
+    supabaseAdmin.from("scan_results").upsert(row, { onConflict: "job_id" })
+  );
 
   if (error) {
     throw new Error(`Failed saving scan_results: ${error.message}`);
@@ -147,9 +232,9 @@ async function saveScanSnapshot(params: {
 }) {
   const row = buildScanSnapshotRow(params);
 
-  const { error } = await supabaseAdmin
-    .from("scan_snapshots")
-    .insert(row);
+  const { error } = await withDbRetry("scan_snapshots.insert", () =>
+    supabaseAdmin.from("scan_snapshots").insert(row)
+  );
 
   if (error) {
     throw new Error(`Failed saving scan_snapshots: ${error.message}`);
@@ -163,19 +248,68 @@ async function updateJobProgress(scanJobId: string, progress: ScanProgress) {
         progress.estimatedTotal ? ` / ${progress.estimatedTotal}` : ""
       })`;
 
-  const { error } = await supabaseAdmin
-    .from("scan_jobs")
-    .update({
-      current_step: currentStep,
-      progress_percent: progress.progressPercent,
-      processed_messages: progress.scannedCount,
-      total_messages_estimate: progress.estimatedTotal,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", scanJobId);
+  const { error } = await withDbRetry("scan_jobs.update.progress", () =>
+    supabaseAdmin
+      .from("scan_jobs")
+      .update({
+        current_step: currentStep,
+        progress_percent: progress.progressPercent,
+        processed_messages: progress.scannedCount,
+        total_messages_estimate: progress.estimatedTotal,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", scanJobId)
+  );
 
   if (error) {
     throw new Error(`Failed updating scan progress: ${error.message}`);
+  }
+}
+
+async function updateJobState(
+  scanJobId: string,
+  values: Record<string, unknown>,
+  operationName: string
+) {
+  const { error } = await withDbRetry(operationName, () =>
+    supabaseAdmin
+      .from("scan_jobs")
+      .update({
+        ...values,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", scanJobId)
+  );
+
+  if (error) {
+    throw new Error(`Failed updating scan_jobs: ${error.message}`);
+  }
+}
+
+async function trySavePartialResults(params: {
+  scanJobId: string;
+  userId: string;
+  scanResult: ScanResult;
+  reason: string;
+}) {
+  try {
+    await savePartialResults({
+      scanJobId: params.scanJobId,
+      userId: params.userId,
+      scanResult: params.scanResult,
+    });
+
+    logger.info("Partial scan result saved", {
+      scanJobId: params.scanJobId,
+      scanned: params.scanResult.scanned,
+      reason: params.reason,
+    });
+  } catch (error) {
+    logger.error("Failed saving partial scan result", {
+      scanJobId: params.scanJobId,
+      reason: params.reason,
+      error: error instanceof Error ? error.message : String(error ?? "Unknown"),
+    });
   }
 }
 
@@ -192,11 +326,15 @@ export async function processScanJob(payload: ScanJobPayload) {
     payloadMaxEmails,
   });
 
-  const { data: job, error: fetchError } = await supabaseAdmin
-    .from("scan_jobs")
-    .select("*")
-    .eq("id", scanJobId)
-    .single();
+  const { data: job, error: fetchError } = await withDbRetry(
+    "scan_jobs.select.full_row",
+    () =>
+      supabaseAdmin
+        .from("scan_jobs")
+        .select("*")
+        .eq("id", scanJobId)
+        .single()
+  );
 
   if (fetchError || !job) {
     throw new Error(`scan_jobs row not found for id=${scanJobId}`);
@@ -231,10 +369,11 @@ export async function processScanJob(payload: ScanJobPayload) {
       : null;
 
   const startedAt = new Date().toISOString();
+  let latestPartialResult: ScanResult | null = null;
 
-  const { error: runningError } = await supabaseAdmin
-    .from("scan_jobs")
-    .update({
+  await updateJobState(
+    scanJobId,
+    {
       status: "running",
       current_step:
         resolvedScanType === "sample"
@@ -244,7 +383,6 @@ export async function processScanJob(payload: ScanJobPayload) {
       processed_messages: 0,
       total_messages_estimate: resolvedMaxEmails,
       started_at: job.started_at ?? startedAt,
-      updated_at: startedAt,
       error_message: null,
       finished_at: null,
       result_snapshot: {
@@ -252,12 +390,9 @@ export async function processScanJob(payload: ScanJobPayload) {
         scanMode: resolvedScanType,
         maxEmails: resolvedMaxEmails,
       },
-    })
-    .eq("id", scanJobId);
-
-  if (runningError) {
-    throw new Error(`Failed updating job to running: ${runningError.message}`);
-  }
+    },
+    "scan_jobs.update.running"
+  );
 
   try {
     await throwIfCancelled(scanJobId);
@@ -266,23 +401,17 @@ export async function processScanJob(payload: ScanJobPayload) {
 
     await throwIfCancelled(scanJobId);
 
-    const { error: scanStartError } = await supabaseAdmin
-      .from("scan_jobs")
-      .update({
+    await updateJobState(
+      scanJobId,
+      {
         current_step:
           resolvedScanType === "sample"
             ? "Scanning up to 1,000 Gmail messages"
             : "Scanning Gmail messages",
         progress_percent: 10,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", scanJobId);
-
-    if (scanStartError) {
-      throw new Error(
-        `Failed updating scan start state: ${scanStartError.message}`
-      );
-    }
+      },
+      "scan_jobs.update.scan_start"
+    );
 
     const scanResult = await runScan({
       userId,
@@ -293,42 +422,70 @@ export async function processScanJob(payload: ScanJobPayload) {
       metadataConcurrency: 5,
       onProgress: async (progress) => {
         await throwIfCancelled(scanJobId);
-        await updateJobProgress(scanJobId, progress);
+
+        try {
+          await updateJobProgress(scanJobId, progress);
+        } catch (error) {
+          logger.error("Failed updating scan progress during onProgress", {
+            scanJobId,
+            scannedCount: progress.scannedCount,
+            estimatedTotal: progress.estimatedTotal,
+            progressPercent: progress.progressPercent,
+            error:
+              error instanceof Error
+                ? error.message
+                : String(error ?? "Unknown"),
+          });
+
+          throw error;
+        }
       },
       onPartialResult: async (partialResult, progress) => {
         await throwIfCancelled(scanJobId);
 
-        await savePartialResults({
-          scanJobId,
-          userId,
-          scanResult: partialResult,
-        });
+        latestPartialResult = partialResult;
 
-        if (progress.completed) {
-          logger.info("Partial scan result saved for completed scan", {
+        try {
+          await savePartialResults({
+            scanJobId,
+            userId,
+            scanResult: partialResult,
+          });
+
+          if (progress.completed) {
+            logger.info("Partial scan result saved for completed scan", {
+              scanJobId,
+              scannedCount: progress.scannedCount,
+            });
+          }
+        } catch (error) {
+          logger.error("Failed saving partial scan result during scan", {
             scanJobId,
             scannedCount: progress.scannedCount,
+            completed: progress.completed,
+            error:
+              error instanceof Error
+                ? error.message
+                : String(error ?? "Unknown"),
           });
+
+          throw error;
         }
       },
     });
 
+    latestPartialResult = scanResult;
+
     await throwIfCancelled(scanJobId);
 
-    const { error: savingStateError } = await supabaseAdmin
-      .from("scan_jobs")
-      .update({
+    await updateJobState(
+      scanJobId,
+      {
         current_step: "Saving results",
         progress_percent: 95,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", scanJobId);
-
-    if (savingStateError) {
-      throw new Error(
-        `Failed updating saving state: ${savingStateError.message}`
-      );
-    }
+      },
+      "scan_jobs.update.saving_results"
+    );
 
     await throwIfCancelled(scanJobId);
 
@@ -354,9 +511,9 @@ export async function processScanJob(payload: ScanJobPayload) {
 
     await throwIfCancelled(scanJobId);
 
-    const { error: completedError } = await supabaseAdmin
-      .from("scan_jobs")
-      .update({
+    await updateJobState(
+      scanJobId,
+      {
         status: "completed",
         current_step:
           resolvedScanType === "sample"
@@ -366,7 +523,6 @@ export async function processScanJob(payload: ScanJobPayload) {
         processed_messages: scanResult.scanned,
         total_messages_estimate: finalTotalEstimate,
         finished_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
         error_message: null,
         result_snapshot: {
           ...(job.result_snapshot ?? {}),
@@ -374,14 +530,9 @@ export async function processScanJob(payload: ScanJobPayload) {
           maxEmails: resolvedMaxEmails,
           completedScanned: scanResult.scanned,
         },
-      })
-      .eq("id", scanJobId);
-
-    if (completedError) {
-      throw new Error(
-        `Failed updating job to completed: ${completedError.message}`
-      );
-    }
+      },
+      "scan_jobs.update.completed"
+    );
 
     logger.info("Completed scan job", {
       scanJobId,
@@ -399,37 +550,55 @@ export async function processScanJob(payload: ScanJobPayload) {
 
       const now = new Date().toISOString();
 
-      await supabaseAdmin
-        .from("scan_jobs")
-        .update({
+      if (latestPartialResult) {
+        await trySavePartialResults({
+          scanJobId,
+          userId,
+          scanResult: latestPartialResult,
+          reason: "cancelled-scan",
+        });
+      }
+
+      await updateJobState(
+        scanJobId,
+        {
           status: "cancelled",
           current_step: "Scan cancelled by user",
           finished_at: now,
-          updated_at: now,
           error_message: null,
-        })
-        .eq("id", scanJobId);
+        },
+        "scan_jobs.update.cancelled"
+      );
 
       return;
     }
 
     logger.error("Scan failed", {
       scanJobId,
-      error: error.message,
+      error: error?.message ?? "Unknown error",
       payloadScanType,
       payloadMaxEmails,
     });
 
-    await supabaseAdmin
-      .from("scan_jobs")
-      .update({
+    if (latestPartialResult) {
+      await trySavePartialResults({
+        scanJobId,
+        userId,
+        scanResult: latestPartialResult,
+        reason: "failed-scan",
+      });
+    }
+
+    await updateJobState(
+      scanJobId,
+      {
         status: "failed",
         current_step: "Scan failed",
-        error_message: error.message,
+        error_message: error?.message ?? "Unknown scan error",
         finished_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", scanJobId);
+      },
+      "scan_jobs.update.failed"
+    );
 
     throw error;
   }
