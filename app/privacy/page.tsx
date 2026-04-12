@@ -143,6 +143,9 @@ export default function PrivacyPage() {
               account
             </li>
           </ul>
+          <p style={pStyle}>
+  InboxShaper does not access, read, or store the full content of Gmail messages.
+</p>
 
           <p style={pStyle}>
             InboxShaper does <b>not</b> use Gmail user data for advertising,
