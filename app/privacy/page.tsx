@@ -58,6 +58,15 @@ export default function PrivacyPage() {
     marginBottom: "14px",
   } as const;
 
+  const listStyle = {
+    color: "#334155",
+    lineHeight: 1.8,
+    fontSize: "16px",
+    marginTop: 0,
+    marginBottom: "14px",
+    paddingLeft: "22px",
+  } as const;
+
   const footerStyle = {
     marginTop: "28px",
     paddingTop: "18px",
@@ -96,134 +105,174 @@ export default function PrivacyPage() {
           </h1>
 
           <p style={mutedStyle}>
-            <b>Effective date:</b> March 2026
+            <b>Effective date:</b> April 2026
           </p>
 
           <p style={{ ...pStyle, fontSize: "18px", color: "#475569" }}>
             InboxShaper is built as a privacy-first service. This Privacy Policy
-            explains what data is accessed, how it is used, and how it is
-            protected.
+            explains what Google user data is accessed, how it is used, how it
+            is protected, and what control users have over their connection.
           </p>
 
           <p style={{ ...pStyle, fontWeight: 800, color: "#0f172a" }}>
-            InboxShaper only accesses Gmail metadata required to provide its
-            functionality and does not read or store email content.
+            InboxShaper accesses limited Gmail user data only to provide inbox
+            analysis and user-requested cleanup features. InboxShaper does not
+            sell Gmail user data, does not use it for advertising, and does not
+            use it to train AI models.
           </p>
 
-          <h2 style={h2Style}>1. Information Access</h2>
+          <h2 style={h2Style}>1. Google User Data Access</h2>
           <p style={pStyle}>
-            When you connect your Gmail account, InboxShaper requests access
-            only to the data necessary to provide inbox analysis and cleanup
+            When you connect your Google account through Google OAuth,
+            InboxShaper may access limited Gmail user data required to provide
+            its core functionality.
+          </p>
+
+          <p style={pStyle}>InboxShaper may access the following Gmail user data:</p>
+          <ul style={listStyle}>
+            <li>
+              Email metadata such as sender information, subject lines, message
+              labels, categories, and related inbox classification signals
+            </li>
+            <li>
+              Message identifiers required to organize emails and perform
+              user-requested actions
+            </li>
+            <li>
+              Gmail account email address used to identify the connected user
+              account
+            </li>
+          </ul>
+
+          <p style={pStyle}>
+            InboxShaper does <b>not</b> use Gmail user data for advertising,
+            marketing profiling, resale, or any unrelated purpose.
+          </p>
+
+          <h2 style={h2Style}>2. How Gmail User Data Is Used</h2>
+          <p style={pStyle}>
+            InboxShaper uses the data listed above only to provide the features
+            of the product, including:
+          </p>
+          <ul style={listStyle}>
+            <li>Analyzing inbox structure and email volume</li>
+            <li>Identifying sender groups and high-volume senders</li>
+            <li>Detecting promotions and other cleanup opportunities</li>
+            <li>Displaying inbox insights, statistics, and dashboard summaries</li>
+            <li>
+              Performing user-initiated actions such as moving emails to trash,
+              archiving emails, or marking emails as read
+            </li>
+          </ul>
+
+          <p style={pStyle}>
+            All Gmail actions are explicitly initiated by the user. InboxShaper
+            does not automatically delete, archive, or modify emails without
+            user action.
+          </p>
+
+          <h2 style={h2Style}>3. Gmail Scope Justification</h2>
+          <p style={pStyle}>
+            InboxShaper requests Gmail modification permission (
+            <b>gmail.modify</b>) because users use the application to take
+            direct action on emails from within the product.
+          </p>
+
+          <p style={pStyle}>
+            This permission is used only for features such as:
+          </p>
+          <ul style={listStyle}>
+            <li>Moving selected emails to trash</li>
+            <li>Archiving selected emails</li>
+            <li>Marking selected emails as read</li>
+          </ul>
+
+          <p style={pStyle}>
+            A more limited read-only scope is not sufficient for these
+            user-requested cleanup features.
+          </p>
+
+          <h2 style={h2Style}>4. Email Content Handling</h2>
+          <p style={pStyle}>
+            InboxShaper is designed as a metadata-first product. It does not
+            permanently store, copy, or archive full email bodies or email
+            content as part of normal operation.
+          </p>
+
+          <p style={pStyle}>
+            InboxShaper primarily uses metadata such as sender, subject line,
+            labels, categories, and message IDs to provide analysis and cleanup
             features.
           </p>
 
-          <h2 style={h2Style}>2. Gmail Data Usage</h2>
+          <h2 style={h2Style}>5. Token Storage & Authentication</h2>
           <p style={pStyle}>
-            InboxShaper accesses limited Gmail data such as sender information,
-            subject lines, message labels, and metadata in order to:
-          </p>
-          <p style={pStyle}>
-            • Analyze inbox structure
-            <br />
-            • Identify sender groups
-            <br />
-            • Detect promotions and categories
-            <br />
-            • Provide insights and statistics
-            <br />
-            • Perform actions requested by the user
+            InboxShaper securely stores OAuth tokens, including access tokens
+            and refresh tokens, required to maintain your Gmail connection and
+            perform user-requested actions.
           </p>
 
           <p style={pStyle}>
-            InboxShaper requests Gmail modification permissions (gmail.modify)
-            only to perform actions explicitly initiated by the user, such as:
-            archiving emails, moving messages to trash, or marking messages as
-            read.
+            These tokens are encrypted and used only for authentication and for
+            carrying out the actions explicitly requested by the user.
+          </p>
+
+          <h2 style={h2Style}>6. Data Retention</h2>
+          <p style={pStyle}>
+            InboxShaper does not permanently store full email content.
           </p>
 
           <p style={pStyle}>
-            InboxShaper does not perform any actions automatically.
-          </p>
-
-          <p style={pStyle}>
-            InboxShaper does not use Gmail data for advertising, profiling, or
-            any unrelated purposes.
-          </p>
-
-          <h2 style={h2Style}>3. No Email Content Storage</h2>
-          <p style={pStyle}>
-            InboxShaper does not store, copy, or permanently archive email
-            content or message bodies.
-          </p>
-
-          <h2 style={h2Style}>4. Token Storage & Authentication</h2>
-          <p style={pStyle}>
-            InboxShaper securely stores OAuth tokens (access tokens and refresh
-            tokens) required to maintain your Gmail connection.
-          </p>
-
-          <p style={pStyle}>
-            These tokens are encrypted and used only to perform actions
-            requested by the user.
-          </p>
-
-          <h2 style={h2Style}>5. Data Retention</h2>
-          <p style={pStyle}>
-            InboxShaper does not permanently store email content.
-          </p>
-
-          <p style={pStyle}>
-            Aggregated analytics data (such as sender counts, categories, and
-            inbox statistics) may be stored temporarily to provide dashboard
+            Limited aggregated analytics data, such as sender counts,
+            categories, inbox metrics, scan summaries, and cleanup-related
+            statistics, may be stored temporarily to provide dashboard
             functionality.
           </p>
 
-          <h2 style={h2Style}>6. User Control</h2>
+          <h2 style={h2Style}>7. Data Sharing and Third Parties</h2>
           <p style={pStyle}>
-            All actions performed by InboxShaper require explicit user
-            initiation. Users remain in full control of their data and actions.
+            InboxShaper does not sell, share, or transfer Gmail user data to
+            third parties except as necessary to operate the service through
+            trusted infrastructure providers.
           </p>
 
-          <h2 style={h2Style}>7. Data Deletion & Access Revocation</h2>
           <p style={pStyle}>
-            Users can revoke access to InboxShaper at any time through their
-            Google Account settings.
+            These service providers may include hosting, database, and cloud
+            infrastructure vendors. They may process data only as needed to
+            support InboxShaper’s functionality and are not permitted to use the
+            data for unrelated purposes.
+          </p>
+
+          <h2 style={h2Style}>8. Security</h2>
+          <p style={pStyle}>
+            InboxShaper uses industry-standard security practices, including
+            encryption, secure authentication flows, restricted access controls,
+            and secure token handling to protect user data.
+          </p>
+
+          <h2 style={h2Style}>9. User Control, Revocation, and Deletion</h2>
+          <p style={pStyle}>
+            Users remain in control of their Gmail connection and may revoke
+            access to InboxShaper at any time through their Google Account
+            settings.
           </p>
 
           <p style={pStyle}>
             Users can also disconnect their account directly from the
-            InboxShaper dashboard.
-          </p>
-
-          <h2 style={h2Style}>8. Third-Party Services</h2>
-          <p style={pStyle}>
-            InboxShaper relies on trusted third-party infrastructure providers
-            (such as cloud hosting and database services) to operate.
-          </p>
-
-          <p style={pStyle}>
-            These services process data only as required to provide the
-            functionality of InboxShaper and are not permitted to use data for
-            other purposes.
-          </p>
-
-          <h2 style={h2Style}>9. Security</h2>
-          <p style={pStyle}>
-            InboxShaper uses industry-standard security practices including
-            encryption, secure authentication flows, and restricted access to
-            sensitive data.
+            InboxShaper dashboard, which stops further Gmail access by the
+            application unless the user reconnects.
           </p>
 
           <h2 style={h2Style}>10. Google API Services Disclosure</h2>
           <p style={pStyle}>
             InboxShaper’s use of information received from Google APIs adheres
-            to the Google API Services User Data Policy, including Limited Use
-            requirements.
+            to the Google API Services User Data Policy, including the Limited
+            Use requirements.
           </p>
 
           <p style={pStyle}>
-            InboxShaper does not sell or transfer Gmail user data to third
-            parties.
+            InboxShaper does not use Google user data to develop, improve, or
+            train generalized AI or machine learning models.
           </p>
 
           <h2 style={h2Style}>11. Contact</h2>
