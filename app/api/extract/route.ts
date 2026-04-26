@@ -5,7 +5,7 @@ import { z } from "zod";
 import { openai } from "@/lib/openai";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-const FREE_EXTRACT_LIMIT = 15;
+const FREE_EXTRACT_LIMIT = 30;
 
 const ExtractRequestSchema = z.object({
   input: z.string().min(1, "Input is required"),
@@ -122,8 +122,7 @@ async function getOrCreateUsageProfile(): Promise<UsageProfile | null> {
     };
   }
 
-  const isPro =
-    data.plan === "pro" || data.subscription_status === "active";
+  const isPro = data.plan === "pro" || data.subscription_status === "active";
 
   return {
     userId: data.id,
@@ -139,7 +138,7 @@ function buildLimitResponse(profile: UsageProfile) {
       success: false,
       error: "FREE_EXTRACT_LIMIT_REACHED",
       message:
-        "You have used all 15 free extracts. Upgrade to Pro to continue extracting tasks.",
+        "You have used all 30 free extracts. Upgrade to Pro to continue extracting tasks.",
       plan: profile.plan,
       extract_count: profile.extractCount,
       extract_limit: FREE_EXTRACT_LIMIT,
@@ -184,10 +183,7 @@ export async function POST(req: NextRequest) {
     const profile = await getOrCreateUsageProfile();
 
     if (!profile) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (
@@ -469,8 +465,7 @@ ${input}
       usage: {
         plan: profile.plan,
         extract_count: nextExtractCount,
-        extract_limit:
-          profile.plan === "pro" ? null : FREE_EXTRACT_LIMIT,
+        extract_limit: profile.plan === "pro" ? null : FREE_EXTRACT_LIMIT,
         remaining_extracts: remainingExtracts,
       },
     });

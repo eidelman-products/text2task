@@ -102,7 +102,7 @@ export default function UpgradeModal({ isOpen, onClose }: Props) {
                 margin: 0,
               }}
             >
-              You’ve used all 15 free extracts. Upgrade to Pro for unlimited AI
+              You’ve used all 30 free extracts. Upgrade to Pro for unlimited AI
               extracts, CSV export, and full task management.
             </p>
 
