@@ -4,15 +4,12 @@ import { useMemo, useState } from "react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import PrimaryButton from "./primary-button";
 import SecondaryButton from "./secondary-button";
-import DashboardScanChangesCard from "./dashboard-scan-changes-card";
+
 
 type DashboardTopSender = {
   sender: string;
   count: number;
   ids?: string[];
-  unsubscribeAvailable?: boolean;
-  unsubscribeTarget?: string;
-  unsubscribeMethod?: "url" | "mailto" | null;
 };
 
 type SmartViews = {
@@ -41,7 +38,6 @@ type ScanSnapshot = {
   promotions_count: number;
   sender_groups_count: number;
   inbox_health_score: number;
-  ready_for_cleanup_count: number;
   top_sender_count: number;
   created_at: string;
 };
@@ -65,7 +61,6 @@ type DashboardOverviewProps = {
   onRunFullScan: () => void;
   onGoToPromotions: () => void;
   onGoToTopSenders: () => void;
-  onGoToUnsubscribe: () => void;
   onUpgradeClick: () => void;
   plan: "free" | "pro";
 };
@@ -261,7 +256,6 @@ export default function DashboardOverview({
   onRunFullScan,
   onGoToPromotions,
   onGoToTopSenders,
-  onGoToUnsubscribe,
   onUpgradeClick,
   plan,
 }: DashboardOverviewProps) {
@@ -287,12 +281,6 @@ export default function DashboardOverview({
         accent: getSenderAccent(item.sender),
       }));
   }, [scanResult]);
-
-  const unsubscribeCount = useMemo(
-    () =>
-      scanResult.topSenders.filter((item) => item.unsubscribeAvailable).length,
-    [scanResult.topSenders]
-  );
 
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
   const [hoveredSender, setHoveredSender] = useState<string | null>(null);
@@ -324,27 +312,17 @@ export default function DashboardOverview({
       accent: "#f97316",
       glow: "rgba(249,115,22,0.18)",
       onClick: onGoToPromotions,
-      helper: "User-controlled cleanup only",
+      helper: "Read-only category analysis",
     },
     {
       id: "senders",
       title: "Review Top Senders",
-      value: `${formatNumber(scanResult.largestSenderCount)} senders`,
+      value: `${formatNumber(scanResult.largestSenderCount)} emails`,
       cta: "Open Sender Review →",
       accent: "#2563eb",
       glow: "rgba(37,99,235,0.18)",
       onClick: onGoToTopSenders,
       helper: "No automatic actions",
-    },
-    {
-      id: "unsubscribe",
-      title: "Review Subscriptions",
-      value: `${formatNumber(unsubscribeCount)} senders`,
-      cta: "Open Unsubscribe Review →",
-      accent: "#10b981",
-      glow: "rgba(16,185,129,0.18)",
-      onClick: onGoToUnsubscribe,
-      helper: "You confirm each step",
     },
   ];
 
@@ -418,8 +396,8 @@ export default function DashboardOverview({
                   lineHeight: 1.45,
                 }}
               >
-                {formatNumber(scanResult.promotionsFoundInSampleScan)} emails ready for
-                user-reviewed cleanup
+                {formatNumber(scanResult.promotionsFoundInSampleScan)} promotional
+                emails identified in the latest scan
               </div>
 
               <div
@@ -429,7 +407,7 @@ export default function DashboardOverview({
                   fontWeight: 600,
                 }}
               >
-                Scans and cleanup actions only run when you start them.
+                Scans only run when you start them.
               </div>
             </div>
 
@@ -707,16 +685,13 @@ export default function DashboardOverview({
           </div>
         </div>
 
-        <DashboardScanChangesCard
-          latestSnapshot={latestSnapshot}
-          previousSnapshot={previousSnapshot}
-        />
-      </section>
+        
+              </section>
 
       <section
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
           gap: "20px",
         }}
       >

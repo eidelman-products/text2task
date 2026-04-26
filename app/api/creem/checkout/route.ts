@@ -1,72 +1,106 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
+
+const CREEM_PRODUCT_ID = "prod_5yqlBNrglVmQtKeaaJ5DzX";
+
+async function getAuthenticatedUser() {
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch {
+            // Safe to ignore in route handlers where cookies may be read-only.
+          }
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) return null;
+
+  return user;
+}
 
 export async function POST() {
   try {
-    const supabase = await createClient();
+    const apiKey = process.env.CREEM_API_KEY;
+    const apiBaseUrl =
+      process.env.CREEM_API_BASE_URL || "https://test-api.creem.io/v1";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user?.id || !user?.email) {
+    if (!apiKey) {
       return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+        { error: "Missing CREEM_API_KEY in env" },
+        { status: 500 }
       );
     }
 
-    const response = await fetch("https://api.creem.io/v1/checkouts", {
+    const user = await getAuthenticatedUser();
+
+    if (!user?.id || !user.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const res = await fetch(`${apiBaseUrl}/checkouts`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.CREEM_API_KEY!,
+        "x-api-key": apiKey,
       },
       body: JSON.stringify({
-        product_id: "prod_4cVD39q7GyCybf8vjv5U4n",
+        product_id: CREEM_PRODUCT_ID,
+        request_id: user.id,
         customer: {
           email: user.email,
         },
         metadata: {
           user_id: user.id,
           email: user.email,
+          product: "text2task_pro",
+          plan: "pro",
         },
+        success_url: `${appUrl}/dashboard?checkout=success`,
       }),
     });
 
-    const data = await response.json();
+    const data = await res.json();
 
-    if (!response.ok) {
-      console.error("Creem checkout API error:", data);
+    console.log("CREEM CHECKOUT RESPONSE:", data);
+
+    if (!res.ok) {
+      return NextResponse.json({ error: data }, { status: res.status });
+    }
+
+    const checkoutUrl = data.checkout_url || data.url;
+
+    if (!checkoutUrl) {
       return NextResponse.json(
-        { error: "Failed to create checkout", details: data },
-        { status: response.status }
+        { error: "Missing checkout URL from Creem" },
+        { status: 502 }
       );
     }
 
-    const url =
-      data.checkout_url ||
-      data.url ||
-      data.hosted_checkout_url ||
-      data.hosted_url ||
-      (data.product && data.id
-        ? `https://creem.io/test/checkout/${data.product}/${data.id}`
-        : null);
+    return NextResponse.json({ url: checkoutUrl });
+  } catch (err) {
+    console.error("CREEM CHECKOUT ERROR:", err);
 
-    if (!url) {
-      console.error("Creem checkout URL missing:", data);
-      return NextResponse.json(
-        { error: "Checkout URL missing", details: data },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ url });
-  } catch (error) {
-    console.error("Creem checkout route error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Checkout failed" }, { status: 500 });
   }
 }

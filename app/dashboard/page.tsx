@@ -1,8 +1,7 @@
+import { redirect } from "next/navigation";
 import DashboardClient from "../components/dashboard-client";
 import { createClient } from "@/lib/supabase/server";
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+import { ensureUser } from "@/lib/supabase/ensureUser";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -12,28 +11,24 @@ export default async function DashboardPage() {
     error: userError,
   } = await supabase.auth.getUser();
 
-  const connectedEmail = user?.email ?? null;
-  const userId = user?.id ?? "";
-
-  let initialPlan: "free" | "pro" = "free";
-
-  if (!userError && userId) {
-    const { data: dbUser, error: dbError } = await supabase
-      .from("users")
-      .select("plan")
-      .eq("id", userId)
-      .single();
-
-    if (!dbError && dbUser?.plan === "pro") {
-      initialPlan = "pro";
-    }
+  if (userError || !user) {
+    redirect("/login");
   }
+
+  if (!user.email) {
+    redirect("/login");
+  }
+
+  const appUser = await ensureUser({
+    id: user.id,
+    email: user.email,
+  });
 
   return (
     <DashboardClient
-      email={connectedEmail || "Not connected"}
-      userId={userId}
-      initialPlan={initialPlan}
+      email={appUser.email}
+      userId={appUser.id}
+      initialPlan={appUser.plan}
     />
   );
 }

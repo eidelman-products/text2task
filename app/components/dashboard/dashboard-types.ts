@@ -2,9 +2,6 @@ export type TopSender = {
   sender: string;
   count: number;
   ids?: string[];
-  unsubscribeAvailable?: boolean;
-  unsubscribeTarget?: string;
-  unsubscribeMethod?: "url" | "mailto" | null;
 };
 
 export type SmartViews = {
@@ -23,7 +20,6 @@ export type SmartViewIds = {
 
 export type ActiveNav =
   | "dashboard"
-  | "scan-results"
   | "top-senders"
   | "promotions"
   | "unread"

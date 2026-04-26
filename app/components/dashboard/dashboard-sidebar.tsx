@@ -7,9 +7,6 @@ type DashboardTopSender = {
   sender: string;
   count: number;
   ids?: string[];
-  unsubscribeAvailable?: boolean;
-  unsubscribeTarget?: string;
-  unsubscribeMethod?: "url" | "mailto" | null;
 };
 
 type DashboardScanResult = {
@@ -34,14 +31,6 @@ type DashboardSidebarProps = {
   plan: "free" | "pro";
   activeNav: ActiveNav;
   setActiveNav: (nav: ActiveNav) => void;
-  setError: (value: string) => void;
-  setSuccess: (value: string) => void;
-  weeklyCleanupUsed: number;
-  remainingWeeklyCleanup: number;
-  freeWeeklyLimit: number;
-  weeklyUnreadUsed: number;
-  remainingWeeklyUnread: number;
-  freeWeeklyUnreadLimit: number;
   scanResult: DashboardScanResult | null;
   onUpgradeClick: () => void;
 };
@@ -143,110 +132,11 @@ function SidebarNavButton({
   );
 }
 
-type CompactUsageCardProps = {
-  title: string;
-  value: string;
-  subtitle: string;
-  percent: number;
-  titleColor: string;
-  fill: string;
-  track?: string;
-  border: string;
-  background: string;
-};
-
-function CompactUsageCard({
-  title,
-  value,
-  subtitle,
-  percent,
-  titleColor,
-  fill,
-  track = "rgba(148,163,184,0.22)",
-  border,
-  background,
-}: CompactUsageCardProps) {
-  return (
-    <div
-      style={{
-        borderRadius: "18px",
-        padding: "8px 10px",
-        background,
-        border,
-        boxShadow: "0 8px 18px rgba(2,8,23,0.14)",
-        marginBottom: "8px",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "12px",
-          fontWeight: 800,
-          color: titleColor,
-          marginBottom: "5px",
-        }}
-      >
-        {title}
-      </div>
-
-      <div
-        style={{
-          fontSize: "18px",
-          fontWeight: 900,
-          lineHeight: 1,
-          letterSpacing: "-0.04em",
-          marginBottom: "6px",
-          color: "#f8fbff",
-        }}
-      >
-        {value}
-      </div>
-
-      <div
-        style={{
-          width: "100%",
-          height: "3px",
-          background: track,
-          borderRadius: "999px",
-          overflow: "hidden",
-          marginBottom: "5px",
-        }}
-      >
-        <div
-          style={{
-            width: `${percent}%`,
-            height: "100%",
-            borderRadius: "999px",
-            background: fill,
-            transition: "width 180ms ease",
-          }}
-        />
-      </div>
-
-      <div
-        style={{
-          fontSize: "12px",
-          fontWeight: 700,
-          lineHeight: 1.3,
-          color: "rgba(226,232,240,0.92)",
-        }}
-      >
-        {subtitle}
-      </div>
-    </div>
-  );
-}
-
 export default function DashboardSidebar({
   email,
   plan,
   activeNav,
   setActiveNav,
-  weeklyCleanupUsed,
-  remainingWeeklyCleanup,
-  freeWeeklyLimit,
-  weeklyUnreadUsed,
-  remainingWeeklyUnread,
-  freeWeeklyUnreadLimit,
   scanResult,
   onUpgradeClick,
 }: DashboardSidebarProps) {
@@ -256,16 +146,6 @@ export default function DashboardSidebar({
     jobSearch: 0,
     shopping: 0,
   };
-
-  const cleanupPercent =
-    plan === "pro"
-      ? 100
-      : Math.min(100, (weeklyCleanupUsed / Math.max(freeWeeklyLimit, 1)) * 100);
-
-  const unreadPercent =
-    plan === "pro"
-      ? 100
-      : Math.min(100, (weeklyUnreadUsed / Math.max(freeWeeklyUnreadLimit, 1)) * 100);
 
   const [upgradeHovered, setUpgradeHovered] = useState(false);
 
@@ -421,60 +301,6 @@ export default function DashboardSidebar({
         </div>
       </div>
 
-      <CompactUsageCard
-        title="Cleanup"
-        value={plan === "pro" ? "Unlimited" : `${weeklyCleanupUsed}/${freeWeeklyLimit}`}
-        subtitle={
-          plan === "pro"
-            ? "Unlimited cleanup available"
-            : `${remainingWeeklyCleanup} left this week`
-        }
-        percent={cleanupPercent}
-        titleColor={plan === "pro" ? "#86efac" : "#93c5fd"}
-        fill={
-          plan === "pro"
-            ? "linear-gradient(90deg, #22c55e 0%, #16a34a 100%)"
-            : "linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%)"
-        }
-        border={
-          plan === "pro"
-            ? "1px solid rgba(34,197,94,0.24)"
-            : "1px solid rgba(59,130,246,0.26)"
-        }
-        background={
-          plan === "pro"
-            ? "linear-gradient(180deg, rgba(34,197,94,0.12) 0%, rgba(15,23,42,0.34) 100%)"
-            : "linear-gradient(180deg, rgba(30,64,175,0.18) 0%, rgba(15,23,42,0.34) 100%)"
-        }
-      />
-
-      <CompactUsageCard
-        title="Unread actions"
-        value={plan === "pro" ? "Unlimited" : `${weeklyUnreadUsed}/${freeWeeklyUnreadLimit}`}
-        subtitle={
-          plan === "pro"
-            ? "Unlimited unread actions available"
-            : `${remainingWeeklyUnread} left this week`
-        }
-        percent={unreadPercent}
-        titleColor={plan === "pro" ? "#6ee7b7" : "#67e8f9"}
-        fill={
-          plan === "pro"
-            ? "linear-gradient(90deg, #10b981 0%, #059669 100%)"
-            : "linear-gradient(90deg, #22d3ee 0%, #06b6d4 100%)"
-        }
-        border={
-          plan === "pro"
-            ? "1px solid rgba(16,185,129,0.22)"
-            : "1px solid rgba(34,211,238,0.24)"
-        }
-        background={
-          plan === "pro"
-            ? "linear-gradient(180deg, rgba(16,185,129,0.10) 0%, rgba(15,23,42,0.34) 100%)"
-            : "linear-gradient(180deg, rgba(8,145,178,0.14) 0%, rgba(15,23,42,0.34) 100%)"
-        }
-      />
-
       <div
         style={{
           fontSize: "12px",
@@ -528,7 +354,7 @@ export default function DashboardSidebar({
         />
 
         <SidebarNavButton
-          label="Unread"
+          label="Unread Emails"
           count={smartViews.unread}
           isActive={activeNav === "unread"}
           onClick={() => setActiveNav("unread")}
@@ -593,8 +419,7 @@ export default function DashboardSidebar({
               lineHeight: 1.6,
             }}
           >
-            Full Scan, unlimited cleanup, unlimited unread actions, bulk actions,
-            and better progress.
+            Full Scan, deeper inbox insights, advanced analytics, and better scan visibility.
           </div>
 
           <button
@@ -642,7 +467,7 @@ export default function DashboardSidebar({
               lineHeight: 1.6,
             }}
           >
-            Pro is active. Full Scan and unlimited cleanup are unlocked.
+            Pro is active. Full Scan and advanced inbox analytics are unlocked.
           </div>
         </div>
       )}
