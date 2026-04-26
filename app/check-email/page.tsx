@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function CheckEmailPage() {
+function CheckEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -35,6 +35,14 @@ export default function CheckEmailPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function CheckEmailPage() {
+  return (
+    <Suspense fallback={<div style={styles.container} />}>
+      <CheckEmailContent />
+    </Suspense>
   );
 }
 
