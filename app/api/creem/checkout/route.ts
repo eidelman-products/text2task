@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 const CREEM_PRODUCT_ID = "prod_5yqlBNrglVmQtKeaaJ5DzX";
+const PRODUCTION_APP_URL = "https://text2task.com";
 
 async function getAuthenticatedUser() {
   const cookieStore = await cookies();
@@ -38,12 +39,31 @@ async function getAuthenticatedUser() {
   return user;
 }
 
-export async function POST() {
+function getAppUrl(req: NextRequest) {
+  const origin = req.headers.get("origin");
+
+  if (origin && origin.includes("text2task.com")) {
+    return origin;
+  }
+
+  const envUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    PRODUCTION_APP_URL;
+
+  if (envUrl.includes("localhost")) {
+    return PRODUCTION_APP_URL;
+  }
+
+  return envUrl.replace(/\/$/, "");
+}
+
+export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.CREEM_API_KEY;
     const apiBaseUrl =
       process.env.CREEM_API_BASE_URL || "https://test-api.creem.io/v1";
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl = getAppUrl(req);
 
     if (!apiKey) {
       return NextResponse.json(
