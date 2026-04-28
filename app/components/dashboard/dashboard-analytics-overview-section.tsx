@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import IncomeTimelineChart from "./income-timeline-chart";
 import IncomeByClientChart from "./income-by-client-chart";
 import IncomeByTaskTypeChart from "./income-by-task-type-chart";
@@ -12,6 +13,8 @@ export default function DashboardAnalyticsOverviewSection({
 }) {
   return (
     <section style={analyticsShellStyle}>
+      <style>{responsiveCss}</style>
+
       <div
         style={{
           display: "flex",
@@ -72,19 +75,13 @@ export default function DashboardAnalyticsOverviewSection({
         </div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1.1fr) minmax(0, 1.15fr) minmax(0, 1.1fr)",
-          gap: 12,
-          alignItems: "stretch",
-        }}
-      >
-        <div style={miniAnalyticsCardStyle}>
+      <div className="dashboard-analytics-grid" style={gridStyle}>
+        <div className="dashboard-analytics-card" style={miniAnalyticsCardStyle}>
           <IncomeTimelineChart analytics={analytics} />
         </div>
 
         <div
+          className="dashboard-analytics-card"
           style={{
             ...miniAnalyticsCardStyle,
             minHeight: 320,
@@ -93,7 +90,7 @@ export default function DashboardAnalyticsOverviewSection({
           <IncomeByClientChart analytics={analytics} />
         </div>
 
-        <div style={miniAnalyticsCardStyle}>
+        <div className="dashboard-analytics-card" style={miniAnalyticsCardStyle}>
           <IncomeByTaskTypeChart analytics={analytics} />
         </div>
       </div>
@@ -101,7 +98,25 @@ export default function DashboardAnalyticsOverviewSection({
   );
 }
 
+const responsiveCss = `
+  @media (max-width: 900px) {
+    .dashboard-analytics-grid {
+      grid-template-columns: 1fr !important;
+      gap: 12px !important;
+    }
+  }
+
+  @media (min-width: 901px) {
+    .dashboard-analytics-grid {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.15fr) minmax(0, 1.1fr) !important;
+    }
+  }
+`;
+
 const analyticsShellStyle: React.CSSProperties = {
+  width: "100%",
+  maxWidth: "100%",
+  overflow: "hidden",
   borderRadius: 30,
   padding: 16,
   border: "1px solid rgba(255,255,255,0.82)",
@@ -109,9 +124,20 @@ const analyticsShellStyle: React.CSSProperties = {
     "linear-gradient(180deg, rgba(244,247,255,0.62) 0%, rgba(255,255,255,0.76) 100%)",
   boxShadow:
     "0 22px 46px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.88)",
+  boxSizing: "border-box",
+};
+
+const gridStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 12,
+  alignItems: "stretch",
 };
 
 const miniAnalyticsCardStyle: React.CSSProperties = {
+  width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
+  overflow: "hidden",
   borderRadius: 20,
   padding: 12,
   border: "1px solid rgba(255,255,255,0.82)",
@@ -119,4 +145,5 @@ const miniAnalyticsCardStyle: React.CSSProperties = {
     "linear-gradient(180deg, rgba(255,255,255,0.84) 0%, rgba(248,250,255,0.86) 100%)",
   boxShadow:
     "0 14px 26px rgba(15,23,42,0.03), inset 0 1px 0 rgba(255,255,255,0.92)",
+  boxSizing: "border-box",
 };

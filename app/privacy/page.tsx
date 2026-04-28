@@ -1,298 +1,404 @@
+import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "Privacy Policy for Text2Task — how we collect, use, protect, and manage your information.",
+};
+
 export default function PrivacyPage() {
-  const pageStyle = {
-    minHeight: "100vh",
-    background: "#f8fafc",
-    padding: "40px 20px 80px",
-  } as const;
-
-  const containerStyle = {
-    maxWidth: "920px",
-    margin: "0 auto",
-  } as const;
-
-  const cardStyle = {
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "24px",
-    padding: "32px",
-    boxShadow: "0 10px 30px rgba(15,23,42,0.04)",
-  } as const;
-
-  const pillStyle = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "8px 12px",
-    borderRadius: "999px",
-    background: "#eff6ff",
-    border: "1px solid #bfdbfe",
-    color: "#1d4ed8",
-    fontWeight: 800,
-    fontSize: "13px",
-    letterSpacing: "0.01em",
-    marginBottom: "18px",
-  } as const;
-
-  const h2Style = {
-    fontSize: "22px",
-    fontWeight: 850,
-    color: "#0f172a",
-    marginTop: "28px",
-    marginBottom: "10px",
-    letterSpacing: "-0.02em",
-  } as const;
-
-  const pStyle = {
-    color: "#334155",
-    lineHeight: 1.8,
-    fontSize: "16px",
-    marginTop: 0,
-    marginBottom: "14px",
-  } as const;
-
-  const mutedStyle = {
-    color: "#64748b",
-    lineHeight: 1.8,
-    fontSize: "16px",
-    marginTop: 0,
-    marginBottom: "14px",
-  } as const;
-
-  const listStyle = {
-    color: "#334155",
-    lineHeight: 1.8,
-    fontSize: "16px",
-    marginTop: 0,
-    marginBottom: "14px",
-    paddingLeft: "22px",
-  } as const;
-
-  const footerStyle = {
-    marginTop: "28px",
-    paddingTop: "18px",
-    borderTop: "1px solid #e2e8f0",
-    color: "#475569",
-    fontSize: "15px",
-    lineHeight: 1.7,
-  } as const;
-
   return (
-    <main style={pageStyle}>
-      <div style={containerStyle}>
-        <div style={cardStyle}>
-          <div style={pillStyle}>
+    <main
+      style={{
+        minHeight: "100vh",
+        background:
+          "radial-gradient(circle at top left, #eef4ff 0%, #f8fafc 42%, #ffffff 100%)",
+        padding: "28px 24px 56px",
+        color: "#0f172a",
+      }}
+    >
+      <div style={{ maxWidth: 980, margin: "0 auto" }}>
+        <header
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 16,
+            marginBottom: 48,
+            flexWrap: "wrap",
+          }}
+        >
+          <Link
+            href="/"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 12,
+              textDecoration: "none",
+              color: "#0f172a",
+              fontSize: 22,
+              fontWeight: 900,
+              letterSpacing: "-0.04em",
+            }}
+          >
             <span
               style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "999px",
-                background: "#2563eb",
+                width: 16,
+                height: 16,
+                borderRadius: 999,
+                background:
+                  "linear-gradient(135deg, #60a5fa, #6366f1, #8b5cf6)",
+                boxShadow: "0 0 0 8px rgba(99,102,241,0.10)",
               }}
             />
+            Text2Task
+          </Link>
+
+          <Link
+            href="/"
+            style={{
+              minHeight: 42,
+              padding: "0 16px",
+              borderRadius: 14,
+              background: "#0f172a",
+              color: "#ffffff",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textDecoration: "none",
+              fontSize: 14,
+              fontWeight: 900,
+              boxShadow: "0 14px 28px rgba(15,23,42,0.14)",
+            }}
+          >
+            Back to Home
+          </Link>
+        </header>
+
+        <section
+          style={{
+            borderRadius: 34,
+            padding: "38px",
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(239,246,255,0.55))",
+            border: "1px solid rgba(191,219,254,0.90)",
+            boxShadow:
+              "0 28px 70px rgba(37,99,235,0.10), inset 0 1px 0 rgba(255,255,255,0.94)",
+            marginBottom: 24,
+          }}
+        >
+          <div
+            style={{
+              width: "fit-content",
+              padding: "8px 14px",
+              borderRadius: 999,
+              background: "rgba(99,102,241,0.10)",
+              color: "#4f46e5",
+              fontSize: 13,
+              fontWeight: 900,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              marginBottom: 18,
+            }}
+          >
             Privacy Policy
           </div>
 
           <h1
             style={{
-              margin: "0 0 12px 0",
-              fontSize: "42px",
-              fontWeight: 900,
-              letterSpacing: "-0.03em",
-              color: "#0f172a",
+              margin: 0,
+              fontSize: "clamp(42px, 6vw, 64px)",
+              lineHeight: 1.08,
+              letterSpacing: "-0.055em",
+              fontWeight: 780,
+              color: "#111827",
+              marginBottom: 18,
             }}
           >
-            InboxShaper Privacy Policy
+            Your data should stay private, clear, and protected.
           </h1>
 
-          <p style={mutedStyle}>
-            <b>Effective date:</b> April 2026
+          <p
+            style={{
+              margin: 0,
+              color: "#475569",
+              fontSize: 18,
+              lineHeight: 1.75,
+              maxWidth: 760,
+            }}
+          >
+            This Privacy Policy explains how Text2Task collects, uses, stores,
+            and protects information when you use our website, account system,
+            AI extraction tools, dashboard, and paid subscription features.
           </p>
 
-          <p style={{ ...pStyle, fontSize: "18px", color: "#475569" }}>
-            InboxShaper is built as a privacy-first service. This Privacy Policy
-            explains what Google user data is accessed, how it is used, how it
-            is protected, and what control users have over their connection.
-          </p>
+          <div
+            style={{
+              marginTop: 22,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+              color: "#334155",
+              fontSize: 14,
+              fontWeight: 750,
+            }}
+          >
+            <span style={pillStyle}>Last updated: April 27, 2026</span>
+            <span style={pillStyle}>Applies to text2task.com</span>
+            <span style={pillStyle}>AI + SaaS product</span>
+          </div>
+        </section>
 
-          <p style={{ ...pStyle, fontWeight: 800, color: "#0f172a" }}>
-            InboxShaper accesses limited Gmail user data only to provide inbox
-            analysis and insights features. InboxShaper does not sell Gmail user
-            data, does not use it for advertising, and does not use it to train
-            AI models.
-          </p>
+        <section style={contentCardStyle}>
+          <PolicyBlock title="1. Information we collect">
+            <p>
+              When you use Text2Task, we may collect the information you provide
+              directly, including your email address, account details, submitted
+              text, uploaded screenshots or images, extracted tasks, client
+              names, deadlines, budgets, task notes, and other information you
+              choose to save in your workspace.
+            </p>
+            <p>
+              We also collect basic technical information such as browser type,
+              device information, IP-related metadata, usage events, page views,
+              authentication activity, and subscription-related events needed to
+              operate and secure the service.
+            </p>
+          </PolicyBlock>
 
-          <h2 style={h2Style}>1. Google User Data Access</h2>
-          <p style={pStyle}>
-            When you connect your Google account through Google OAuth,
-            InboxShaper may access limited Gmail user data required to provide
-            its core functionality.
-          </p>
+          <PolicyBlock title="2. How we use your information">
+            <p>
+              We use your information to provide the Text2Task service, process
+              AI extraction requests, create structured task previews, save tasks
+              to your workspace, maintain your account, process subscriptions,
+              improve reliability, prevent abuse, and provide support.
+            </p>
+            <p>
+              We may also use aggregated or anonymized information to understand
+              product usage, improve onboarding, improve user experience, and
+              make the product better.
+            </p>
+          </PolicyBlock>
 
-          <p style={pStyle}>
-            InboxShaper may access the following Gmail user data:
-          </p>
-          <ul style={listStyle}>
-            <li>
-              Email metadata such as sender information, subject lines, message
-              labels, categories, and related inbox classification signals
-            </li>
-            <li>
-              Message identifiers required to analyze and group emails for
-              insights
-            </li>
-            <li>
-              Gmail account email address used to identify the connected user
-              account
-            </li>
-          </ul>
+          <PolicyBlock title="3. AI processing">
+            <p>
+              Text2Task uses AI services to extract structured task information
+              from the text or images you submit. This may include client names,
+              task descriptions, budgets, deadlines, priority, contact details,
+              and related work information.
+            </p>
+            <p>
+              You should not submit sensitive personal information, confidential
+              third-party information, medical records, government IDs, payment
+              card numbers, passwords, or other highly sensitive data unless it
+              is necessary and you have the right to use it.
+            </p>
+          </PolicyBlock>
 
-          <p style={pStyle}>
-            InboxShaper does not access, read, or store the full content of
-            Gmail messages.
-          </p>
+          <PolicyBlock title="4. Payments and subscriptions">
+            <p>
+              Paid subscriptions are processed through our payment provider. We
+              do not store full payment card numbers on our servers. Payment
+              providers may collect billing details, transaction information,
+              and payment method information according to their own policies.
+            </p>
+            <p>
+              We store subscription status information such as plan type,
+              subscription status, payment provider identifiers, and related
+              timestamps so we can unlock paid features for your account.
+            </p>
+          </PolicyBlock>
 
-          <p style={pStyle}>
-            InboxShaper does <b>not</b> use Gmail user data for advertising,
-            marketing profiling, resale, or any unrelated purpose.
-          </p>
+          <PolicyBlock title="5. Cookies and authentication">
+            <p>
+              Text2Task uses cookies and similar technologies to keep you signed
+              in, secure your session, remember authentication state, and operate
+              the dashboard. Some cookies are necessary for the service to work.
+            </p>
+          </PolicyBlock>
 
-          <h2 style={h2Style}>2. How Gmail User Data Is Used</h2>
-          <p style={pStyle}>
-            InboxShaper uses the data listed above only to provide the features
-            of the product, including:
-          </p>
-          <ul style={listStyle}>
-            <li>Analyzing inbox structure and email volume</li>
-            <li>Identifying sender groups and high-volume senders</li>
-            <li>Detecting promotions and other inbox patterns</li>
-            <li>Displaying inbox insights, statistics, and dashboard summaries</li>
-          </ul>
+          <PolicyBlock title="6. Data storage and security">
+            <p>
+              We use reasonable technical and organizational measures to protect
+              your information, including account-based access controls,
+              database security rules, and secure service providers. However, no
+              internet service can guarantee absolute security.
+            </p>
+            <p>
+              You are responsible for keeping your login credentials secure and
+              for using strong passwords where applicable.
+            </p>
+          </PolicyBlock>
 
-          <p style={pStyle}>
-            InboxShaper does not delete, archive, move, or modify emails in the
-            user's mailbox.
-          </p>
+          <PolicyBlock title="7. Data sharing">
+            <p>
+              We do not sell your personal information. We may share limited
+              information with trusted service providers that help us operate
+              Text2Task, including hosting, database, authentication, AI
+              processing, analytics, email, and payment services.
+            </p>
+            <p>
+              We may also disclose information if required by law, to protect
+              our rights, prevent fraud or abuse, or enforce our terms.
+            </p>
+          </PolicyBlock>
 
-          <h2 style={h2Style}>3. Gmail Scope Justification</h2>
+          <PolicyBlock title="8. Your choices and rights">
+            <p>
+              Depending on your location, you may have rights to access, update,
+              delete, or request a copy of your personal information. You can
+              also choose not to provide certain information, but some features
+              may not work without it.
+            </p>
+            <p>
+              To request account or data deletion, contact us using the contact
+              information below.
+            </p>
+          </PolicyBlock>
 
-          <p style={pStyle}>
-            InboxShaper uses read-only Gmail access (<b>gmail.readonly</b>) to
-            analyze email metadata and provide insights about inbox activity.
-          </p>
+          <PolicyBlock title="9. Data retention">
+            <p>
+              We retain information for as long as needed to provide the
+              service, maintain your account, comply with legal obligations,
+              resolve disputes, prevent abuse, and enforce agreements. You may
+              request deletion of your account data, subject to legal and
+              operational requirements.
+            </p>
+          </PolicyBlock>
 
-          <p style={pStyle}>
-            InboxShaper does not modify, delete, archive, or change any emails
-            in the user&apos;s mailbox.
-          </p>
+          <PolicyBlock title="10. Children’s privacy">
+            <p>
+              Text2Task is not intended for children under 13. We do not
+              knowingly collect personal information from children under 13. If
+              you believe a child has provided us with personal information,
+              please contact us.
+            </p>
+          </PolicyBlock>
 
-          <p style={pStyle}>
-            This limited read-only access ensures user data safety while
-            allowing InboxShaper to deliver analytics and insights features.
-          </p>
+          <PolicyBlock title="11. Changes to this policy">
+            <p>
+              We may update this Privacy Policy from time to time. When we make
+              changes, we will update the “Last updated” date above. Continued
+              use of Text2Task after changes means you accept the updated
+              policy.
+            </p>
+          </PolicyBlock>
 
-          <h2 style={h2Style}>4. Email Content Handling</h2>
-          <p style={pStyle}>
-            InboxShaper is designed as a metadata-first product. It does not
-            permanently store, copy, or archive full email bodies or email
-            content as part of normal operation.
-          </p>
-
-          <p style={pStyle}>
-            InboxShaper primarily uses metadata such as sender, subject line,
-            labels, categories, and message IDs to provide analysis and
-            insights.
-          </p>
-
-          <h2 style={h2Style}>5. Token Storage & Authentication</h2>
-          <p style={pStyle}>
-            InboxShaper securely stores OAuth tokens, including access tokens
-            and refresh tokens, required to maintain your Gmail connection and
-            analyze inbox metadata.
-          </p>
-
-          <p style={pStyle}>
-            These tokens are encrypted and used only for authentication and for
-            providing the analytics and insights explicitly requested by the
-            user.
-          </p>
-
-          <h2 style={h2Style}>6. Data Retention</h2>
-          <p style={pStyle}>
-            InboxShaper does not permanently store full email content.
-          </p>
-
-          <p style={pStyle}>
-            Limited aggregated analytics data, such as sender counts,
-            categories, inbox metrics, scan summaries, and related statistics,
-            may be stored temporarily to provide dashboard functionality.
-          </p>
-
-          <h2 style={h2Style}>7. Data Sharing and Third Parties</h2>
-          <p style={pStyle}>
-            InboxShaper does not sell, share, or transfer Gmail user data to
-            third parties except as necessary to operate the service through
-            trusted infrastructure providers.
-          </p>
-
-          <p style={pStyle}>
-            These service providers may include hosting, database, and cloud
-            infrastructure vendors. They may process data only as needed to
-            support InboxShaper&apos;s functionality and are not permitted to use
-            the data for unrelated purposes.
-          </p>
-
-          <h2 style={h2Style}>8. Security</h2>
-          <p style={pStyle}>
-            InboxShaper uses industry-standard security practices, including
-            encryption, secure authentication flows, restricted access controls,
-            and secure token handling to protect user data.
-          </p>
-
-          <h2 style={h2Style}>9. User Control, Revocation, and Deletion</h2>
-          <p style={pStyle}>
-            Users remain in control of their Gmail connection and may revoke
-            access to InboxShaper at any time through their Google Account
-            settings.
-          </p>
-
-          <p style={pStyle}>
-            Users can also disconnect their account directly from the
-            InboxShaper dashboard, which stops further Gmail access by the
-            application unless the user reconnects.
-          </p>
-
-          <h2 style={h2Style}>10. Google API Services Disclosure</h2>
-          <p style={pStyle}>
-            InboxShaper&apos;s use of information received from Google APIs adheres
-            to the Google API Services User Data Policy, including the Limited
-            Use requirements.
-          </p>
-
-          <p style={pStyle}>
-            InboxShaper does not use Google user data to develop, improve, or
-            train generalized AI or machine learning models.
-          </p>
-
-          <h2 style={h2Style}>11. Contact</h2>
-          <p style={pStyle}>
-            For questions please contact:{" "}
-            <a
-              href="mailto:support@inboxshaper.com"
+          <PolicyBlock title="12. Contact us">
+            <p>
+              If you have questions about this Privacy Policy or want to make a
+              privacy request, contact us at:
+            </p>
+            <div
               style={{
-                color: "#2563eb",
-                fontWeight: 800,
-                textDecoration: "none",
+                marginTop: 12,
+                borderRadius: 18,
+                padding: 18,
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                color: "#0f172a",
+                fontWeight: 850,
               }}
             >
-              support@inboxshaper.com
-            </a>
-          </p>
+              support@text2task.com
+            </div>
+          </PolicyBlock>
+        </section>
 
-          <div style={footerStyle}>
-            InboxShaper • Privacy-first Gmail analytics and insights
+        <footer
+          style={{
+            marginTop: 26,
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 16,
+            flexWrap: "wrap",
+            color: "#64748b",
+            fontSize: 14,
+            fontWeight: 700,
+          }}
+        >
+          <span>© 2026 Text2Task. All rights reserved.</span>
+
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <Link href="/terms" style={footerLinkStyle}>
+              Terms
+            </Link>
+            <Link href="/contact" style={footerLinkStyle}>
+              Contact
+            </Link>
+            <Link href="/" style={footerLinkStyle}>
+              Home
+            </Link>
           </div>
-        </div>
+        </footer>
       </div>
     </main>
   );
 }
+
+function PolicyBlock({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <article
+      style={{
+        padding: "24px 0",
+        borderBottom: "1px solid #e2e8f0",
+      }}
+    >
+      <h2
+        style={{
+          margin: "0 0 12px",
+          color: "#0f172a",
+          fontSize: 24,
+          lineHeight: 1.2,
+          letterSpacing: "-0.035em",
+          fontWeight: 850,
+        }}
+      >
+        {title}
+      </h2>
+
+      <div
+        style={{
+          display: "grid",
+          gap: 12,
+          color: "#475569",
+          fontSize: 16,
+          lineHeight: 1.75,
+          fontWeight: 500,
+        }}
+      >
+        {children}
+      </div>
+    </article>
+  );
+}
+
+const pillStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "8px 12px",
+  borderRadius: 999,
+  background: "#ffffff",
+  border: "1px solid #dbeafe",
+  color: "#334155",
+};
+
+const contentCardStyle: React.CSSProperties = {
+  borderRadius: 30,
+  padding: "12px 34px",
+  background: "rgba(255,255,255,0.95)",
+  border: "1px solid rgba(226,232,240,0.96)",
+  boxShadow: "0 24px 60px rgba(15,23,42,0.07)",
+};
+
+const footerLinkStyle: React.CSSProperties = {
+  color: "#475569",
+  textDecoration: "none",
+};

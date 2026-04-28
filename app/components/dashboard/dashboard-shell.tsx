@@ -1,74 +1,275 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type React from "react";
 
-const TOP_BOTTOM_PADDING = 0;
-const RIGHT_PADDING = 20;
-const SIDEBAR_WIDTH = 286;
+type Props = {
+  sidebar: React.ReactNode;
+  children: React.ReactNode;
+  activeNavLabel: string;
+  isMobileSidebarOpen: boolean;
+  onOpenMobileSidebar: () => void;
+  onCloseMobileSidebar: () => void;
+};
 
 export default function DashboardShell({
   sidebar,
   children,
-}: {
-  sidebar: ReactNode;
-  children: ReactNode;
-}) {
+  activeNavLabel,
+  isMobileSidebarOpen,
+  onOpenMobileSidebar,
+  onCloseMobileSidebar,
+}: Props) {
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, #eef4ff 0%, #f6f8fc 38%, #f8fafc 100%)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "stretch",
-          minHeight: "100vh",
-          paddingTop: TOP_BOTTOM_PADDING,
-          paddingBottom: TOP_BOTTOM_PADDING,
-          paddingLeft: 0,
-          paddingRight: RIGHT_PADDING,
-          gap: 22,
-        }}
-      >
-        <aside
-          style={{
-            width: SIDEBAR_WIDTH,
-            minWidth: SIDEBAR_WIDTH,
-            position: "sticky",
-            top: 0,
-            alignSelf: "flex-start",
-            height: "100vh",
-            overflowY: "auto",
-            padding: "24px 22px 22px",
-            borderTopLeftRadius: 0,
-            borderBottomLeftRadius: 0,
-            borderTopRightRadius: 34,
-            borderBottomRightRadius: 34,
-            border: "1px solid rgba(226,232,240,0.96)",
-            borderLeft: "none",
-            background:
-              "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(247,250,255,0.96) 100%)",
-            boxShadow:
-              "0 18px 40px rgba(37,99,235,0.06), inset 0 1px 0 rgba(255,255,255,0.74)",
-          }}
-        >
-          {sidebar}
-        </aside>
+    <div style={styles.wrapper}>
+      <style>{responsiveCss}</style>
 
-        <main
-          style={{
-            flex: 1,
-            minWidth: 0,
-            paddingTop: 16,
-            paddingBottom: 18,
-          }}
-        >
-          {children}
-        </main>
-      </div>
+      {/* DESKTOP FIXED SIDEBAR */}
+      <aside className="dashboard-desktop-sidebar" style={styles.desktopSidebar}>
+        {sidebar}
+      </aside>
+
+      {/* MOBILE DRAWER */}
+      {isMobileSidebarOpen ? (
+        <div style={styles.overlay} onClick={onCloseMobileSidebar}>
+          <div
+            style={styles.mobileSidebar}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={styles.mobileDrawerTop}>
+              <div style={styles.mobileDrawerTitle}>Menu</div>
+
+              <button
+                type="button"
+                onClick={onCloseMobileSidebar}
+                style={styles.closeButton}
+                aria-label="Close navigation"
+              >
+                ×
+              </button>
+            </div>
+
+            {sidebar}
+          </div>
+        </div>
+      ) : null}
+
+      {/* MAIN AREA */}
+      <main className="dashboard-main-area" style={styles.main}>
+        <header className="dashboard-mobile-header" style={styles.mobileHeader}>
+          <button
+            type="button"
+            onClick={onOpenMobileSidebar}
+            style={styles.menuButton}
+            aria-label="Open navigation"
+          >
+            ☰
+          </button>
+
+          <div style={styles.logo}>Text2Task</div>
+
+          <div style={styles.badge}>{activeNavLabel}</div>
+        </header>
+
+        <div className="dashboard-content-outer" style={styles.contentOuter}>
+          <div className="dashboard-content-inner" style={styles.contentInner}>
+            {children}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
+
+const responsiveCss = `
+  @media (max-width: 900px) {
+    .dashboard-desktop-sidebar {
+      display: none !important;
+    }
+
+    .dashboard-mobile-header {
+      display: flex !important;
+    }
+
+    .dashboard-main-area {
+      width: 100% !important;
+      margin-left: 0 !important;
+    }
+
+    .dashboard-content-outer {
+      justify-content: center !important;
+    }
+
+    .dashboard-content-inner {
+      max-width: 430px !important;
+      padding: 18px 14px 30px !important;
+    }
+  }
+
+  @media (min-width: 901px) {
+    .dashboard-desktop-sidebar {
+      display: block !important;
+      position: fixed !important;
+      left: 0 !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      width: 292px !important;
+      height: 100vh !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+    }
+
+    .dashboard-mobile-header {
+      display: none !important;
+    }
+
+    .dashboard-main-area {
+      width: calc(100% - 292px) !important;
+      margin-left: 292px !important;
+      min-height: 100vh !important;
+    }
+
+    .dashboard-content-outer {
+      justify-content: flex-start !important;
+    }
+
+    .dashboard-content-inner {
+      max-width: 1440px !important;
+      padding: 28px 32px 48px !important;
+    }
+  }
+`;
+
+const styles: Record<string, React.CSSProperties> = {
+  wrapper: {
+    width: "100%",
+    minHeight: "100vh",
+    background:
+      "radial-gradient(circle at top left, #eef4ff 0%, #f8fafc 46%, #ffffff 100%)",
+    overflowX: "hidden",
+  },
+
+  desktopSidebar: {
+    background:
+      "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.92) 100%)",
+    borderRight: "1px solid rgba(226,232,240,0.95)",
+    boxShadow: "18px 0 55px rgba(15,23,42,0.035)",
+    zIndex: 200,
+  },
+
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 3000,
+    background: "rgba(15,23,42,0.42)",
+    backdropFilter: "blur(8px)",
+  },
+
+  mobileSidebar: {
+    width: 320,
+    maxWidth: "86vw",
+    height: "100%",
+    background: "#ffffff",
+    overflowY: "auto",
+    overflowX: "hidden",
+    boxShadow: "28px 0 70px rgba(15,23,42,0.25)",
+  },
+
+  mobileDrawerTop: {
+    height: 58,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "0 16px",
+    borderBottom: "1px solid rgba(226,232,240,0.95)",
+    background: "rgba(255,255,255,0.96)",
+    position: "sticky",
+    top: 0,
+    zIndex: 5,
+  },
+
+  mobileDrawerTitle: {
+    color: "#0f172a",
+    fontSize: 15,
+    fontWeight: 950,
+    letterSpacing: "-0.03em",
+  },
+
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    border: "1px solid rgba(203,213,225,0.95)",
+    background: "#ffffff",
+    color: "#0f172a",
+    fontSize: 24,
+    lineHeight: 1,
+    fontWeight: 800,
+    cursor: "pointer",
+    display: "grid",
+    placeItems: "center",
+  },
+
+  main: {
+    minWidth: 0,
+    overflowX: "hidden",
+  },
+
+  mobileHeader: {
+    height: 64,
+    position: "sticky",
+    top: 0,
+    zIndex: 1000,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    padding: "0 16px",
+    background: "rgba(255,255,255,0.94)",
+    backdropFilter: "blur(16px)",
+    borderBottom: "1px solid rgba(226,232,240,0.95)",
+  },
+
+  menuButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    border: "1px solid rgba(203,213,225,0.95)",
+    background: "#ffffff",
+    color: "#0f172a",
+    fontSize: 20,
+    fontWeight: 900,
+    cursor: "pointer",
+    boxShadow: "0 10px 22px rgba(15,23,42,0.06)",
+  },
+
+  logo: {
+    color: "#0f172a",
+    fontSize: 17,
+    fontWeight: 950,
+    letterSpacing: "-0.04em",
+  },
+
+  badge: {
+    minWidth: 8,
+    minHeight: 8,
+    padding: "6px 10px",
+    borderRadius: 999,
+    background: "rgba(99,102,241,0.10)",
+    color: "#4f46e5",
+    fontSize: 12,
+    fontWeight: 950,
+    whiteSpace: "nowrap",
+  },
+
+  contentOuter: {
+    width: "100%",
+    display: "flex",
+    overflowX: "hidden",
+  },
+
+  contentInner: {
+    width: "100%",
+    boxSizing: "border-box",
+    overflowX: "hidden",
+  },
+};

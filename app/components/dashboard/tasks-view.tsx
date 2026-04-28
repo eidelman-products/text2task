@@ -1,8 +1,9 @@
 import EmptyState from "./empty-state";
 import SectionCard from "./section-card";
 import TaskRowComponent from "./task-row";
+import TaskRowActions from "./task-row-actions";
 import TasksToolbar from "./tasks-toolbar";
-import type { KeyboardEvent } from "react";
+import type { CSSProperties, KeyboardEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type {
@@ -118,6 +119,14 @@ function getDeadlineSortValue(task: TaskRow) {
 
 function getClientName(task: TaskRow) {
   return task.client?.name?.trim() || "";
+}
+
+function getClientDisplayName(task: TaskRow) {
+  return task.client?.name?.trim() || "Unassigned";
+}
+
+function getEditableDeadlineValue(task: TaskRow) {
+  return task.deadline_original_text?.trim() || task.deadline || "";
 }
 
 export default function TasksView({
@@ -334,28 +343,25 @@ export default function TasksView({
 
   return (
     <>
+      <style>{responsiveCss}</style>
+
       <SectionCard
         title="Task CRM"
         description="Manage tasks, clients, deadlines, and status in one powerful workspace."
         rightSlot={
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              flexWrap: "wrap",
-            }}
-          >
+          <div className="tasks-top-stats" style={topStatsWrapStyle}>
             <div style={topStatPill("blue")}>◉ {visibleTasksCount} Tasks</div>
             <div style={topStatPill("green")}>
               ◉ {flatTasks.filter((task) => task.status === "Done").length} Done
             </div>
             <div style={topStatPill("orange")}>
-              ◉ {flatTasks.filter((task) => task.priority === "High").length} High Priority
+              ◉ {flatTasks.filter((task) => task.priority === "High").length}{" "}
+              High Priority
             </div>
           </div>
         }
       >
-        <div style={{ display: "grid", gap: 14 }}>
+        <div style={mainContentStyle}>
           <TasksToolbar
             searchTerm={searchTerm}
             statusFilter={statusFilter}
@@ -370,29 +376,8 @@ export default function TasksView({
           />
 
           {hasSelection && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                flexWrap: "wrap",
-                padding: "12px 14px",
-                borderRadius: 14,
-                border: "1px solid rgba(15,23,42,0.08)",
-                background: "#0f172a",
-                color: "#ffffff",
-                boxShadow: "0 10px 24px rgba(15,23,42,0.10)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 900,
-                  marginRight: 4,
-                }}
-              >
-                {selectedTaskIds.length} selected
-              </div>
+            <div className="tasks-bulk-bar" style={bulkBarStyle}>
+              <div style={bulkCountStyle}>{selectedTaskIds.length} selected</div>
 
               <button
                 type="button"
@@ -428,112 +413,128 @@ export default function TasksView({
             </div>
           )}
 
-          <div
-            style={{
-              border: "1px solid rgba(226,232,240,0.96)",
-              borderRadius: 18,
-              overflow: "hidden",
-              background: "#ffffff",
-              boxShadow:
-                "0 10px 22px rgba(15,23,42,0.035), 0 1px 4px rgba(15,23,42,0.02)",
-            }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns:
-                  "42px 1.05fr 1.65fr 0.85fr 1.35fr 1fr 1.15fr 1.45fr 0.7fr 0.85fr 0.85fr 1.05fr",
-                padding: "12px 14px",
-                background:
-                  "linear-gradient(180deg, rgba(251,191,36,0.18) 0%, rgba(245,158,11,0.10) 100%)",
-                borderBottom: "1px solid rgba(245,158,11,0.18)",
-                color: "#9a3412",
-                fontSize: 12,
-                fontWeight: 900,
-                letterSpacing: "0.01em",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "center" }}>
-                <input
-                  type="checkbox"
-                  checked={allVisibleSelected}
-                  disabled={!hasMatchingTasks}
-                  onChange={toggleSelectAllVisible}
-                  style={{
-                    width: 16,
-                    height: 16,
-                    cursor: hasMatchingTasks ? "pointer" : "not-allowed",
-                    opacity: hasMatchingTasks ? 1 : 0.45,
-                  }}
-                />
+          {!hasMatchingTasks ? (
+            <div style={emptyTableStateStyle}>
+              <div style={emptyIconStyle}>⌕</div>
+              <div style={emptyTitleStyle}>No matching tasks</div>
+              <div style={emptyDescriptionStyle}>
+                Try changing the search text, status filter, priority filter, or
+                sort option.
               </div>
-              <div style={headerCellStyle}>👤 Client</div>
-              <div style={headerCellStyle}>☰ Task</div>
-              <div style={headerCellStyle}>💲 Amount</div>
-              <div style={headerCellStyle}>📅 Deadline</div>
-              <div style={headerCellStyle}>📞 Phone</div>
-              <div style={headerCellStyle}>✉️ Email</div>
-              <div style={headerCellStyle}>📝 Notes</div>
-              <div style={headerCellStyle}>🕘 Created</div>
-              <div style={headerCellStyle}>⚑ Priority</div>
-              <div style={headerCellStyle}>↗ Status</div>
-              <div style={headerCellStyle}>⚙ Actions</div>
             </div>
+          ) : (
+            <>
+              <div className="tasks-mobile-list" style={mobileListStyle}>
+                {flatTasks.map((task) => {
+                  const isSaving = !!savingTaskIds[task.id];
+                  const isSaved = !!savedTaskIds[task.id];
+                  const isDeleting = !!deletingTaskIds[task.id];
+                  const isCopied = !!copiedTaskIds[task.id];
+                  const isHighlighted = flashTaskId === task.id;
 
-            {!hasMatchingTasks ? (
-              <div style={emptyTableStateStyle}>
-                <div style={emptyIconStyle}>⌕</div>
-                <div style={emptyTitleStyle}>No matching tasks</div>
-                <div style={emptyDescriptionStyle}>
-                  Try changing the search text, status filter, priority filter,
-                  or sort option.
-                </div>
+                  return (
+                    <div
+                      key={`mobile-${task.id}`}
+                      ref={(node) => {
+                        taskRefs.current[task.id] = node;
+                      }}
+                      style={{
+                        transform: isHighlighted ? "scale(1.01)" : "scale(1)",
+                        transition: "transform 0.25s ease",
+                      }}
+                    >
+                      <MobileTaskCard
+                        task={task}
+                        createdLabel={formatCreatedDate(task.created_at)}
+                        isSaving={isSaving}
+                        isSaved={isSaved}
+                        isDeleting={isDeleting}
+                        isCopied={isCopied}
+                        isSelected={selectedTaskIds.includes(task.id)}
+                        toggleSelect={toggleSelect}
+                        updateTaskField={updateTaskField}
+                        updateTaskStatus={updateTaskStatus}
+                        copyTask={copyTask}
+                        deleteTask={deleteTask}
+                      />
+                    </div>
+                  );
+                })}
               </div>
-            ) : (
-              flatTasks.map((task) => {
-                const isSaving = !!savingTaskIds[task.id];
-                const isSaved = !!savedTaskIds[task.id];
-                const isDeleting = !!deletingTaskIds[task.id];
-                const isCopied = !!copiedTaskIds[task.id];
-                const isHighlighted = flashTaskId === task.id;
 
-                return (
-                  <div
-                    key={task.id}
-                    ref={(node) => {
-                      taskRefs.current[task.id] = node;
-                    }}
-                    style={{
-                      position: "relative",
-                      boxShadow: isHighlighted
-                        ? "inset 3px 0 0 #f59e0b, 0 0 0 1px rgba(245,158,11,0.10)"
-                        : "none",
-                      transition: "box-shadow 0.28s ease, transform 0.28s ease",
-                      transform: isHighlighted ? "scale(1.0015)" : "scale(1)",
-                    }}
-                  >
-                    <TaskRowComponent
-                      task={task}
-                      createdLabel={formatCreatedDate(task.created_at)}
-                      isSaving={isSaving}
-                      isSaved={isSaved}
-                      isDeleting={isDeleting}
-                      isCopied={isCopied}
-                      isSelected={selectedTaskIds.includes(task.id)}
-                      toggleSelect={toggleSelect}
-                      onEnterBlur={handleEnterBlur}
-                      updateTaskField={updateTaskField}
-                      updateTaskStatus={updateTaskStatus}
-                      copyTask={copyTask}
-                      deleteTask={deleteTask}
+              <div className="tasks-desktop-table" style={desktopTableStyle}>
+                <div style={desktopHeaderRowStyle}>
+                  <div style={{ display: "flex", justifyContent: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      disabled={!hasMatchingTasks}
+                      onChange={toggleSelectAllVisible}
+                      style={{
+                        width: 16,
+                        height: 16,
+                        cursor: hasMatchingTasks ? "pointer" : "not-allowed",
+                        opacity: hasMatchingTasks ? 1 : 0.45,
+                      }}
                     />
                   </div>
-                );
-              })
-            )}
-          </div>
+                  <div style={headerCellStyle}>👤 Client</div>
+                  <div style={headerCellStyle}>☰ Task</div>
+                  <div style={headerCellStyle}>💲 Amount</div>
+                  <div style={headerCellStyle}>📅 Deadline</div>
+                  <div style={headerCellStyle}>📞 Phone</div>
+                  <div style={headerCellStyle}>✉️ Email</div>
+                  <div style={headerCellStyle}>📝 Notes</div>
+                  <div style={headerCellStyle}>🕘 Created</div>
+                  <div style={headerCellStyle}>⚑ Priority</div>
+                  <div style={headerCellStyle}>↗ Status</div>
+                  <div style={headerCellStyle}>⚙ Actions</div>
+                </div>
+
+                {flatTasks.map((task) => {
+                  const isSaving = !!savingTaskIds[task.id];
+                  const isSaved = !!savedTaskIds[task.id];
+                  const isDeleting = !!deletingTaskIds[task.id];
+                  const isCopied = !!copiedTaskIds[task.id];
+                  const isHighlighted = flashTaskId === task.id;
+
+                  return (
+                    <div
+                      key={`desktop-${task.id}`}
+                      ref={(node) => {
+                        taskRefs.current[task.id] = node;
+                      }}
+                      style={{
+                        position: "relative",
+                        boxShadow: isHighlighted
+                          ? "inset 3px 0 0 #f59e0b, 0 0 0 1px rgba(245,158,11,0.10)"
+                          : "none",
+                        transition:
+                          "box-shadow 0.28s ease, transform 0.28s ease",
+                        transform: isHighlighted ? "scale(1.0015)" : "scale(1)",
+                      }}
+                    >
+                      <TaskRowComponent
+                        task={task}
+                        createdLabel={formatCreatedDate(task.created_at)}
+                        isSaving={isSaving}
+                        isSaved={isSaved}
+                        isDeleting={isDeleting}
+                        isCopied={isCopied}
+                        isSelected={selectedTaskIds.includes(task.id)}
+                        toggleSelect={toggleSelect}
+                        onEnterBlur={handleEnterBlur}
+                        updateTaskField={updateTaskField}
+                        updateTaskStatus={updateTaskStatus}
+                        copyTask={copyTask}
+                        deleteTask={deleteTask}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       </SectionCard>
 
@@ -581,9 +582,247 @@ export default function TasksView({
   );
 }
 
+function MobileTaskCard({
+  task,
+  createdLabel,
+  isSaving,
+  isSaved,
+  isDeleting,
+  isCopied,
+  isSelected,
+  toggleSelect,
+  updateTaskField,
+  updateTaskStatus,
+  copyTask,
+  deleteTask,
+}: {
+  task: TaskRow;
+  createdLabel: string;
+  isSaving: boolean;
+  isSaved: boolean;
+  isDeleting: boolean;
+  isCopied: boolean;
+  isSelected: boolean;
+  toggleSelect: (taskId: number) => void;
+  updateTaskField: (taskId: number, field: string, value: any) => void;
+  updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
+  copyTask: (taskId: number) => void;
+  deleteTask: (taskId: number) => Promise<void> | void;
+}) {
+  const isDone = (task.status || "").trim().toLowerCase() === "done";
+  const isBusy = isSaving || isDeleting;
+  const clientName = getClientDisplayName(task);
+
+  const [taskDraft, setTaskDraft] = useState(task.task || "");
+  const [amountDraft, setAmountDraft] = useState(task.amount || "");
+  const [deadlineDraft, setDeadlineDraft] = useState(
+    getEditableDeadlineValue(task)
+  );
+
+  useEffect(() => {
+    setTaskDraft(task.task || "");
+  }, [task.task]);
+
+  useEffect(() => {
+    setAmountDraft(task.amount || "");
+  }, [task.amount]);
+
+  useEffect(() => {
+    setDeadlineDraft(getEditableDeadlineValue(task));
+  }, [task.deadline, task.deadline_original_text]);
+
+  function saveTaskIfChanged() {
+    const next = taskDraft.trim();
+    const current = (task.task || "").trim();
+    if (next !== current) updateTaskField(task.id, "task", next);
+  }
+
+  function saveAmountIfChanged() {
+    const next = amountDraft.trim();
+    const current = (task.amount || "").trim();
+    if (next !== current) updateTaskField(task.id, "amount", next || null);
+  }
+
+  function saveDeadlineIfChanged() {
+    const next = deadlineDraft.trim();
+    const current = getEditableDeadlineValue(task).trim();
+    if (next !== current) updateTaskField(task.id, "deadline", next);
+  }
+
+  function handleInputEnter(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.currentTarget.blur();
+    }
+  }
+
+  return (
+    <article
+      style={{
+        ...mobileCardStyle,
+        borderLeft: isSaved
+          ? "4px solid #16a34a"
+          : isDone
+          ? "4px solid #22c55e"
+          : "4px solid #f59e0b",
+        background: isDone
+          ? "linear-gradient(180deg, rgba(240,253,244,0.96) 0%, #ffffff 100%)"
+          : "#ffffff",
+        opacity: isDeleting ? 0.6 : 1,
+      }}
+    >
+      <div style={mobileCardTopStyle}>
+        <label style={mobileCheckboxWrapStyle}>
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => toggleSelect(task.id)}
+            disabled={isBusy}
+            style={{ width: 17, height: 17 }}
+          />
+        </label>
+
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={mobileClientStyle}>{clientName}</div>
+          <div style={mobileCreatedStyle}>Created {createdLabel}</div>
+        </div>
+
+        <div
+          style={{
+            ...mobileStatusPillStyle,
+            color: isDone ? "#15803d" : "#2563eb",
+            background: isDone
+              ? "rgba(34,197,94,0.10)"
+              : "rgba(59,130,246,0.10)",
+            border: isDone
+              ? "1px solid rgba(34,197,94,0.18)"
+              : "1px solid rgba(59,130,246,0.18)",
+          }}
+        >
+          {task.status || "New"}
+        </div>
+      </div>
+
+      <div style={mobileFieldStackStyle}>
+        <label style={mobileFieldLabelStyle}>Task</label>
+        <input
+          value={taskDraft}
+          onChange={(e) => setTaskDraft(e.target.value)}
+          onKeyDown={handleInputEnter}
+          onBlur={saveTaskIfChanged}
+          disabled={isBusy}
+          style={mobileInputStyle}
+        />
+      </div>
+
+      <div className="mobile-task-two-grid" style={mobileTwoGridStyle}>
+        <div style={mobileFieldStackStyle}>
+          <label style={mobileFieldLabelStyle}>Amount</label>
+          <input
+            value={amountDraft}
+            onChange={(e) => setAmountDraft(e.target.value)}
+            onKeyDown={handleInputEnter}
+            onBlur={saveAmountIfChanged}
+            disabled={isBusy}
+            placeholder="Amount"
+            style={mobileInputStyle}
+          />
+        </div>
+
+        <div style={mobileFieldStackStyle}>
+          <label style={mobileFieldLabelStyle}>Deadline</label>
+          <input
+            value={deadlineDraft}
+            onChange={(e) => setDeadlineDraft(e.target.value)}
+            onKeyDown={handleInputEnter}
+            onBlur={saveDeadlineIfChanged}
+            disabled={isBusy}
+            placeholder="Deadline"
+            style={mobileInputStyle}
+          />
+        </div>
+      </div>
+
+      <div className="mobile-task-two-grid" style={mobileTwoGridStyle}>
+        <div style={mobileFieldStackStyle}>
+          <label style={mobileFieldLabelStyle}>Priority</label>
+          <select
+            value={task.priority || "Medium"}
+            onChange={(e) => updateTaskField(task.id, "priority", e.target.value)}
+            disabled={isBusy}
+            style={mobileInputStyle}
+          >
+            <option>Low</option>
+            <option>Medium</option>
+            <option>High</option>
+          </select>
+        </div>
+
+        <div style={mobileFieldStackStyle}>
+          <label style={mobileFieldLabelStyle}>Status</label>
+          <select
+            value={task.status || "New"}
+            onChange={(e) => updateTaskStatus(task.id, e.target.value)}
+            disabled={isBusy}
+            style={mobileInputStyle}
+          >
+            <option value="New">New</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Done">Done</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={mobileMetaGridStyle}>
+        <MetaLine label="Phone" value={task.client_phone || task.client?.phone} />
+        <MetaLine label="Email" value={task.client_email || task.client?.email} />
+        <MetaLine label="Notes" value={task.client_notes || task.client?.notes} />
+      </div>
+
+      <div style={mobileActionsRowStyle}>
+        <TaskRowActions
+          taskId={task.id}
+          isDeleting={isBusy}
+          isCopied={isCopied}
+          onCopy={copyTask}
+          onDelete={deleteTask}
+        />
+
+        {(isSaving || isSaved || isDeleting) && (
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 900,
+              color: isDeleting ? "#b91c1c" : isSaved ? "#15803d" : "#64748b",
+            }}
+          >
+            {isDeleting ? "Deleting..." : isSaved ? "Saved" : "Saving..."}
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function MetaLine({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | null;
+}) {
+  if (!value) return null;
+
+  return (
+    <div style={mobileMetaLineStyle}>
+      <span style={mobileMetaLabelStyle}>{label}</span>
+      <span style={mobileMetaValueStyle}>{value}</span>
+    </div>
+  );
+}
+
 function topStatPill(
   tone: "blue" | "green" | "orange"
-): React.CSSProperties {
+): CSSProperties {
   const palette = {
     blue: {
       background: "rgba(59,130,246,0.08)",
@@ -617,13 +856,259 @@ function topStatPill(
   };
 }
 
-const headerCellStyle: React.CSSProperties = {
+const responsiveCss = `
+  .tasks-mobile-list {
+    display: none;
+  }
+
+  .tasks-desktop-table {
+    display: block;
+  }
+
+  @media (max-width: 900px) {
+    .tasks-top-stats {
+      justify-content: flex-start !important;
+      gap: 8px !important;
+    }
+
+    .tasks-top-stats > div {
+      font-size: 12px !important;
+      padding: 8px 10px !important;
+    }
+
+    .tasks-desktop-table {
+      display: none !important;
+    }
+
+    .tasks-mobile-list {
+      display: grid !important;
+    }
+
+    .tasks-bulk-bar {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+    }
+
+    .tasks-bulk-bar > div:first-child {
+      grid-column: 1 / -1 !important;
+    }
+
+    .mobile-task-two-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  @media (min-width: 901px) {
+    .tasks-mobile-list {
+      display: none !important;
+    }
+
+    .tasks-desktop-table {
+      display: block !important;
+    }
+  }
+`;
+
+const topStatsWrapStyle: CSSProperties = {
+  display: "flex",
+  gap: 12,
+  flexWrap: "wrap",
+};
+
+const mainContentStyle: CSSProperties = {
+  display: "grid",
+  gap: 14,
+  minWidth: 0,
+  width: "100%",
+};
+
+const bulkBarStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  flexWrap: "wrap",
+  padding: "12px 14px",
+  borderRadius: 14,
+  border: "1px solid rgba(15,23,42,0.08)",
+  background: "#0f172a",
+  color: "#ffffff",
+  boxShadow: "0 10px 24px rgba(15,23,42,0.10)",
+};
+
+const bulkCountStyle: CSSProperties = {
+  fontSize: 13,
+  fontWeight: 900,
+  marginRight: 4,
+};
+
+const mobileListStyle: CSSProperties = {
+  display: "grid",
+  gap: 12,
+};
+
+const mobileCardStyle: CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+  borderRadius: 22,
+  padding: 14,
+  border: "1px solid rgba(226,232,240,0.96)",
+  boxShadow:
+    "0 12px 26px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.9)",
+  display: "grid",
+  gap: 12,
+};
+
+const mobileCardTopStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  minWidth: 0,
+};
+
+const mobileCheckboxWrapStyle: CSSProperties = {
+  width: 34,
+  height: 34,
+  borderRadius: 12,
+  background: "rgba(248,250,252,0.95)",
+  border: "1px solid rgba(203,213,225,0.9)",
+  display: "grid",
+  placeItems: "center",
+  flexShrink: 0,
+};
+
+const mobileClientStyle: CSSProperties = {
+  fontSize: 13,
+  color: "#64748b",
+  fontWeight: 850,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const mobileCreatedStyle: CSSProperties = {
+  marginTop: 2,
+  fontSize: 11,
+  color: "#94a3b8",
+  fontWeight: 700,
+};
+
+const mobileStatusPillStyle: CSSProperties = {
+  padding: "7px 9px",
+  borderRadius: 999,
+  fontSize: 11,
+  fontWeight: 900,
+  whiteSpace: "nowrap",
+};
+
+const mobileFieldStackStyle: CSSProperties = {
+  display: "grid",
+  gap: 6,
+  minWidth: 0,
+};
+
+const mobileFieldLabelStyle: CSSProperties = {
+  fontSize: 11,
+  color: "#64748b",
+  fontWeight: 900,
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+};
+
+const mobileInputStyle: CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+  minHeight: 42,
+  borderRadius: 13,
+  border: "1px solid rgba(203,213,225,0.95)",
+  background: "#ffffff",
+  color: "#0f172a",
+  fontWeight: 750,
+  fontSize: 14,
+  padding: "0 12px",
+  outline: "none",
+};
+
+const mobileTwoGridStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 10,
+  minWidth: 0,
+};
+
+const mobileMetaGridStyle: CSSProperties = {
+  display: "grid",
+  gap: 7,
+};
+
+const mobileMetaLineStyle: CSSProperties = {
+  display: "grid",
+  gap: 3,
+  padding: "9px 10px",
+  borderRadius: 13,
+  background: "#f8fafc",
+  border: "1px solid rgba(226,232,240,0.9)",
+  minWidth: 0,
+};
+
+const mobileMetaLabelStyle: CSSProperties = {
+  fontSize: 10,
+  color: "#64748b",
+  fontWeight: 900,
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+};
+
+const mobileMetaValueStyle: CSSProperties = {
+  fontSize: 13,
+  color: "#0f172a",
+  fontWeight: 750,
+  wordBreak: "break-word",
+};
+
+const mobileActionsRowStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+  flexWrap: "wrap",
+  paddingTop: 2,
+};
+
+const desktopTableStyle: CSSProperties = {
+  border: "1px solid rgba(226,232,240,0.96)",
+  borderRadius: 18,
+  overflow: "auto",
+  background: "#ffffff",
+  boxShadow:
+    "0 10px 22px rgba(15,23,42,0.035), 0 1px 4px rgba(15,23,42,0.02)",
+};
+
+const desktopHeaderRowStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns:
+    "42px 1.05fr 1.65fr 0.85fr 1.35fr 1fr 1.15fr 1.45fr 0.7fr 0.85fr 0.85fr 1.05fr",
+  minWidth: 1180,
+  padding: "12px 14px",
+  background:
+    "linear-gradient(180deg, rgba(251,191,36,0.18) 0%, rgba(245,158,11,0.10) 100%)",
+  borderBottom: "1px solid rgba(245,158,11,0.18)",
+  color: "#9a3412",
+  fontSize: 12,
+  fontWeight: 900,
+  letterSpacing: "0.01em",
+  alignItems: "center",
+  gap: 8,
+};
+
+const headerCellStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
 };
 
-const emptyTableStateStyle: React.CSSProperties = {
+const emptyTableStateStyle: CSSProperties = {
   minHeight: 220,
   display: "grid",
   placeItems: "center",
@@ -634,7 +1119,7 @@ const emptyTableStateStyle: React.CSSProperties = {
     "linear-gradient(180deg, rgba(248,250,252,0.72) 0%, rgba(255,255,255,1) 100%)",
 };
 
-const emptyIconStyle: React.CSSProperties = {
+const emptyIconStyle: CSSProperties = {
   width: 46,
   height: 46,
   borderRadius: 999,
@@ -647,21 +1132,21 @@ const emptyIconStyle: React.CSSProperties = {
   fontWeight: 900,
 };
 
-const emptyTitleStyle: React.CSSProperties = {
+const emptyTitleStyle: CSSProperties = {
   fontSize: 20,
   fontWeight: 950,
   color: "#0f172a",
   letterSpacing: "-0.03em",
 };
 
-const emptyDescriptionStyle: React.CSSProperties = {
+const emptyDescriptionStyle: CSSProperties = {
   maxWidth: 520,
   fontSize: 14,
   color: "#64748b",
   lineHeight: 1.65,
 };
 
-const bulkActionButtonStyle: React.CSSProperties = {
+const bulkActionButtonStyle: CSSProperties = {
   minHeight: 34,
   padding: "0 12px",
   borderRadius: 10,
@@ -673,18 +1158,18 @@ const bulkActionButtonStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const bulkDeleteButtonStyle: React.CSSProperties = {
+const bulkDeleteButtonStyle: CSSProperties = {
   ...bulkActionButtonStyle,
   background: "rgba(239,68,68,0.18)",
   border: "1px solid rgba(239,68,68,0.24)",
 };
 
-const bulkSecondaryButtonStyle: React.CSSProperties = {
+const bulkSecondaryButtonStyle: CSSProperties = {
   ...bulkActionButtonStyle,
   background: "transparent",
 };
 
-const modalOverlayStyle: React.CSSProperties = {
+const modalOverlayStyle: CSSProperties = {
   position: "fixed",
   inset: 0,
   background: "rgba(15,23,42,0.36)",
@@ -696,7 +1181,7 @@ const modalOverlayStyle: React.CSSProperties = {
   backdropFilter: "blur(3px)",
 };
 
-const modalCardStyle: React.CSSProperties = {
+const modalCardStyle: CSSProperties = {
   width: "100%",
   maxWidth: 460,
   borderRadius: 20,
@@ -708,26 +1193,26 @@ const modalCardStyle: React.CSSProperties = {
   gap: 18,
 };
 
-const modalTitleStyle: React.CSSProperties = {
+const modalTitleStyle: CSSProperties = {
   fontSize: 20,
   fontWeight: 900,
   color: "#0f172a",
   letterSpacing: "-0.03em",
 };
 
-const modalTextStyle: React.CSSProperties = {
+const modalTextStyle: CSSProperties = {
   fontSize: 14,
   color: "#475569",
   lineHeight: 1.65,
 };
 
-const modalActionsStyle: React.CSSProperties = {
+const modalActionsStyle: CSSProperties = {
   display: "flex",
   justifyContent: "flex-end",
   gap: 10,
 };
 
-const modalSecondaryButtonStyle: React.CSSProperties = {
+const modalSecondaryButtonStyle: CSSProperties = {
   minHeight: 42,
   padding: "0 16px",
   borderRadius: 12,
@@ -739,7 +1224,7 @@ const modalSecondaryButtonStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const modalDeleteButtonStyle: React.CSSProperties = {
+const modalDeleteButtonStyle: CSSProperties = {
   minHeight: 42,
   padding: "0 16px",
   borderRadius: 12,

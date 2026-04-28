@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type React from "react";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -23,7 +25,10 @@ export default function SignupPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
       });
 
       const data = await res.json();
@@ -35,103 +40,345 @@ export default function SignupPage() {
 
       router.push(`/check-email?email=${encodeURIComponent(email.trim())}`);
     } catch {
-      setError("Something went wrong");
+      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div style={styles.container}>
-      <form onSubmit={handleSignup} style={styles.card}>
-        <h2 style={styles.title}>Sign Up</h2>
+    <main style={pageStyle}>
+      <style>{responsiveCss}</style>
 
-        <input
-          type="email"
-          placeholder="Email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={styles.input}
-        />
+      <section className="auth-shell" style={shellStyle}>
+        <div className="auth-brand-panel" style={brandPanelStyle}>
+          <Link href="/" style={brandStyle}>
+            <span style={brandDotStyle} />
+            Text2Task
+          </Link>
 
-        <input
-          type="password"
-          placeholder="Password"
-          autoComplete="new-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={styles.input}
-        />
+          <div style={brandContentStyle}>
+            <div style={badgeStyle}>Start free</div>
+            <h1 style={heroTitleStyle}>Turn messy client messages into tasks.</h1>
+            <p style={heroTextStyle}>
+              Create your Text2Task account and start extracting structured
+              client work from text and screenshots.
+            </p>
 
-        <div style={styles.helper}>Use at least 6 characters.</div>
+            <div style={trustListStyle}>
+              <span>✓ 30 free AI extracts</span>
+              <span>✓ No credit card required</span>
+              <span>✓ Text + image extraction</span>
+            </div>
+          </div>
+        </div>
 
-        {error ? <p style={styles.error}>{error}</p> : null}
+        <form onSubmit={handleSignup} className="auth-card" style={cardStyle}>
+          <div>
+            <div style={kickerStyle}>Text2Task</div>
+            <h2 style={titleStyle}>Create your account</h2>
+            <p style={subtitleStyle}>
+              Start free and organize your client requests in one workspace.
+            </p>
+          </div>
 
-        <button type="submit" disabled={loading} style={styles.button}>
-          {loading ? "Creating..." : "Create Account"}
-        </button>
+          <div style={fieldGroupStyle}>
+            <label htmlFor="email" style={labelStyle}>
+              Email address
+            </label>
+            <input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={inputStyle}
+            />
+          </div>
 
-        <p style={styles.link} onClick={() => router.push("/login")}>
-          Already have an account? Login
-        </p>
-      </form>
-    </div>
+          <div style={fieldGroupStyle}>
+            <label htmlFor="password" style={labelStyle}>
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              placeholder="At least 6 characters"
+              autoComplete="new-password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={inputStyle}
+            />
+            <div style={helperStyle}>Use at least 6 characters.</div>
+          </div>
+
+          {error ? <div style={errorStyle}>{error}</div> : null}
+
+          <button type="submit" disabled={loading} style={buttonStyle}>
+            {loading ? "Creating account..." : "Create account"}
+          </button>
+
+          <p style={bottomTextStyle}>
+            Already have an account?{" "}
+            <Link href="/login" style={bottomLinkStyle}>
+              Log in
+            </Link>
+          </p>
+
+          <Link href="/" style={backLinkStyle}>
+            ← Back to home
+          </Link>
+        </form>
+      </section>
+    </main>
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    height: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "#0f172a",
-  },
-  card: {
-    background: "#111827",
-    padding: "30px",
-    borderRadius: "12px",
-    width: "320px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  title: {
-    color: "#ffffff",
-    textAlign: "center",
-  },
-  input: {
-    padding: "10px",
-    borderRadius: "6px",
-    border: "1px solid #374151",
-    background: "#1f2937",
-    color: "#ffffff",
-  },
-  helper: {
-    color: "#94a3b8",
-    fontSize: "12px",
-    textAlign: "left",
-    marginTop: "-4px",
-  },
-  button: {
-    padding: "10px",
-    borderRadius: "6px",
-    border: "none",
-    background: "#3b82f6",
-    color: "#ffffff",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-  error: {
-    color: "#ef4444",
-    fontSize: "12px",
-    textAlign: "center",
-  },
-  link: {
-    color: "#9ca3af",
-    fontSize: "12px",
-    textAlign: "center",
-    cursor: "pointer",
-  },
+const responsiveCss = `
+  @media (max-width: 860px) {
+  .auth-shell {
+    grid-template-columns: 1fr !important;
+    max-width: 520px !important;
+  }
+
+  .auth-brand-panel {
+    min-height: auto !important;
+    padding: 20px !important;
+    gap: 12px !important;
+  }
+
+  .auth-card {
+    padding: 22px !important;
+  }
+
+  .auth-brand-panel h1 {
+    font-size: 28px !important;
+    line-height: 1.15 !important;
+  }
+
+  .auth-brand-panel p {
+    font-size: 14px !important;
+  }
+
+  .auth-brand-panel span {
+    font-size: 13px !important;
+  }
+}
+
+  @media (max-width: 430px) {
+    .auth-shell {
+      border-radius: 28px !important;
+    }
+
+    .auth-brand-panel {
+      padding: 24px !important;
+      border-radius: 28px 28px 0 0 !important;
+    }
+
+    .auth-card {
+      padding: 24px !important;
+      border-radius: 0 0 28px 28px !important;
+    }
+  }
+`;
+
+const pageStyle: React.CSSProperties = {
+  minHeight: "100vh",
+  display: "grid",
+  placeItems: "center",
+  padding: 24,
+  background:
+    "radial-gradient(circle at top left, #eef4ff 0%, #f8fafc 46%, #ffffff 100%)",
+};
+
+const shellStyle: React.CSSProperties = {
+  width: "100%",
+  maxWidth: 980,
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  borderRadius: 34,
+  overflow: "hidden",
+  background: "rgba(255,255,255,0.74)",
+  border: "1px solid rgba(191,219,254,0.78)",
+  boxShadow: "0 34px 90px rgba(15,23,42,0.12)",
+};
+
+const brandPanelStyle: React.CSSProperties = {
+  minHeight: 620,
+  padding: 34,
+  display: "grid",
+  alignContent: "space-between",
+  background:
+    "linear-gradient(180deg, rgba(239,246,255,0.94), rgba(224,231,255,0.52))",
+};
+
+const brandStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 12,
+  width: "fit-content",
+  textDecoration: "none",
+  color: "#0f172a",
+  fontSize: 22,
+  fontWeight: 900,
+  letterSpacing: "-0.04em",
+};
+
+const brandDotStyle: React.CSSProperties = {
+  width: 16,
+  height: 16,
+  borderRadius: 999,
+  background: "linear-gradient(135deg, #60a5fa, #6366f1, #8b5cf6)",
+  boxShadow: "0 0 0 8px rgba(99,102,241,0.10)",
+};
+
+const brandContentStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 18,
+};
+
+const badgeStyle: React.CSSProperties = {
+  width: "fit-content",
+  padding: "8px 14px",
+  borderRadius: 999,
+  background: "rgba(99,102,241,0.10)",
+  color: "#4f46e5",
+  fontSize: 13,
+  fontWeight: 900,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+};
+
+const heroTitleStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#111827",
+  fontSize: "clamp(36px, 5vw, 54px)",
+  lineHeight: 1.04,
+  letterSpacing: "-0.055em",
+  fontWeight: 850,
+};
+
+const heroTextStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#475569",
+  fontSize: 17,
+  lineHeight: 1.75,
+};
+
+const trustListStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+  color: "#334155",
+  fontSize: 14,
+  fontWeight: 800,
+};
+
+const cardStyle: React.CSSProperties = {
+  padding: 38,
+  background: "rgba(255,255,255,0.96)",
+  display: "grid",
+  alignContent: "center",
+  gap: 18,
+};
+
+const kickerStyle: React.CSSProperties = {
+  color: "#4f46e5",
+  fontSize: 14,
+  fontWeight: 900,
+  marginBottom: 8,
+};
+
+const titleStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#0f172a",
+  fontSize: 34,
+  lineHeight: 1.05,
+  letterSpacing: "-0.045em",
+  fontWeight: 900,
+};
+
+const subtitleStyle: React.CSSProperties = {
+  margin: "10px 0 0",
+  color: "#64748b",
+  fontSize: 15,
+  lineHeight: 1.65,
+};
+
+const fieldGroupStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+};
+
+const labelStyle: React.CSSProperties = {
+  color: "#334155",
+  fontSize: 13,
+  fontWeight: 850,
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  height: 54,
+  borderRadius: 15,
+  border: "1px solid #cbd5e1",
+  background: "#f8fafc",
+  color: "#0f172a",
+  padding: "0 16px",
+  outline: "none",
+  fontSize: 16,
+  boxSizing: "border-box",
+};
+
+const helperStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  fontWeight: 700,
+};
+
+const errorStyle: React.CSSProperties = {
+  padding: "13px 14px",
+  borderRadius: 14,
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  color: "#b91c1c",
+  fontSize: 14,
+  fontWeight: 800,
+  textAlign: "center",
+};
+
+const buttonStyle: React.CSSProperties = {
+  width: "100%",
+  height: 54,
+  border: "none",
+  borderRadius: 15,
+  background: "#0f172a",
+  color: "#ffffff",
+  fontSize: 16,
+  fontWeight: 900,
+  cursor: "pointer",
+  boxShadow: "0 18px 34px rgba(15,23,42,0.16)",
+};
+
+const bottomTextStyle: React.CSSProperties = {
+  margin: 0,
+  textAlign: "center",
+  color: "#64748b",
+  fontSize: 14,
+};
+
+const bottomLinkStyle: React.CSSProperties = {
+  color: "#4f46e5",
+  textDecoration: "none",
+  fontWeight: 900,
+};
+
+const backLinkStyle: React.CSSProperties = {
+  textAlign: "center",
+  color: "#475569",
+  textDecoration: "none",
+  fontSize: 14,
+  fontWeight: 800,
 };

@@ -1,4 +1,5 @@
-import React from "react";
+import Link from "next/link";
+import type React from "react";
 
 type SearchParams = {
   error?: string;
@@ -30,250 +31,378 @@ export default async function LoginPage({ searchParams }: PageProps) {
   const reset = params.reset === "1";
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        background:
-          "radial-gradient(circle at top, #0d1b3b 0%, #08142d 45%, #061127 100%)",
-        padding: 24,
-      }}
-    >
-      <section
-        style={{
-          width: "100%",
-          maxWidth: 460,
-          background: "rgba(9, 20, 45, 0.92)",
-          border: "1px solid rgba(86, 109, 160, 0.28)",
-          borderRadius: 24,
-          padding: 28,
-          boxShadow: "0 30px 80px rgba(0, 0, 0, 0.35)",
-          color: "#ffffff",
-        }}
-      >
-        <div style={{ marginBottom: 20 }}>
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: "#9fb4ff",
-              marginBottom: 10,
-            }}
-          >
+    <main style={pageStyle}>
+      <style>{responsiveCss}</style>
+
+      <section className="auth-shell" style={shellStyle}>
+        <div className="auth-brand-panel" style={brandPanelStyle}>
+          <Link href="/" style={brandStyle}>
+            <span style={brandDotStyle} />
             Text2Task
+          </Link>
+
+          <div style={brandContentStyle}>
+            <div style={badgeStyle}>Welcome back</div>
+            <h1 style={heroTitleStyle}>Continue managing your client work.</h1>
+            <p style={heroTextStyle}>
+              Log in to access your CRM, saved tasks, dashboard analytics, and
+              client workspace.
+            </p>
+
+            <div style={trustListStyle}>
+              <span>✓ Structured task workspace</span>
+              <span>✓ Client and revenue tracking</span>
+              <span>✓ AI extraction history</span>
+            </div>
+          </div>
+        </div>
+
+        <section className="auth-card" style={cardStyle}>
+          <div>
+            <div style={kickerStyle}>Text2Task</div>
+            <h2 style={titleStyle}>Log in</h2>
+            <p style={subtitleStyle}>
+              Access your CRM and continue working from where you left off.
+            </p>
           </div>
 
-          <h1
-            style={{
-              fontSize: 32,
-              lineHeight: 1.05,
-              margin: 0,
-              marginBottom: 10,
-              fontWeight: 900,
-              letterSpacing: "-0.04em",
-            }}
-          >
-            Log in
-          </h1>
+          {confirmed ? (
+            <div style={successStyle}>
+              Email confirmed successfully. You can log in now.
+            </div>
+          ) : null}
 
-          <p
-            style={{
-              margin: 0,
-              color: "#b6c3e1",
-              fontSize: 15,
-              lineHeight: 1.7,
-            }}
-          >
-            Access your CRM and continue working from where you left off.
+          {reset ? (
+            <div style={successStyle}>
+              Password updated successfully. Log in with your new password.
+            </div>
+          ) : null}
+
+          {errorMessage ? <div style={errorStyle}>{errorMessage}</div> : null}
+
+          <form action="/api/auth/login" method="post" style={formStyle}>
+            <div style={fieldGroupStyle}>
+              <label htmlFor="email" style={labelStyle}>
+                Email address
+              </label>
+
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="you@example.com"
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={fieldGroupStyle}>
+              <label htmlFor="password" style={labelStyle}>
+                Password
+              </label>
+
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                placeholder="Your password"
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={forgotRowStyle}>
+              <Link href="/forgot-password" style={forgotLinkStyle}>
+                Forgot password?
+              </Link>
+            </div>
+
+            <button type="submit" style={buttonStyle}>
+              Log in
+            </button>
+          </form>
+
+          <p style={bottomTextStyle}>
+            Don&apos;t have an account?{" "}
+            <Link href="/signup" style={bottomLinkStyle}>
+              Sign up
+            </Link>
           </p>
-        </div>
 
-        {confirmed ? (
-          <div
-            style={{
-              marginBottom: 16,
-              padding: "14px 16px",
-              borderRadius: 14,
-              background: "rgba(34, 197, 94, 0.16)",
-              border: "1px solid rgba(34, 197, 94, 0.32)",
-              color: "#dcfce7",
-              fontSize: 14,
-              fontWeight: 700,
-              textAlign: "center",
-            }}
-          >
-            Email confirmed successfully. You can log in now.
-          </div>
-        ) : null}
-
-        {reset ? (
-          <div
-            style={{
-              marginBottom: 16,
-              padding: "14px 16px",
-              borderRadius: 14,
-              background: "rgba(34, 197, 94, 0.16)",
-              border: "1px solid rgba(34, 197, 94, 0.32)",
-              color: "#dcfce7",
-              fontSize: 14,
-              fontWeight: 700,
-              textAlign: "center",
-            }}
-          >
-            Password updated successfully. Log in with your new password.
-          </div>
-        ) : null}
-
-        {errorMessage ? (
-          <div
-            style={{
-              marginBottom: 16,
-              padding: "14px 16px",
-              borderRadius: 14,
-              background: "rgba(125, 31, 54, 0.28)",
-              border: "1px solid rgba(239, 68, 68, 0.38)",
-              color: "#ffd5d9",
-              fontSize: 14,
-              fontWeight: 700,
-              textAlign: "center",
-            }}
-          >
-            {errorMessage}
-          </div>
-        ) : null}
-
-        <form action="/api/auth/login" method="post">
-          <label
-            htmlFor="email"
-            style={{
-              display: "block",
-              marginBottom: 10,
-              fontSize: 13,
-              color: "#b6c3e1",
-              fontWeight: 700,
-            }}
-          >
-            Email address
-          </label>
-
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            placeholder="you@example.com"
-            style={{
-              width: "100%",
-              height: 54,
-              borderRadius: 14,
-              border: "1px solid rgba(101, 120, 168, 0.35)",
-              background: "rgba(255, 255, 255, 0.06)",
-              color: "#ffffff",
-              padding: "0 16px",
-              outline: "none",
-              fontSize: 16,
-              marginBottom: 14,
-              boxSizing: "border-box",
-            }}
-          />
-
-          <label
-            htmlFor="password"
-            style={{
-              display: "block",
-              marginBottom: 10,
-              fontSize: 13,
-              color: "#b6c3e1",
-              fontWeight: 700,
-            }}
-          >
-            Password
-          </label>
-
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            placeholder="Your password"
-            style={{
-              width: "100%",
-              height: 54,
-              borderRadius: 14,
-              border: "1px solid rgba(101, 120, 168, 0.35)",
-              background: "rgba(255, 255, 255, 0.06)",
-              color: "#ffffff",
-              padding: "0 16px",
-              outline: "none",
-              fontSize: 16,
-              marginBottom: 10,
-              boxSizing: "border-box",
-            }}
-          />
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              marginBottom: 16,
-            }}
-          >
-            <a
-              href="/forgot-password"
-              style={{
-                color: "#9fb4ff",
-                textDecoration: "none",
-                fontSize: 14,
-                fontWeight: 700,
-              }}
-            >
-              Forgot password?
-            </a>
-          </div>
-
-          <button
-            type="submit"
-            style={{
-              width: "100%",
-              height: 54,
-              border: "none",
-              borderRadius: 14,
-              background: "#22c55e",
-              color: "#031321",
-              fontWeight: 900,
-              fontSize: 18,
-              cursor: "pointer",
-              boxShadow: "0 18px 35px rgba(34, 197, 94, 0.18)",
-            }}
-          >
-            Login
-          </button>
-        </form>
-
-        <div
-          style={{
-            marginTop: 18,
-            textAlign: "center",
-            color: "#b6c3e1",
-            fontSize: 14,
-          }}
-        >
-          Don't have an account?{" "}
-          <a
-            href="/signup"
-            style={{
-              color: "#9fb4ff",
-              textDecoration: "none",
-              fontWeight: 700,
-            }}
-          >
-            Sign up
-          </a>
-        </div>
+          <Link href="/" style={backLinkStyle}>
+            ← Back to home
+          </Link>
+        </section>
       </section>
     </main>
   );
 }
+
+const responsiveCss = `
+  @media (max-width: 860px) {
+  .auth-shell {
+    grid-template-columns: 1fr !important;
+    max-width: 520px !important;
+  }
+
+  .auth-brand-panel {
+    min-height: auto !important;
+    padding: 20px !important;
+    gap: 12px !important;
+  }
+
+  .auth-card {
+    padding: 22px !important;
+  }
+
+  .auth-brand-panel h1 {
+    font-size: 28px !important;
+    line-height: 1.15 !important;
+  }
+
+  .auth-brand-panel p {
+    font-size: 14px !important;
+  }
+
+  .auth-brand-panel span {
+    font-size: 13px !important;
+  }
+}
+
+  @media (max-width: 430px) {
+    .auth-shell {
+      border-radius: 28px !important;
+    }
+
+    .auth-brand-panel {
+      padding: 24px !important;
+      border-radius: 28px 28px 0 0 !important;
+    }
+
+    .auth-card {
+      padding: 24px !important;
+      border-radius: 0 0 28px 28px !important;
+    }
+  }
+`;
+
+const pageStyle: React.CSSProperties = {
+  minHeight: "100vh",
+  display: "grid",
+  placeItems: "center",
+  padding: 24,
+  background:
+    "radial-gradient(circle at top left, #eef4ff 0%, #f8fafc 46%, #ffffff 100%)",
+};
+
+const shellStyle: React.CSSProperties = {
+  width: "100%",
+  maxWidth: 980,
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  borderRadius: 34,
+  overflow: "hidden",
+  background: "rgba(255,255,255,0.74)",
+  border: "1px solid rgba(191,219,254,0.78)",
+  boxShadow: "0 34px 90px rgba(15,23,42,0.12)",
+};
+
+const brandPanelStyle: React.CSSProperties = {
+  minHeight: 620,
+  padding: 34,
+  display: "grid",
+  alignContent: "space-between",
+  background:
+    "linear-gradient(180deg, rgba(239,246,255,0.94), rgba(224,231,255,0.52))",
+};
+
+const brandStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 12,
+  width: "fit-content",
+  textDecoration: "none",
+  color: "#0f172a",
+  fontSize: 22,
+  fontWeight: 900,
+  letterSpacing: "-0.04em",
+};
+
+const brandDotStyle: React.CSSProperties = {
+  width: 16,
+  height: 16,
+  borderRadius: 999,
+  background: "linear-gradient(135deg, #60a5fa, #6366f1, #8b5cf6)",
+  boxShadow: "0 0 0 8px rgba(99,102,241,0.10)",
+};
+
+const brandContentStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 18,
+};
+
+const badgeStyle: React.CSSProperties = {
+  width: "fit-content",
+  padding: "8px 14px",
+  borderRadius: 999,
+  background: "rgba(99,102,241,0.10)",
+  color: "#4f46e5",
+  fontSize: 13,
+  fontWeight: 900,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+};
+
+const heroTitleStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#111827",
+  fontSize: "clamp(36px, 5vw, 54px)",
+  lineHeight: 1.04,
+  letterSpacing: "-0.055em",
+  fontWeight: 850,
+};
+
+const heroTextStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#475569",
+  fontSize: 17,
+  lineHeight: 1.75,
+};
+
+const trustListStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+  color: "#334155",
+  fontSize: 14,
+  fontWeight: 800,
+};
+
+const cardStyle: React.CSSProperties = {
+  padding: 38,
+  background: "rgba(255,255,255,0.96)",
+  display: "grid",
+  alignContent: "center",
+  gap: 18,
+};
+
+const kickerStyle: React.CSSProperties = {
+  color: "#4f46e5",
+  fontSize: 14,
+  fontWeight: 900,
+  marginBottom: 8,
+};
+
+const titleStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#0f172a",
+  fontSize: 34,
+  lineHeight: 1.05,
+  letterSpacing: "-0.045em",
+  fontWeight: 900,
+};
+
+const subtitleStyle: React.CSSProperties = {
+  margin: "10px 0 0",
+  color: "#64748b",
+  fontSize: 15,
+  lineHeight: 1.65,
+};
+
+const successStyle: React.CSSProperties = {
+  padding: "13px 14px",
+  borderRadius: 14,
+  background: "#f0fdf4",
+  border: "1px solid #bbf7d0",
+  color: "#166534",
+  fontSize: 14,
+  fontWeight: 800,
+  textAlign: "center",
+};
+
+const errorStyle: React.CSSProperties = {
+  padding: "13px 14px",
+  borderRadius: 14,
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  color: "#b91c1c",
+  fontSize: 14,
+  fontWeight: 800,
+  textAlign: "center",
+};
+
+const formStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 14,
+};
+
+const fieldGroupStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+};
+
+const labelStyle: React.CSSProperties = {
+  color: "#334155",
+  fontSize: 13,
+  fontWeight: 850,
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  height: 54,
+  borderRadius: 15,
+  border: "1px solid #cbd5e1",
+  background: "#f8fafc",
+  color: "#0f172a",
+  padding: "0 16px",
+  outline: "none",
+  fontSize: 16,
+  boxSizing: "border-box",
+};
+
+const forgotRowStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "flex-end",
+};
+
+const forgotLinkStyle: React.CSSProperties = {
+  color: "#4f46e5",
+  textDecoration: "none",
+  fontSize: 14,
+  fontWeight: 900,
+};
+
+const buttonStyle: React.CSSProperties = {
+  width: "100%",
+  height: 54,
+  border: "none",
+  borderRadius: 15,
+  background: "#0f172a",
+  color: "#ffffff",
+  fontSize: 16,
+  fontWeight: 900,
+  cursor: "pointer",
+  boxShadow: "0 18px 34px rgba(15,23,42,0.16)",
+};
+
+const bottomTextStyle: React.CSSProperties = {
+  margin: 0,
+  textAlign: "center",
+  color: "#64748b",
+  fontSize: 14,
+};
+
+const bottomLinkStyle: React.CSSProperties = {
+  color: "#4f46e5",
+  textDecoration: "none",
+  fontWeight: 900,
+};
+
+const backLinkStyle: React.CSSProperties = {
+  textAlign: "center",
+  color: "#475569",
+  textDecoration: "none",
+  fontSize: 14,
+  fontWeight: 800,
+};

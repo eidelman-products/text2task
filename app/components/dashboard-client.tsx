@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { toast } from "sonner";
-import EmptyState from "./dashboard/empty-state";
 import TasksView, { TaskGroup, TaskRow } from "./dashboard/tasks-view";
 import ExtractWorkspace from "./dashboard/extract-workspace";
 import RevenueSnapshotPremium from "./dashboard/revenue-snapshot-premium";
 import DashboardShell from "./dashboard/dashboard-shell";
 import DashboardSidebarProfile from "./dashboard/dashboard-sidebar-profile";
+import DashboardHeader from "./dashboard/dashboard-header";
 import DashboardTopSummaryStrip from "./dashboard/dashboard-top-summary-strip";
 import DashboardUrgentTasksCard from "./dashboard/dashboard-urgent-tasks-card";
 import DashboardAnalyticsOverviewSection from "./dashboard/dashboard-analytics-overview-section";
@@ -33,16 +34,23 @@ type DashboardClientProps = {
   initialPlan: "free" | "pro";
 };
 
+type DashboardNav = "dashboard" | "extract" | "tasks";
+
 const DELETE_UNDO_DURATION = 7000;
+
+function getActiveNavLabel(activeNav: DashboardNav) {
+  if (activeNav === "extract") return "Extract";
+  if (activeNav === "tasks") return "Tasks";
+  return "Dashboard";
+}
 
 export default function DashboardClient({
   email,
   userId,
   initialPlan,
 }: DashboardClientProps) {
-  const [activeNav, setActiveNav] = useState<"dashboard" | "extract" | "tasks">(
-    "dashboard"
-  );
+  const [activeNav, setActiveNav] = useState<DashboardNav>("dashboard");
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [plan] = useState<"free" | "pro">(initialPlan);
 
   const [tasks, setTasks] = useState<TaskRow[]>([]);
@@ -71,6 +79,8 @@ export default function DashboardClient({
   const [copiedTaskIds, setCopiedTaskIds] = useState<Record<number, boolean>>(
     {}
   );
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isBillingLoading, setIsBillingLoading] = useState(false);
 
   const saveTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>(
     {}
@@ -99,7 +109,7 @@ export default function DashboardClient({
     return buildUrgentPreviewTasks(tasks).slice(0, 4);
   }, [tasks]);
 
-  const groupedTasks = useMemo<TaskGroup[]>((() => {
+  const groupedTasks = useMemo<TaskGroup[]>(() => {
     const map = new Map<string, TaskGroup>();
 
     for (const task of tasks) {
@@ -128,11 +138,16 @@ export default function DashboardClient({
       priorityFilter,
       sortOption,
     });
-  }) as any, [tasks, searchTerm, statusFilter, priorityFilter, sortOption]);
+  }, [tasks, searchTerm, statusFilter, priorityFilter, sortOption]);
 
   const visibleTasks = useMemo(() => {
     return groupedTasks.flatMap((group) => group.tasks);
   }, [groupedTasks]);
+
+  function handleNavChange(nav: DashboardNav) {
+    setActiveNav(nav);
+    setIsMobileSidebarOpen(false);
+  }
 
   async function fetchTasksFromServer(): Promise<TaskRow[]> {
     const res = await fetch("/api/tasks", {
@@ -149,7 +164,77 @@ export default function DashboardClient({
     return (data.tasks || []).map(normalizeTaskFromApi);
   }
 
+  async function handleBilling() {
+    if (isBillingLoading) return;
+
+    try {
+      setIsBillingLoading(true);
+
+      const res = await fetch("/api/creem/checkout", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to open billing");
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      throw new Error("Billing URL missing");
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Billing failed", {
+        description: error?.message || "Could not open billing right now.",
+      });
+    } finally {
+      setIsBillingLoading(false);
+    }
+  }
+
+  async function handleLogout() {
+    if (isLoggingOut) return;
+
+    try {
+      setIsLoggingOut(true);
+
+      const res = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Logout failed");
+      }
+
+      window.location.href = "/";
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Logout failed", {
+        description: error?.message || "Could not log out. Please try again.",
+      });
+      setIsLoggingOut(false);
+    }
+  }
+
   function exportVisibleTasksToCsv() {
+    if (plan === "free") {
+      toast.error("CSV export is a Pro feature", {
+        description:
+          "Upgrade to Pro to export your tasks and client data as CSV.",
+        action: {
+          label: "Upgrade",
+          onClick: handleBilling,
+        },
+      });
+      return;
+    }
+
     if (!visibleTasks.length) {
       toast.warning("No tasks to export", {
         description: "Change the filters or add tasks first.",
@@ -389,12 +474,12 @@ export default function DashboardClient({
       console.error(error);
       setTasks(previousTasks);
       toast.error("Status update failed", {
-  description: message,
-  action: {
-    label: "Retry",
-    onClick: () => updateTaskStatus(taskId, status),
-  },
-});
+        description: message,
+        action: {
+          label: "Retry",
+          onClick: () => updateTaskStatus(taskId, status),
+        },
+      });
     } finally {
       setSavingTaskIds((prev) => {
         const next = { ...prev };
@@ -482,13 +567,19 @@ export default function DashboardClient({
                 }
               : null,
             ...(field === "phone"
-              ? { client_phone: normalizedValue === "" ? null : normalizedValue }
+              ? {
+                  client_phone: normalizedValue === "" ? null : normalizedValue,
+                }
               : {}),
             ...(field === "email"
-              ? { client_email: normalizedValue === "" ? null : normalizedValue }
+              ? {
+                  client_email: normalizedValue === "" ? null : normalizedValue,
+                }
               : {}),
             ...(field === "notes"
-              ? { client_notes: normalizedValue === "" ? null : normalizedValue }
+              ? {
+                  client_notes: normalizedValue === "" ? null : normalizedValue,
+                }
               : {}),
           };
         }
@@ -567,12 +658,12 @@ export default function DashboardClient({
       console.error(error);
       setTasks(previousTasks);
       toast.error("Update failed", {
-  description: message,
-  action: {
-    label: "Retry",
-    onClick: () => updateTaskField(taskId, field, value),
-  },
-});
+        description: message,
+        action: {
+          label: "Retry",
+          onClick: () => updateTaskField(taskId, field, value),
+        },
+      });
     } finally {
       setSavingTaskIds((prev) => {
         const next = { ...prev };
@@ -737,12 +828,12 @@ export default function DashboardClient({
         });
 
         toast.error("Delete failed", {
-  description: message,
-  action: {
-    label: "Retry",
-    onClick: () => deleteTask(taskId),
-  },
-});
+          description: message,
+          action: {
+            label: "Retry",
+            onClick: () => deleteTask(taskId),
+          },
+        });
       } finally {
         delete deleteTimersRef.current[taskId];
 
@@ -764,11 +855,16 @@ export default function DashboardClient({
 
   function renderDashboard() {
     return (
-      <div style={{ display: "grid", gap: 18 }}>
-        <DashboardHeroHeader
-          openTasks={stats.open}
-          highPriority={stats.high}
-          doneTasks={stats.done}
+      <div className="dashboard-page-root" style={dashboardPageRootStyle}>
+        <style>{dashboardResponsiveCss}</style>
+
+        <DashboardHeader
+          userEmail={email}
+          onBilling={handleBilling}
+          onDisconnect={() => undefined}
+          onLogout={handleLogout}
+          isDisconnecting={false}
+          isLoggingOut={isLoggingOut}
         />
 
         <DashboardTopSummaryStrip
@@ -778,14 +874,7 @@ export default function DashboardClient({
           progress={progressStats}
         />
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 1.55fr) minmax(320px, 0.85fr)",
-            gap: 16,
-            alignItems: "start",
-          }}
-        >
+        <div className="dashboard-primary-grid" style={dashboardPrimaryGridStyle}>
           <DashboardUrgentTasksCard
             urgentTasks={urgentPreviewTasks}
             overdueCount={dashboardAlerts.counts.overdue}
@@ -817,7 +906,7 @@ export default function DashboardClient({
         existingTasks={tasks}
         fetchTasksFromServer={fetchTasksFromServer}
         onTasksSaved={handleTasksSaved}
-        onGoToTasks={() => setActiveNav("tasks")}
+        onGoToTasks={() => handleNavChange("tasks")}
       />
     );
   }
@@ -826,6 +915,7 @@ export default function DashboardClient({
     switch (activeNav) {
       case "extract":
         return renderExtract();
+
       case "tasks":
         return (
           <TasksView
@@ -856,147 +946,92 @@ export default function DashboardClient({
             deleteTask={deleteTask}
           />
         );
+
       case "dashboard":
       default:
         return renderDashboard();
     }
   }
 
+  const sidebar = (
+    <DashboardSidebarProfile
+      email={email}
+      plan={plan}
+      activeNav={activeNav}
+      onNavChange={handleNavChange}
+    />
+  );
+
   return (
     <DashboardShell
-      sidebar={
-        <DashboardSidebarProfile
-          email={email}
-          plan={plan}
-          activeNav={activeNav}
-          onNavChange={setActiveNav}
-        />
-      }
+      sidebar={sidebar}
+      activeNavLabel={getActiveNavLabel(activeNav)}
+      isMobileSidebarOpen={isMobileSidebarOpen}
+      onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
+      onCloseMobileSidebar={() => setIsMobileSidebarOpen(false)}
     >
       {renderContent()}
     </DashboardShell>
   );
 }
 
-function DashboardHeroHeader({
-  openTasks,
-  highPriority,
-  doneTasks,
-}: {
-  openTasks: number;
-  highPriority: number;
-  doneTasks: number;
-}) {
-  return (
-    <section style={heroShellStyle}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 18,
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "grid", gap: 6, maxWidth: 760 }}>
-          <div
-            style={{
-              fontSize: 40,
-              fontWeight: 950,
-              lineHeight: 1.02,
-              letterSpacing: "-0.06em",
-              color: "#0f172a",
-            }}
-          >
-            Dashboard
-          </div>
+const dashboardResponsiveCss = `
+  .dashboard-page-root,
+  .dashboard-page-root * {
+    box-sizing: border-box;
+  }
 
-          <div
-            style={{
-              fontSize: 14,
-              color: "#526174",
-              lineHeight: 1.65,
-              maxWidth: 720,
-            }}
-          >
-            See what needs attention now and track your revenue with a cleaner,
-            sharper workspace.
-          </div>
-        </div>
+  .dashboard-page-root > * {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
-          <HeroPill label="Open" value={openTasks} tone="slate" />
-          <HeroPill label="High priority" value={highPriority} tone="red" />
-          <HeroPill label="Done" value={doneTasks} tone="green" />
-        </div>
-      </div>
-    </section>
-  );
-}
+  .dashboard-primary-grid > * {
+    min-width: 0;
+  }
 
-function HeroPill({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone: "slate" | "green" | "red";
-}) {
-  const palette = {
-    slate: {
-      background: "rgba(255,255,255,0.78)",
-      border: "1px solid rgba(148,163,184,0.14)",
-      color: "#475569",
-    },
-    green: {
-      background: "rgba(240,253,244,0.84)",
-      border: "1px solid rgba(34,197,94,0.14)",
-      color: "#15803d",
-    },
-    red: {
-      background: "rgba(254,242,242,0.84)",
-      border: "1px solid rgba(239,68,68,0.16)",
-      color: "#dc2626",
-    },
-  }[tone];
+  @media (max-width: 900px) {
+    .dashboard-page-root {
+      gap: 16px !important;
+    }
 
-  return (
-    <div
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "9px 12px",
-        borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 800,
-        border: palette.border,
-        background: palette.background,
-        color: palette.color,
-        boxShadow: "0 10px 20px rgba(15,23,42,0.035)",
-      }}
-    >
-      <span style={{ color: "#64748b", fontWeight: 700 }}>{label}</span>
-      <span>{value}</span>
-    </div>
-  );
-}
+    .dashboard-primary-grid {
+      grid-template-columns: 1fr !important;
+      gap: 16px !important;
+    }
+  }
 
-const heroShellStyle: React.CSSProperties = {
-  borderRadius: 28,
-  padding: 18,
-  border: "1px solid rgba(255,255,255,0.84)",
-  background:
-    "linear-gradient(135deg, rgba(255,255,255,0.82) 0%, rgba(244,247,255,0.88) 100%)",
-  boxShadow:
-    "0 22px 42px rgba(99,102,241,0.05), inset 0 1px 0 rgba(255,255,255,0.92)",
-  backdropFilter: "blur(18px)",
+  @media (min-width: 901px) {
+    .dashboard-page-root {
+      gap: 18px !important;
+    }
+
+    .dashboard-primary-grid {
+      grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr) !important;
+      gap: 18px !important;
+      align-items: stretch !important;
+    }
+  }
+`;
+
+const dashboardPageRootStyle: CSSProperties = {
+  width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
+  display: "grid",
+  gridTemplateColumns: "1fr",
+  gap: 18,
+  overflowX: "hidden",
+};
+
+const dashboardPrimaryGridStyle: CSSProperties = {
+  width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
+  display: "grid",
+  gridTemplateColumns: "1fr",
+  gap: 18,
+  alignItems: "stretch",
+  overflowX: "hidden",
 };
