@@ -2,6 +2,7 @@
 
 import type React from "react";
 import DashboardFooter from "./dashboard-footer";
+import DashboardUserMenu from "./dashboard-user-menu";
 
 type Props = {
   sidebar: React.ReactNode;
@@ -56,6 +57,10 @@ export default function DashboardShell({
 
       {/* MAIN AREA */}
       <main className="dashboard-main-area" style={styles.main}>
+        <div className="dashboard-desktop-account-menu" style={styles.desktopAccountMenu}>
+          <DashboardUserMenu />
+        </div>
+
         <header className="dashboard-mobile-header" style={styles.mobileHeader}>
           <button
             type="button"
@@ -66,9 +71,12 @@ export default function DashboardShell({
             ☰
           </button>
 
-          <div style={styles.logo}>Text2Task</div>
+          <div style={styles.mobileHeaderCenter}>
+            <div style={styles.logo}>Text2Task</div>
+            <div style={styles.mobileActiveLabel}>{activeNavLabel}</div>
+          </div>
 
-          <div style={styles.badge}>{activeNavLabel}</div>
+          <DashboardUserMenu compact />
         </header>
 
         <div className="dashboard-content-outer" style={styles.contentOuter}>
@@ -86,6 +94,10 @@ export default function DashboardShell({
 const responsiveCss = `
   @media (max-width: 900px) {
     .dashboard-desktop-sidebar {
+      display: none !important;
+    }
+
+    .dashboard-desktop-account-menu {
       display: none !important;
     }
 
@@ -119,6 +131,10 @@ const responsiveCss = `
       height: 100vh !important;
       overflow-y: auto !important;
       overflow-x: hidden !important;
+    }
+
+    .dashboard-desktop-account-menu {
+      display: block !important;
     }
 
     .dashboard-mobile-header {
@@ -158,6 +174,13 @@ const styles: Record<string, React.CSSProperties> = {
     borderRight: "1px solid rgba(226,232,240,0.95)",
     boxShadow: "18px 0 55px rgba(15,23,42,0.035)",
     zIndex: 200,
+  },
+
+  desktopAccountMenu: {
+    position: "fixed",
+    top: 24,
+    right: 32,
+    zIndex: 1200,
   },
 
   overlay: {
@@ -216,6 +239,7 @@ const styles: Record<string, React.CSSProperties> = {
   main: {
     minWidth: 0,
     overflowX: "hidden",
+    position: "relative",
   },
 
   mobileHeader: {
@@ -227,7 +251,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    padding: "0 16px",
+    padding: "0 14px",
     background: "rgba(255,255,255,0.94)",
     backdropFilter: "blur(16px)",
     borderBottom: "1px solid rgba(226,232,240,0.95)",
@@ -244,24 +268,28 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 900,
     cursor: "pointer",
     boxShadow: "0 10px 22px rgba(15,23,42,0.06)",
+    flexShrink: 0,
+  },
+
+  mobileHeaderCenter: {
+    minWidth: 0,
+    display: "grid",
+    gap: 1,
+    textAlign: "center",
   },
 
   logo: {
     color: "#0f172a",
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: 950,
     letterSpacing: "-0.04em",
+    whiteSpace: "nowrap",
   },
 
-  badge: {
-    minWidth: 8,
-    minHeight: 8,
-    padding: "6px 10px",
-    borderRadius: 999,
-    background: "rgba(99,102,241,0.10)",
-    color: "#4f46e5",
-    fontSize: 12,
-    fontWeight: 950,
+  mobileActiveLabel: {
+    color: "#64748b",
+    fontSize: 11,
+    fontWeight: 850,
     whiteSpace: "nowrap",
   },
 

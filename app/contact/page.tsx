@@ -8,20 +8,33 @@ export const metadata: Metadata = {
     "Contact Text2Task for support, billing questions, privacy requests, and product feedback.",
 };
 
-export default function ContactPage() {
+type ContactPageProps = {
+  searchParams?: Promise<{
+    from?: string;
+  }>;
+};
+
+export default async function ContactPage({ searchParams }: ContactPageProps) {
+  const params = searchParams ? await searchParams : {};
+  const cameFromDashboard = params?.from === "dashboard";
+
+  const backHref = cameFromDashboard ? "/dashboard" : "/";
+  const backLabel = cameFromDashboard ? "Back to workspace" : "Back to Home";
+  const footerHomeLabel = cameFromDashboard ? "Dashboard" : "Home";
+
   return (
     <main style={pageStyle}>
       <style>{responsiveCss}</style>
 
       <div className="contact-container" style={containerStyle}>
         <header className="contact-header" style={headerStyle}>
-          <Link href="/" style={brandStyle}>
+          <Link href={backHref} style={brandStyle}>
             <span style={brandDotStyle} />
             Text2Task
           </Link>
 
-          <Link href="/" style={backButtonStyle}>
-            Back to Home
+          <Link href={backHref} style={backButtonStyle}>
+            {backLabel}
           </Link>
         </header>
 
@@ -101,8 +114,8 @@ export default function ContactPage() {
             <Link href="/terms" style={footerLinkStyle}>
               Terms
             </Link>
-            <Link href="/" style={footerLinkStyle}>
-              Home
+            <Link href={backHref} style={footerLinkStyle}>
+              {footerHomeLabel}
             </Link>
           </div>
         </footer>
