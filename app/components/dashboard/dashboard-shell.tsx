@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import DashboardFooter from "./dashboard-footer";
 
 type Props = {
   sidebar: React.ReactNode;
@@ -72,7 +73,9 @@ export default function DashboardShell({
 
         <div className="dashboard-content-outer" style={styles.contentOuter}>
           <div className="dashboard-content-inner" style={styles.contentInner}>
-            {children}
+            <div style={styles.pageContent}>{children}</div>
+
+            <DashboardFooter />
           </div>
         </div>
       </main>
@@ -101,7 +104,7 @@ const responsiveCss = `
 
     .dashboard-content-inner {
       max-width: 430px !important;
-      padding: 18px 14px 30px !important;
+      padding: 18px 14px 0 !important;
     }
   }
 
@@ -133,8 +136,9 @@ const responsiveCss = `
     }
 
     .dashboard-content-inner {
-      max-width: 1440px !important;
-      padding: 28px 32px 48px !important;
+      width: 100% !important;
+      max-width: none !important;
+      padding: 28px 32px 0 !important;
     }
   }
 `;
@@ -271,5 +275,11 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     boxSizing: "border-box",
     overflowX: "hidden",
+  },
+
+  pageContent: {
+    width: "100%",
+    minWidth: 0,
+    maxWidth: 1440,
   },
 };
