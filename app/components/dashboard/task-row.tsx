@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
-import type { TaskRow as TaskRowType } from "./tasks-view";
+import type { TaskArchiveView, TaskRow as TaskRowType } from "./tasks-view";
 import TaskRowActions from "./task-row-actions";
 import { getDeadlineUi } from "@/lib/tasks/get-deadline-ui";
 
@@ -12,6 +12,7 @@ type TaskRowProps = {
   isDeleting: boolean;
   isCopied: boolean;
   isSelected: boolean;
+  archiveView: TaskArchiveView;
   toggleSelect: (taskId: number) => void;
   onEnterBlur: (
     e: KeyboardEvent<HTMLInputElement | HTMLSelectElement>
@@ -19,7 +20,9 @@ type TaskRowProps = {
   updateTaskField: (taskId: number, field: string, value: any) => void;
   updateTaskStatus: (taskId: number, status: string) => void;
   copyTask: (taskId: number) => void;
-  deleteTask: (taskId: number) => void;
+  archiveTask: (taskId: number) => void;
+  restoreTask: (taskId: number) => void;
+  permanentlyDeleteTask: (taskId: number) => void;
 };
 
 function getClientDisplayName(task: TaskRowType) {
@@ -30,6 +33,48 @@ function getEditableDeadlineValue(task: TaskRowType) {
   return task.deadline_original_text?.trim() || task.deadline || "";
 }
 
+function isDoneStatus(status: string | null | undefined) {
+  return String(status || "").trim().toLowerCase() === "done";
+}
+
+function buildDeadlineUi(task: TaskRowType) {
+  const isDone = isDoneStatus(task.status);
+
+  if (isDone) {
+    return {
+      icon: "✓",
+      label: "Completed",
+      backgroundColor: "rgba(34,197,94,0.12)",
+      borderColor: "rgba(34,197,94,0.24)",
+      textColor: "#15803d",
+    };
+  }
+
+  const raw = getDeadlineUi(
+    getEditableDeadlineValue(task),
+    task.deadline_date || null,
+    task.status || null
+  );
+
+  const cleanLabel = String(raw.label || "").toLowerCase();
+
+  if (
+    cleanLabel.includes("on track") ||
+    cleanLabel.includes("completed") ||
+    raw.textColor === "#15803d"
+  ) {
+    return {
+      icon: "•",
+      label: task.deadline_date ? "Scheduled" : raw.label || "Deadline",
+      backgroundColor: "rgba(248,250,252,0.96)",
+      borderColor: "rgba(203,213,225,0.95)",
+      textColor: "#475569",
+    };
+  }
+
+  return raw;
+}
+
 export default function TaskRow({
   task,
   createdLabel,
@@ -38,25 +83,36 @@ export default function TaskRow({
   isDeleting,
   isCopied,
   isSelected,
+  archiveView,
   toggleSelect,
   onEnterBlur,
   updateTaskField,
   updateTaskStatus,
   copyTask,
-  deleteTask,
+  archiveTask,
+  restoreTask,
+  permanentlyDeleteTask,
 }: TaskRowProps) {
-  const isDone = (task.status || "").trim().toLowerCase() === "done";
+  const isDone = isDoneStatus(task.status);
   const isBusy = isSaving || isDeleting;
   const clientDisplayName = getClientDisplayName(task);
+  const actionMode =
+    archiveView === "archived" || task.is_archived ? "archived" : "active";
 
   const [taskDraft, setTaskDraft] = useState(task.task);
   const [amountDraft, setAmountDraft] = useState(task.amount || "");
   const [deadlineDraft, setDeadlineDraft] = useState(
     getEditableDeadlineValue(task)
   );
-  const [phoneDraft, setPhoneDraft] = useState(task.client?.phone || "");
-  const [emailDraft, setEmailDraft] = useState(task.client?.email || "");
-  const [notesDraft, setNotesDraft] = useState(task.client?.notes || "");
+  const [phoneDraft, setPhoneDraft] = useState(
+    task.client?.phone || task.client_phone || ""
+  );
+  const [emailDraft, setEmailDraft] = useState(
+    task.client?.email || task.client_email || ""
+  );
+  const [notesDraft, setNotesDraft] = useState(
+    task.client?.notes || task.client_notes || ""
+  );
   const [isEditingDeadline, setIsEditingDeadline] = useState(false);
 
   useEffect(() => {
@@ -74,26 +130,18 @@ export default function TaskRow({
   }, [task.deadline, task.deadline_original_text, isEditingDeadline]);
 
   useEffect(() => {
-    setPhoneDraft(task.client?.phone || "");
-  }, [task.client?.phone]);
+    setPhoneDraft(task.client?.phone || task.client_phone || "");
+  }, [task.client?.phone, task.client_phone]);
 
   useEffect(() => {
-    setEmailDraft(task.client?.email || "");
-  }, [task.client?.email]);
+    setEmailDraft(task.client?.email || task.client_email || "");
+  }, [task.client?.email, task.client_email]);
 
   useEffect(() => {
-    setNotesDraft(task.client?.notes || "");
-  }, [task.client?.notes]);
+    setNotesDraft(task.client?.notes || task.client_notes || "");
+  }, [task.client?.notes, task.client_notes]);
 
-  const deadlineUi = useMemo(
-    () =>
-      getDeadlineUi(
-        getEditableDeadlineValue(task),
-        task.deadline_date || null,
-        task.status || null
-      ),
-    [task]
-  );
+  const deadlineUi = useMemo(() => buildDeadlineUi(task), [task]);
 
   function saveTaskIfChanged() {
     if (isBusy) return;
@@ -129,7 +177,11 @@ export default function TaskRow({
     if (isBusy) return;
 
     const nextValue = phoneDraft.trim();
-    const currentValue = (task.client?.phone || "").trim();
+    const currentValue = (
+      task.client?.phone ||
+      task.client_phone ||
+      ""
+    ).trim();
 
     if (nextValue === currentValue) return;
     updateTaskField(task.id, "phone", nextValue === "" ? null : nextValue);
@@ -139,7 +191,11 @@ export default function TaskRow({
     if (isBusy) return;
 
     const nextValue = emailDraft.trim();
-    const currentValue = (task.client?.email || "").trim();
+    const currentValue = (
+      task.client?.email ||
+      task.client_email ||
+      ""
+    ).trim();
 
     if (nextValue === currentValue) return;
     updateTaskField(task.id, "email", nextValue === "" ? null : nextValue);
@@ -149,7 +205,11 @@ export default function TaskRow({
     if (isBusy) return;
 
     const nextValue = notesDraft.trim();
-    const currentValue = (task.client?.notes || "").trim();
+    const currentValue = (
+      task.client?.notes ||
+      task.client_notes ||
+      ""
+    ).trim();
 
     if (nextValue === currentValue) return;
     updateTaskField(task.id, "notes", nextValue === "" ? null : nextValue);
@@ -219,12 +279,16 @@ export default function TaskRow({
     ? "rgba(59,130,246,0.05)"
     : isDone
     ? "rgba(34,197,94,0.06)"
+    : task.is_archived
+    ? "rgba(248,250,252,0.92)"
     : "#ffffff";
 
   const rowBorderLeft = isSaved
     ? "3px solid #16a34a"
     : isDone
     ? "3px solid #22c55e"
+    : task.is_archived
+    ? "3px solid #94a3b8"
     : "3px solid transparent";
 
   const disabledInputStyle = isBusy
@@ -242,7 +306,7 @@ export default function TaskRow({
         position: "relative",
         display: "grid",
         gridTemplateColumns:
-          "42px 1.05fr 1.65fr 0.85fr 1.35fr 1fr 1.15fr 1.45fr 0.7fr 0.85fr 0.85fr 1.05fr",
+          "42px 1.05fr 1.65fr 0.85fr 1.35fr 1fr 1.15fr 1.45fr 0.7fr 0.85fr 0.85fr 1.2fr",
         padding: "8px 12px",
         borderBottom: "1px solid rgba(226,232,240,0.82)",
         alignItems: "center",
@@ -258,12 +322,7 @@ export default function TaskRow({
           "background 0.28s ease, box-shadow 0.28s ease, transform 0.28s ease, opacity 0.2s ease",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "center" }}>
         <input
           type="checkbox"
           checked={isSelected}
@@ -294,9 +353,13 @@ export default function TaskRow({
             flexShrink: 0,
             background: isDone
               ? "#22c55e"
+              : task.is_archived
+              ? "#94a3b8"
               : "linear-gradient(180deg, #f59e0b 0%, #fb7185 100%)",
             boxShadow: isDone
               ? "0 0 0 4px rgba(34,197,94,0.12)"
+              : task.is_archived
+              ? "0 0 0 4px rgba(148,163,184,0.12)"
               : "0 0 0 4px rgba(245,158,11,0.10)",
           }}
         />
@@ -470,8 +533,11 @@ export default function TaskRow({
         taskId={task.id}
         isDeleting={isBusy}
         isCopied={isCopied}
+        actionMode={actionMode}
         onCopy={copyTask}
-        onDelete={deleteTask}
+        onArchive={archiveTask}
+        onRestore={restoreTask}
+        onPermanentDelete={permanentlyDeleteTask}
       />
 
       {(isSaving || isSaved || isDeleting) && (
@@ -503,7 +569,13 @@ export default function TaskRow({
               : "none",
           }}
         >
-          {isDeleting ? "Deleting..." : isSaved ? "Saved" : "Saving..."}
+          {isDeleting
+            ? actionMode === "archived"
+              ? "Deleting..."
+              : "Archiving..."
+            : isSaved
+            ? "Saved"
+            : "Saving..."}
         </div>
       )}
     </div>

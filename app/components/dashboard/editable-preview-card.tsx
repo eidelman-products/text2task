@@ -11,11 +11,15 @@ import type {
 
 type EditablePreview = {
   client: string;
+  client_phone?: string;
+  client_email?: string;
+  client_notes?: string;
   task: string;
   amount: string;
   deadline: string;
   priority: "Low" | "Medium" | "High";
   source: string;
+  raw_input?: string;
   deadline_date?: string | null;
   deadline_original_text?: string | null;
 };
@@ -117,7 +121,7 @@ export default function EditablePreviewCard({
           flexWrap: "wrap",
         }}
       >
-        <div style={{ display: "grid", gap: 6 }}>
+        <div style={{ display: "grid", gap: 6, minWidth: 0, flex: 1 }}>
           <div
             style={{
               fontSize: 10,
@@ -159,6 +163,14 @@ export default function EditablePreviewCard({
             }}
           >
             <MetaChip label={`Client: ${preview.client || "Unassigned"}`} />
+            <MetaChip
+              label={`Phone: ${preview.client_phone || "No phone"}`}
+              subtle={!preview.client_phone}
+            />
+            <MetaChip
+              label={`Email: ${preview.client_email || "No email"}`}
+              subtle={!preview.client_email}
+            />
             <MetaChip label={`Amount: ${preview.amount || "No amount"}`} />
             <MetaChip label={`Deadline: ${displayDeadline || "No deadline"}`} />
             <MetaChip label={`Source: ${preview.source}`} subtle />
@@ -205,6 +217,28 @@ export default function EditablePreviewCard({
             value={preview.client}
             onChange={(e) => onChange(index, "client", e.target.value)}
             placeholder="Client name"
+            style={inputStyle}
+          />
+        </Field>
+
+        <Field label="Phone">
+          <input
+            value={preview.client_phone || ""}
+            onChange={(e) =>
+              onChange(index, "client_phone", e.target.value)
+            }
+            placeholder="Phone"
+            style={inputStyle}
+          />
+        </Field>
+
+        <Field label="Email">
+          <input
+            value={preview.client_email || ""}
+            onChange={(e) =>
+              onChange(index, "client_email", e.target.value)
+            }
+            placeholder="Email"
             style={inputStyle}
           />
         </Field>
@@ -258,6 +292,20 @@ export default function EditablePreviewCard({
           </select>
         </Field>
       </div>
+
+      <Field label="Client notes">
+        <textarea
+          value={preview.client_notes || ""}
+          onChange={(e) => onChange(index, "client_notes", e.target.value)}
+          placeholder="Optional client notes"
+          style={{
+            ...inputStyle,
+            resize: "vertical",
+            minHeight: 74,
+            lineHeight: 1.5,
+          }}
+        />
+      </Field>
 
       <div
         style={{

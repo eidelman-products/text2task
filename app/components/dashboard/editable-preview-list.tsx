@@ -7,30 +7,36 @@ import type {
   HybridPreviewMeta,
 } from "@/lib/preview/hybrid-preview";
 
+type PreviewItem = ExtractedPreview & {
+  client_phone?: string;
+  client_email?: string;
+  client_notes?: string;
+  raw_input?: string;
+};
+
+type PreviewFieldName = keyof Omit<PreviewItem, "previewId">;
+
 type DuplicateWarning = {
   existingTaskId: number;
   existingTask: string;
   existingClient: string;
   existingDeadline: string;
   existingCreatedAt: string;
+  reason: string;
 };
 
 type EditablePreviewListProps = {
-  previewItems: ExtractedPreview[];
+  previewItems: PreviewItem[];
   aiMetaByPreviewId: Record<string, HybridPreviewMeta>;
   duplicateWarnings: Record<string, DuplicateWarning>;
   savingPreviewIds: Record<string, boolean>;
   onSaveDuplicateAnyway: (previewId: string) => void;
   onSkipDuplicate: (previewId: string) => void;
-  onChange: (
-    index: number,
-    field: keyof Omit<ExtractedPreview, "previewId">,
-    value: string
-  ) => void;
+  onChange: (index: number, field: PreviewFieldName, value: string) => void;
   onUndoChange: (previewId: string, change: HybridAppliedChange) => void;
 };
 
-function buildPreviewRenderKey(preview: ExtractedPreview) {
+function buildPreviewRenderKey(preview: PreviewItem) {
   return preview.previewId;
 }
 
@@ -93,7 +99,7 @@ export default function EditablePreviewList({
                       letterSpacing: "-0.02em",
                     }}
                   >
-                    Exact duplicate detected
+                    Possible duplicate detected
                   </div>
 
                   <div
@@ -103,8 +109,7 @@ export default function EditablePreviewList({
                       lineHeight: 1.55,
                     }}
                   >
-                    This task already exists in your CRM. Compare it below or
-                    open it directly in Tasks before deciding.
+                    This task may already exist in your CRM. {warning.reason}
                   </div>
                 </div>
 
@@ -177,7 +182,9 @@ export default function EditablePreviewList({
                       label={`Client: ${warning.existingClient || "Unassigned"}`}
                     />
                     <MetaChip
-                      label={`Deadline: ${warning.existingDeadline || "No deadline"}`}
+                      label={`Deadline: ${
+                        warning.existingDeadline || "No deadline"
+                      }`}
                     />
                     <MetaChip label="Status: Existing task" subtle />
                   </div>

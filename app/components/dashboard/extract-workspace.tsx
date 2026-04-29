@@ -22,7 +22,17 @@ type DuplicateWarning = {
   existingClient: string;
   existingDeadline: string;
   existingCreatedAt: string;
+  reason: string;
 };
+
+type PreviewItem = ExtractedPreview & {
+  client_phone?: string;
+  client_email?: string;
+  client_notes?: string;
+  raw_input?: string;
+};
+
+type PreviewFieldName = keyof Omit<PreviewItem, "previewId">;
 
 type ExtractWorkspaceProps = {
   plan: "free" | "pro";
@@ -38,17 +48,53 @@ type SelectedImageItem = {
 };
 
 function getClientDisplayName(task: TaskRow) {
-  return task.client?.name?.trim() || "Unassigned";
+  const directClientName =
+    typeof (task as any).client_name === "string"
+      ? (task as any).client_name.trim()
+      : "";
+
+  return task.client?.name?.trim() || directClientName || "Unassigned";
+}
+
+function normalizeExactValue(value: string) {
+  return (value || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function extractDateKey(value: string) {
+  const clean = (value || "").trim();
+  if (!clean) return "";
+
+  const isoMatch = clean.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  }
+
+  const shortUsMatch = clean.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  if (shortUsMatch) {
+    const month = shortUsMatch[1].padStart(2, "0");
+    const day = shortUsMatch[2].padStart(2, "0");
+    const rawYear = shortUsMatch[3];
+    const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+    return `${year}-${month}-${day}`;
+  }
+
+  const parsed = parseDeadline(clean);
+
+  if (parsed.deadlineDate) {
+    return parsed.deadlineDate.split("T")[0];
+  }
+
+  return "";
 }
 
 function normalizeDeadlineComparable(value: string) {
-  const parsed = parseDeadline(value);
+  const dateKey = extractDateKey(value);
 
-  if (parsed.deadlineDate) {
-    return `date:${parsed.deadlineDate.split("T")[0]}`;
+  if (dateKey) {
+    return `date:${dateKey}`;
   }
 
-  return `text:${(value || "").trim().replace(/\s+/g, " ").toLowerCase()}`;
+  return `text:${normalizeExactValue(value)}`;
 }
 
 function normalizeAmountComparable(value: string) {
@@ -60,19 +106,95 @@ function normalizeAmountComparable(value: string) {
     return `amount:${numberPart}:${currencyPart}`;
   }
 
-  return `text:${(value || "").trim().replace(/\s+/g, " ").toLowerCase()}`;
+  return `text:${normalizeExactValue(value)}`;
 }
 
 function getTaskCanonicalDeadline(task: TaskRow) {
-  if (task.deadline_date?.trim()) {
-    return task.deadline_date.trim();
-  }
-
   if (task.deadline_original_text?.trim()) {
     return task.deadline_original_text.trim();
   }
 
+  if (task.deadline_date?.trim()) {
+    return task.deadline_date.trim();
+  }
+
   return task.deadline?.trim() || "";
+}
+
+function normalizePriority(value: unknown): "Low" | "Medium" | "High" {
+  const clean = String(value || "").trim().toLowerCase();
+
+  if (clean === "high") return "High";
+  if (clean === "low") return "Low";
+  return "Medium";
+}
+
+function normalizeOptionalText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getPreviewClientPhone(preview: PreviewItem) {
+  return normalizeOptionalText(preview.client_phone);
+}
+
+function getPreviewClientEmail(preview: PreviewItem) {
+  return normalizeOptionalText(preview.client_email).toLowerCase();
+}
+
+function getPreviewClientNotes(preview: PreviewItem) {
+  return normalizeOptionalText(preview.client_notes);
+}
+
+function getTaskClientPhone(task: TaskRow) {
+  return normalizeOptionalText(task.client?.phone ?? (task as any).client_phone);
+}
+
+function getTaskClientEmail(task: TaskRow) {
+  return normalizeOptionalText(
+    task.client?.email ?? (task as any).client_email
+  ).toLowerCase();
+}
+
+function getTaskClientNotes(task: TaskRow) {
+  return normalizeOptionalText(task.client?.notes ?? (task as any).client_notes);
+}
+
+function buildDuplicateCoreFromPreview(preview: PreviewItem) {
+  return [
+    normalizeExactValue(preview.client),
+    normalizeExactValue(preview.task),
+    normalizeDeadlineComparable(buildSaveDeadlineValue(preview)),
+  ].join("||");
+}
+
+function buildDuplicateCoreFromTask(task: TaskRow) {
+  return [
+    normalizeExactValue(getClientDisplayName(task)),
+    normalizeExactValue(task.task),
+    normalizeDeadlineComparable(getTaskCanonicalDeadline(task)),
+  ].join("||");
+}
+
+function buildDuplicateStrictFromPreview(preview: PreviewItem) {
+  return [
+    buildDuplicateCoreFromPreview(preview),
+    normalizeAmountComparable(preview.amount),
+  ].join("||");
+}
+
+function buildDuplicateStrictFromTask(task: TaskRow) {
+  return [
+    buildDuplicateCoreFromTask(task),
+    normalizeAmountComparable(task.amount),
+  ].join("||");
+}
+
+function buildSaveDeadlineValue(preview: PreviewItem) {
+  if (preview.deadline_original_text?.trim()) {
+    return preview.deadline_original_text.trim();
+  }
+
+  return preview.deadline.trim();
 }
 
 export default function ExtractWorkspace({
@@ -83,7 +205,7 @@ export default function ExtractWorkspace({
   onGoToTasks,
 }: ExtractWorkspaceProps) {
   const [inputText, setInputText] = useState("");
-  const [previewItems, setPreviewItems] = useState<ExtractedPreview[]>([]);
+  const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
   const [previewAiMeta, setPreviewAiMeta] = useState<
     Record<string, HybridPreviewMeta>
   >({});
@@ -175,7 +297,7 @@ export default function ExtractWorkspace({
     };
   }
 
-  function mapTaskToPreview(task: any, source: string): ExtractedPreview {
+  function mapTaskToPreview(task: any, source: string): PreviewItem {
     const originalDeadlineText = task.deadline_text || "";
     const parsedDeadline = parseDeadline(originalDeadlineText);
 
@@ -186,24 +308,23 @@ export default function ExtractWorkspace({
     return {
       previewId: createPreviewId(),
       client: task.client_name || "",
+      client_phone: task.client_phone || task.phone || "",
+      client_email: task.client_email || task.email || "",
+      client_notes: task.client_notes || task.notes || "",
       task: task.task_title || "",
       amount: task.amount || "",
       deadline: displayDeadline,
       deadline_date: parsedDeadline.deadlineDate,
       deadline_original_text: originalDeadlineText || null,
-      priority:
-        task.priority === "High"
-          ? "High"
-          : task.priority === "Low"
-          ? "Low"
-          : "Medium",
+      priority: normalizePriority(task.priority),
       status: "Not Started",
       source,
-    };
+      raw_input: task.raw_input || "",
+    } as PreviewItem;
   }
 
   function removeDeadlineChanges(
-    mappedPreviews: ExtractedPreview[],
+    mappedPreviews: PreviewItem[],
     aiMetaByPreviewId: Record<string, HybridPreviewMeta>
   ) {
     const previewMap = new Map(
@@ -214,6 +335,10 @@ export default function ExtractWorkspace({
       const original = previewMap.get(preview.previewId);
       return {
         ...preview,
+        client_phone: original?.client_phone || preview.client_phone || "",
+        client_email: original?.client_email || preview.client_email || "",
+        client_notes: original?.client_notes || preview.client_notes || "",
+        raw_input: original?.raw_input || preview.raw_input || "",
         deadline: original?.deadline || preview.deadline,
         deadline_date: original?.deadline_date || preview.deadline_date,
         deadline_original_text:
@@ -244,29 +369,37 @@ export default function ExtractWorkspace({
     extractedTasks: any[],
     source: string
   ): Promise<{
-    previewItems: ExtractedPreview[];
+    previewItems: PreviewItem[];
     aiMetaByPreviewId: Record<string, HybridPreviewMeta>;
   }> {
     const mappedPreviews = extractedTasks.map((task: any) =>
       mapTaskToPreview(task, source)
     );
 
-    const hybridResult = await buildHybridPreviewItems(mappedPreviews);
+    const hybridResult = await buildHybridPreviewItems(
+      mappedPreviews as ExtractedPreview[]
+    );
+
+    const hybridPreviewItems = hybridResult.previewItems.map((preview) => {
+      const original = mappedPreviews.find(
+        (item) => item.previewId === preview.previewId
+      );
+
+      return {
+        ...(preview as PreviewItem),
+        client_phone: original?.client_phone || "",
+        client_email: original?.client_email || "",
+        client_notes: original?.client_notes || "",
+        raw_input: original?.raw_input || "",
+        deadline: original?.deadline || preview.deadline,
+        deadline_date: original?.deadline_date || preview.deadline_date,
+        deadline_original_text:
+          original?.deadline_original_text || preview.deadline_original_text,
+      };
+    });
 
     const { cleanedPreviewItems, cleanedAiMeta } = removeDeadlineChanges(
-      hybridResult.previewItems.map((preview) => {
-        const original = mappedPreviews.find(
-          (item) => item.previewId === preview.previewId
-        );
-
-        return {
-          ...preview,
-          deadline: original?.deadline || preview.deadline,
-          deadline_date: original?.deadline_date || preview.deadline_date,
-          deadline_original_text:
-            original?.deadline_original_text || preview.deadline_original_text,
-        };
-      }),
+      hybridPreviewItems,
       hybridResult.aiMetaByPreviewId
     );
 
@@ -321,46 +454,45 @@ export default function ExtractWorkspace({
     });
   }
 
-  function buildSaveDeadlineValue(preview: ExtractedPreview) {
-    if (preview.deadline_original_text?.trim()) {
-      return preview.deadline_original_text.trim();
+  function findPossibleDuplicate(
+    preview: PreviewItem,
+    rowsToCheck: TaskRow[]
+  ): DuplicateWarning | null {
+    const previewStrictKey = buildDuplicateStrictFromPreview(preview);
+    const previewCoreKey = buildDuplicateCoreFromPreview(preview);
+
+    const strictDuplicate = rowsToCheck.find((task) => {
+      return buildDuplicateStrictFromTask(task) === previewStrictKey;
+    });
+
+    if (strictDuplicate) {
+      return {
+        existingTaskId: strictDuplicate.id,
+        existingTask: strictDuplicate.task,
+        existingClient: getClientDisplayName(strictDuplicate),
+        existingDeadline: strictDuplicate.deadline,
+        existingCreatedAt: strictDuplicate.created_at || "",
+        reason: "Same client, task, amount, and deadline.",
+      };
     }
 
-    return preview.deadline.trim();
-  }
-
-  function normalizeExactValue(value: string) {
-    return (value || "").trim().replace(/\s+/g, " ").toLowerCase();
-  }
-
-  function buildDuplicateKeyFromPreview(preview: ExtractedPreview) {
-    return [
-      normalizeExactValue(preview.client),
-      normalizeExactValue(preview.task),
-      normalizeAmountComparable(preview.amount),
-      normalizeDeadlineComparable(buildSaveDeadlineValue(preview)),
-    ].join("||");
-  }
-
-  function buildDuplicateKeyFromTask(task: TaskRow) {
-    return [
-      normalizeExactValue(getClientDisplayName(task)),
-      normalizeExactValue(task.task),
-      normalizeAmountComparable(task.amount),
-      normalizeDeadlineComparable(getTaskCanonicalDeadline(task)),
-    ].join("||");
-  }
-
-  function findPossibleDuplicate(
-    preview: ExtractedPreview,
-    rowsToCheck: TaskRow[]
-  ) {
-    const previewKey = buildDuplicateKeyFromPreview(preview);
-
-    return rowsToCheck.find((task) => {
-      const taskKey = buildDuplicateKeyFromTask(task);
-      return taskKey === previewKey;
+    const coreDuplicate = rowsToCheck.find((task) => {
+      return buildDuplicateCoreFromTask(task) === previewCoreKey;
     });
+
+    if (coreDuplicate) {
+      return {
+        existingTaskId: coreDuplicate.id,
+        existingTask: coreDuplicate.task,
+        existingClient: getClientDisplayName(coreDuplicate),
+        existingDeadline: coreDuplicate.deadline,
+        existingCreatedAt: coreDuplicate.created_at || "",
+        reason:
+          "Same client, task, and deadline. Amount may be different, but this is probably the same work request.",
+      };
+    }
+
+    return null;
   }
 
   function handleExtractError(data: any, fallbackMessage: string) {
@@ -478,7 +610,7 @@ export default function ExtractWorkspace({
 
   function updatePreviewItem(
     index: number,
-    field: keyof Omit<ExtractedPreview, "previewId">,
+    field: PreviewFieldName,
     value: string
   ) {
     setPreviewItems((prev) =>
@@ -562,7 +694,13 @@ export default function ExtractWorkspace({
     });
   }
 
-  async function saveSinglePreview(preview: ExtractedPreview) {
+  async function saveSinglePreview(preview: PreviewItem) {
+    const sourceRawInput =
+      preview.raw_input?.trim() ||
+      (preview.source === "Image extraction"
+        ? "Extracted from uploaded image"
+        : inputText);
+
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: {
@@ -570,16 +708,16 @@ export default function ExtractWorkspace({
       },
       body: JSON.stringify({
         client_name: preview.client,
+        client_phone: getPreviewClientPhone(preview),
+        client_email: getPreviewClientEmail(preview),
+        client_notes: getPreviewClientNotes(preview),
         task_title: preview.task,
         amount: preview.amount,
         deadline_text: buildSaveDeadlineValue(preview),
         priority: preview.priority,
         status: "New",
         source: preview.source,
-        raw_input:
-          preview.source === "Image extraction"
-            ? "Extracted from uploaded image"
-            : inputText,
+        raw_input: sourceRawInput,
       }),
     });
 
@@ -613,23 +751,23 @@ export default function ExtractWorkspace({
       setSaveSuccess(false);
 
       const latestTasks = await fetchTasksFromServer();
-      const tasksForDuplicateCheck = [...latestTasks];
+      const tasksForDuplicateCheck = [...existingTasks, ...latestTasks];
+      const uniqueTasksForDuplicateCheck = Array.from(
+        new Map(tasksForDuplicateCheck.map((task) => [task.id, task])).values()
+      );
+
       const nextWarnings: Record<string, DuplicateWarning> = {};
-      const previewsToKeep: ExtractedPreview[] = [];
+      const previewsToKeep: PreviewItem[] = [];
       const nextAiMeta: Record<string, HybridPreviewMeta> = {};
       const newlySavedRows: TaskRow[] = [];
 
-      for (const preview of previewItems) {
-        const duplicate = findPossibleDuplicate(preview, tasksForDuplicateCheck);
+      const rowsToCheck = [...uniqueTasksForDuplicateCheck];
 
-        if (duplicate) {
-          nextWarnings[preview.previewId] = {
-            existingTaskId: duplicate.id,
-            existingTask: duplicate.task,
-            existingClient: getClientDisplayName(duplicate),
-            existingDeadline: duplicate.deadline,
-            existingCreatedAt: duplicate.created_at || "",
-          };
+      for (const preview of previewItems) {
+        const duplicateWarning = findPossibleDuplicate(preview, rowsToCheck);
+
+        if (duplicateWarning) {
+          nextWarnings[preview.previewId] = duplicateWarning;
 
           previewsToKeep.push(preview);
           nextAiMeta[preview.previewId] = previewAiMeta[preview.previewId] || {
@@ -641,7 +779,7 @@ export default function ExtractWorkspace({
 
         const savedRow = await saveSinglePreview(preview);
         newlySavedRows.push(savedRow);
-        tasksForDuplicateCheck.push(savedRow);
+        rowsToCheck.push(savedRow);
       }
 
       if (newlySavedRows.length > 0) {
@@ -802,7 +940,7 @@ export default function ExtractWorkspace({
                       letterSpacing: "-0.02em",
                     }}
                   >
-                    Exact duplicates found
+                    Possible duplicates found
                   </div>
                   <div
                     style={{
@@ -812,10 +950,9 @@ export default function ExtractWorkspace({
                     }}
                   >
                     We found {duplicateCount} task
-                    {duplicateCount > 1 ? "s" : ""} that already exist with
-                    the same client, task, amount, and deadline. Review the
-                    comparison block below and choose whether to save or skip
-                    them.
+                    {duplicateCount > 1 ? "s" : ""} that may already exist in
+                    your CRM. Review the comparison block below and choose
+                    whether to save or skip them.
                   </div>
                 </div>
               ) : null}

@@ -9,6 +9,9 @@ const FREE_EXTRACT_LIMIT = 30;
 
 const ExtractedTaskSchema = z.object({
   client_name: z.string(),
+  client_phone: z.string(),
+  client_email: z.string(),
+  client_notes: z.string(),
   task_title: z.string(),
   amount: z.string(),
   deadline_text: z.string(),
@@ -222,10 +225,10 @@ export async function POST(req: NextRequest) {
 You are an AI assistant that extracts structured tasks from uploaded images for a CRM system.
 
 Your job:
-Analyze the uploaded image and convert any visible client request, message, screenshot, note, email, chat, or work brief into a clean list of actionable tasks.
+Analyze the uploaded image and convert any visible client request, message, screenshot, note, email, chat, WhatsApp message, invoice-like note, or work brief into a clean list of actionable CRM tasks.
 
 Important:
-Text inside images may be short, messy, incomplete, unpunctuated, or formatted like notes, bullets, screenshots, or chat snippets.
+Text inside images may be short, messy, incomplete, unpunctuated, or formatted like notes, bullets, screenshots, chats, emails, or mobile messages.
 You must still infer the most realistic structured tasks without inventing unsupported details.
 
 Return ONLY valid JSON in this exact format:
@@ -233,6 +236,9 @@ Return ONLY valid JSON in this exact format:
   "tasks": [
     {
       "client_name": string,
+      "client_phone": string,
+      "client_email": string,
+      "client_notes": string,
       "task_title": string,
       "amount": string,
       "deadline_text": string,
@@ -251,6 +257,8 @@ STRICT OUTPUT RULES:
 - No extra text before or after the JSON
 - "source" must always be "image"
 - "raw_input" must always be exactly "Extracted from uploaded image"
+- Every task object must include all fields exactly as shown
+- If a field is missing or unknown, return an empty string ""
 - If there are no clearly actionable tasks, return:
   { "tasks": [] }
 
@@ -271,15 +279,43 @@ Examples:
 - "maybe later also do social media" -> do NOT create a separate task unless it is clearly requested as real work
 
 2. CLIENT NAME
-- Extract the most useful clean client name if mentioned.
+- Extract the most useful clean client name if visible or clearly implied.
 - Remove helper words like "client", "company", "from", "contact".
-- If missing, use "Unknown client".
+- If the client name is missing, use "Unknown client".
+- Do not use the sender name as the client unless it clearly represents the customer/client.
 
-3. TASK TITLE
+3. CLIENT PHONE / EMAIL / NOTES
+- Extract client_phone if a phone number appears anywhere in the image.
+- Extract client_email if an email address appears anywhere in the image.
+- Extract client_notes only if there are useful extra client-level notes that are not the task title, amount, deadline, phone, or email.
+- Do NOT put a phone number into amount.
+- Do NOT put an email address into task_title.
+- Do NOT invent phone numbers or emails.
+- If phone/email/notes are not visible or not present, return "".
+
+Examples:
+Image text:
+"Reach me at sarah@brightside.com or 212-555-8912"
+Output:
+"client_email": "sarah@brightside.com"
+"client_phone": "212-555-8912"
+
+Image text:
+"phone 55635656"
+Output:
+"client_phone": "55635656"
+
+Image text:
+"contact apex@example.com"
+Output:
+"client_email": "apex@example.com"
+
+4. TASK TITLE
 - Must be clear, specific, short, and professional.
 - Rewrite messy image text into a clean actionable task title.
 - Keep quantity inside the title when quantity describes the work itself.
 - Avoid vague titles.
+- Do not include phone numbers, emails, or contact details in the task title.
 
 Good examples:
 - "Design website banner for homepage"
@@ -290,12 +326,15 @@ Bad examples:
 - "Banner"
 - "Emails"
 - "Work on project"
+- "Call 212-555-8912"
+- "Email sarah@brightside.com"
 
-4. AMOUNT LOGIC (VERY IMPORTANT)
+5. AMOUNT LOGIC
 
 You must clearly distinguish between:
 - MONEY / PRICE / BUDGET / PAYMENT / COST / COMPENSATION -> amount
 - QUANTITY OF WORK / NUMBER OF ITEMS -> NOT amount
+- PHONE NUMBERS -> NOT amount
 
 IMPORTANT:
 - Return amount as TEXT, not as a number.
@@ -315,6 +354,7 @@ Examples:
 - "paying 200" -> amount = "200"
 - "600 dollars" -> amount = "600 dollars"
 - "1,200 EUR" -> amount = "1,200 EUR"
+- "phone 55635656" -> client_phone = "55635656", amount = ""
 
 A. PER-ITEM / EACH LOGIC
 If the image text clearly says that a money amount is PER ITEM, PER TASK, or EACH, such as:
@@ -359,9 +399,10 @@ Good output amounts:
 C. NO MONEY
 If no money amount is mentioned, use "".
 
-5. QUANTITY VS MONEY
+6. QUANTITY VS MONEY
 - Numbers describing work quantity must stay in the task title, not in amount.
 - Numbers describing payment must go to amount.
+- Numbers describing phone/contact must go to client_phone, not amount.
 - If both exist, preserve both correctly.
 
 Examples:
@@ -374,8 +415,10 @@ Examples:
   -> split intelligently
 - "Need 5 posts"
   -> amount = ""
+- "Phone 555-0101"
+  -> client_phone = "555-0101"
 
-6. DEADLINE
+7. DEADLINE
 - Extract deadline if mentioned.
 - Keep it as short natural text.
 - Examples:
@@ -387,11 +430,11 @@ Examples:
 - If one deadline applies to all tasks, copy it to all relevant tasks.
 - If none is mentioned, return "".
 
-7. PRIORITY
-Set priority using smart judgment:
+8. PRIORITY
+Set priority using smart judgment.
 
 Return "high" if:
-- the text includes urgency words like: urgent, ASAP, immediately, as soon as possible
+- the image text includes urgency words like: urgent, ASAP, immediately, as soon as possible
 - OR the deadline is extremely soon: today, tonight, tomorrow
 
 Return "low" if:
@@ -401,13 +444,15 @@ Return "medium" if:
 - there is a deadline but it is not urgent
 - OR the task seems normal business priority
 
-8. QUALITY BAR
+9. QUALITY BAR
 - Prefer fewer, stronger tasks over many weak ones.
 - Preserve the real business meaning.
 - Keep outputs CRM-friendly and realistic.
 - Do not invent details that are not supported by the image.
+- If a phone/email appears once and applies to the same client, copy it to all tasks for that client.
+- If multiple clients appear, assign phone/email only to the correct client when clear.
 
-9. REPEATED DELIVERABLES
+10. REPEATED DELIVERABLES
 When the image text contains repeated deliverables with explicit per-item pricing, such as:
 - "2 emails for $100 each"
 - "3 banners at $50 each"
@@ -426,7 +471,7 @@ Good examples:
 
 Do NOT create awkward robotic titles if a cleaner title is possible.
 
-TITLE CLEANUP RULE (VERY IMPORTANT):
+TITLE CLEANUP RULE:
 - Never generate incomplete or broken titles.
 - Do NOT use phrases like:
   "1 of", "2 of", "part of", "item of"
@@ -474,6 +519,7 @@ TITLE CLEANUP RULE (VERY IMPORTANT):
         {
           error: "Model returned invalid structure",
           raw: parsedJson,
+          details: parsedTasks.error.flatten(),
         },
         { status: 502 }
       );

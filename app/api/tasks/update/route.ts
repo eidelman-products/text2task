@@ -15,8 +15,10 @@ const UpdateTaskSchema = z.object({
     "phone",
     "email",
     "notes",
+    "archive",
+    "restore",
   ]),
-  value: z.union([z.string(), z.number(), z.null()]),
+  value: z.union([z.string(), z.number(), z.boolean(), z.null()]).optional(),
 });
 
 function normalizeAmountInput(value: unknown): string | number | null {
@@ -39,6 +41,60 @@ function normalizeOptionalText(value: unknown): string | null {
 
   const trimmed = value.trim();
   return trimmed === "" ? null : trimmed;
+}
+
+function isDoneStatus(status: unknown) {
+  return String(status || "").trim().toLowerCase() === "done";
+}
+
+function cleanJoinedTask(data: any, fallbackClient: any = null) {
+  const task = {
+    ...data,
+    client: Array.isArray(data?.clients)
+      ? data.clients[0] ?? fallbackClient
+      : data?.clients ?? fallbackClient,
+  };
+
+  const { clients, ...cleanTask } = task;
+  return cleanTask;
+}
+
+async function reloadTask({
+  supabase,
+  taskId,
+  userId,
+  fallbackClient,
+}: {
+  supabase: any;
+  taskId: number;
+  userId: string;
+  fallbackClient?: any;
+}) {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select(
+      `
+      *,
+      clients (
+        id,
+        name,
+        phone,
+        email,
+        notes,
+        created_at
+      )
+    `
+    )
+    .eq("id", taskId)
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .single();
+
+  if (error) {
+    throw new Error(error.message || "Failed to reload updated task");
+  }
+
+  return cleanJoinedTask(data, fallbackClient ?? null);
 }
 
 export async function POST(req: NextRequest) {
@@ -84,6 +140,10 @@ export async function POST(req: NextRequest) {
         status,
         source,
         raw_input,
+        is_archived,
+        archived_at,
+        completed_at,
+        deleted_at,
         created_at,
         clients (
           id,
@@ -97,6 +157,7 @@ export async function POST(req: NextRequest) {
       )
       .eq("id", taskId)
       .eq("user_id", user.id)
+      .is("deleted_at", null)
       .single();
 
     if (existingTaskError || !existingTask) {
@@ -113,14 +174,17 @@ export async function POST(req: NextRequest) {
     if (field === "phone" || field === "email" || field === "notes") {
       if (!existingTask.client_id) {
         return NextResponse.json(
-          { error: "Cannot update client details because this task has no linked client" },
+          {
+            error:
+              "Cannot update client details because this task has no linked client",
+          },
           { status: 400 }
         );
       }
 
       const normalizedValue = normalizeOptionalText(value);
 
-      let clientUpdateData: Record<string, string | null> = {};
+      const clientUpdateData: Record<string, string | null> = {};
 
       if (field === "phone") {
         clientUpdateData.phone = normalizedValue;
@@ -144,47 +208,20 @@ export async function POST(req: NextRequest) {
         console.error("Client update error:", clientUpdateError);
 
         return NextResponse.json(
-          { error: clientUpdateError.message || "Failed to update client details" },
+          {
+            error:
+              clientUpdateError.message || "Failed to update client details",
+          },
           { status: 500 }
         );
       }
 
-      const { data, error } = await supabase
-        .from("tasks")
-        .select(
-          `
-          *,
-          clients (
-            id,
-            name,
-            phone,
-            email,
-            notes,
-            created_at
-          )
-        `
-        )
-        .eq("id", taskId)
-        .eq("user_id", user.id)
-        .single();
-
-      if (error) {
-        console.error("Reload task after client update error:", error);
-
-        return NextResponse.json(
-          { error: error.message || "Failed to reload updated task" },
-          { status: 500 }
-        );
-      }
-
-      const task = {
-        ...data,
-        client: Array.isArray((data as any).clients)
-          ? (data as any).clients[0] ?? currentClient
-          : (data as any).clients ?? currentClient,
-      };
-
-      const { clients, ...cleanTask } = task as any;
+      const cleanTask = await reloadTask({
+        supabase,
+        taskId,
+        userId: user.id,
+        fallbackClient: currentClient,
+      });
 
       return NextResponse.json({
         success: true,
@@ -193,6 +230,7 @@ export async function POST(req: NextRequest) {
     }
 
     let updateData: Record<string, unknown> = {};
+    const nowIso = new Date().toISOString();
 
     switch (field) {
       case "task": {
@@ -233,8 +271,33 @@ export async function POST(req: NextRequest) {
       }
 
       case "status": {
-        updateData.status =
+        const nextStatus =
           typeof value === "string" && value.trim() ? value.trim() : "New";
+
+        updateData.status = nextStatus;
+
+        /*
+          Lifetime Completed:
+          ברגע שמשימה סומנה Done פעם אחת — completed_at נשמר.
+          גם אם המשתמש אחר כך מעביר לארכיון או מוחק לצמיתות,
+          הספירה ההיסטורית של Done לא תיעלם.
+        */
+        if (isDoneStatus(nextStatus) && !existingTask.completed_at) {
+          updateData.completed_at = nowIso;
+        }
+
+        break;
+      }
+
+      case "archive": {
+        updateData.is_archived = true;
+        updateData.archived_at = existingTask.archived_at || nowIso;
+        break;
+      }
+
+      case "restore": {
+        updateData.is_archived = false;
+        updateData.archived_at = null;
         break;
       }
 
@@ -250,6 +313,7 @@ export async function POST(req: NextRequest) {
       .update(updateData)
       .eq("id", taskId)
       .eq("user_id", user.id)
+      .is("deleted_at", null)
       .select(
         `
         *,
@@ -274,24 +338,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const task = {
-      ...data,
-      client: Array.isArray((data as any).clients)
-        ? (data as any).clients[0] ?? currentClient
-        : (data as any).clients ?? currentClient,
-    };
-
-    const { clients, ...cleanTask } = task as any;
+    const cleanTask = cleanJoinedTask(data, currentClient);
 
     return NextResponse.json({
       success: true,
       task: cleanTask,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Update task route error:", error);
 
     return NextResponse.json(
-      { error: "Failed to update task" },
+      { error: error.message || "Failed to update task" },
       { status: 500 }
     );
   }

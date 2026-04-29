@@ -34,7 +34,7 @@ function endOfYear(date: Date) {
 function startOfWeek(date: Date) {
   const d = startOfDay(date);
   const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day; // Monday start
+  const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   return d;
 }
@@ -71,12 +71,20 @@ function addYears(date: Date, years: number) {
 function normalize(text: string) {
   return text
     .toLowerCase()
-    .replace(/[.,]/g, " ")
+    .replace(/[.,!?;:]/g, " ")
     .replace(/\bthe\b/g, "")
     .replace(/\bby\b/g, "")
     .replace(/\bon\b/g, "")
     .replace(/\bdue\b/g, "")
     .replace(/\buntil\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeForExtraction(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[.,!?;:]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -88,6 +96,7 @@ function isValidDate(date: Date) {
 function buildLocalDate(year: number, month: number, day: number) {
   const d = new Date(year, month - 1, day, 12, 0, 0, 0);
   if (!isValidDate(d)) return null;
+
   if (
     d.getFullYear() !== year ||
     d.getMonth() !== month - 1 ||
@@ -95,6 +104,7 @@ function buildLocalDate(year: number, month: number, day: number) {
   ) {
     return null;
   }
+
   return d;
 }
 
@@ -124,6 +134,7 @@ function applyTime(baseDate: Date, text: string): Date {
   const timeMatch12h = normalized.match(
     /\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/
   );
+
   if (timeMatch12h) {
     let hours = Number(timeMatch12h[1]);
     const minutes = Number(timeMatch12h[2] || "0");
@@ -137,6 +148,7 @@ function applyTime(baseDate: Date, text: string): Date {
   }
 
   const timeMatch24h = normalized.match(/\b(?:at\s+)?(\d{1,2}):(\d{2})\b/);
+
   if (timeMatch24h) {
     const hours = Number(timeMatch24h[1]);
     const minutes = Number(timeMatch24h[2]);
@@ -161,7 +173,9 @@ function isTimeOnlyExpression(text: string) {
 function resolveNextWeekday(baseDate: Date, targetDay: number) {
   const d = startOfDay(baseDate);
   let diff = targetDay - d.getDay();
+
   if (diff <= 0) diff += 7;
+
   d.setDate(d.getDate() + diff);
   return d;
 }
@@ -170,6 +184,7 @@ function resolveThisWeekday(baseDate: Date, targetDay: number) {
   const weekStart = startOfWeek(baseDate);
   const d = cloneDate(weekStart);
   const mondayBasedIndex = targetDay === 0 ? 6 : targetDay - 1;
+
   d.setDate(weekStart.getDate() + mondayBasedIndex);
   return startOfDay(d);
 }
@@ -251,11 +266,114 @@ function extractNumericDate(raw: string) {
   };
 }
 
-export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult {
-  if (!deadlineText || !deadlineText.trim()) {
-    return { deadlineDate: null, matched: false };
-  }
+function getWeekdays() {
+  return {
+    sunday: 0,
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6,
+  } as const;
+}
 
+function extractDeadlinePhrase(raw: string): string {
+  const text = normalizeForExtraction(raw);
+
+  if (!text) return "";
+
+  const numericDate = extractNumericDate(text);
+  if (numericDate) return numericDate.matchedText;
+
+  const months =
+    "january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|sept|october|oct|november|nov|december|dec";
+
+  const monthDayWithOptionalYear = text.match(
+    new RegExp(
+      `\\b(?:by\\s+|due\\s+|on\\s+|until\\s+)?(${months})\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:\\s*,?\\s*(\\d{2,4}))?\\b`
+    )
+  );
+
+  if (monthDayWithOptionalYear) return monthDayWithOptionalYear[0];
+
+  const dayMonthWithOptionalYear = text.match(
+    new RegExp(
+      `\\b(?:by\\s+|due\\s+|on\\s+|until\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+(${months})(?:\\s*,?\\s*(\\d{2,4}))?\\b`
+    )
+  );
+
+  if (dayMonthWithOptionalYear) return dayMonthWithOptionalYear[0];
+
+  const endOfNamedMonth = text.match(
+    new RegExp(`\\b(?:by\\s+)?end\\s+of\\s+(${months})\\b`)
+  );
+
+  if (endOfNamedMonth) return endOfNamedMonth[0];
+
+  const relative = text.match(
+    /\b(?:within\s+|in\s+)(\d+)\s+(day|days|week|weeks|month|months|year|years)\b/
+  );
+
+  if (relative) return relative[0].replace(/^within\s+/, "in ");
+
+  const fromNow = text.match(
+    /\b(\d+)\s+(day|days|week|weeks|month|months|year|years)\s+from\s+now\b/
+  );
+
+  if (fromNow) return fromNow[0];
+
+  if (/\bday after tomorrow\b/.test(text)) return "day after tomorrow";
+  if (/\btomorrow\b/.test(text)) return "tomorrow";
+  if (/\btonight\b/.test(text)) return "tonight";
+  if (/\btoday\b/.test(text)) return "today";
+
+  if (/\bend of next month\b/.test(text)) return "end of next month";
+  if (/\bnext month end\b/.test(text)) return "next month end";
+  if (/\beom next month\b/.test(text)) return "eom next month";
+
+  if (/\bend of month\b/.test(text)) return "end of month";
+  if (/\bmonth end\b/.test(text)) return "month end";
+  if (/\beom\b/.test(text)) return "eom";
+
+  if (/\bend of week\b/.test(text)) return "end of week";
+  if (/\bweek end\b/.test(text)) return "week end";
+  if (/\beow\b/.test(text)) return "eow";
+
+  if (/\bend of year\b/.test(text)) return "end of year";
+  if (/\byear end\b/.test(text)) return "year end";
+  if (/\beoy\b/.test(text)) return "eoy";
+
+  if (/\bnext week\b/.test(text)) return "next week";
+  if (/\bthis week\b/.test(text)) return "this week";
+  if (/\bnext month\b/.test(text)) return "next month";
+  if (/\bthis month\b/.test(text)) return "this month";
+  if (/\bnext year\b/.test(text)) return "next year";
+
+  const weekdays = Object.keys(getWeekdays()).join("|");
+
+  const nextWeekday = text.match(
+    new RegExp(`\\bnext\\s+(${weekdays})\\b`)
+  );
+  if (nextWeekday) return nextWeekday[0];
+
+  const thisWeekday = text.match(
+    new RegExp(`\\bthis\\s+(${weekdays})\\b`)
+  );
+  if (thisWeekday) return thisWeekday[0];
+
+  const plainWeekday = text.match(new RegExp(`\\b(${weekdays})\\b`));
+  if (plainWeekday) return plainWeekday[0];
+
+  const timeOnly = text.match(
+    /\b(noon|midnight|eod|end of day|\d{1,2}(:\d{2})?\s*(am|pm)|\d{1,2}:\d{2})\b/
+  );
+  if (timeOnly) return timeOnly[0];
+
+  return raw.trim();
+}
+
+function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
   const raw = deadlineText.trim();
 
   const isoDateTimePattern =
@@ -263,6 +381,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
 
   if (isoDateTimePattern.test(raw)) {
     const parsed = new Date(raw);
+
     if (isValidDate(parsed)) {
       return {
         deadlineDate: parsed.toISOString(),
@@ -272,6 +391,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
   }
 
   const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
   if (dateOnlyMatch) {
     const year = Number(dateOnlyMatch[1]);
     const month = Number(dateOnlyMatch[2]);
@@ -287,8 +407,10 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
   }
 
   const numericDate = extractNumericDate(raw);
+
   if (numericDate) {
     const withTime = applyTime(numericDate.parsed, raw);
+
     return {
       deadlineDate: withTime.toISOString(),
       matched: true,
@@ -300,6 +422,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
 
   if (isTimeOnlyExpression(text)) {
     const todayWithTime = applyTime(startOfDay(now), text);
+
     return {
       deadlineDate: todayWithTime.toISOString(),
       matched: true,
@@ -315,6 +438,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
 
   if (text === "tomorrow") {
     const d = addDays(startOfDay(now), 1);
+
     return {
       deadlineDate: d.toISOString(),
       matched: true,
@@ -323,6 +447,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
 
   if (text === "day after tomorrow") {
     const d = addDays(startOfDay(now), 2);
+
     return {
       deadlineDate: d.toISOString(),
       matched: true,
@@ -332,6 +457,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
   if (text === "tonight") {
     const d = cloneDate(now);
     d.setHours(20, 0, 0, 0);
+
     return {
       deadlineDate: d.toISOString(),
       matched: true,
@@ -347,6 +473,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
 
   if (text === "next week") {
     const d = endOfWeek(addWeeks(now, 1));
+
     return {
       deadlineDate: d.toISOString(),
       matched: true,
@@ -380,6 +507,17 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
   }
 
   if (
+    text === "end of next month" ||
+    text === "next month end" ||
+    text === "eom next month"
+  ) {
+    return {
+      deadlineDate: endOfMonth(addMonths(now, 1)).toISOString(),
+      matched: true,
+    };
+  }
+
+  if (
     text.includes("end of month") ||
     text.includes("month end") ||
     text === "eom" ||
@@ -387,17 +525,6 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
   ) {
     return {
       deadlineDate: endOfMonth(now).toISOString(),
-      matched: true,
-    };
-  }
-
-  if (
-    text.includes("end of next month") ||
-    text === "next month end" ||
-    text === "eom next month"
-  ) {
-    return {
-      deadlineDate: endOfMonth(addMonths(now, 1)).toISOString(),
       matched: true,
     };
   }
@@ -424,6 +551,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
   const relativeMatch = text.match(
     /\bin\s+(\d+)\s+(day|days|week|weeks|month|months|year|years)\b/
   );
+
   if (relativeMatch) {
     const amount = Number(relativeMatch[1]);
     const unit = relativeMatch[2];
@@ -445,6 +573,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
   const fromNowMatch = text.match(
     /\b(\d+)\s+(day|days|week|weeks|month|months|year|years)\s+from\s+now\b/
   );
+
   if (fromNowMatch) {
     const amount = Number(fromNowMatch[1]);
     const unit = fromNowMatch[2];
@@ -463,19 +592,12 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
     };
   }
 
-  const weekdays: Record<string, number> = {
-    sunday: 0,
-    monday: 1,
-    tuesday: 2,
-    wednesday: 3,
-    thursday: 4,
-    friday: 5,
-    saturday: 6,
-  };
+  const weekdays = getWeekdays();
 
   for (const [name, dayIndex] of Object.entries(weekdays)) {
     if (text === name) {
       const d = applyTime(resolveNextWeekday(now, dayIndex), text);
+
       return {
         deadlineDate: d.toISOString(),
         matched: true,
@@ -484,6 +606,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
 
     if (text === `next ${name}`) {
       const d = applyTime(resolveNextWeekday(now, dayIndex), text);
+
       return {
         deadlineDate: d.toISOString(),
         matched: true,
@@ -492,6 +615,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
 
     if (text === `this ${name}`) {
       const d = applyTime(resolveThisWeekday(now, dayIndex), text);
+
       return {
         deadlineDate: d.toISOString(),
         matched: true,
@@ -502,8 +626,9 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
   const months = getMonthIndexMap();
 
   const monthDayMatch = text.match(
-    /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|sept|october|oct|november|nov|december|dec)\s+(\d{1,2})\b/
+    /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|sept|october|oct|november|nov|december|dec)\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s+(\d{2,4}))?\b/
   );
+
   if (monthDayMatch) {
     const monthIndex = months[monthDayMatch[1]];
     const day = Number(monthDayMatch[2]);
@@ -511,6 +636,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
 
     if (d) {
       const withTime = applyTime(d, text);
+
       return {
         deadlineDate: withTime.toISOString(),
         matched: true,
@@ -519,8 +645,9 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
   }
 
   const dayMonthMatch = text.match(
-    /\b(\d{1,2})\s+(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|sept|october|oct|november|nov|december|dec)\b/
+    /\b(\d{1,2})(?:st|nd|rd|th)?\s+(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|sept|october|oct|november|nov|december|dec)(?:\s+(\d{2,4}))?\b/
   );
+
   if (dayMonthMatch) {
     const day = Number(dayMonthMatch[1]);
     const monthIndex = months[dayMonthMatch[2]];
@@ -528,6 +655,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
 
     if (d) {
       const withTime = applyTime(d, text);
+
       return {
         deadlineDate: withTime.toISOString(),
         matched: true,
@@ -538,6 +666,7 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
   const endOfNamedMonthMatch = text.match(
     /\b(end of|by end of)\s+(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|sept|october|oct|november|nov|december|dec)\b/
   );
+
   if (endOfNamedMonthMatch) {
     const monthIndex = months[endOfNamedMonthMatch[2]];
     let year = now.getFullYear();
@@ -553,6 +682,35 @@ export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult
       deadlineDate: d.toISOString(),
       matched: true,
     };
+  }
+
+  return {
+    deadlineDate: null,
+    matched: false,
+  };
+}
+
+export function parseDeadline(deadlineText?: string | null): ParseDeadlineResult {
+  if (!deadlineText || !deadlineText.trim()) {
+    return { deadlineDate: null, matched: false };
+  }
+
+  const raw = deadlineText.trim();
+
+  const directResult = parseDeadlineCore(raw);
+
+  if (directResult.matched) {
+    return directResult;
+  }
+
+  const extractedPhrase = extractDeadlinePhrase(raw);
+
+  if (extractedPhrase && extractedPhrase !== raw) {
+    const extractedResult = parseDeadlineCore(extractedPhrase);
+
+    if (extractedResult.matched) {
+      return extractedResult;
+    }
   }
 
   return {
