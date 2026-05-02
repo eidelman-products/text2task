@@ -1,26 +1,27 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 export default function LandingFooter() {
   return (
     <footer style={footerStyle}>
       <div style={footerTopStyle}>
-        {/* LEFT */}
         <div style={footerBrandStyle}>
           <div style={logoRowStyle}>
             <span style={dotStyle} />
-            Text2Task
+            <span>Text2Task</span>
           </div>
 
           <p style={footerTextStyle}>
-            Turn messy client messages into structured work with AI.
+            Turn messy client messages, screenshots, and notes into structured
+            work with AI.
           </p>
         </div>
 
-        {/* RIGHT LINKS */}
         <div style={linksGridStyle}>
           <div>
             <div style={titleStyle}>Product</div>
-            <FooterLink href="#product" label="How it works" />
+            <FooterLink href="#product" label="Product" />
+            <FooterLink href="#how-it-works" label="How it works" />
             <FooterLink href="#features" label="Features" />
             <FooterLink href="#pricing" label="Pricing" />
           </div>
@@ -34,15 +35,13 @@ export default function LandingFooter() {
 
           <div>
             <div style={titleStyle}>Account</div>
-            <FooterLink href="/login" label="Login" />
-            <FooterLink href="/signup" label="Start free" />
+            <FooterLink href="/login" label="Log in" />
+            <FooterLink href="/signup" label="Try Text2Task" />
           </div>
         </div>
       </div>
 
-      <div style={footerBottomStyle}>
-        © 2026 Text2Task. All rights reserved.
-      </div>
+      <div style={footerBottomStyle}>© 2026 Text2Task. All rights reserved.</div>
     </footer>
   );
 }
@@ -55,66 +54,75 @@ function FooterLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-/* STYLES */
-
-const footerStyle: React.CSSProperties = {
+const footerStyle: CSSProperties = {
+  marginTop: 72,
+  paddingTop: 34,
   borderTop: "1px solid #e2e8f0",
-  paddingTop: 40,
 };
 
-const footerTopStyle: React.CSSProperties = {
+const footerTopStyle: CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
-  gap: 40,
+  alignItems: "flex-start",
+  gap: 32,
   flexWrap: "wrap",
 };
 
-const footerBrandStyle: React.CSSProperties = {
-  maxWidth: 260,
+const footerBrandStyle: CSSProperties = {
+  maxWidth: 320,
 };
 
-const logoRowStyle: React.CSSProperties = {
+const logoRowStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: 12,
   fontWeight: 900,
-  fontSize: 18,
-  marginBottom: 10,
+  fontSize: 22,
+  color: "#0f172a",
+  marginBottom: 12,
 };
 
-const dotStyle: React.CSSProperties = {
+const dotStyle: CSSProperties = {
   width: 14,
   height: 14,
   borderRadius: 999,
-  background: "linear-gradient(135deg,#60a5fa,#6366f1)",
+  background: "linear-gradient(135deg,#8b5cf6,#60a5fa)",
+  boxShadow: "0 0 0 5px rgba(99,102,241,0.12)",
 };
 
-const footerTextStyle: React.CSSProperties = {
+const footerTextStyle: CSSProperties = {
+  margin: 0,
   color: "#64748b",
-  fontSize: 14,
-  lineHeight: 1.6,
+  fontSize: 16,
+  lineHeight: 1.75,
 };
 
-const linksGridStyle: React.CSSProperties = {
+const linksGridStyle: CSSProperties = {
   display: "flex",
-  gap: 40,
+  gap: 44,
   flexWrap: "wrap",
 };
 
-const titleStyle: React.CSSProperties = {
+const titleStyle: CSSProperties = {
   fontWeight: 900,
-  marginBottom: 10,
+  marginBottom: 12,
+  color: "#0f172a",
+  fontSize: 16,
 };
 
-const linkStyle: React.CSSProperties = {
+const linkStyle: CSSProperties = {
   display: "block",
-  marginBottom: 6,
+  marginBottom: 10,
   color: "#64748b",
   textDecoration: "none",
+  fontSize: 15,
+  fontWeight: 700,
 };
 
-const footerBottomStyle: React.CSSProperties = {
-  marginTop: 30,
+const footerBottomStyle: CSSProperties = {
+  marginTop: 28,
+  paddingTop: 18,
+  borderTop: "1px solid #eef2f7",
   color: "#94a3b8",
   fontSize: 14,
 };
