@@ -10,45 +10,80 @@ const inter = Inter({
   display: "swap",
 });
 
+const siteUrl = "https://www.text2task.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+
   title: {
-    default: "Text2Task | Turn Messy Client Messages Into Tasks",
+    default: "Text2Task | Turn Client Messages Into Tasks",
     template: "%s | Text2Task",
   },
+
   description:
-    "Text2Task is an AI CRM that turns messy client messages, emails, screenshots, and notes into structured tasks with clients, deadlines, budgets, and priorities.",
+    "Text2Task turns messy client messages, emails, notes, and screenshots into organized tasks with deadlines, budgets, client details, phone numbers, emails, and priorities.",
+
   keywords: [
     "AI CRM",
+    "AI task manager",
     "task extraction",
     "client task manager",
     "freelancer CRM",
-    "AI task manager",
+    "freelance task manager",
     "text to task",
     "screenshot to task",
+    "turn client messages into tasks",
+    "turn emails into tasks",
+    "client work management",
+    "client request management",
+    "AI tool for freelancers",
+    "AI tool for web designers",
+    "AI tool for virtual assistants",
+    "AI tool for social media managers",
+    "WordPress freelancer task manager",
+    "Webflow freelancer task manager",
   ],
+
   applicationName: "Text2Task",
   authors: [{ name: "Text2Task" }],
   creator: "Text2Task",
   publisher: "Text2Task",
-  metadataBase: new URL("https://text2task.com"),
+
+  category: "Productivity Software",
+
   openGraph: {
-    title: "Text2Task | Turn Messy Client Messages Into Tasks",
+    title: "Text2Task | Turn Client Messages Into Tasks",
     description:
-      "Extract clients, tasks, budgets, deadlines, and priorities from text or screenshots — then manage everything in a clean CRM-style workspace.",
-    url: "https://text2task.com",
+      "Turn messy client messages, emails, notes, and screenshots into clean structured tasks with deadlines, budgets, client details, and priorities.",
+    url: siteUrl,
     siteName: "Text2Task",
     type: "website",
     locale: "en_US",
   },
+
   twitter: {
     card: "summary_large_image",
-    title: "Text2Task | Turn Messy Client Messages Into Tasks",
+    title: "Text2Task | Turn Client Messages Into Tasks",
     description:
-      "AI CRM for freelancers and small teams. Turn messy client messages into structured tasks in seconds.",
+      "AI CRM for freelancers and small teams. Turn messy client messages, emails, notes, and screenshots into structured tasks in seconds.",
   },
+
   robots: {
     index: true,
     follow: true,
+    nocache: false,
+    googleBot: {
+      index: true,
+      follow: true,
+      noimageindex: false,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+
+  verification: {
+    google: undefined,
   },
 };
 
