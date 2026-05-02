@@ -28,7 +28,7 @@ export default function HeroSection() {
               Log in
             </Link>
             <Link href="/signup" style={navButtonStyle}>
-              Start free
+              Try Text2Task
             </Link>
           </nav>
         </header>
@@ -36,22 +36,22 @@ export default function HeroSection() {
         <main className="hero-grid" style={heroGridStyle}>
           <div style={heroCopyStyle}>
             <div className="eyebrow" style={eyebrowStyle}>
-              AI CRM for freelancers, creators, and small teams
+              AI task extractor for freelancers and small service providers
             </div>
 
             <h1 className="hero-title" style={h1Style}>
-              Turn messy client messages into clear, structured work.
+              Paste a messy client message. Get clean tasks instantly.
             </h1>
 
             <p className="hero-lead" style={leadStyle}>
-              Text2Task extracts clients, tasks, budgets, deadlines, contact
-              details, and priorities from text or screenshots — then organizes
-              everything into a clean CRM-style workspace.
+              Text2Task extracts tasks, deadlines, budgets, client details,
+              phone numbers, emails, and notes from text or screenshots — then
+              organizes everything in one workspace.
             </p>
 
             <div className="cta-row" style={ctaRowStyle}>
               <Link href="/signup" style={primaryButtonStyle}>
-                Start free — 30 extracts
+                Try Text2Task
               </Link>
               <a href="#product" style={secondaryButtonStyle}>
                 See how it works
@@ -60,8 +60,8 @@ export default function HeroSection() {
 
             <div className="trust-row" style={trustRowStyle}>
               <span>✓ No credit card required</span>
-              <span>✓ Text + image extraction</span>
-              <span>✓ Built for real client work</span>
+              <span>✓ Try with real client messages</span>
+              <span>✓ Text + screenshot extraction</span>
             </div>
           </div>
 
@@ -72,7 +72,7 @@ export default function HeroSection() {
             </div>
 
             <div style={messageCardStyle}>
-              <div style={miniLabelStyle}>Client message</div>
+              <div style={miniLabelStyle}>Messy client message</div>
               <p style={messageTextStyle}>
                 “Hey, I need a landing page and logo for Brightside Dental.
                 Budget is around $1,200. Can you finish by next Friday? You can
@@ -83,14 +83,15 @@ export default function HeroSection() {
             <div style={conversionLineStyle}>
               <span style={conversionIconStyle}>AI</span>
               <span>
-                Extracting client, task, budget, deadline, and contact info...
+                Extracting task, deadline, budget, client details, email, and
+                phone...
               </span>
             </div>
 
             <div className="extracted-grid" style={extractedGridStyle}>
               <DataChip label="Client" value="Sarah Mitchell" />
               <DataChip label="Company" value="Brightside Dental" />
-              <DataChip label="Tasks" value="Landing page + Logo" />
+              <DataChip label="Task" value="Landing page + Logo" />
               <DataChip label="Budget" value="$1,200" />
               <DataChip label="Deadline" value="Next Friday" />
               <DataChip label="Phone" value="212-555-8912" />
@@ -98,40 +99,91 @@ export default function HeroSection() {
             </div>
 
             <div style={saveBarStyle}>
-              <span>Ready to save into CRM</span>
+              <span>Ready to save into your workspace</span>
               <span style={saveButtonFakeStyle}>Save task</span>
             </div>
           </div>
         </main>
 
+        <section style={beforeAfterSectionStyle}>
+          <SectionTitle
+            kicker="Before / After"
+            title="From one messy message to a clean task list."
+            text="Show Text2Task a real client message or screenshot, review the extracted details, and save the work into your task workspace."
+          />
+
+          <div className="before-after-grid" style={beforeAfterGridStyle}>
+            <div style={beforeCardStyle}>
+              <div style={beforeAfterBadgeStyle}>Before</div>
+              <h3 style={beforeAfterTitleStyle}>Messy client request</h3>
+              <div style={messageBubbleStyle}>
+                “Hi, can you update my website homepage, add a pricing section,
+                create 3 email templates, and send me the first draft by next
+                Friday? Budget is $850. My email is mark@northline.com.”
+              </div>
+            </div>
+
+            <div style={afterCardStyle}>
+              <div style={beforeAfterBadgeStyle}>After</div>
+              <h3 style={beforeAfterTitleStyle}>Clean structured tasks</h3>
+
+              <div style={afterListStyle}>
+                <AfterRow label="Client" value="Mark / Northline" />
+                <AfterRow label="Tasks" value="Homepage update, pricing section, 3 email templates" />
+                <AfterRow label="Deadline" value="Next Friday" />
+                <AfterRow label="Budget" value="$850" />
+                <AfterRow label="Email" value="mark@northline.com" />
+                <AfterRow label="Priority" value="High" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section style={audienceSectionStyle}>
+          <SectionTitle
+            kicker="Built for"
+            title="Freelancers who manage real client work from messages."
+            text="Text2Task is made for people who receive work requests through WhatsApp, email, screenshots, DMs, and informal notes."
+          />
+
+          <div className="audience-grid" style={audienceGridStyle}>
+            <AudienceCard title="Web designers" text="Turn client website requests into clear tasks, deadlines, and budgets." />
+            <AudienceCard title="Graphic designers" text="Organize logos, banners, revisions, brand assets, and delivery notes." />
+            <AudienceCard title="Social media managers" text="Extract posts, campaigns, due dates, and client notes from messy messages." />
+            <AudienceCard title="Video editors" text="Convert revision requests, edit notes, deadlines, and budgets into task lists." />
+            <AudienceCard title="Virtual assistants" text="Capture client instructions and turn them into organized daily work." />
+            <AudienceCard title="Small agencies" text="Keep client requests, deliverables, and revenue visible in one workspace." />
+          </div>
+        </section>
+
         <section id="product" style={productSectionStyle}>
           <SectionTitle
             kicker="Product workflow"
-            title="From messy input to a clear business workspace."
-            text="Text2Task is built around one simple flow: capture the request, extract the important details, and manage the work in one place."
+            title="See how Text2Task turns messages into work."
+            text="A simple flow built for real client work: capture the request, extract the important details, review the output, and manage everything in one place."
           />
 
           <div className="workflow-grid" style={workflowGridStyle}>
             <WorkflowCard
               number="01"
-              title="Extract from text or screenshots"
-              text="Paste a WhatsApp message, email, DM, client note, or upload a screenshot."
+              title="Paste a message or upload a screenshot"
+              text="Use a WhatsApp message, email, DM, client note, or screenshot."
             >
               <ExtractionMockup />
             </WorkflowCard>
 
             <WorkflowCard
               number="02"
-              title="Review structured tasks"
-              text="Edit the extracted client, task, amount, deadline, and priority before saving."
+              title="Text2Task extracts clean tasks"
+              text="Get the client, task, amount, deadline, priority, phone, email, and notes."
             >
               <CrmTableMockup />
             </WorkflowCard>
 
             <WorkflowCard
               number="03"
-              title="Track work and revenue"
-              text="See open tasks, urgent work, monthly income, clients, and task types."
+              title="Manage tasks, budgets, and deadlines"
+              text="Track open tasks, urgent work, monthly income, clients, and task status."
             >
               <AnalyticsMockup />
             </WorkflowCard>
@@ -159,7 +211,7 @@ export default function HeroSection() {
               text="Review, correct, and approve tasks before saving."
             />
             <FeatureItem
-              title="CRM task workspace"
+              title="Client task workspace"
               text="Keep client work organized by client, amount, deadline, and status."
             />
             <FeatureItem
@@ -177,14 +229,14 @@ export default function HeroSection() {
           <SectionTitle
             kicker="Pricing"
             title="Simple pricing for a simple workflow."
-            text="Start free with 30 total extracts. Upgrade when Text2Task becomes part of your daily work."
+            text="Start free with 30 total extracts. No credit card required. Upgrade only when Text2Task becomes part of your daily client workflow."
           />
 
           <div className="pricing-grid" style={pricingGridStyle}>
             <PricingCard
               name="Free"
               price="$0"
-              description="For trying Text2Task with real client messages."
+              description="For testing Text2Task with real client messages."
               features={[
                 "30 total AI extracts",
                 "Text and image extraction",
@@ -192,7 +244,7 @@ export default function HeroSection() {
                 "Dashboard and task workspace",
                 "CSV export not included",
               ]}
-              buttonText="Start free"
+              buttonText="Try Text2Task"
               href="/signup"
               highlighted={false}
             />
@@ -219,16 +271,15 @@ export default function HeroSection() {
         <section className="final-cta" style={finalCtaStyle}>
           <div>
             <div className="final-title" style={finalTitleStyle}>
-              Ready to organize your next client request?
+              Ready to turn your next client message into tasks?
             </div>
             <div style={finalTextStyle}>
-              Start free and turn messy messages into structured work in
-              seconds.
+              Try Text2Task free and organize real client work in seconds.
             </div>
           </div>
 
           <Link href="/signup" style={finalButtonStyle}>
-            Start free
+            Try Text2Task
           </Link>
         </section>
 
@@ -275,6 +326,27 @@ function DataChip({
   );
 }
 
+function AfterRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={afterRowStyle}>
+      <span style={afterLabelStyle}>{label}</span>
+      <strong style={afterValueStyle}>{value}</strong>
+    </div>
+  );
+}
+
+function AudienceCard({ title, text }: { title: string; text: string }) {
+  return (
+    <div style={audienceCardStyle}>
+      <div style={audienceIconStyle}>✓</div>
+      <div>
+        <div style={audienceTitleStyle}>{title}</div>
+        <div style={audienceTextStyle}>{text}</div>
+      </div>
+    </div>
+  );
+}
+
 function WorkflowCard({
   number,
   title,
@@ -306,7 +378,7 @@ function ExtractionMockup() {
       <div style={smallMockupLabelStyle}>Input</div>
       <div style={smallInputStyle}>
         “Need a homepage refresh for Apex Roofing. Budget $950. Deadline May
-        10.”
+        10. Email: john@apexroofing.com.”
       </div>
       <div style={smallArrowStyle}>↓</div>
       <div style={smallOutputStyle}>
@@ -337,7 +409,7 @@ function CrmTableMockup() {
       </div>
       <div style={tableRowStyle}>
         <span>Northline</span>
-        <strong>Email</strong>
+        <strong>Email templates</strong>
         <span>Soon</span>
       </div>
     </div>
@@ -478,10 +550,12 @@ const responsiveCss = `
     }
 
     .workflow-grid,
-    .pricing-grid {
+    .pricing-grid,
+    .before-after-grid {
       grid-template-columns: 1fr !important;
     }
 
+    .audience-grid,
     .feature-grid {
       grid-template-columns: 1fr 1fr !important;
     }
@@ -531,7 +605,7 @@ const responsiveCss = `
     }
 
     .hero-title {
-      font-size: 42px !important;
+      font-size: 40px !important;
       line-height: 1.04 !important;
       letter-spacing: -0.055em !important;
     }
@@ -574,7 +648,9 @@ const responsiveCss = `
 
     .workflow-grid,
     .feature-grid,
-    .pricing-grid {
+    .pricing-grid,
+    .before-after-grid,
+    .audience-grid {
       grid-template-columns: 1fr !important;
     }
 
@@ -685,8 +761,8 @@ const eyebrowStyle: React.CSSProperties = {
 
 const h1Style: React.CSSProperties = {
   margin: 0,
-  fontSize: "clamp(46px, 5.7vw, 68px)",
-  lineHeight: 1.12,
+  fontSize: "clamp(44px, 5.6vw, 66px)",
+  lineHeight: 1.1,
   letterSpacing: "-0.045em",
   fontWeight: 760,
   color: "#111827",
@@ -698,7 +774,7 @@ const leadStyle: React.CSSProperties = {
   color: "#334155",
   fontSize: 18,
   lineHeight: 1.75,
-  maxWidth: 690,
+  maxWidth: 720,
 };
 
 const ctaRowStyle: React.CSSProperties = {
@@ -874,6 +950,147 @@ const saveButtonFakeStyle: React.CSSProperties = {
   color: "#0f172a",
   fontWeight: 900,
   flexShrink: 0,
+};
+
+const beforeAfterSectionStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 28,
+};
+
+const beforeAfterGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: 18,
+};
+
+const beforeCardStyle: React.CSSProperties = {
+  borderRadius: 30,
+  padding: 24,
+  background: "rgba(255,255,255,0.92)",
+  border: "1px solid rgba(226,232,240,0.95)",
+  boxShadow: "0 18px 44px rgba(15,23,42,0.05)",
+  display: "grid",
+  gap: 14,
+};
+
+const afterCardStyle: React.CSSProperties = {
+  borderRadius: 30,
+  padding: 24,
+  background:
+    "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(239,246,255,0.78))",
+  border: "1px solid rgba(191,219,254,0.94)",
+  boxShadow: "0 22px 55px rgba(37,99,235,0.08)",
+  display: "grid",
+  gap: 14,
+};
+
+const beforeAfterBadgeStyle: React.CSSProperties = {
+  width: "fit-content",
+  padding: "7px 11px",
+  borderRadius: 999,
+  background: "rgba(79,70,229,0.09)",
+  color: "#4f46e5",
+  fontSize: 12,
+  fontWeight: 900,
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+};
+
+const beforeAfterTitleStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#0f172a",
+  fontSize: 22,
+  lineHeight: 1.15,
+  letterSpacing: "-0.035em",
+  fontWeight: 900,
+};
+
+const messageBubbleStyle: React.CSSProperties = {
+  borderRadius: 22,
+  padding: 18,
+  background: "#f8fafc",
+  border: "1px solid #e2e8f0",
+  color: "#334155",
+  fontSize: 15,
+  lineHeight: 1.75,
+};
+
+const afterListStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+};
+
+const afterRowStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "110px 1fr",
+  gap: 12,
+  alignItems: "start",
+  borderRadius: 16,
+  padding: "12px 14px",
+  background: "#ffffff",
+  border: "1px solid #dbeafe",
+};
+
+const afterLabelStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  fontWeight: 900,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+};
+
+const afterValueStyle: React.CSSProperties = {
+  color: "#0f172a",
+  fontSize: 14,
+  lineHeight: 1.5,
+  overflowWrap: "anywhere",
+};
+
+const audienceSectionStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 28,
+};
+
+const audienceGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: 14,
+};
+
+const audienceCardStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 14,
+  padding: 18,
+  borderRadius: 22,
+  background: "rgba(255,255,255,0.9)",
+  border: "1px solid rgba(191,219,254,0.82)",
+  boxShadow: "0 12px 30px rgba(37,99,235,0.04)",
+};
+
+const audienceIconStyle: React.CSSProperties = {
+  width: 28,
+  height: 28,
+  borderRadius: 999,
+  display: "grid",
+  placeItems: "center",
+  background: "#dcfce7",
+  color: "#15803d",
+  fontWeight: 900,
+  flexShrink: 0,
+};
+
+const audienceTitleStyle: React.CSSProperties = {
+  color: "#0f172a",
+  fontSize: 16,
+  fontWeight: 900,
+  marginBottom: 4,
+};
+
+const audienceTextStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 14,
+  lineHeight: 1.55,
+  fontWeight: 650,
 };
 
 const productSectionStyle: React.CSSProperties = {
