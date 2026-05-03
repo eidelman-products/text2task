@@ -3,8 +3,13 @@ import type { CSSProperties, KeyboardEvent } from "react";
 import type { TaskArchiveView, TaskRow as TaskRowType } from "./tasks-view";
 import TaskRowActions from "./task-row-actions";
 import { getDeadlineUi } from "@/lib/tasks/get-deadline-ui";
+import {
+  taskTableGridColumns,
+  taskTableMinWidth,
+} from "./tasks/task-table-layout";
 
 type TaskRowProps = {
+  rowIndex: number;
   task: TaskRowType;
   createdLabel: string;
   isSaving: boolean;
@@ -18,11 +23,22 @@ type TaskRowProps = {
     e: KeyboardEvent<HTMLInputElement | HTMLSelectElement>
   ) => void;
   updateTaskField: (taskId: number, field: string, value: any) => void;
-  updateTaskStatus: (taskId: number, status: string) => void;
+  updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
   copyTask: (taskId: number) => void;
-  archiveTask: (taskId: number) => void;
-  restoreTask: (taskId: number) => void;
-  permanentlyDeleteTask: (taskId: number) => void;
+  archiveTask: (taskId: number) => Promise<void> | void;
+  restoreTask: (taskId: number) => Promise<void> | void;
+  permanentlyDeleteTask: (taskId: number) => Promise<void> | void;
+};
+
+type VisualTone = {
+  accent: string;
+  accent2: string;
+  text: string;
+  soft: string;
+  border: string;
+  priorityBg: string;
+  priorityBorder: string;
+  priorityText: string;
 };
 
 function getClientDisplayName(task: TaskRowType) {
@@ -33,8 +49,110 @@ function getEditableDeadlineValue(task: TaskRowType) {
   return task.deadline_original_text?.trim() || task.deadline || "";
 }
 
+function getPriorityValue(priority: string | null | undefined) {
+  return String(priority || "").trim().toLowerCase();
+}
+
+function getStatusValue(status: string | null | undefined) {
+  return String(status || "").trim().toLowerCase();
+}
+
 function isDoneStatus(status: string | null | undefined) {
-  return String(status || "").trim().toLowerCase() === "done";
+  return getStatusValue(status) === "done";
+}
+
+function getVisualTone(task: TaskRowType): VisualTone {
+  const priority = getPriorityValue(task.priority);
+  const status = getStatusValue(task.status);
+
+  if (task.is_archived) {
+    return {
+      accent: "#64748b",
+      accent2: "#94a3b8",
+      text: "#334155",
+      soft: "rgba(248,250,252,0.96)",
+      border: "rgba(203,213,225,0.96)",
+      priorityBg: "rgba(248,250,252,0.98)",
+      priorityBorder: "rgba(203,213,225,0.95)",
+      priorityText: "#475569",
+    };
+  }
+
+  if (status === "done") {
+    return {
+      accent: "#16a34a",
+      accent2: "#22c55e",
+      text: "#166534",
+      soft: "rgba(240,253,244,0.96)",
+      border: "rgba(34,197,94,0.22)",
+      priorityBg: "rgba(240,253,244,0.98)",
+      priorityBorder: "rgba(34,197,94,0.24)",
+      priorityText: "#15803d",
+    };
+  }
+
+  if (priority === "high") {
+    return {
+      accent: "#e11d48",
+      accent2: "#f97316",
+      text: "#9f1239",
+      soft: "rgba(255,241,242,0.96)",
+      border: "rgba(225,29,72,0.18)",
+      priorityBg: "rgba(255,241,242,0.98)",
+      priorityBorder: "rgba(225,29,72,0.24)",
+      priorityText: "#be123c",
+    };
+  }
+
+  if (priority === "low") {
+    return {
+      accent: "#2563eb",
+      accent2: "#06b6d4",
+      text: "#1d4ed8",
+      soft: "rgba(239,246,255,0.96)",
+      border: "rgba(37,99,235,0.18)",
+      priorityBg: "rgba(239,246,255,0.98)",
+      priorityBorder: "rgba(37,99,235,0.22)",
+      priorityText: "#1d4ed8",
+    };
+  }
+
+  return {
+    accent: "#7c3aed",
+    accent2: "#f59e0b",
+    text: "#6d28d9",
+    soft: "rgba(245,243,255,0.96)",
+    border: "rgba(124,58,237,0.16)",
+    priorityBg: "rgba(255,251,235,0.98)",
+    priorityBorder: "rgba(245,158,11,0.24)",
+    priorityText: "#b45309",
+  };
+}
+
+function getStatusSelectTone(status: string | null | undefined) {
+  const value = getStatusValue(status);
+
+  if (value === "done") {
+    return {
+      bg: "rgba(240,253,244,0.98)",
+      border: "rgba(34,197,94,0.24)",
+      text: "#15803d",
+    };
+  }
+
+  if (value === "in progress") {
+    return {
+      bg: "rgba(238,242,255,0.98)",
+      border: "rgba(99,102,241,0.24)",
+      text: "#4338ca",
+    };
+  }
+
+  return {
+    bg: "rgba(248,250,252,0.98)",
+    border: "rgba(148,163,184,0.24)",
+    text: "#334155",
+  };
 }
 
 function buildDeadlineUi(task: TaskRowType) {
@@ -76,6 +194,7 @@ function buildDeadlineUi(task: TaskRowType) {
 }
 
 export default function TaskRow({
+  rowIndex,
   task,
   createdLabel,
   isSaving,
@@ -93,13 +212,13 @@ export default function TaskRow({
   restoreTask,
   permanentlyDeleteTask,
 }: TaskRowProps) {
-  const isDone = isDoneStatus(task.status);
   const isBusy = isSaving || isDeleting;
   const clientDisplayName = getClientDisplayName(task);
   const actionMode =
     archiveView === "archived" || task.is_archived ? "archived" : "active";
 
-  const [taskDraft, setTaskDraft] = useState(task.task);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [taskDraft, setTaskDraft] = useState(task.task || "");
   const [amountDraft, setAmountDraft] = useState(task.amount || "");
   const [deadlineDraft, setDeadlineDraft] = useState(
     getEditableDeadlineValue(task)
@@ -116,7 +235,7 @@ export default function TaskRow({
   const [isEditingDeadline, setIsEditingDeadline] = useState(false);
 
   useEffect(() => {
-    setTaskDraft(task.task);
+    setTaskDraft(task.task || "");
   }, [task.task]);
 
   useEffect(() => {
@@ -141,6 +260,11 @@ export default function TaskRow({
     setNotesDraft(task.client?.notes || task.client_notes || "");
   }, [task.client?.notes, task.client_notes]);
 
+  const visualTone = useMemo(() => getVisualTone(task), [task]);
+  const statusTone = useMemo(
+    () => getStatusSelectTone(task.status),
+    [task.status]
+  );
   const deadlineUi = useMemo(() => buildDeadlineUi(task), [task]);
 
   function saveTaskIfChanged() {
@@ -215,10 +339,19 @@ export default function TaskRow({
     updateTaskField(task.id, "notes", nextValue === "" ? null : nextValue);
   }
 
-  function handleTaskKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") {
+  function handleTaskKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
       saveTaskIfChanged();
-      onEnterBlur(e);
+      e.currentTarget.blur();
+    }
+  }
+
+  function handleNotesKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      saveNotesIfChanged();
+      e.currentTarget.blur();
     }
   }
 
@@ -251,13 +384,6 @@ export default function TaskRow({
     }
   }
 
-  function handleNotesKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") {
-      saveNotesIfChanged();
-      onEnterBlur(e);
-    }
-  }
-
   function handlePriorityChange(value: string) {
     if (isBusy) return;
     updateTaskField(task.id, "priority", value);
@@ -273,56 +399,76 @@ export default function TaskRow({
     toggleSelect(task.id);
   }
 
-  const rowBackground = isSaved
-    ? "linear-gradient(90deg, rgba(34,197,94,0.13) 0%, rgba(255,255,255,1) 68%)"
-    : isSelected
-    ? "rgba(59,130,246,0.05)"
-    : isDone
-    ? "rgba(34,197,94,0.06)"
-    : task.is_archived
-    ? "rgba(248,250,252,0.92)"
-    : "#ffffff";
-
-  const rowBorderLeft = isSaved
-    ? "3px solid #16a34a"
-    : isDone
-    ? "3px solid #22c55e"
-    : task.is_archived
-    ? "3px solid #94a3b8"
-    : "3px solid transparent";
+  const rowShellBackground = isSelected
+    ? "linear-gradient(135deg, rgba(239,246,255,1) 0%, rgba(255,255,255,1) 58%, rgba(238,242,255,0.95) 100%)"
+    : "linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.98) 60%, rgba(248,250,252,0.98) 100%)";
 
   const disabledInputStyle = isBusy
     ? {
         ...inputStyle,
         cursor: "not-allowed",
-        opacity: 0.7,
+        opacity: 0.72,
         background: "rgba(248,250,252,0.95)",
       }
     : inputStyle;
+
+  const disabledTaskTextAreaStyle = isBusy
+    ? {
+        ...taskTextAreaStyle,
+        cursor: "not-allowed",
+        opacity: 0.72,
+        background: "rgba(248,250,252,0.95)",
+      }
+    : taskTextAreaStyle;
 
   return (
     <div
       style={{
         position: "relative",
         display: "grid",
-        gridTemplateColumns:
-          "42px 1.05fr 1.65fr 0.85fr 1.35fr 1fr 1.15fr 1.45fr 0.7fr 0.85fr 0.85fr 1.2fr",
-        padding: "8px 12px",
-        borderBottom: "1px solid rgba(226,232,240,0.82)",
-        alignItems: "center",
-        gap: 8,
+        gridTemplateColumns: taskTableGridColumns,
+        minWidth: taskTableMinWidth,
+        padding: "16px 16px 14px",
+        alignItems: "start",
+        gap: 12,
         opacity: isDeleting ? 0.55 : 1,
-        background: rowBackground,
-        borderLeft: rowBorderLeft,
+        background: rowShellBackground,
+        border: `1px solid ${visualTone.border}`,
+        borderLeft: `7px solid ${visualTone.accent}`,
+        borderRadius: 22,
         boxShadow: isSaved
-          ? "inset 0 0 0 1px rgba(34,197,94,0.10), 0 8px 18px rgba(34,197,94,0.06)"
-          : "none",
-        transform: isSaved ? "translateY(-1px)" : "translateY(0)",
+          ? "0 18px 34px rgba(34,197,94,0.12), inset 0 0 0 1px rgba(34,197,94,0.07)"
+          : isSelected
+            ? "0 16px 30px rgba(59,130,246,0.10)"
+            : "0 12px 28px rgba(15,23,42,0.055)",
         transition:
           "background 0.28s ease, box-shadow 0.28s ease, transform 0.28s ease, opacity 0.2s ease",
+        overflow: "hidden",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "center" }}>
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: "100%",
+          height: 5,
+          background: `linear-gradient(90deg, ${visualTone.accent} 0%, ${visualTone.accent2} 46%, rgba(99,102,241,0.22) 100%)`,
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          inset: "5px auto auto 0",
+          width: 130,
+          height: 130,
+          background: `radial-gradient(circle, ${visualTone.soft} 0%, transparent 68%)`,
+          pointerEvents: "none",
+        }}
+      />
+
+      <div style={{ display: "flex", justifyContent: "center", paddingTop: 12 }}>
         <input
           type="checkbox"
           checked={isSelected}
@@ -339,53 +485,63 @@ export default function TaskRow({
 
       <div
         style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          minWidth: 0,
+          ...mainTaskCellStyle,
+          background:
+            "linear-gradient(135deg, rgba(239,246,255,0.94) 0%, rgba(255,255,255,0.98) 55%, rgba(245,243,255,0.90) 100%)",
+          border: "1px solid rgba(191,219,254,0.82)",
+          borderRadius: 18,
+          padding: "12px 12px",
+          boxShadow:
+            "inset 0 1px 0 rgba(255,255,255,0.75), 0 5px 14px rgba(37,99,235,0.035)",
+          position: "relative",
+          zIndex: 1,
         }}
       >
-        <span
+        <div style={clientLineStyle}>
+          <span
+            style={{
+              width: 11,
+              height: 11,
+              borderRadius: 999,
+              flexShrink: 0,
+              background: visualTone.accent,
+              boxShadow: `0 0 0 5px ${visualTone.soft}`,
+            }}
+          />
+
+          <span style={clientNameStyle} title={clientDisplayName}>
+            {clientDisplayName}
+          </span>
+
+          <span
+            style={{
+              ...createdMiniStyle,
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%)",
+              border: "1px solid rgba(203,213,225,0.92)",
+              color: "#64748b",
+            }}
+            title={createdLabel}
+          >
+            Created {createdLabel}
+          </span>
+        </div>
+
+        <textarea
+          value={taskDraft}
+          onChange={(e) => setTaskDraft(e.target.value)}
+          onKeyDown={handleTaskKeyDown}
+          onBlur={saveTaskIfChanged}
+          disabled={isBusy}
+          title={taskDraft}
+          rows={2}
           style={{
-            width: 10,
-            height: 10,
-            borderRadius: 999,
-            flexShrink: 0,
-            background: isDone
-              ? "#22c55e"
-              : task.is_archived
-              ? "#94a3b8"
-              : "linear-gradient(180deg, #f59e0b 0%, #fb7185 100%)",
-            boxShadow: isDone
-              ? "0 0 0 4px rgba(34,197,94,0.12)"
-              : task.is_archived
-              ? "0 0 0 4px rgba(148,163,184,0.12)"
-              : "0 0 0 4px rgba(245,158,11,0.10)",
+            ...disabledTaskTextAreaStyle,
+            background: "rgba(255,255,255,0.98)",
+            border: "1px solid rgba(191,219,254,0.92)",
           }}
         />
-        <span
-          style={{
-            fontSize: 13,
-            fontWeight: 800,
-            color: "#0f172a",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-          title={clientDisplayName}
-        >
-          {clientDisplayName}
-        </span>
       </div>
-
-      <input
-        value={taskDraft}
-        onChange={(e) => setTaskDraft(e.target.value)}
-        onKeyDown={handleTaskKeyDown}
-        onBlur={saveTaskIfChanged}
-        disabled={isBusy}
-        style={disabledInputStyle}
-      />
 
       <input
         value={amountDraft}
@@ -393,10 +549,32 @@ export default function TaskRow({
         onKeyDown={handleAmountKeyDown}
         onBlur={saveAmountIfChanged}
         disabled={isBusy}
-        style={disabledInputStyle}
+        title={amountDraft}
+        style={{
+          ...disabledInputStyle,
+          background:
+            "linear-gradient(180deg, rgba(236,253,245,0.92) 0%, rgba(255,255,255,0.98) 100%)",
+          border: "1px solid rgba(134,239,172,0.36)",
+          color: "#166534",
+          fontWeight: 950,
+          position: "relative",
+          zIndex: 1,
+        }}
       />
 
-      <div style={{ display: "grid", gap: 4 }}>
+      <div
+        style={{
+          display: "grid",
+          gap: 4,
+          background:
+            "linear-gradient(180deg, rgba(254,242,242,0.96) 0%, rgba(255,255,255,0.98) 100%)",
+          border: `1px solid ${deadlineUi.borderColor}`,
+          borderRadius: 16,
+          padding: "10px 10px 8px",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
         <div
           style={{
             display: "grid",
@@ -415,7 +593,7 @@ export default function TaskRow({
               alignItems: "center",
               justifyContent: "center",
               fontSize: 10,
-              background: deadlineUi.backgroundColor,
+              background: "rgba(255,255,255,0.82)",
               border: `1px solid ${deadlineUi.borderColor}`,
               color: deadlineUi.textColor,
               flexShrink: 0,
@@ -438,71 +616,34 @@ export default function TaskRow({
               setIsEditingDeadline(false);
             }}
             disabled={isBusy}
+            title={isEditingDeadline ? deadlineDraft : task.deadline || ""}
             style={{
               ...disabledInputStyle,
+              minHeight: 38,
               border: `1px solid ${deadlineUi.borderColor}`,
-              background: isBusy
-                ? "rgba(248,250,252,0.95)"
-                : deadlineUi.backgroundColor,
+              background: "rgba(255,255,255,0.70)",
               color: isEditingDeadline ? "#0f172a" : deadlineUi.textColor,
+              fontWeight: 950,
             }}
           />
         </div>
 
         <div
           style={{
-            fontSize: 10,
-            fontWeight: 800,
+            fontSize: 10.5,
+            fontWeight: 950,
             color: deadlineUi.textColor,
-            paddingLeft: 26,
+            paddingLeft: 28,
             whiteSpace: "nowrap",
-            opacity: 0.84,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            opacity: 0.95,
             lineHeight: 1.2,
           }}
+          title={deadlineUi.label}
         >
           {deadlineUi.label}
         </div>
-      </div>
-
-      <input
-        value={phoneDraft}
-        onChange={(e) => setPhoneDraft(e.target.value)}
-        onKeyDown={handlePhoneKeyDown}
-        onBlur={savePhoneIfChanged}
-        disabled={isBusy}
-        placeholder="Phone"
-        style={disabledInputStyle}
-      />
-
-      <input
-        value={emailDraft}
-        onChange={(e) => setEmailDraft(e.target.value)}
-        onKeyDown={handleEmailKeyDown}
-        onBlur={saveEmailIfChanged}
-        disabled={isBusy}
-        placeholder="Email"
-        style={disabledInputStyle}
-      />
-
-      <input
-        value={notesDraft}
-        onChange={(e) => setNotesDraft(e.target.value)}
-        onKeyDown={handleNotesKeyDown}
-        onBlur={saveNotesIfChanged}
-        disabled={isBusy}
-        placeholder="Notes"
-        style={disabledInputStyle}
-      />
-
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 700,
-          color: "#475569",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {createdLabel}
       </div>
 
       <select
@@ -510,7 +651,15 @@ export default function TaskRow({
         onKeyDown={onEnterBlur}
         onChange={(e) => handlePriorityChange(e.target.value)}
         disabled={isBusy}
-        style={disabledInputStyle}
+        style={{
+          ...disabledInputStyle,
+          background: visualTone.priorityBg,
+          border: `1px solid ${visualTone.priorityBorder}`,
+          color: visualTone.priorityText,
+          fontWeight: 950,
+          position: "relative",
+          zIndex: 1,
+        }}
       >
         <option>Low</option>
         <option>Medium</option>
@@ -522,44 +671,133 @@ export default function TaskRow({
         onKeyDown={onEnterBlur}
         onChange={(e) => handleStatusChange(e.target.value)}
         disabled={isBusy}
-        style={disabledInputStyle}
+        style={{
+          ...disabledInputStyle,
+          background: statusTone.bg,
+          border: `1px solid ${statusTone.border}`,
+          color: statusTone.text,
+          fontWeight: 950,
+          position: "relative",
+          zIndex: 1,
+        }}
       >
         <option value="New">New</option>
         <option value="In Progress">In Progress</option>
         <option value="Done">Done</option>
       </select>
 
-      <TaskRowActions
-        taskId={task.id}
-        isDeleting={isBusy}
-        isCopied={isCopied}
-        actionMode={actionMode}
-        onCopy={copyTask}
-        onArchive={archiveTask}
-        onRestore={restoreTask}
-        onPermanentDelete={permanentlyDeleteTask}
-      />
+      <div style={actionsCellStyle}>
+        <button
+          type="button"
+          onClick={() => setIsDetailsOpen((current) => !current)}
+          disabled={isBusy}
+          style={{
+            ...detailsToggleButtonStyle,
+            color: isDetailsOpen ? "#ffffff" : visualTone.text,
+            borderColor: isDetailsOpen
+              ? "rgba(79,70,229,0.30)"
+              : "rgba(199,210,254,0.82)",
+            background: isDetailsOpen
+              ? "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)"
+              : "linear-gradient(180deg, rgba(238,242,255,0.96) 0%, rgba(255,255,255,0.98) 100%)",
+            boxShadow: isDetailsOpen
+              ? "0 8px 18px rgba(79,70,229,0.16)"
+              : "0 3px 8px rgba(79,70,229,0.05)",
+          }}
+        >
+          {isDetailsOpen ? "Hide details" : "Details"}
+        </button>
+
+        <TaskRowActions
+          taskId={task.id}
+          isDeleting={isBusy}
+          isCopied={isCopied}
+          actionMode={actionMode}
+          onCopy={copyTask}
+          onArchive={archiveTask}
+          onRestore={restoreTask}
+          onPermanentDelete={permanentlyDeleteTask}
+        />
+      </div>
+
+      {isDetailsOpen && (
+        <div
+          style={{
+            ...detailsRowStyle,
+            background:
+              "linear-gradient(135deg, rgba(238,242,255,0.88) 0%, rgba(255,255,255,0.98) 48%, rgba(240,249,255,0.92) 100%)",
+            border: "1px solid rgba(199,210,254,0.70)",
+            boxShadow:
+              "inset 0 1px 0 rgba(255,255,255,0.75), 0 4px 12px rgba(79,70,229,0.025)",
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
+          <div style={detailFieldStyle}>
+            <span style={detailLabelStyle}>Phone</span>
+            <input
+              value={phoneDraft}
+              onChange={(e) => setPhoneDraft(e.target.value)}
+              onKeyDown={handlePhoneKeyDown}
+              onBlur={savePhoneIfChanged}
+              disabled={isBusy}
+              placeholder="Phone"
+              title={phoneDraft}
+              style={detailInputStyle}
+            />
+          </div>
+
+          <div style={detailFieldStyle}>
+            <span style={detailLabelStyle}>Email</span>
+            <input
+              value={emailDraft}
+              onChange={(e) => setEmailDraft(e.target.value)}
+              onKeyDown={handleEmailKeyDown}
+              onBlur={saveEmailIfChanged}
+              disabled={isBusy}
+              placeholder="Email"
+              title={emailDraft}
+              style={detailInputStyle}
+            />
+          </div>
+
+          <div style={detailFieldWideStyle}>
+            <span style={detailLabelStyle}>Notes</span>
+            <textarea
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              onKeyDown={handleNotesKeyDown}
+              onBlur={saveNotesIfChanged}
+              disabled={isBusy}
+              placeholder="Notes"
+              title={notesDraft}
+              rows={2}
+              style={detailTextAreaStyle}
+            />
+          </div>
+        </div>
+      )}
 
       {(isSaving || isSaved || isDeleting) && (
         <div
           style={{
             position: "absolute",
-            top: 6,
-            right: 10,
+            top: 10,
+            right: 14,
             fontSize: 10,
             fontWeight: 800,
-            color: isDeleting ? "#b91c1c" : isSaved ? "#15803d" : "#64748b",
+            color: isDeleting ? "#b91c1c" : isSaved ? "#15803d" : "#475569",
             background: isDeleting
-              ? "rgba(254,242,242,0.96)"
+              ? "rgba(254,242,242,0.98)"
               : isSaved
-              ? "rgba(240,253,244,0.95)"
-              : "rgba(248,250,252,0.95)",
+                ? "rgba(240,253,244,0.98)"
+                : "rgba(248,250,252,0.98)",
             border: `1px solid ${
               isDeleting
-                ? "rgba(239,68,68,0.18)"
+                ? "rgba(239,68,68,0.20)"
                 : isSaved
-                ? "rgba(34,197,94,0.18)"
-                : "rgba(203,213,225,0.9)"
+                  ? "rgba(34,197,94,0.20)"
+                  : "rgba(203,213,225,0.92)"
             }`,
             borderRadius: 999,
             padding: "4px 8px",
@@ -567,6 +805,7 @@ export default function TaskRow({
             boxShadow: isSaved
               ? "0 8px 16px rgba(34,197,94,0.08)"
               : "none",
+            zIndex: 2,
           }}
         >
           {isDeleting
@@ -574,24 +813,169 @@ export default function TaskRow({
               ? "Deleting..."
               : "Archiving..."
             : isSaved
-            ? "Saved"
-            : "Saving..."}
+              ? "Saved"
+              : "Saving..."}
         </div>
       )}
     </div>
   );
 }
 
+const mainTaskCellStyle: CSSProperties = {
+  display: "grid",
+  gap: 8,
+  minWidth: 0,
+};
+
+const clientLineStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  minWidth: 0,
+};
+
+const clientNameStyle: CSSProperties = {
+  fontSize: 13.5,
+  fontWeight: 950,
+  color: "#0f172a",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  maxWidth: 185,
+};
+
+const createdMiniStyle: CSSProperties = {
+  marginLeft: "auto",
+  fontSize: 10.5,
+  fontWeight: 850,
+  whiteSpace: "nowrap",
+  borderRadius: 999,
+  padding: "4px 8px",
+};
+
+const actionsCellStyle: CSSProperties = {
+  display: "grid",
+  gap: 7,
+  alignItems: "start",
+  minHeight: 42,
+  position: "relative",
+  zIndex: 1,
+};
+
+const detailsToggleButtonStyle: CSSProperties = {
+  minHeight: 30,
+  padding: "0 10px",
+  borderRadius: 10,
+  border: "1px solid rgba(199,210,254,0.82)",
+  fontSize: 11,
+  fontWeight: 900,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+};
+
 const inputStyle: CSSProperties = {
   border: "1px solid rgba(203,213,225,0.95)",
-  borderRadius: 10,
-  padding: "7px 10px",
+  borderRadius: 12,
+  padding: "8px 10px",
   width: "100%",
   background: "#ffffff",
   color: "#0f172a",
-  fontWeight: 600,
+  fontWeight: 800,
+  fontSize: 12.5,
+  outline: "none",
+  minHeight: 40,
+  boxShadow: "0 1px 4px rgba(15,23,42,0.025)",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  boxSizing: "border-box",
+};
+
+const taskTextAreaStyle: CSSProperties = {
+  border: "1px solid rgba(203,213,225,0.95)",
+  borderRadius: 12,
+  padding: "9px 10px",
+  width: "100%",
+  minHeight: 54,
+  maxHeight: 64,
+  resize: "none",
+  background: "#ffffff",
+  color: "#0f172a",
+  fontWeight: 850,
   fontSize: 13,
+  lineHeight: 1.35,
+  outline: "none",
+  boxShadow: "0 1px 4px rgba(15,23,42,0.025)",
+  boxSizing: "border-box",
+  overflow: "hidden",
+};
+
+const detailsRowStyle: CSSProperties = {
+  gridColumn: "2 / -1",
+  display: "grid",
+  gridTemplateColumns:
+    "minmax(160px, 0.72fr) minmax(240px, 1fr) minmax(360px, 2.25fr)",
+  gap: 10,
+  padding: "12px 12px",
+  minWidth: 0,
+  borderRadius: 18,
+};
+
+const detailFieldStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "50px 1fr",
+  alignItems: "center",
+  gap: 8,
+  minWidth: 0,
+};
+
+const detailFieldWideStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "50px 1fr",
+  alignItems: "start",
+  gap: 8,
+  minWidth: 0,
+};
+
+const detailLabelStyle: CSSProperties = {
+  fontSize: 10,
+  fontWeight: 950,
+  color: "#4338ca",
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+};
+
+const detailInputStyle: CSSProperties = {
+  border: "1px solid rgba(199,210,254,0.75)",
+  borderRadius: 11,
+  padding: "7px 9px",
+  width: "100%",
+  background: "rgba(255,255,255,0.98)",
+  color: "#0f172a",
+  fontWeight: 750,
+  fontSize: 12,
   outline: "none",
   minHeight: 34,
-  boxShadow: "0 1px 4px rgba(15,23,42,0.025)",
+  boxSizing: "border-box",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const detailTextAreaStyle: CSSProperties = {
+  border: "1px solid rgba(199,210,254,0.75)",
+  borderRadius: 11,
+  padding: "8px 9px",
+  width: "100%",
+  minHeight: 40,
+  maxHeight: 52,
+  resize: "none",
+  background: "rgba(255,255,255,0.98)",
+  color: "#0f172a",
+  fontWeight: 750,
+  fontSize: 12,
+  lineHeight: 1.34,
+  outline: "none",
+  boxSizing: "border-box",
+  overflow: "hidden",
 };

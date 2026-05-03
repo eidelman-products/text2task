@@ -1,8 +1,8 @@
 import EmptyState from "./empty-state";
 import SectionCard from "./section-card";
-import TaskRowComponent from "./task-row";
 import TaskRowActions from "./task-row-actions";
 import TasksToolbar from "./tasks-toolbar";
+import DesktopTasksTable from "./tasks/desktop-tasks-table";
 import type { CSSProperties, KeyboardEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -669,84 +669,29 @@ export default function TasksView({
                 })}
               </div>
 
-              <div className="tasks-desktop-table" style={desktopTableStyle}>
-                <div style={desktopHeaderRowStyle}>
-                  <div style={{ display: "flex", justifyContent: "center" }}>
-                    <input
-                      type="checkbox"
-                      checked={allVisibleSelected}
-                      disabled={!hasMatchingTasks}
-                      onChange={toggleSelectAllVisible}
-                      style={{
-                        width: 16,
-                        height: 16,
-                        cursor: hasMatchingTasks ? "pointer" : "not-allowed",
-                        opacity: hasMatchingTasks ? 1 : 0.45,
-                      }}
-                    />
-                  </div>
-                  <div style={headerCellStyle}>👤 Client</div>
-                  <div style={headerCellStyle}>☰ Task</div>
-                  <div style={headerCellStyle}>💲 Amount</div>
-                  <div style={headerCellStyle}>📅 Deadline</div>
-                  <div style={headerCellStyle}>📞 Phone</div>
-                  <div style={headerCellStyle}>✉️ Email</div>
-                  <div style={headerCellStyle}>📝 Notes</div>
-                  <div style={headerCellStyle}>🕘 Created</div>
-                  <div style={headerCellStyle}>⚑ Priority</div>
-                  <div style={headerCellStyle}>↗ Status</div>
-                  <div style={headerCellStyle}>⚙ Actions</div>
-                </div>
-
-                {flatTasks.map((task) => {
-                  const isSaving = !!savingTaskIds[task.id];
-                  const isSaved = !!savedTaskIds[task.id];
-                  const isDeleting = !!deletingTaskIds[task.id];
-                  const isCopied = !!copiedTaskIds[task.id];
-                  const isHighlighted = flashTaskId === task.id;
-                  const rowArchiveView =
-                    archiveView === "archived" || task.is_archived
-                      ? "archived"
-                      : "active";
-
-                  return (
-                    <div
-                      key={`desktop-${task.id}`}
-                      ref={(node) => {
-                        taskRefs.current[task.id] = node;
-                      }}
-                      style={{
-                        position: "relative",
-                        boxShadow: isHighlighted
-                          ? "inset 3px 0 0 #f59e0b, 0 0 0 1px rgba(245,158,11,0.10)"
-                          : "none",
-                        transition:
-                          "box-shadow 0.28s ease, transform 0.28s ease",
-                        transform: isHighlighted ? "scale(1.0015)" : "scale(1)",
-                      }}
-                    >
-                      <TaskRowComponent
-                        task={task}
-                        createdLabel={formatCreatedDate(task.created_at)}
-                        isSaving={isSaving}
-                        isSaved={isSaved}
-                        isDeleting={isDeleting}
-                        isCopied={isCopied}
-                        isSelected={selectedTaskIds.includes(task.id)}
-                        archiveView={rowArchiveView}
-                        toggleSelect={toggleSelect}
-                        onEnterBlur={handleEnterBlur}
-                        updateTaskField={updateTaskField}
-                        updateTaskStatus={updateTaskStatus}
-                        copyTask={copyTask}
-                        archiveTask={archiveTask}
-                        restoreTask={restoreTask}
-                        permanentlyDeleteTask={requestSinglePermanentDelete}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+              <DesktopTasksTable
+                tasks={flatTasks}
+                allVisibleSelected={allVisibleSelected}
+                hasMatchingTasks={hasMatchingTasks}
+                savingTaskIds={savingTaskIds}
+                savedTaskIds={savedTaskIds}
+                deletingTaskIds={deletingTaskIds}
+                copiedTaskIds={copiedTaskIds}
+                selectedTaskIds={selectedTaskIds}
+                archiveView={archiveView}
+                flashTaskId={flashTaskId}
+                taskRefs={taskRefs}
+                onToggleSelectAllVisible={toggleSelectAllVisible}
+                onEnterBlur={handleEnterBlur}
+                toggleSelect={toggleSelect}
+                updateTaskField={updateTaskField}
+                updateTaskStatus={updateTaskStatus}
+                copyTask={copyTask}
+                archiveTask={archiveTask}
+                restoreTask={restoreTask}
+                permanentlyDeleteTask={requestSinglePermanentDelete}
+                formatCreatedDate={formatCreatedDate}
+              />
             </>
           )}
         </div>
@@ -987,15 +932,15 @@ function MobileTaskCard({
         borderLeft: isSaved
           ? "4px solid #16a34a"
           : isDone
-          ? "4px solid #22c55e"
-          : task.is_archived
-          ? "4px solid #94a3b8"
-          : "4px solid #f59e0b",
+            ? "4px solid #22c55e"
+            : task.is_archived
+              ? "4px solid #94a3b8"
+              : "4px solid #f59e0b",
         background: isDone
           ? "linear-gradient(180deg, rgba(240,253,244,0.96) 0%, #ffffff 100%)"
           : task.is_archived
-          ? "linear-gradient(180deg, rgba(248,250,252,0.96) 0%, #ffffff 100%)"
-          : "#ffffff",
+            ? "linear-gradient(180deg, rgba(248,250,252,0.96) 0%, #ffffff 100%)"
+            : "#ffffff",
         opacity: isDeleting ? 0.6 : 1,
       }}
     >
@@ -1022,13 +967,13 @@ function MobileTaskCard({
             background: isDone
               ? "rgba(34,197,94,0.10)"
               : task.is_archived
-              ? "rgba(148,163,184,0.12)"
-              : "rgba(59,130,246,0.10)",
+                ? "rgba(148,163,184,0.12)"
+                : "rgba(59,130,246,0.10)",
             border: isDone
               ? "1px solid rgba(34,197,94,0.18)"
               : task.is_archived
-              ? "1px solid rgba(148,163,184,0.18)"
-              : "1px solid rgba(59,130,246,0.18)",
+                ? "1px solid rgba(148,163,184,0.18)"
+                : "1px solid rgba(59,130,246,0.18)",
           }}
         >
           {task.is_archived ? "Archived" : task.status || "New"}
@@ -1138,8 +1083,8 @@ function MobileTaskCard({
                 ? "Deleting..."
                 : "Archiving..."
               : isSaved
-              ? "Saved"
-              : "Saving..."}
+                ? "Saved"
+                : "Saving..."}
           </div>
         )}
       </div>
@@ -1457,38 +1402,6 @@ const mobileActionsRowStyle: CSSProperties = {
   gap: 10,
   flexWrap: "wrap",
   paddingTop: 2,
-};
-
-const desktopTableStyle: CSSProperties = {
-  border: "1px solid rgba(226,232,240,0.96)",
-  borderRadius: 18,
-  overflow: "auto",
-  background: "#ffffff",
-  boxShadow:
-    "0 10px 22px rgba(15,23,42,0.035), 0 1px 4px rgba(15,23,42,0.02)",
-};
-
-const desktopHeaderRowStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns:
-    "42px 1.05fr 1.65fr 0.85fr 1.35fr 1fr 1.15fr 1.45fr 0.7fr 0.85fr 0.85fr 1.2fr",
-  minWidth: 1210,
-  padding: "12px 14px",
-  background:
-    "linear-gradient(180deg, rgba(251,191,36,0.18) 0%, rgba(245,158,11,0.10) 100%)",
-  borderBottom: "1px solid rgba(245,158,11,0.18)",
-  color: "#9a3412",
-  fontSize: 12,
-  fontWeight: 900,
-  letterSpacing: "0.01em",
-  alignItems: "center",
-  gap: 8,
-};
-
-const headerCellStyle: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
 };
 
 const emptyTableStateStyle: CSSProperties = {
