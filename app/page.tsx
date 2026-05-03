@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import HeroSection from "./components/landing/hero-section";
+import UseCasesPreviewSection from "./components/landing/use-cases-preview-section";
 
 const siteUrl = "https://www.text2task.com";
 
@@ -102,6 +103,7 @@ export default function HomePage() {
       />
 
       <HeroSection />
+      <UseCasesPreviewSection />
     </main>
   );
 }
