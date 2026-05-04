@@ -3,6 +3,9 @@ import SectionCard from "./section-card";
 import TaskRowActions from "./task-row-actions";
 import TasksToolbar from "./tasks-toolbar";
 import DesktopTasksTable from "./tasks/desktop-tasks-table";
+import TasksArchiveTabs from "./tasks/tasks-archive-tabs";
+import TasksBulkBar from "./tasks/tasks-bulk-bar";
+import TaskDeleteModals from "./tasks/task-delete-modals";
 import type { CSSProperties, KeyboardEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -11,45 +14,32 @@ import type {
   TaskSortOption,
   TaskStatusFilter,
 } from "./task-filters";
-import { formatDeadline } from "@/lib/tasks/format-deadline";
+import type {
+  ClientEntity,
+  TaskArchiveView,
+  TaskGroup,
+  TaskRow,
+} from "./tasks/task-types";
+import {
+  formatCreatedDate,
+  getClientDisplayName,
+  getClientName,
+  getDeadlineSortValue,
+  getEditableDeadlineValue,
+  getViewDescription,
+  getViewTitle,
+  isActiveCurrentTask,
+  isArchivedCurrentTask,
+  isCompletedLifetimeTask,
+  normalizeTask,
+} from "./tasks/task-utils";
 
-export type TaskArchiveView = "active" | "archived" | "all";
-
-export type ClientEntity = {
-  id: string;
-  name: string;
-  phone?: string | null;
-  email?: string | null;
-  notes?: string | null;
-};
-
-export type TaskRow = {
-  id: number;
-  client: ClientEntity | null;
-  task: string;
-  amount: string;
-  deadline: string;
-  priority: string;
-  status: string;
-  source: string;
-  raw_input?: string;
-  deadline_date?: string | null;
-  deadline_original_text?: string | null;
-  created_at?: string | null;
-  completed_at?: string | null;
-  is_archived?: boolean;
-  archived_at?: string | null;
-  deleted_at?: string | null;
-  client_phone?: string | null;
-  client_email?: string | null;
-  client_notes?: string | null;
-};
-
-export type TaskGroup = {
-  key: string;
-  clientName: string;
-  tasks: TaskRow[];
-};
+export type {
+  ClientEntity,
+  TaskArchiveView,
+  TaskGroup,
+  TaskRow,
+} from "./tasks/task-types";
 
 type TasksViewProps = {
   isLoadingTasks: boolean;
@@ -83,96 +73,6 @@ type TasksViewProps = {
   restoreTask: (taskId: number) => Promise<void> | void;
   permanentlyDeleteTask: (taskId: number) => Promise<void> | void;
 };
-
-function normalizeTask(task: TaskRow): TaskRow {
-  const preciseDeadline = task.deadline_date?.trim() || "";
-  const fallbackDeadline = task.deadline?.trim() || "";
-  const originalDeadlineText = task.deadline_original_text?.trim() || "";
-
-  const resolvedDeadline = preciseDeadline || fallbackDeadline;
-  const formattedDeadline = resolvedDeadline
-    ? formatDeadline(resolvedDeadline)
-    : "";
-
-  return {
-    ...task,
-    deadline:
-      formattedDeadline || originalDeadlineText || fallbackDeadline || "",
-    client_phone: task.client?.phone ?? task.client_phone ?? null,
-    client_email: task.client?.email ?? task.client_email ?? null,
-    client_notes: task.client?.notes ?? task.client_notes ?? null,
-    is_archived: Boolean(task.is_archived),
-  };
-}
-
-function formatCreatedDate(value?: string | null) {
-  if (!value) return "—";
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "—";
-
-  return parsed.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function getDeadlineSortValue(task: TaskRow) {
-  if (task.deadline_date) {
-    const precise = new Date(task.deadline_date).getTime();
-    if (!Number.isNaN(precise)) return precise;
-  }
-
-  const fallback = new Date(task.deadline).getTime();
-  if (!Number.isNaN(fallback)) return fallback;
-
-  return Number.MAX_SAFE_INTEGER;
-}
-
-function getClientName(task: TaskRow) {
-  return task.client?.name?.trim() || "";
-}
-
-function getClientDisplayName(task: TaskRow) {
-  return task.client?.name?.trim() || "Unassigned";
-}
-
-function getEditableDeadlineValue(task: TaskRow) {
-  return task.deadline_original_text?.trim() || task.deadline || "";
-}
-
-function isDoneTask(task: TaskRow) {
-  return String(task.status || "").trim().toLowerCase() === "done";
-}
-
-function isCompletedLifetimeTask(task: TaskRow) {
-  return isDoneTask(task) || Boolean(task.completed_at);
-}
-
-function isDeletedTask(task: TaskRow) {
-  return Boolean(task.deleted_at);
-}
-
-function isArchivedCurrentTask(task: TaskRow) {
-  return Boolean(task.is_archived) && !isDeletedTask(task);
-}
-
-function isActiveCurrentTask(task: TaskRow) {
-  return !task.is_archived && !isDeletedTask(task);
-}
-
-function getViewTitle(view: TaskArchiveView) {
-  if (view === "archived") return "Archived Tasks";
-  return "Task CRM";
-}
-
-function getViewDescription(view: TaskArchiveView) {
-  if (view === "archived") {
-    return "Review archived work, restore tasks, or permanently delete items you no longer need.";
-  }
-
-  return "Manage tasks, clients, deadlines, and status in one powerful workspace.";
-}
 
 export default function TasksView({
   isLoadingTasks,
@@ -554,63 +454,15 @@ export default function TasksView({
           />
 
           {hasSelection && (
-            <div className="tasks-bulk-bar" style={bulkBarStyle}>
-              <div style={bulkCountStyle}>{selectedTaskIds.length} selected</div>
-
-              {archiveView !== "archived" ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handleBulkStatus("Done")}
-                    style={bulkActionButtonStyle}
-                  >
-                    Mark Done
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleBulkStatus("In Progress")}
-                    style={bulkActionButtonStyle}
-                  >
-                    Mark In Progress
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleBulkArchive}
-                    style={bulkArchiveButtonStyle}
-                  >
-                    Move to Archive
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleBulkRestore}
-                    style={bulkActionButtonStyle}
-                  >
-                    Restore selected
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={openBulkDeleteConfirm}
-                    style={bulkDeleteButtonStyle}
-                  >
-                    Delete permanently
-                  </button>
-                </>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setSelectedTaskIds([])}
-                style={bulkSecondaryButtonStyle}
-              >
-                Clear
-              </button>
-            </div>
+            <TasksBulkBar
+              selectedCount={selectedTaskIds.length}
+              archiveView={archiveView}
+              onBulkStatus={handleBulkStatus}
+              onBulkArchive={handleBulkArchive}
+              onBulkRestore={handleBulkRestore}
+              onOpenBulkDeleteConfirm={openBulkDeleteConfirm}
+              onClearSelection={() => setSelectedTaskIds([])}
+            />
           )}
 
           {!hasMatchingTasks ? (
@@ -697,150 +549,18 @@ export default function TasksView({
         </div>
       </SectionCard>
 
-      {singleDeleteTask && (
-        <div style={modalOverlayStyle} onClick={closeSingleDeleteConfirm}>
-          <div
-            style={modalCardStyle}
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Delete task permanently confirmation"
-          >
-            <div style={modalIconDangerStyle}>!</div>
-
-            <div style={{ display: "grid", gap: 8 }}>
-              <div style={modalTitleStyle}>Delete permanently?</div>
-              <div style={modalTextStyle}>
-                <strong>{singleDeleteTask.task || "This task"}</strong> will be
-                permanently deleted from your Archive. This cannot be undone.
-              </div>
-            </div>
-
-            <div style={modalActionsStyle}>
-              <button
-                type="button"
-                onClick={closeSingleDeleteConfirm}
-                style={modalSecondaryButtonStyle}
-                disabled={isSingleDeleting}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={confirmSinglePermanentDelete}
-                style={modalDeleteButtonStyle}
-                disabled={isSingleDeleting}
-              >
-                {isSingleDeleting ? "Deleting..." : "Delete forever"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showBulkDeleteConfirm && (
-        <div style={modalOverlayStyle} onClick={closeBulkDeleteConfirm}>
-          <div
-            style={modalCardStyle}
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Delete selected tasks confirmation"
-          >
-            <div style={modalIconDangerStyle}>!</div>
-
-            <div style={{ display: "grid", gap: 8 }}>
-              <div style={modalTitleStyle}>Delete selected tasks forever?</div>
-              <div style={modalTextStyle}>
-                You are about to permanently delete{" "}
-                <strong>{selectedTaskIds.length} selected task(s)</strong> from
-                Archive. This cannot be undone.
-              </div>
-            </div>
-
-            <div style={modalActionsStyle}>
-              <button
-                type="button"
-                onClick={closeBulkDeleteConfirm}
-                style={modalSecondaryButtonStyle}
-                disabled={isBulkDeleting}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={confirmBulkPermanentDelete}
-                style={modalDeleteButtonStyle}
-                disabled={isBulkDeleting}
-              >
-                {isBulkDeleting ? "Deleting..." : "Delete permanently"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TaskDeleteModals
+        singleDeleteTask={singleDeleteTask}
+        selectedCount={selectedTaskIds.length}
+        showBulkDeleteConfirm={showBulkDeleteConfirm}
+        isSingleDeleting={isSingleDeleting}
+        isBulkDeleting={isBulkDeleting}
+        onCloseSingleDeleteConfirm={closeSingleDeleteConfirm}
+        onConfirmSinglePermanentDelete={confirmSinglePermanentDelete}
+        onCloseBulkDeleteConfirm={closeBulkDeleteConfirm}
+        onConfirmBulkPermanentDelete={confirmBulkPermanentDelete}
+      />
     </>
-  );
-}
-
-function TasksArchiveTabs({
-  archiveView,
-  onArchiveViewChange,
-}: {
-  archiveView: TaskArchiveView;
-  onArchiveViewChange: (value: TaskArchiveView) => void;
-}) {
-  const options: Array<{
-    value: TaskArchiveView;
-    label: string;
-    description: string;
-  }> = [
-    {
-      value: "active",
-      label: "Active",
-      description: "Current work",
-    },
-    {
-      value: "archived",
-      label: "Archive",
-      description: "Completed or hidden work",
-    },
-  ];
-
-  return (
-    <div className="tasks-archive-tabs" style={archiveTabsStyle}>
-      {options.map((option) => {
-        const isActive = archiveView === option.value;
-
-        return (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onArchiveViewChange(option.value)}
-            style={{
-              ...archiveTabButtonStyle,
-              background: isActive
-                ? "linear-gradient(180deg, rgba(239,246,255,0.96) 0%, rgba(255,255,255,0.96) 100%)"
-                : "rgba(255,255,255,0.72)",
-              borderColor: isActive
-                ? "rgba(59,130,246,0.28)"
-                : "rgba(226,232,240,0.92)",
-              color: isActive ? "#1d4ed8" : "#475569",
-              boxShadow: isActive
-                ? "0 12px 24px rgba(59,130,246,0.07), inset 0 0 0 1px rgba(59,130,246,0.04)"
-                : "none",
-            }}
-          >
-            <span style={archiveTabLabelStyle}>{option.label}</span>
-            <span style={archiveTabDescriptionStyle}>
-              {option.description}
-            </span>
-          </button>
-        );
-      })}
-    </div>
   );
 }
 
@@ -1221,54 +941,6 @@ const mainContentStyle: CSSProperties = {
   width: "100%",
 };
 
-const archiveTabsStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 180px))",
-  gap: 8,
-  justifyContent: "start",
-};
-
-const archiveTabButtonStyle: CSSProperties = {
-  minHeight: 46,
-  borderRadius: 14,
-  padding: "9px 12px",
-  border: "1px solid rgba(226,232,240,0.92)",
-  cursor: "pointer",
-  textAlign: "left",
-  display: "grid",
-  gap: 2,
-};
-
-const archiveTabLabelStyle: CSSProperties = {
-  fontSize: 13,
-  fontWeight: 950,
-};
-
-const archiveTabDescriptionStyle: CSSProperties = {
-  fontSize: 10.5,
-  fontWeight: 750,
-  color: "#64748b",
-};
-
-const bulkBarStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  flexWrap: "wrap",
-  padding: "12px 14px",
-  borderRadius: 14,
-  border: "1px solid rgba(15,23,42,0.08)",
-  background: "#0f172a",
-  color: "#ffffff",
-  boxShadow: "0 10px 24px rgba(15,23,42,0.10)",
-};
-
-const bulkCountStyle: CSSProperties = {
-  fontSize: 13,
-  fontWeight: 900,
-  marginRight: 4,
-};
-
 const mobileListStyle: CSSProperties = {
   display: "grid",
   gap: 12,
@@ -1440,113 +1112,4 @@ const emptyDescriptionStyle: CSSProperties = {
   fontSize: 14,
   color: "#64748b",
   lineHeight: 1.65,
-};
-
-const bulkActionButtonStyle: CSSProperties = {
-  minHeight: 34,
-  padding: "0 12px",
-  borderRadius: 10,
-  border: "1px solid rgba(255,255,255,0.12)",
-  background: "rgba(255,255,255,0.10)",
-  color: "#ffffff",
-  fontSize: 12,
-  fontWeight: 800,
-  cursor: "pointer",
-};
-
-const bulkArchiveButtonStyle: CSSProperties = {
-  ...bulkActionButtonStyle,
-  background: "rgba(245,158,11,0.18)",
-  border: "1px solid rgba(245,158,11,0.26)",
-};
-
-const bulkDeleteButtonStyle: CSSProperties = {
-  ...bulkActionButtonStyle,
-  background: "rgba(239,68,68,0.18)",
-  border: "1px solid rgba(239,68,68,0.24)",
-};
-
-const bulkSecondaryButtonStyle: CSSProperties = {
-  ...bulkActionButtonStyle,
-  background: "transparent",
-};
-
-const modalOverlayStyle: CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(15,23,42,0.42)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 20,
-  zIndex: 1200,
-  backdropFilter: "blur(5px)",
-};
-
-const modalCardStyle: CSSProperties = {
-  width: "100%",
-  maxWidth: 460,
-  borderRadius: 22,
-  border: "1px solid rgba(226,232,240,0.96)",
-  background: "#ffffff",
-  boxShadow: "0 28px 60px rgba(15,23,42,0.20)",
-  padding: 22,
-  display: "grid",
-  gap: 18,
-};
-
-const modalIconDangerStyle: CSSProperties = {
-  width: 42,
-  height: 42,
-  borderRadius: 999,
-  display: "grid",
-  placeItems: "center",
-  background: "rgba(254,242,242,1)",
-  border: "1px solid rgba(239,68,68,0.18)",
-  color: "#dc2626",
-  fontSize: 22,
-  fontWeight: 950,
-};
-
-const modalTitleStyle: CSSProperties = {
-  fontSize: 21,
-  fontWeight: 950,
-  color: "#0f172a",
-  letterSpacing: "-0.04em",
-};
-
-const modalTextStyle: CSSProperties = {
-  fontSize: 14,
-  color: "#475569",
-  lineHeight: 1.65,
-};
-
-const modalActionsStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "flex-end",
-  gap: 10,
-};
-
-const modalSecondaryButtonStyle: CSSProperties = {
-  minHeight: 42,
-  padding: "0 16px",
-  borderRadius: 12,
-  border: "1px solid rgba(203,213,225,0.96)",
-  background: "#ffffff",
-  color: "#334155",
-  fontSize: 14,
-  fontWeight: 800,
-  cursor: "pointer",
-};
-
-const modalDeleteButtonStyle: CSSProperties = {
-  minHeight: 42,
-  padding: "0 16px",
-  borderRadius: 12,
-  border: "1px solid rgba(239,68,68,0.20)",
-  background: "rgba(239,68,68,0.94)",
-  color: "#ffffff",
-  fontSize: 14,
-  fontWeight: 900,
-  cursor: "pointer",
 };
