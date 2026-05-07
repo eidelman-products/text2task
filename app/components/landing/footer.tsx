@@ -35,6 +35,30 @@ export default function Footer({ jakartaClassName }: FooterProps) {
         </a>
 
         <a
+          href="/use-cases"
+          className={jakartaClassName}
+          style={footerLinkStyle}
+        >
+          Use Cases
+        </a>
+
+        <a
+          href="/resources"
+          className={jakartaClassName}
+          style={footerLinkStyle}
+        >
+          Resources
+        </a>
+
+        <a
+          href="/contact"
+          className={jakartaClassName}
+          style={footerLinkStyle}
+        >
+          Contact
+        </a>
+
+        <a
           href="/privacy"
           className={jakartaClassName}
           style={footerLinkStyle}
@@ -51,7 +75,7 @@ export default function Footer({ jakartaClassName }: FooterProps) {
         </a>
 
         <a
-          href="mailto:support@inboxshaper.com"
+          href="mailto:support@text2task.com"
           className={jakartaClassName}
           style={footerLinkStyle}
         >
@@ -68,9 +92,9 @@ export default function Footer({ jakartaClassName }: FooterProps) {
           fontWeight: 500,
         }}
       >
-        InboxShaper • Privacy-first Gmail cleanup and analytics
+        Text2Task • Turn messy client messages into organized tasks
         <br />
-        Support: support@inboxshaper.com
+        Support: support@text2task.com
       </div>
     </footer>
   );

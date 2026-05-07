@@ -41,7 +41,7 @@ type DashboardClientProps = {
 type DashboardNav = "dashboard" | "extract" | "tasks";
 type TasksApiView = TaskArchiveView | "stats";
 
-const ARCHIVE_UNDO_DURATION = 7000;
+
 
 function getActiveNavLabel(activeNav: DashboardNav) {
   if (activeNav === "extract") return "Extract";
@@ -965,41 +965,45 @@ export default function DashboardClient({
   }
 
   async function archiveTask(taskId: number) {
-    const taskToArchive = tasks.find((task) => task.id === taskId);
-    const taskIndex = tasks.findIndex((task) => task.id === taskId);
+  const taskToArchive = tasks.find((task) => task.id === taskId);
 
-    if (!taskToArchive || taskIndex === -1) {
-      toast.error("Task not found", {
-        description: "Could not find the task to archive.",
-      });
-      return;
-    }
-
-    if (archiveTimersRef.current[taskId]) {
-      clearTimeout(archiveTimersRef.current[taskId]);
-      delete archiveTimersRef.current[taskId];
-    }
-
-    const nowIso = new Date().toISOString();
-
-    setTasks((prev) => {
-      if (archiveView === "all") {
-        return prev.map((task) =>
-          task.id === taskId
-            ? {
-                ...task,
-                is_archived: true,
-                archived_at: task.archived_at || nowIso,
-              }
-            : task
-        );
-      }
-
-      return prev.filter((task) => task.id !== taskId);
+  if (!taskToArchive) {
+    toast.error("Task not found", {
+      description: "Could not find the task to archive.",
     });
+    return;
+  }
 
-    setAllTasksForStats((prev) =>
-      prev.map((task) =>
+  const previousTasks = tasks;
+  const previousAllTasks = allTasksForStats;
+  const nowIso = new Date().toISOString();
+
+  setDeletingTaskIds((prev) => ({
+    ...prev,
+    [taskId]: true,
+  }));
+
+  setSavedTaskIds((prev) => {
+    const next = { ...prev };
+    delete next[taskId];
+    return next;
+  });
+
+  setSavingTaskIds((prev) => {
+    const next = { ...prev };
+    delete next[taskId];
+    return next;
+  });
+
+  setCopiedTaskIds((prev) => {
+    const next = { ...prev };
+    delete next[taskId];
+    return next;
+  });
+
+  setTasks((prev) => {
+    if (archiveView === "all") {
+      return prev.map((task) =>
         task.id === taskId
           ? {
               ...task,
@@ -1007,158 +1011,68 @@ export default function DashboardClient({
               archived_at: task.archived_at || nowIso,
             }
           : task
-      )
-    );
+      );
+    }
 
-    setSavedTaskIds((prev) => {
-      const next = { ...prev };
-      delete next[taskId];
-      return next;
-    });
+    return removeTaskFromList(prev, taskId);
+  });
 
-    setSavingTaskIds((prev) => {
-      const next = { ...prev };
-      delete next[taskId];
-      return next;
-    });
-
-    setCopiedTaskIds((prev) => {
-      const next = { ...prev };
-      delete next[taskId];
-      return next;
-    });
-
-    const toastId = toast("Task moved to Archive", {
-      description: taskToArchive.task
-        ? `"${taskToArchive.task}" will be archived in a few seconds.`
-        : "This task will be archived in a few seconds.",
-      duration: ARCHIVE_UNDO_DURATION,
-      action: {
-        label: "Undo",
-        onClick: () => {
-          if (archiveTimersRef.current[taskId]) {
-            clearTimeout(archiveTimersRef.current[taskId]);
-            delete archiveTimersRef.current[taskId];
+  setAllTasksForStats((prev) =>
+    prev.map((task) =>
+      task.id === taskId
+        ? {
+            ...task,
+            is_archived: true,
+            archived_at: task.archived_at || nowIso,
           }
+        : task
+    )
+  );
 
-          setTasks((prev) => {
-            if (prev.some((task) => task.id === taskId)) {
-              return prev.map((task) =>
-                task.id === taskId
-                  ? { ...task, is_archived: false, archived_at: null }
-                  : task
-              );
-            }
+  try {
+    const res = await fetch("/api/tasks/delete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ taskId, mode: "archive" }),
+    });
 
-            const next = [...prev];
-            const safeIndex = Math.min(Math.max(taskIndex, 0), next.length);
-            next.splice(safeIndex, 0, {
-              ...taskToArchive,
-              is_archived: false,
-              archived_at: null,
-            });
-            return next;
-          });
+    const data = await res.json();
 
-          setAllTasksForStats((prev) =>
-            prev.map((task) =>
-              task.id === taskId
-                ? { ...task, is_archived: false, archived_at: null }
-                : task
-            )
-          );
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to archive task");
+    }
 
-          setDeletingTaskIds((prev) => {
-            const next = { ...prev };
-            delete next[taskId];
-            return next;
-          });
+    await refreshStatsOnly();
 
-          toast.dismiss(toastId);
-          toast.success("Archive cancelled", {
-            description: "The task stayed in your active workspace.",
-          });
-        },
+    toast.success("Task archived", {
+      description: taskToArchive.task
+        ? `"${taskToArchive.task}" is now in Archive.`
+        : "The task is now in Archive.",
+    });
+  } catch (error: any) {
+    const message = error.message || "Failed to archive task";
+    console.error(error);
+
+    setTasks(previousTasks);
+    setAllTasksForStats(previousAllTasks);
+
+    toast.error("Archive failed", {
+      description: message,
+      action: {
+        label: "Retry",
+        onClick: () => archiveTask(taskId),
       },
     });
-
-    archiveTimersRef.current[taskId] = setTimeout(async () => {
-      setDeletingTaskIds((prev) => ({
-        ...prev,
-        [taskId]: true,
-      }));
-
-      try {
-        const res = await fetch("/api/tasks/delete", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ taskId, mode: "archive" }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to archive task");
-        }
-
-        await refreshStatsOnly();
-
-        toast.success("Task archived", {
-          description: taskToArchive.task
-            ? `"${taskToArchive.task}" is now in Archive.`
-            : "The task is now in Archive.",
-        });
-      } catch (error: any) {
-        const message = error.message || "Failed to archive task";
-        console.error(error);
-
-        setTasks((prev) => {
-          if (prev.some((task) => task.id === taskId)) {
-            return prev.map((task) =>
-              task.id === taskId
-                ? { ...task, is_archived: false, archived_at: null }
-                : task
-            );
-          }
-
-          const next = [...prev];
-          const safeIndex = Math.min(Math.max(taskIndex, 0), next.length);
-          next.splice(safeIndex, 0, {
-            ...taskToArchive,
-            is_archived: false,
-            archived_at: null,
-          });
-          return next;
-        });
-
-        setAllTasksForStats((prev) =>
-          prev.map((task) =>
-            task.id === taskId
-              ? { ...task, is_archived: false, archived_at: null }
-              : task
-          )
-        );
-
-        toast.error("Archive failed", {
-          description: message,
-          action: {
-            label: "Retry",
-            onClick: () => archiveTask(taskId),
-          },
-        });
-      } finally {
-        delete archiveTimersRef.current[taskId];
-
-        setDeletingTaskIds((prev) => {
-          const next = { ...prev };
-          delete next[taskId];
-          return next;
-        });
-      }
-    }, ARCHIVE_UNDO_DURATION);
+  } finally {
+    setDeletingTaskIds((prev) => {
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
+    });
   }
+}
 
   async function restoreTask(taskId: number) {
     const taskToRestore = tasks.find((task) => task.id === taskId);

@@ -1,7 +1,30 @@
 import type { MetadataRoute } from "next";
 import { getAllUseCases } from "@/app/lib/seo/use-cases";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://text2task.com";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.text2task.com";
+
+const resourceRoutes = [
+  {
+    path: "/resources",
+    priority: 0.82,
+    changeFrequency: "weekly" as const,
+  },
+  {
+    path: "/resources/how-to-organize-client-requests-as-a-freelancer",
+    priority: 0.78,
+    changeFrequency: "monthly" as const,
+  },
+  {
+    path: "/resources/manage-client-revisions-web-designers",
+    priority: 0.76,
+    changeFrequency: "monthly" as const,
+  },
+  {
+    path: "/resources/turn-client-messages-into-tasks",
+    priority: 0.76,
+    changeFrequency: "monthly" as const,
+  },
+];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
@@ -54,5 +77,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }),
   );
 
-  return [...publicRoutes, ...useCaseRoutes];
+  const resources: MetadataRoute.Sitemap = resourceRoutes.map((route) => ({
+    url: `${siteUrl}${route.path}`,
+    lastModified: now,
+    changeFrequency: route.changeFrequency,
+    priority: route.priority,
+  }));
+
+  return [...publicRoutes, ...useCaseRoutes, ...resources];
 }
