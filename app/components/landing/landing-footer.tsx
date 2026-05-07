@@ -24,6 +24,8 @@ export default function LandingFooter() {
             <FooterLink href="#how-it-works" label="How it works" />
             <FooterLink href="#features" label="Features" />
             <FooterLink href="#pricing" label="Pricing" />
+            <FooterLink href="/use-cases" label="Use Cases" />
+            <FooterLink href="/resources" label="Resources" />
           </div>
 
           <div>
