@@ -16,28 +16,40 @@ export function useTaskHighlight({
   useEffect(() => {
     if (!highlightedTaskId) return;
 
-    const timer = setTimeout(() => {
+    let attempts = 0;
+    let clearTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const interval = setInterval(() => {
+      attempts += 1;
       const target = taskRefs.current[highlightedTaskId];
 
       if (target) {
+        clearInterval(interval);
+
         target.scrollIntoView({
           behavior: "smooth",
           block: "center",
         });
 
         setFlashTaskId(highlightedTaskId);
-      }
-    }, 250);
 
-    const clearTimer = setTimeout(() => {
-      setFlashTaskId((current) =>
-        current === highlightedTaskId ? null : current
-      );
-    }, 2600);
+        clearTimer = setTimeout(() => {
+          setFlashTaskId((current) =>
+            current === highlightedTaskId ? null : current
+          );
+        }, 2600);
+      }
+
+      if (attempts >= 12) {
+        clearInterval(interval);
+      }
+    }, 150);
 
     return () => {
-      clearTimeout(timer);
-      clearTimeout(clearTimer);
+      clearInterval(interval);
+      if (clearTimer) {
+        clearTimeout(clearTimer);
+      }
     };
   }, [highlightedTaskId, groupedTasks]);
 

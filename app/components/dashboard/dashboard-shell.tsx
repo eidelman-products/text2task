@@ -25,12 +25,10 @@ export default function DashboardShell({
     <div style={styles.wrapper}>
       <style>{responsiveCss}</style>
 
-      {/* DESKTOP FIXED SIDEBAR */}
       <aside className="dashboard-desktop-sidebar" style={styles.desktopSidebar}>
         {sidebar}
       </aside>
 
-      {/* MOBILE DRAWER */}
       {isMobileSidebarOpen ? (
         <div style={styles.overlay} onClick={onCloseMobileSidebar}>
           <div
@@ -38,7 +36,10 @@ export default function DashboardShell({
             onClick={(event) => event.stopPropagation()}
           >
             <div style={styles.mobileDrawerTop}>
-              <div style={styles.mobileDrawerTitle}>Menu</div>
+              <div>
+                <div style={styles.mobileDrawerTitle}>Workspace</div>
+                <div style={styles.mobileDrawerSubtitle}>Text2Task menu</div>
+              </div>
 
               <button
                 type="button"
@@ -55,9 +56,11 @@ export default function DashboardShell({
         </div>
       ) : null}
 
-      {/* MAIN AREA */}
       <main className="dashboard-main-area" style={styles.main}>
-        <div className="dashboard-desktop-account-menu" style={styles.desktopAccountMenu}>
+        <div
+          className="dashboard-desktop-account-menu"
+          style={styles.desktopAccountMenu}
+        >
           <DashboardUserMenu />
         </div>
 
@@ -127,7 +130,7 @@ const responsiveCss = `
       left: 0 !important;
       top: 0 !important;
       bottom: 0 !important;
-      width: 292px !important;
+      width: 260px !important;
       height: 100vh !important;
       overflow-y: auto !important;
       overflow-x: hidden !important;
@@ -142,8 +145,8 @@ const responsiveCss = `
     }
 
     .dashboard-main-area {
-      width: calc(100% - 292px) !important;
-      margin-left: 292px !important;
+      width: calc(100% - 260px) !important;
+      margin-left: 260px !important;
       min-height: 100vh !important;
     }
 
@@ -154,7 +157,7 @@ const responsiveCss = `
     .dashboard-content-inner {
       width: 100% !important;
       max-width: none !important;
-      padding: 28px 32px 0 !important;
+      padding: 28px 28px 0 !important;
     }
   }
 `;
@@ -164,22 +167,23 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     minHeight: "100vh",
     background:
-      "radial-gradient(circle at top left, #eef4ff 0%, #f8fafc 46%, #ffffff 100%)",
+      "radial-gradient(circle at top left, rgba(238,242,255,0.88) 0%, transparent 30%), radial-gradient(circle at top right, rgba(224,242,254,0.58) 0%, transparent 28%), linear-gradient(180deg, #f8fafc 0%, #ffffff 58%, #f8fafc 100%)",
     overflowX: "hidden",
   },
 
   desktopSidebar: {
     background:
-      "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.92) 100%)",
-    borderRight: "1px solid rgba(226,232,240,0.95)",
-    boxShadow: "18px 0 55px rgba(15,23,42,0.035)",
+      "radial-gradient(circle at top left, rgba(238,242,255,0.92) 0%, transparent 32%), linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.94) 100%)",
+    borderRight: "1px solid rgba(226,232,240,0.92)",
+    boxShadow:
+      "18px 0 52px rgba(15,23,42,0.04), inset -1px 0 0 rgba(255,255,255,0.72)",
     zIndex: 200,
   },
 
   desktopAccountMenu: {
     position: "fixed",
     top: 24,
-    right: 32,
+    right: 28,
     zIndex: 1200,
   },
 
@@ -187,28 +191,32 @@ const styles: Record<string, React.CSSProperties> = {
     position: "fixed",
     inset: 0,
     zIndex: 3000,
-    background: "rgba(15,23,42,0.42)",
-    backdropFilter: "blur(8px)",
+    background: "rgba(15,23,42,0.46)",
+    backdropFilter: "blur(10px)",
   },
 
   mobileSidebar: {
-    width: 320,
-    maxWidth: "86vw",
+    width: 308,
+    maxWidth: "88vw",
     height: "100%",
-    background: "#ffffff",
+    background:
+      "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.96) 100%)",
     overflowY: "auto",
     overflowX: "hidden",
-    boxShadow: "28px 0 70px rgba(15,23,42,0.25)",
+    boxShadow: "32px 0 80px rgba(15,23,42,0.28)",
+    borderRight: "1px solid rgba(226,232,240,0.92)",
   },
 
   mobileDrawerTop: {
-    height: 58,
+    minHeight: 64,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
     padding: "0 16px",
-    borderBottom: "1px solid rgba(226,232,240,0.95)",
-    background: "rgba(255,255,255,0.96)",
+    borderBottom: "1px solid rgba(226,232,240,0.86)",
+    background: "rgba(255,255,255,0.86)",
+    backdropFilter: "blur(16px)",
     position: "sticky",
     top: 0,
     zIndex: 5,
@@ -221,19 +229,27 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "-0.03em",
   },
 
+  mobileDrawerSubtitle: {
+    marginTop: 2,
+    color: "#64748b",
+    fontSize: 11,
+    fontWeight: 800,
+  },
+
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    border: "1px solid rgba(203,213,225,0.95)",
-    background: "#ffffff",
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    border: "1px solid rgba(203,213,225,0.82)",
+    background: "rgba(255,255,255,0.92)",
     color: "#0f172a",
-    fontSize: 24,
+    fontSize: 23,
     lineHeight: 1,
     fontWeight: 800,
     cursor: "pointer",
     display: "grid",
     placeItems: "center",
+    boxShadow: "0 10px 22px rgba(15,23,42,0.055)",
   },
 
   main: {
@@ -252,17 +268,18 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "space-between",
     gap: 12,
     padding: "0 14px",
-    background: "rgba(255,255,255,0.94)",
-    backdropFilter: "blur(16px)",
-    borderBottom: "1px solid rgba(226,232,240,0.95)",
+    background: "rgba(255,255,255,0.88)",
+    backdropFilter: "blur(18px)",
+    borderBottom: "1px solid rgba(226,232,240,0.86)",
+    boxShadow: "0 14px 32px rgba(15,23,42,0.045)",
   },
 
   menuButton: {
     width: 42,
     height: 42,
-    borderRadius: 14,
-    border: "1px solid rgba(203,213,225,0.95)",
-    background: "#ffffff",
+    borderRadius: 15,
+    border: "1px solid rgba(203,213,225,0.88)",
+    background: "rgba(255,255,255,0.96)",
     color: "#0f172a",
     fontSize: 20,
     fontWeight: 900,
@@ -282,7 +299,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#0f172a",
     fontSize: 16,
     fontWeight: 950,
-    letterSpacing: "-0.04em",
+    letterSpacing: "-0.045em",
     whiteSpace: "nowrap",
   },
 

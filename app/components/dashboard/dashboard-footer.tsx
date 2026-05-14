@@ -53,22 +53,23 @@ export default function DashboardFooter() {
 
       <div style={styles.inner}>
         <div className="dashboard-footer-brand" style={styles.brandBlock}>
-          <div style={styles.brandRow}>
-            <span style={styles.brandDot} />
-            <span style={styles.brandName}>Text2Task</span>
+          <div style={styles.logoCrop}>
+            <img
+              src="/text2task-logo.png"
+              alt="Text2Task"
+              style={styles.logoImage}
+            />
           </div>
 
           <p style={styles.brandDescription}>
             Turn messy client messages, screenshots, notes, and work requests
-            into structured tasks with AI.
+            into organized projects and tasks with AI.
           </p>
 
-          <div style={styles.supportBox}>
-            <div style={styles.supportLabel}>Support</div>
-            <a href="mailto:support@text2task.com" style={styles.supportLink}>
-              support@text2task.com
-            </a>
-          </div>
+          <a href="mailto:support@text2task.com" style={styles.supportBox}>
+            <span style={styles.supportLabel}>Support</span>
+            <span style={styles.supportLink}>support@text2task.com</span>
+          </a>
         </div>
 
         <div className="dashboard-footer-columns" style={styles.columns}>
@@ -125,7 +126,9 @@ const responsiveCss = `
     transition:
       color 160ms ease,
       transform 160ms ease,
-      opacity 160ms ease;
+      opacity 160ms ease,
+      border-color 160ms ease,
+      background 160ms ease;
   }
 
   .dashboard-footer a:hover {
@@ -138,10 +141,15 @@ const responsiveCss = `
       width: calc(100% + 28px) !important;
       margin-left: -14px !important;
       margin-right: -14px !important;
-      margin-top: 24px !important;
+      margin-top: 20px !important;
       margin-bottom: 0 !important;
       border-radius: 22px 22px 0 0 !important;
-      padding: 18px 16px 14px !important;
+      padding: 15px 14px 12px !important;
+    }
+
+    .dashboard-footer > div:nth-child(3) {
+      grid-template-columns: 1fr !important;
+      gap: 14px !important;
     }
 
     .dashboard-footer-brand {
@@ -150,13 +158,13 @@ const responsiveCss = `
 
     .dashboard-footer-columns {
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-      gap: 14px !important;
+      gap: 13px !important;
     }
   }
 
   @media (max-width: 520px) {
     .dashboard-footer {
-      padding: 18px 14px 14px !important;
+      padding: 14px 14px 12px !important;
     }
 
     .dashboard-footer-columns {
@@ -166,17 +174,17 @@ const responsiveCss = `
 
   @media (min-width: 901px) {
     .dashboard-footer {
-      width: calc(100vw - 292px) !important;
-      margin-left: -32px !important;
-      margin-right: -32px !important;
-      margin-top: 28px !important;
+      width: calc(100vw - 260px) !important;
+      margin-left: -28px !important;
+      margin-right: -28px !important;
+      margin-top: 24px !important;
       margin-bottom: 0 !important;
-      border-radius: 24px 24px 0 0 !important;
-      padding: 20px 32px 14px !important;
+      border-radius: 22px 22px 0 0 !important;
+      padding: 13px 28px 10px !important;
     }
 
     .dashboard-footer-columns {
-      grid-template-columns: repeat(4, minmax(120px, 1fr)) !important;
+      grid-template-columns: repeat(4, minmax(112px, 1fr)) !important;
     }
   }
 `;
@@ -184,41 +192,41 @@ const responsiveCss = `
 const styles: Record<string, React.CSSProperties> = {
   footer: {
     width: "100%",
-    marginTop: 28,
+    marginTop: 24,
     marginBottom: 0,
-    padding: "20px 32px 14px",
-    borderRadius: "24px 24px 0 0",
-    border: "1px solid rgba(199,210,254,0.92)",
+    padding: "13px 28px 10px",
+    borderRadius: "22px 22px 0 0",
+    border: "1px solid rgba(199,210,254,0.68)",
     borderBottom: "0",
     background:
-      "linear-gradient(135deg, rgba(238,242,255,0.98) 0%, rgba(239,246,255,0.96) 45%, rgba(250,245,255,0.92) 100%)",
+      "radial-gradient(circle at top left, rgba(255,255,255,0.9) 0%, transparent 26%), radial-gradient(circle at top right, rgba(219,234,254,0.56) 0%, transparent 28%), linear-gradient(135deg, rgba(238,242,255,0.9) 0%, rgba(248,250,252,0.92) 50%, rgba(250,245,255,0.84) 100%)",
     boxShadow:
-      "0 -8px 34px rgba(79,70,229,0.065), 0 12px 34px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.88)",
+      "0 -8px 24px rgba(79,70,229,0.04), 0 8px 20px rgba(15,23,42,0.025), inset 0 1px 0 rgba(255,255,255,0.9)",
     position: "relative",
     overflow: "hidden",
   },
 
   softGlowOne: {
     position: "absolute",
-    width: 220,
-    height: 220,
+    width: 190,
+    height: 190,
     borderRadius: 999,
-    right: -80,
-    top: -130,
+    right: -78,
+    top: -125,
     background:
-      "radial-gradient(circle, rgba(99,102,241,0.16) 0%, rgba(99,102,241,0.00) 68%)",
+      "radial-gradient(circle, rgba(99,102,241,0.11) 0%, rgba(99,102,241,0.00) 70%)",
     pointerEvents: "none",
   },
 
   softGlowTwo: {
     position: "absolute",
-    width: 190,
-    height: 190,
+    width: 150,
+    height: 150,
     borderRadius: 999,
-    left: -72,
-    bottom: -120,
+    left: -62,
+    bottom: -100,
     background:
-      "radial-gradient(circle, rgba(59,130,246,0.13) 0%, rgba(59,130,246,0.00) 70%)",
+      "radial-gradient(circle, rgba(14,165,233,0.08) 0%, rgba(14,165,233,0.00) 72%)",
     pointerEvents: "none",
   },
 
@@ -227,64 +235,60 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 2,
     width: "100%",
     display: "grid",
-    gridTemplateColumns: "minmax(220px, 0.8fr) minmax(0, 2fr)",
-    gap: 24,
+    gridTemplateColumns: "minmax(210px, 0.62fr) minmax(0, 2fr)",
+    gap: 22,
     alignItems: "start",
   },
 
   brandBlock: {
     minWidth: 0,
-    maxWidth: 360,
+    maxWidth: 340,
     display: "grid",
-    gap: 9,
+    gap: 6,
   },
 
-  brandRow: {
+  logoCrop: {
+    width: 142,
+    height: 34,
+    overflow: "hidden",
     display: "flex",
     alignItems: "center",
-    gap: 9,
+    justifyContent: "flex-start",
   },
 
-  brandDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 999,
-    display: "inline-block",
-    background:
-      "linear-gradient(135deg, rgba(79,70,229,1) 0%, rgba(37,99,235,1) 100%)",
-    boxShadow: "0 8px 18px rgba(79,70,229,0.32)",
-  },
-
-  brandName: {
-    color: "#0f172a",
-    fontSize: 17,
-    fontWeight: 950,
-    letterSpacing: "-0.045em",
+  logoImage: {
+    width: 142,
+    height: 34,
+    objectFit: "contain",
+    objectPosition: "left center",
+    display: "block",
   },
 
   brandDescription: {
     margin: 0,
     color: "#475569",
-    fontSize: 12,
-    lineHeight: 1.48,
+    fontSize: 11.5,
+    lineHeight: 1.38,
     fontWeight: 700,
+    maxWidth: 320,
   },
 
   supportBox: {
     width: "fit-content",
     display: "grid",
-    gap: 2,
-    padding: "8px 11px",
-    borderRadius: 14,
-    border: "1px solid rgba(129,140,248,0.45)",
+    gap: 1,
+    padding: "7px 10px",
+    borderRadius: 13,
+    border: "1px solid rgba(129,140,248,0.32)",
     background:
-      "linear-gradient(135deg, rgba(255,255,255,0.76) 0%, rgba(238,242,255,0.70) 100%)",
-    boxShadow: "0 9px 18px rgba(79,70,229,0.065)",
+      "linear-gradient(135deg, rgba(255,255,255,0.76) 0%, rgba(238,242,255,0.56) 100%)",
+    boxShadow: "0 7px 15px rgba(79,70,229,0.045)",
+    textDecoration: "none",
   },
 
   supportLabel: {
     color: "#64748b",
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: 950,
     textTransform: "uppercase",
     letterSpacing: "0.08em",
@@ -292,49 +296,48 @@ const styles: Record<string, React.CSSProperties> = {
 
   supportLink: {
     color: "#3730a3",
-    fontSize: 11.5,
+    fontSize: 10.75,
     fontWeight: 950,
-    textDecoration: "none",
   },
 
   columns: {
     minWidth: 0,
     display: "grid",
-    gap: 20,
+    gap: 18,
   },
 
   column: {
     minWidth: 0,
     display: "grid",
-    gap: 8,
+    gap: 6,
   },
 
   columnTitle: {
     color: "#111827",
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: 950,
     letterSpacing: "-0.025em",
   },
 
   linkList: {
     display: "grid",
-    gap: 6,
+    gap: 4,
   },
 
   link: {
     color: "#475569",
-    fontSize: 12,
+    fontSize: 11.25,
     fontWeight: 760,
-    lineHeight: 1.25,
+    lineHeight: 1.18,
     textDecoration: "none",
   },
 
   bottomBar: {
     position: "relative",
     zIndex: 2,
-    marginTop: 16,
-    paddingTop: 12,
-    borderTop: "1px solid rgba(165,180,252,0.42)",
+    marginTop: 10,
+    paddingTop: 8,
+    borderTop: "1px solid rgba(165,180,252,0.30)",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -344,7 +347,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   copyright: {
     color: "#64748b",
-    fontSize: 11,
+    fontSize: 10.25,
     fontWeight: 760,
   },
 
@@ -352,19 +355,19 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 7,
   },
 
   bottomLink: {
     color: "#334155",
-    fontSize: 11,
+    fontSize: 10.25,
     fontWeight: 900,
     textDecoration: "none",
   },
 
   dotSeparator: {
     color: "#818cf8",
-    fontSize: 10.5,
+    fontSize: 9.5,
     fontWeight: 950,
   },
 };

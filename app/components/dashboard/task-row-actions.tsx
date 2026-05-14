@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 type TaskActionMode = "active" | "archived";
 
 type TaskRowActionsProps = {
@@ -26,7 +28,9 @@ export default function TaskRowActions({
   const isArchivedMode = actionMode === "archived";
 
   return (
-    <div style={containerStyle}>
+    <div className="task-row-actions" style={containerStyle}>
+      <style>{actionsCss}</style>
+
       <button
         type="button"
         onClick={(e) => {
@@ -34,18 +38,14 @@ export default function TaskRowActions({
           onCopy(taskId);
         }}
         disabled={isDeleting}
+        className="task-row-action-button"
         style={{
-          ...actionButtonStyle,
-          color: isCopied ? "#15803d" : "#2563eb",
-          borderColor: isCopied
-            ? "rgba(34,197,94,0.18)"
-            : "rgba(59,130,246,0.18)",
-          background: isCopied
-            ? "rgba(240,253,244,0.9)"
-            : "rgba(239,246,255,0.9)",
+          ...baseButtonStyle,
+          ...(isCopied ? copiedButtonStyle : copyButtonStyle),
         }}
       >
-        {isCopied ? "✓" : "Copy"}
+        <span style={buttonDotStyle(isCopied ? "green" : "blue")} />
+        {isCopied ? "Copied" : "Copy"}
       </button>
 
       {isArchivedMode ? (
@@ -57,13 +57,13 @@ export default function TaskRowActions({
               onRestore?.(taskId);
             }}
             disabled={isDeleting}
+            className="task-row-action-button"
             style={{
-              ...actionButtonStyle,
-              color: "#15803d",
-              borderColor: "rgba(34,197,94,0.18)",
-              background: "rgba(240,253,244,0.92)",
+              ...baseButtonStyle,
+              ...restoreButtonStyle,
             }}
           >
+            <span style={buttonDotStyle("green")} />
             Restore
           </button>
 
@@ -74,14 +74,14 @@ export default function TaskRowActions({
               onPermanentDelete?.(taskId);
             }}
             disabled={isDeleting}
+            className="task-row-action-button"
             style={{
-              ...actionButtonStyle,
-              color: "#dc2626",
-              borderColor: "rgba(239,68,68,0.22)",
-              background: "rgba(254,242,242,0.95)",
+              ...baseButtonStyle,
+              ...dangerButtonStyle,
             }}
           >
-            {isDeleting ? "..." : "Delete forever"}
+            <span style={buttonDotStyle("red")} />
+            {isDeleting ? "Deleting" : "Delete"}
           </button>
         </>
       ) : (
@@ -98,39 +98,128 @@ export default function TaskRowActions({
             onDelete?.(taskId);
           }}
           disabled={isDeleting}
+          className="task-row-action-button"
           style={{
-            ...actionButtonStyle,
-            color: "#c2410c",
-            borderColor: "rgba(245,158,11,0.22)",
-            background: "rgba(255,251,235,0.95)",
+            ...baseButtonStyle,
+            ...archiveButtonStyle,
           }}
         >
-          {isDeleting ? "..." : "Archive"}
+          <span style={buttonDotStyle("orange")} />
+          {isDeleting ? "Archiving" : "Archive"}
         </button>
       )}
     </div>
   );
 }
 
-const containerStyle: React.CSSProperties = {
+function buttonDotStyle(tone: "blue" | "green" | "orange" | "red"): CSSProperties {
+  const palette = {
+    blue: "#3b82f6",
+    green: "#22c55e",
+    orange: "#f97316",
+    red: "#ef4444",
+  }[tone];
+
+  return {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+    background: palette,
+    boxShadow: `0 0 0 3px ${palette}1f`,
+    flexShrink: 0,
+  };
+}
+
+const containerStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 6,
   justifyContent: "flex-start",
+  gap: 7,
   flexWrap: "wrap",
 };
 
-const actionButtonStyle: React.CSSProperties = {
-  height: 28,
-  padding: "0 10px",
-  borderRadius: 9,
-  border: "1px solid rgba(203,213,225,0.9)",
+const baseButtonStyle: CSSProperties = {
+  height: 30,
+  minWidth: 0,
+  padding: "0 11px",
+  borderRadius: 999,
+  border: "1px solid rgba(226,232,240,0.92)",
   fontSize: 11,
-  fontWeight: 800,
+  fontWeight: 900,
   cursor: "pointer",
-  background: "#ffffff",
-  display: "flex",
+  display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
+  gap: 7,
   whiteSpace: "nowrap",
+  boxShadow:
+    "0 1px 2px rgba(15,23,42,0.035), inset 0 1px 0 rgba(255,255,255,0.86)",
+  transition:
+    "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease, opacity 160ms ease",
 };
+
+const copyButtonStyle: CSSProperties = {
+  color: "#2563eb",
+  borderColor: "rgba(191,219,254,0.92)",
+  background:
+    "linear-gradient(135deg, rgba(239,246,255,0.98) 0%, rgba(255,255,255,0.96) 100%)",
+};
+
+const copiedButtonStyle: CSSProperties = {
+  color: "#15803d",
+  borderColor: "rgba(187,247,208,0.96)",
+  background:
+    "linear-gradient(135deg, rgba(240,253,244,0.98) 0%, rgba(255,255,255,0.96) 100%)",
+};
+
+const archiveButtonStyle: CSSProperties = {
+  color: "#c2410c",
+  borderColor: "rgba(254,215,170,0.94)",
+  background:
+    "linear-gradient(135deg, rgba(255,247,237,0.98) 0%, rgba(255,255,255,0.96) 100%)",
+};
+
+const restoreButtonStyle: CSSProperties = {
+  color: "#15803d",
+  borderColor: "rgba(187,247,208,0.96)",
+  background:
+    "linear-gradient(135deg, rgba(240,253,244,0.98) 0%, rgba(255,255,255,0.96) 100%)",
+};
+
+const dangerButtonStyle: CSSProperties = {
+  color: "#dc2626",
+  borderColor: "rgba(254,202,202,0.96)",
+  background:
+    "linear-gradient(135deg, rgba(254,242,242,0.98) 0%, rgba(255,255,255,0.96) 100%)",
+};
+
+const actionsCss = `
+  .task-row-action-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow:
+      0 10px 22px rgba(15,23,42,0.075),
+      inset 0 1px 0 rgba(255,255,255,0.92) !important;
+  }
+
+  .task-row-action-button:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .task-row-action-button:disabled {
+    opacity: 0.58;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  @media (max-width: 520px) {
+    .task-row-actions {
+      width: 100%;
+      gap: 8px !important;
+    }
+
+    .task-row-action-button {
+      min-height: 34px !important;
+      flex: 1 1 auto;
+    }
+  }
+`;

@@ -11,6 +11,7 @@ type TasksToolbarProps = {
   priorityFilter: TaskPriorityFilter;
   sortOption: TaskSortOption;
   visibleTasksCount: number;
+  visibleProjectsCount: number;
   onSearchTermChange: (value: string) => void;
   onStatusFilterChange: (value: TaskStatusFilter) => void;
   onPriorityFilterChange: (value: TaskPriorityFilter) => void;
@@ -24,6 +25,7 @@ export default function TasksToolbar({
   priorityFilter,
   sortOption,
   visibleTasksCount,
+  visibleProjectsCount,
   onSearchTermChange,
   onStatusFilterChange,
   onPriorityFilterChange,
@@ -31,155 +33,362 @@ export default function TasksToolbar({
   onExportCsv,
 }: TasksToolbarProps) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gap: 10,
-        padding: 12,
-        borderRadius: 18,
-        border: "2px solid rgba(168,85,247,0.45)",
-        background:
-          "linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(248,250,252,0.98) 35%, rgba(255,247,237,0.96) 100%)",
-        boxShadow:
-          "0 10px 24px rgba(59,130,246,0.10), inset 0 0 0 1px rgba(59,130,246,0.06)",
-      }}
-    >
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "2.1fr 1fr 1fr 1fr auto",
-          gap: 10,
-          alignItems: "center",
-        }}
-      >
-        <div style={searchWrapStyle}>
-          <span style={{ fontSize: 20, color: "#7c3aed" }}>⌕</span>
+    <div className="tasks-toolbar" style={toolbarShellStyle}>
+      <style>{responsiveToolbarCss}</style>
+
+      <div style={toolbarGlowStyle} />
+      <div style={toolbarAccentStyle} />
+
+      <div className="tasks-toolbar-grid" style={toolbarGridStyle}>
+        <label className="tasks-toolbar-search" style={searchWrapStyle}>
+          <span style={searchIconStyle}>⌕</span>
+
           <input
             value={searchTerm}
             onChange={(e) => onSearchTermChange(e.target.value)}
-            placeholder="Search client, task, amount, deadline..."
+            placeholder="Search client, project, task..."
             style={searchInputStyle}
           />
-        </div>
+        </label>
 
-        <select
+        <FilterSelect
           value={statusFilter}
-          onChange={(e) =>
-            onStatusFilterChange(e.target.value as TaskStatusFilter)
-          }
-          style={statusSelectStyle}
+          onChange={(value) => onStatusFilterChange(value as TaskStatusFilter)}
+          ariaLabel="Filter by status"
         >
           <option value="all">All statuses</option>
           <option value="new">New</option>
           <option value="in-progress">In Progress</option>
           <option value="done">Done</option>
-        </select>
+        </FilterSelect>
 
-        <select
+        <FilterSelect
           value={priorityFilter}
-          onChange={(e) =>
-            onPriorityFilterChange(e.target.value as TaskPriorityFilter)
+          onChange={(value) =>
+            onPriorityFilterChange(value as TaskPriorityFilter)
           }
-          style={prioritySelectStyle}
+          ariaLabel="Filter by priority"
         >
           <option value="all">All priorities</option>
           <option value="low">Low</option>
           <option value="medium">Medium</option>
           <option value="high">High</option>
-        </select>
+        </FilterSelect>
 
-        <select
+        <FilterSelect
           value={sortOption}
-          onChange={(e) => onSortOptionChange(e.target.value as TaskSortOption)}
-          style={sortSelectStyle}
+          onChange={(value) => onSortOptionChange(value as TaskSortOption)}
+          ariaLabel="Sort tasks"
         >
           <option value="client-asc">Client A → Z</option>
           <option value="client-desc">Client Z → A</option>
-          <option value="task-asc">Task A → Z</option>
-          <option value="task-desc">Task Z → A</option>
+          <option value="task-asc">Project A → Z</option>
+          <option value="task-desc">Project Z → A</option>
           <option value="deadline-asc">Deadline A → Z</option>
           <option value="deadline-desc">Deadline Z → A</option>
-        </select>
+        </FilterSelect>
 
         <button
           type="button"
           onClick={onExportCsv}
-          style={{
-            border: "1px solid rgba(15,23,42,0.06)",
-            borderRadius: 12,
-            padding: "11px 15px",
-            background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-            color: "#ffffff",
-            fontSize: 14,
-            fontWeight: 800,
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-            boxShadow: "0 10px 20px rgba(15,23,42,0.16)",
-          }}
+          style={exportButtonStyle}
+          className="tasks-toolbar-export"
         >
-          ⬇ Export CSV
+          <span style={exportIconStyle}>↓</span>
+          Export CSV
         </button>
       </div>
 
-      <div
-        style={{
-          fontSize: 13,
-          fontWeight: 700,
-          color: "#64748b",
-        }}
-      >
-        Showing {visibleTasksCount} matching tasks
+      <div style={toolbarMetaRowStyle}>
+        <span style={resultTextStyle}>
+          Showing{" "}
+          <strong style={resultStrongStyle}>
+            {visibleProjectsCount} project
+            {visibleProjectsCount === 1 ? "" : "s"}
+          </strong>{" "}
+          ·{" "}
+          <strong style={resultStrongStyle}>
+            {visibleTasksCount} task{visibleTasksCount === 1 ? "" : "s"}
+          </strong>
+        </span>
+
+        <span style={hintTextStyle}>Grouped by client project</span>
       </div>
     </div>
   );
 }
 
+function FilterSelect({
+  value,
+  onChange,
+  ariaLabel,
+  children,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={selectStyle}
+      aria-label={ariaLabel}
+      className="tasks-toolbar-select"
+    >
+      {children}
+    </select>
+  );
+}
+
+const toolbarShellStyle: CSSProperties = {
+  position: "relative",
+  display: "grid",
+  gap: 11,
+  padding: "14px 14px 12px",
+  borderRadius: 22,
+  border: "1px solid rgba(199,210,254,0.72)",
+  background:
+    "linear-gradient(135deg, rgba(248,250,252,0.98) 0%, rgba(238,242,255,0.72) 44%, rgba(255,255,255,0.98) 100%)",
+  boxShadow:
+    "0 18px 42px rgba(79,70,229,0.075), inset 0 1px 0 rgba(255,255,255,0.94)",
+  overflow: "hidden",
+  width: "100%",
+  maxWidth: "100%",
+  boxSizing: "border-box",
+};
+
+const toolbarGlowStyle: CSSProperties = {
+  position: "absolute",
+  right: -80,
+  top: -92,
+  width: 260,
+  height: 160,
+  borderRadius: 999,
+  background:
+    "radial-gradient(circle, rgba(99,102,241,0.16) 0%, rgba(99,102,241,0.06) 44%, transparent 72%)",
+  filter: "blur(16px)",
+  pointerEvents: "none",
+};
+
+const toolbarAccentStyle: CSSProperties = {
+  position: "absolute",
+  left: 0,
+  top: 0,
+  bottom: 0,
+  width: 4,
+  background:
+    "linear-gradient(180deg, rgba(79,70,229,0.92) 0%, rgba(14,165,233,0.66) 100%)",
+};
+
+const toolbarGridStyle: CSSProperties = {
+  position: "relative",
+  zIndex: 1,
+  display: "grid",
+  gridTemplateColumns:
+    "minmax(260px, 2.1fr) minmax(150px, 1fr) minmax(150px, 1fr) minmax(160px, 1fr) auto",
+  gap: 10,
+  alignItems: "center",
+  width: "100%",
+  minWidth: 0,
+};
+
 const searchWrapStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 10,
-  border: "1px solid rgba(168,85,247,0.14)",
-  borderRadius: 12,
-  padding: "0 14px",
-  minHeight: 46,
-  background: "rgba(196,181,253,0.24)",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.4)",
+  border: "1px solid rgba(199,210,254,0.8)",
+  borderRadius: 15,
+  padding: "0 13px",
+  minHeight: 44,
+  background:
+    "linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.96) 100%)",
+  boxShadow:
+    "0 1px 2px rgba(15,23,42,0.025), inset 0 1px 0 rgba(255,255,255,0.9)",
+  minWidth: 0,
+  width: "100%",
+  boxSizing: "border-box",
+};
+
+const searchIconStyle: CSSProperties = {
+  width: 22,
+  height: 22,
+  borderRadius: 8,
+  display: "grid",
+  placeItems: "center",
+  fontSize: 14,
+  lineHeight: 1,
+  color: "#4f46e5",
+  background: "rgba(238,242,255,0.96)",
+  border: "1px solid rgba(199,210,254,0.78)",
+  fontWeight: 950,
+  flexShrink: 0,
 };
 
 const searchInputStyle: CSSProperties = {
   border: "none",
   outline: "none",
   width: "100%",
+  minWidth: 0,
   background: "transparent",
   color: "#0f172a",
-  fontWeight: 600,
-  fontSize: 15,
-};
-
-const sharedSelectStyle: CSSProperties = {
-  border: "1px solid rgba(203,213,225,0.95)",
-  borderRadius: 12,
-  padding: "11px 13px",
-  width: "100%",
-  color: "#0f172a",
-  fontWeight: 700,
+  fontWeight: 650,
   fontSize: 14,
+};
+
+const selectStyle: CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  minHeight: 44,
+  border: "1px solid rgba(203,213,225,0.92)",
+  borderRadius: 15,
+  padding: "0 12px",
+  color: "#334155",
+  background:
+    "linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.96) 100%)",
+  fontWeight: 760,
+  fontSize: 13,
   outline: "none",
-  minHeight: 46,
-  boxShadow: "0 1px 4px rgba(15,23,42,0.025)",
+  boxShadow:
+    "0 1px 2px rgba(15,23,42,0.025), inset 0 1px 0 rgba(255,255,255,0.9)",
+  cursor: "pointer",
+  boxSizing: "border-box",
 };
 
-const statusSelectStyle: CSSProperties = {
-  ...sharedSelectStyle,
-  background: "rgba(191,219,254,0.30)",
+const exportButtonStyle: CSSProperties = {
+  minHeight: 44,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  border: "1px solid rgba(22,163,74,0.18)",
+  borderRadius: 15,
+  padding: "0 16px",
+  background:
+    "linear-gradient(135deg, rgba(22,163,74,1) 0%, rgba(34,197,94,1) 100%)",
+  color: "#ffffff",
+  fontSize: 13,
+  fontWeight: 950,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  boxShadow:
+    "0 14px 28px rgba(22,163,74,0.18), inset 0 1px 0 rgba(255,255,255,0.22)",
+  boxSizing: "border-box",
 };
 
-const prioritySelectStyle: CSSProperties = {
-  ...sharedSelectStyle,
-  background: "rgba(253,230,138,0.30)",
+const exportIconStyle: CSSProperties = {
+  width: 18,
+  height: 18,
+  borderRadius: 7,
+  display: "grid",
+  placeItems: "center",
+  background: "rgba(255,255,255,0.18)",
+  fontSize: 13,
+  lineHeight: 1,
+  fontWeight: 950,
 };
 
-const sortSelectStyle: CSSProperties = {
-  ...sharedSelectStyle,
-  background: "rgba(216,180,254,0.28)",
+const toolbarMetaRowStyle: CSSProperties = {
+  position: "relative",
+  zIndex: 1,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  padding: "0 2px 0 1px",
+  flexWrap: "wrap",
 };
+
+const resultTextStyle: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 800,
+  color: "#64748b",
+};
+
+const resultStrongStyle: CSSProperties = {
+  color: "#334155",
+  fontWeight: 950,
+};
+
+const hintTextStyle: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 900,
+  color: "#6d28d9",
+};
+
+const responsiveToolbarCss = `
+  .tasks-toolbar input::placeholder {
+    color: #94a3b8;
+  }
+
+  .tasks-toolbar-search,
+  .tasks-toolbar-select,
+  .tasks-toolbar-export {
+    transition:
+      transform 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      background 160ms ease;
+  }
+
+  .tasks-toolbar-search:focus-within,
+  .tasks-toolbar-select:focus {
+    border-color: rgba(99,102,241,0.72) !important;
+    box-shadow:
+      0 0 0 4px rgba(99,102,241,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.92) !important;
+  }
+
+  .tasks-toolbar-export:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 18px 34px rgba(22,163,74,0.22),
+      inset 0 1px 0 rgba(255,255,255,0.24) !important;
+  }
+
+  @media (max-width: 900px) {
+    .tasks-toolbar {
+      padding: 12px 12px 11px !important;
+      border-radius: 19px !important;
+    }
+
+    .tasks-toolbar-grid {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 9px !important;
+    }
+
+    .tasks-toolbar-search {
+      grid-column: 1 / -1 !important;
+    }
+
+    .tasks-toolbar-export {
+      grid-column: 1 / -1 !important;
+      width: 100% !important;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .tasks-toolbar {
+      padding: 11px 10px 10px !important;
+      gap: 9px !important;
+      border-radius: 17px !important;
+    }
+
+    .tasks-toolbar-grid {
+      grid-template-columns: 1fr !important;
+      gap: 8px !important;
+    }
+
+    .tasks-toolbar-search,
+    .tasks-toolbar-export {
+      grid-column: auto !important;
+    }
+
+    .tasks-toolbar select,
+    .tasks-toolbar button,
+    .tasks-toolbar input {
+      font-size: 13px !important;
+    }
+  }
+`;

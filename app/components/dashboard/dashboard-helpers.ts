@@ -29,7 +29,12 @@ export function getClientDisplayName(task: TaskRow) {
 
 export function normalizeTaskFromApi(item: any): TaskRow {
   const rawDeadlineText =
-    typeof item.deadline_text === "string" ? item.deadline_text : "";
+    typeof item.deadline_text === "string"
+      ? item.deadline_text
+      : typeof item.deadline_original_text === "string"
+        ? item.deadline_original_text
+        : "";
+
   const rawDeadlineDate =
     typeof item.deadline_date === "string" ? item.deadline_date : null;
 
@@ -39,33 +44,110 @@ export function normalizeTaskFromApi(item: any): TaskRow {
     (rawDeadlineDate ? formatDeadline(rawDeadlineDate) : "") ||
     "";
 
+  const clientId = item.client?.id || item.client_id || "";
+  const clientName =
+    item.client?.name || item.client_name || item.clientName || "Unassigned";
+
+  const contactName =
+    item.client?.contact_name || item.contact_name || item.contactName || null;
+
+  const clientPhone =
+    item.client?.phone || item.client_phone || item.clientPhone || null;
+
+  const clientEmail =
+    item.client?.email || item.client_email || item.clientEmail || null;
+
+  const clientNotes =
+    item.client?.notes || item.client_notes || item.clientNotes || null;
+
+  const rawProject = item.project || item.projects || null;
+
+  const project =
+    rawProject && typeof rawProject === "object"
+      ? {
+          id: String(rawProject.id || item.project_id || ""),
+          client_id: rawProject.client_id || null,
+          client_name: rawProject.client_name || null,
+          contact_name: rawProject.contact_name || null,
+          title: rawProject.title || null,
+          summary: rawProject.summary || null,
+          amount:
+            rawProject.amount !== null && rawProject.amount !== undefined
+              ? String(rawProject.amount)
+              : null,
+          amount_value:
+            typeof rawProject.amount_value === "number"
+              ? rawProject.amount_value
+              : null,
+          currency_code: rawProject.currency_code || null,
+          deadline_text: rawProject.deadline_text || null,
+          deadline_date: rawProject.deadline_date || null,
+          priority: rawProject.priority || null,
+          status: rawProject.status || null,
+          source: rawProject.source || null,
+          raw_input: rawProject.raw_input || null,
+          created_at: rawProject.created_at || null,
+          updated_at: rawProject.updated_at || null,
+          completed_at: rawProject.completed_at || null,
+          is_archived:
+            typeof rawProject.is_archived === "boolean"
+              ? rawProject.is_archived
+              : null,
+          archived_at: rawProject.archived_at || null,
+          deleted_at: rawProject.deleted_at || null,
+        }
+      : null;
+
   return {
     id: item.id,
-    client: item.client
+
+    client: clientName
       ? {
-          id: item.client.id,
-          name: item.client.name,
-          phone: item.client.phone ?? null,
-          email: item.client.email ?? null,
-          notes: item.client.notes ?? null,
+          id: clientId,
+          name: clientName,
+          contact_name: contactName,
+          phone: clientPhone,
+          email: clientEmail,
+          notes: clientNotes,
         }
       : null,
-    task: item.task_title || "",
+
+    project,
+
+    task: item.task || item.task_title || "",
     amount:
       item.amount !== null && item.amount !== undefined
         ? String(item.amount)
         : "",
+
     deadline: displayDeadline,
     deadline_date: rawDeadlineDate,
     deadline_original_text: rawDeadlineText || null,
+
     priority: item.priority || "Medium",
-    status: item.status || "New",
+    status:
+      item.status === "Not Started"
+        ? "New"
+        : item.status || "New",
+
     source: item.source || "Pasted text",
     raw_input: item.raw_input || "",
+
     created_at: item.created_at || null,
-    client_phone: item.client?.phone ?? null,
-    client_email: item.client?.email ?? null,
-    client_notes: item.client?.notes ?? null,
+    updated_at: item.updated_at || null,
+    completed_at: item.completed_at || null,
+    is_archived: Boolean(item.is_archived),
+    archived_at: item.archived_at || null,
+    deleted_at: item.deleted_at || null,
+
+    contact_name: contactName,
+    client_phone: clientPhone,
+    client_email: clientEmail,
+    client_notes: clientNotes,
+
+    project_id: item.project_id || project?.id || null,
+    subtask_order:
+      typeof item.subtask_order === "number" ? item.subtask_order : null,
   };
 }
 
@@ -325,7 +407,9 @@ export function buildUrgentPreviewTasks(tasks: TaskRow[]): UrgentPreviewTask[] {
     }) as UrgentPreviewTask[];
 }
 
-export function getPaidCompletedProgress(tasks: TaskRow[]): PaidCompletedProgress {
+export function getPaidCompletedProgress(
+  tasks: TaskRow[]
+): PaidCompletedProgress {
   const now = new Date();
   const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -335,6 +419,7 @@ export function getPaidCompletedProgress(tasks: TaskRow[]): PaidCompletedProgres
     const amountNumber = Number(
       String(task.amount || "").replace(/[^0-9.-]/g, "")
     );
+
     if (task.status !== "Done") return false;
     if (!Number.isFinite(amountNumber) || amountNumber <= 0) return false;
     if (!task.created_at) return false;
@@ -390,9 +475,7 @@ export function getPaidCompletedProgress(tasks: TaskRow[]): PaidCompletedProgres
         ? "0%"
         : `${percentChange > 0 ? "+" : ""}${percentChange}%`,
     helper: "vs last month",
-    tone:
-      percentChange > 0 ? "green" : percentChange < 0 ? "red" : "slate",
-    arrowSymbol:
-      percentChange > 0 ? "↑" : percentChange < 0 ? "↓" : "•",
+    tone: percentChange > 0 ? "green" : percentChange < 0 ? "red" : "slate",
+    arrowSymbol: percentChange > 0 ? "↑" : percentChange < 0 ? "↓" : "•",
   };
 }

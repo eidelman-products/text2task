@@ -23,6 +23,7 @@ import type {
 import type {
   TaskArchiveView,
   TaskGroup,
+  TaskProjectGroup,
   TaskRow,
 } from "./tasks/task-types";
 import {
@@ -68,8 +69,13 @@ type TasksViewProps = {
   onSortOptionChange: (value: TaskSortOption) => void;
   onExportCsv: () => void;
   toggleClientGroup: (groupKey: string) => void;
-  updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
+    updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
   updateTaskField: (taskId: number, field: string, value: any) => void;
+  updateProjectField: (
+    projectId: string,
+    field: string,
+    value: any
+  ) => Promise<void> | void;
   copyTask: (taskId: number) => void;
   archiveTask: (taskId: number) => Promise<void> | void;
   restoreTask: (taskId: number) => Promise<void> | void;
@@ -101,6 +107,7 @@ export default function TasksView({
   onExportCsv,
   updateTaskStatus,
   updateTaskField,
+  updateProjectField,
   copyTask,
   archiveTask,
   restoreTask,
@@ -110,11 +117,13 @@ export default function TasksView({
     allNormalizedTasks,
     normalizedStatsTasks,
     flatTasks,
+    projectGroups,
     hasMatchingTasks,
-    activeCount,
-    doneCount,
-    archivedCount,
-    highCount,
+    activeProjectsCount,
+    totalTasksCount,
+    completedProjectsCount,
+    archivedTasksCount,
+    highPriorityTasksCount,
   } = useTaskDerivedData({
     tasks,
     statsTasks,
@@ -184,6 +193,42 @@ export default function TasksView({
     }
   }
 
+  function toggleProjectSelection(project: TaskProjectGroup) {
+    const allSelected = project.taskIds.every((id) =>
+      selectedTaskIds.includes(id)
+    );
+
+    project.taskIds.forEach((id) => {
+      const isSelected = selectedTaskIds.includes(id);
+
+      if (allSelected && isSelected) {
+        toggleSelect(id);
+      }
+
+      if (!allSelected && !isSelected) {
+        toggleSelect(id);
+      }
+    });
+  }
+
+  async function archiveProject(project: TaskProjectGroup) {
+    for (const task of project.tasks) {
+      await archiveTask(task.id);
+    }
+  }
+
+  async function restoreProject(project: TaskProjectGroup) {
+    for (const task of project.tasks) {
+      await restoreTask(task.id);
+    }
+  }
+
+  async function permanentlyDeleteProject(project: TaskProjectGroup) {
+    for (const task of project.tasks) {
+      await requestSinglePermanentDelete(task.id);
+    }
+  }
+
   if (isLoadingTasks) {
     return (
       <EmptyState
@@ -244,10 +289,11 @@ export default function TasksView({
         description={getViewDescription(archiveView)}
         rightSlot={
           <TasksStatsPills
-            activeCount={activeCount}
-            doneCount={doneCount}
-            archivedCount={archivedCount}
-            highCount={highCount}
+            activeProjectsCount={activeProjectsCount}
+            totalTasksCount={totalTasksCount}
+            completedProjectsCount={completedProjectsCount}
+            archivedTasksCount={archivedTasksCount}
+            highPriorityTasksCount={highPriorityTasksCount}
           />
         }
       >
@@ -263,6 +309,7 @@ export default function TasksView({
             priorityFilter={priorityFilter}
             sortOption={sortOption}
             visibleTasksCount={visibleTasksCount}
+            visibleProjectsCount={projectGroups.length}
             onSearchTermChange={onSearchTermChange}
             onStatusFilterChange={onStatusFilterChange}
             onPriorityFilterChange={onPriorityFilterChange}
@@ -287,22 +334,39 @@ export default function TasksView({
           ) : (
             <>
               <div className="tasks-mobile-list" style={mobileListStyle}>
-                {flatTasks.map((task) => {
-                  const isSaving = !!savingTaskIds[task.id];
-                  const isSaved = !!savedTaskIds[task.id];
-                  const isDeleting = !!deletingTaskIds[task.id];
-                  const isCopied = !!copiedTaskIds[task.id];
-                  const isHighlighted = flashTaskId === task.id;
-                  const rowArchiveView =
-                    archiveView === "archived" || task.is_archived
-                      ? "archived"
-                      : "active";
+                {projectGroups.map((project) => {
+                  const isSaving = project.taskIds.some(
+                    (id) => savingTaskIds[id]
+                  );
+                  const isSaved = project.taskIds.some((id) => savedTaskIds[id]);
+                  const isDeleting = project.taskIds.some(
+                    (id) => deletingTaskIds[id]
+                  );
+                  const isCopied = Boolean(
+                    copiedTaskIds[project.primaryTask.id]
+                  );
+                  const isSelected = project.taskIds.every((id) =>
+                    selectedTaskIds.includes(id)
+                  );
+                  const isPartiallySelected =
+                    !isSelected &&
+                    project.taskIds.some((id) => selectedTaskIds.includes(id));
+
+                  const isHighlighted = project.taskIds.includes(
+                    flashTaskId || -1
+                  );
 
                   return (
                     <div
-                      key={`mobile-${task.id}`}
+                      key={`mobile-project-${project.key}`}
                       ref={(node) => {
-                        taskRefs.current[task.id] = node;
+                        project.tasks.forEach((task) => {
+                          if (node) {
+                            taskRefs.current[task.id] = node;
+                          } else {
+                            delete taskRefs.current[task.id];
+                          }
+                        });
                       }}
                       style={{
                         transform: isHighlighted ? "scale(1.01)" : "scale(1)",
@@ -310,21 +374,21 @@ export default function TasksView({
                       }}
                     >
                       <MobileTaskCard
-                        task={task}
-                        createdLabel={formatCreatedDate(task.created_at)}
+                        project={project}
                         isSaving={isSaving}
                         isSaved={isSaved}
                         isDeleting={isDeleting}
                         isCopied={isCopied}
-                        isSelected={selectedTaskIds.includes(task.id)}
-                        archiveView={rowArchiveView}
-                        toggleSelect={toggleSelect}
+                        isSelected={isSelected}
+                        isPartiallySelected={isPartiallySelected}
+                        archiveView={archiveView}
+                        onToggleProjectSelection={toggleProjectSelection}
                         updateTaskField={updateTaskField}
                         updateTaskStatus={updateTaskStatus}
                         copyTask={copyTask}
-                        archiveTask={archiveTask}
-                        restoreTask={restoreTask}
-                        permanentlyDeleteTask={requestSinglePermanentDelete}
+                        archiveProject={archiveProject}
+                        restoreProject={restoreProject}
+                        permanentlyDeleteProject={permanentlyDeleteProject}
                       />
                     </div>
                   );
@@ -341,6 +405,7 @@ export default function TasksView({
                 copiedTaskIds={copiedTaskIds}
                 selectedTaskIds={selectedTaskIds}
                 archiveView={archiveView}
+                highlightedTaskId={highlightedTaskId}
                 flashTaskId={flashTaskId}
                 taskRefs={taskRefs}
                 onToggleSelectAllVisible={toggleSelectAllVisible}
@@ -348,6 +413,7 @@ export default function TasksView({
                 toggleSelect={toggleSelect}
                 updateTaskField={updateTaskField}
                 updateTaskStatus={updateTaskStatus}
+                updateProjectField={updateProjectField}
                 copyTask={copyTask}
                 archiveTask={archiveTask}
                 restoreTask={restoreTask}

@@ -2,8 +2,38 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { parseDeadline } from "@/lib/tasks/parse-deadline";
 import { parseAmount } from "@/lib/tasks/parse-amount";
+import {
+  buildDuplicateCandidateFromProjectPayload,
+  findDuplicateProject,
+} from "@/lib/tasks/project-duplicate-detection";
 
 type TasksView = "active" | "archived" | "all" | "stats";
+
+type ProjectResourceInput = {
+  resource_type?: string;
+  title?: string;
+  url?: string;
+  notes?: string;
+};
+
+type ProjectSubtaskInput = {
+  task?: string;
+  task_title?: string;
+  taskTitle?: string;
+  title?: string;
+  amount?: unknown;
+  deadline?: unknown;
+  deadline_text?: unknown;
+  deadlineText?: unknown;
+  priority?: unknown;
+  status?: unknown;
+  source?: unknown;
+  raw_input?: unknown;
+  rawInput?: unknown;
+  contact_name?: unknown;
+  contactName?: unknown;
+  resources?: ProjectResourceInput[];
+};
 
 function normalizeAmountInput(value: unknown): string | number | null {
   if (value === null || value === undefined) return null;
@@ -71,10 +101,43 @@ function cleanTaskWithJoinedClient(task: any) {
     client: Array.isArray(task.clients)
       ? task.clients[0] ?? null
       : task.clients ?? null,
+    project: Array.isArray(task.projects)
+      ? task.projects[0] ?? null
+      : task.projects ?? null,
   };
 
-  const { clients, ...result } = cleanTask;
+  const { clients, projects, ...result } = cleanTask;
   return result;
+}
+
+function cleanTaskWithClientFallback(task: any, clientData: any = null) {
+  const taskWithClient = {
+    ...task,
+    client: Array.isArray(task.clients)
+      ? task.clients[0] ?? clientData
+      : task.clients ?? clientData,
+    project: Array.isArray(task.projects)
+      ? task.projects[0] ?? null
+      : task.projects ?? null,
+  };
+
+  const { clients, projects, ...cleanTask } = taskWithClient;
+  return cleanTask;
+}
+
+function getContactNameFromBody(body: any): string {
+  return pickFirstString(
+    body.contact_name,
+    body.contactName,
+    body.contact_person,
+    body.contactPerson,
+    body.person_name,
+    body.personName,
+    body.sender_name,
+    body.senderName,
+    body.client_contact_name,
+    body.clientContactName
+  );
 }
 
 function getClientPayloadFromBody(body: any) {
@@ -86,6 +149,8 @@ function getClientPayloadFromBody(body: any) {
     body.customerName,
     body.customer
   );
+
+  const contact_name = getContactNameFromBody(body);
 
   const rawPhone = pickFirstString(
     body.client_phone,
@@ -117,7 +182,8 @@ function getClientPayloadFromBody(body: any) {
   );
 
   return {
-    client_name,
+    client_name: normalizeClientName(client_name),
+    contact_name: normalizeOptionalClientField(contact_name),
     client_phone: normalizePhone(rawPhone),
     client_email: normalizeEmail(rawEmail),
     client_notes,
@@ -168,6 +234,562 @@ function getRawInputFromBody(body: any): string {
   );
 }
 
+function getProjectPayloadFromBody(body: any) {
+  const projectBody =
+    body.project && typeof body.project === "object" ? body.project : body;
+
+  const clientPayload = getClientPayloadFromBody(projectBody);
+
+  const title =
+    pickFirstString(
+      projectBody.project_title,
+      projectBody.projectTitle,
+      projectBody.project_name,
+      projectBody.projectName,
+      projectBody.title,
+      projectBody.name
+    ) || getTaskTitleFromBody(projectBody);
+
+  const summary = pickFirstString(
+    projectBody.summary,
+    projectBody.project_summary,
+    projectBody.projectSummary,
+    projectBody.description
+  );
+
+  const rawAmountInput = normalizeAmountInput(
+    projectBody.amount ??
+      projectBody.budget ??
+      projectBody.price ??
+      projectBody.cost ??
+      projectBody.value ??
+      projectBody.amount_text ??
+      projectBody.amountText
+  );
+
+  const parsedAmount = parseAmount(rawAmountInput);
+
+  const amount =
+    parsedAmount.displayAmount ??
+    (typeof rawAmountInput === "string"
+      ? rawAmountInput
+      : typeof rawAmountInput === "number"
+        ? String(rawAmountInput)
+        : null);
+
+  const deadline_text = getDeadlineTextFromBody(projectBody);
+  const { deadlineDate } = parseDeadline(deadline_text);
+
+  const priority =
+    pickFirstString(
+      projectBody.priority,
+      projectBody.project_priority,
+      projectBody.projectPriority
+    ) || "Medium";
+
+  const status =
+    pickFirstString(
+      projectBody.status,
+      projectBody.project_status,
+      projectBody.projectStatus
+    ) || "New";
+
+  const source = getSourceFromBody(projectBody);
+  const raw_input = getRawInputFromBody(projectBody);
+
+  return {
+    ...clientPayload,
+    title,
+    summary,
+    amount,
+    amount_value: parsedAmount.amountValue,
+    currency_code: parsedAmount.currencyCode,
+    deadline_text,
+    deadline_date: deadlineDate,
+    priority,
+    status,
+    source,
+    raw_input,
+  };
+}
+
+function extractProjectSubtasks(body: any): ProjectSubtaskInput[] {
+  const projectBody =
+    body.project && typeof body.project === "object" ? body.project : body;
+
+  const possibleArrays = [
+    body.subtasks,
+    body.tasks,
+    body.items,
+    body.deliverables,
+    projectBody.subtasks,
+    projectBody.tasks,
+    projectBody.items,
+    projectBody.deliverables,
+  ];
+
+  for (const value of possibleArrays) {
+    if (Array.isArray(value)) {
+      return value.filter((item) => item && typeof item === "object");
+    }
+  }
+
+  return [];
+}
+
+function isProjectCreateRequest(body: any) {
+  if (!body || typeof body !== "object") return false;
+
+  const projectBody =
+    body.project && typeof body.project === "object" ? body.project : null;
+
+  const hasProjectFlag =
+    body.mode === "project" ||
+    body.type === "project" ||
+    body.save_as === "project" ||
+    body.saveAs === "project" ||
+    body.create_project === true ||
+    body.createProject === true ||
+    Boolean(projectBody);
+
+  const hasSubtasks = extractProjectSubtasks(body).length > 0;
+
+  return hasProjectFlag || hasSubtasks;
+}
+
+function shouldSkipDuplicateCheck(body: any) {
+  return (
+    body?.skip_duplicate_check === true ||
+    body?.skipDuplicateCheck === true ||
+    body?.save_anyway === true ||
+    body?.saveAnyway === true ||
+    body?.allow_duplicate === true ||
+    body?.allowDuplicate === true ||
+    body?.force_save === true ||
+    body?.forceSave === true
+  );
+}
+
+function getSubtaskTitle(subtask: ProjectSubtaskInput): string {
+  return pickFirstString(
+    subtask.task_title,
+    subtask.taskTitle,
+    subtask.title,
+    subtask.task
+  );
+}
+
+function normalizeResourceType(value: unknown): string {
+  const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
+
+  const allowed = new Set([
+    "website",
+    "logo",
+    "image",
+    "banner",
+    "reference",
+    "file",
+    "note",
+    "link",
+  ]);
+
+  return allowed.has(raw) ? raw : "link";
+}
+
+async function checkProjectDuplicateBeforeSave({
+  supabase,
+  userId,
+  body,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  body: any;
+}) {
+  if (shouldSkipDuplicateCheck(body)) {
+    return null;
+  }
+
+  const projectPayload = getProjectPayloadFromBody(body);
+  const subtasks = extractProjectSubtasks(body);
+
+  const duplicateCandidate = buildDuplicateCandidateFromProjectPayload({
+    client_name: projectPayload.client_name,
+    contact_name: projectPayload.contact_name,
+    amount: projectPayload.amount,
+    deadline_text: projectPayload.deadline_text,
+    deadline_date: projectPayload.deadline_date,
+    title: projectPayload.title,
+    summary: projectPayload.summary,
+    subtasks: subtasks.map((subtask) => ({
+      task_title: getSubtaskTitle(subtask),
+    })),
+  });
+
+  return findDuplicateProject({
+    supabase,
+    userId,
+    candidate: duplicateCandidate,
+  });
+}
+
+async function upsertClientForUser({
+  supabase,
+  userId,
+  client_name,
+  contact_name,
+  client_phone,
+  client_email,
+  client_notes,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  client_name: string;
+  contact_name: string;
+  client_phone: string;
+  client_email: string;
+  client_notes: string;
+}) {
+  let clientId: string | null = null;
+  let clientData: any = null;
+
+  if (!client_name) {
+    return { clientId, clientData };
+  }
+
+  const { data: existingClients, error: clientLookupError } = await supabase
+    .from("clients")
+    .select("id, name, contact_name, phone, email, notes, created_at")
+    .eq("user_id", userId)
+    .ilike("name", client_name)
+    .limit(1);
+
+  if (clientLookupError) {
+    throw new Error(clientLookupError.message || "Failed to lookup client");
+  }
+
+  if (existingClients && existingClients.length > 0) {
+    const existingClient = existingClients[0];
+
+    clientId = existingClient.id;
+
+    const nextContactName =
+      contact_name || existingClient.contact_name || null;
+    const nextPhone = client_phone || existingClient.phone || null;
+    const nextEmail = client_email || existingClient.email || null;
+    const nextNotes = client_notes || existingClient.notes || null;
+
+    const shouldUpdateClient =
+      nextContactName !== (existingClient.contact_name || null) ||
+      nextPhone !== (existingClient.phone || null) ||
+      nextEmail !== (existingClient.email || null) ||
+      nextNotes !== (existingClient.notes || null);
+
+    if (shouldUpdateClient) {
+      const { data: updatedClient, error: updateClientError } = await supabase
+        .from("clients")
+        .update({
+          contact_name: nextContactName,
+          phone: nextPhone,
+          email: nextEmail,
+          notes: nextNotes,
+        })
+        .eq("id", existingClient.id)
+        .eq("user_id", userId)
+        .select("id, name, contact_name, phone, email, notes, created_at")
+        .single();
+
+      if (updateClientError) {
+        throw new Error(
+          updateClientError.message || "Failed to update client details"
+        );
+      }
+
+      clientData = updatedClient;
+    } else {
+      clientData = existingClient;
+    }
+  } else {
+    const { data: newClient, error: createClientError } = await supabase
+      .from("clients")
+      .insert({
+        user_id: userId,
+        name: client_name,
+        contact_name: contact_name || null,
+        phone: client_phone || null,
+        email: client_email || null,
+        notes: client_notes || null,
+      })
+      .select("id, name, contact_name, phone, email, notes, created_at")
+      .single();
+
+    if (createClientError) {
+      throw new Error(createClientError.message || "Failed to create client");
+    }
+
+    clientId = newClient.id;
+    clientData = newClient;
+  }
+
+  return { clientId, clientData };
+}
+
+async function createProjectWithSubtasks({
+  supabase,
+  userId,
+  body,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  body: any;
+}) {
+  const projectPayload = getProjectPayloadFromBody(body);
+  const subtasks = extractProjectSubtasks(body);
+
+  if (!projectPayload.title && subtasks.length === 0) {
+    throw new Error("Project title or subtasks are required");
+  }
+
+  const { clientId, clientData } = await upsertClientForUser({
+    supabase,
+    userId,
+    client_name: projectPayload.client_name,
+    contact_name: projectPayload.contact_name,
+    client_phone: projectPayload.client_phone,
+    client_email: projectPayload.client_email,
+    client_notes: projectPayload.client_notes,
+  });
+
+  const nowIso = new Date().toISOString();
+  const projectCompletedAt = isDoneStatus(projectPayload.status) ? nowIso : null;
+
+  const fallbackProjectTitle =
+    projectPayload.title || getSubtaskTitle(subtasks[0]) || "Untitled project";
+
+  const { data: project, error: projectError } = await supabase
+    .from("projects")
+    .insert({
+      user_id: userId,
+      client_id: clientId,
+      client_name: projectPayload.client_name,
+      contact_name: projectPayload.contact_name || null,
+      title: fallbackProjectTitle,
+      summary: projectPayload.summary || null,
+      amount: projectPayload.amount,
+      amount_value: projectPayload.amount_value,
+      currency_code: projectPayload.currency_code,
+      deadline_text: projectPayload.deadline_text,
+      deadline_date: projectPayload.deadline_date,
+      priority: projectPayload.priority,
+      status: projectPayload.status,
+      source: projectPayload.source,
+      raw_input: projectPayload.raw_input,
+      is_archived: false,
+      archived_at: null,
+      completed_at: projectCompletedAt,
+      deleted_at: null,
+    })
+    .select("*")
+    .single();
+
+  if (projectError || !project) {
+    throw new Error(projectError?.message || "Failed to create project");
+  }
+
+  const normalizedSubtasks =
+    subtasks.length > 0
+      ? subtasks
+      : [
+          {
+            task: fallbackProjectTitle,
+            amount: projectPayload.amount,
+            deadline: projectPayload.deadline_text,
+            priority: projectPayload.priority,
+            status: projectPayload.status,
+            source: projectPayload.source,
+            raw_input: projectPayload.raw_input,
+          },
+        ];
+
+  const taskRows = normalizedSubtasks
+    .map((subtask, index) => {
+      const subtaskTitle = getSubtaskTitle(subtask);
+
+      if (!subtaskTitle) return null;
+
+      const rawAmountInput = normalizeAmountInput(
+        subtask.amount ??
+          projectPayload.amount ??
+          body.amount ??
+          body.budget ??
+          body.price ??
+          body.cost ??
+          body.value
+      );
+
+      const parsedAmount = parseAmount(rawAmountInput);
+
+      const amount =
+        parsedAmount.displayAmount ??
+        (typeof rawAmountInput === "string"
+          ? rawAmountInput
+          : typeof rawAmountInput === "number"
+            ? String(rawAmountInput)
+            : projectPayload.amount);
+
+      const deadlineText =
+        pickFirstString(
+          subtask.deadline_text,
+          subtask.deadlineText,
+          subtask.deadline
+        ) || projectPayload.deadline_text;
+
+      const { deadlineDate } = parseDeadline(deadlineText);
+
+      const status =
+        pickFirstString(subtask.status) || projectPayload.status || "New";
+
+      return {
+        user_id: userId,
+        client_name: projectPayload.client_name,
+        contact_name:
+          pickFirstString(subtask.contact_name, subtask.contactName) ||
+          projectPayload.contact_name ||
+          null,
+        client_id: clientId,
+        project_id: project.id,
+        subtask_order: index + 1,
+        task_title: subtaskTitle,
+        amount,
+        amount_value: parsedAmount.amountValue ?? projectPayload.amount_value,
+        currency_code:
+          parsedAmount.currencyCode ?? projectPayload.currency_code,
+        deadline_text: deadlineText,
+        deadline_date: deadlineDate ?? projectPayload.deadline_date,
+        priority:
+          pickFirstString(subtask.priority) ||
+          projectPayload.priority ||
+          "Medium",
+        status,
+        source: pickFirstString(subtask.source) || projectPayload.source,
+        raw_input:
+          pickFirstString(subtask.raw_input, subtask.rawInput) ||
+          projectPayload.raw_input,
+        is_archived: false,
+        archived_at: null,
+        completed_at: isDoneStatus(status) ? nowIso : null,
+        deleted_at: null,
+      };
+    })
+    .filter(Boolean);
+
+  if (taskRows.length === 0) {
+    throw new Error("At least one subtask title is required");
+  }
+
+  const { data: insertedTasks, error: tasksError } = await supabase
+    .from("tasks")
+    .insert(taskRows)
+    .select(
+      `
+      *,
+      clients (
+        id,
+        name,
+        contact_name,
+        phone,
+        email,
+        notes,
+        created_at
+      ),
+      projects (
+        id,
+        client_id,
+        client_name,
+        contact_name,
+        title,
+        summary,
+        amount,
+        amount_value,
+        currency_code,
+        deadline_text,
+        deadline_date,
+        priority,
+        status,
+        source,
+        raw_input,
+        created_at,
+        updated_at,
+        completed_at,
+        is_archived,
+        archived_at,
+        deleted_at
+      )
+    `
+    );
+
+  if (tasksError) {
+    throw new Error(tasksError.message || "Failed to create project tasks");
+  }
+
+  const cleanTasks = (insertedTasks ?? []).map((task) =>
+    cleanTaskWithClientFallback(task, clientData)
+  );
+
+  const resourceRows: any[] = [];
+
+  normalizedSubtasks.forEach((subtask, index) => {
+    const task = cleanTasks[index];
+    const resources = Array.isArray(subtask.resources)
+      ? subtask.resources
+      : [];
+
+    resources.forEach((resource) => {
+      const title = pickFirstString(resource.title);
+      const url = pickFirstString(resource.url);
+      const notes = pickFirstString(resource.notes);
+
+      if (!title && !url && !notes) return;
+
+      resourceRows.push({
+        user_id: userId,
+        project_id: project.id,
+        task_id: task?.id ?? null,
+        resource_type: normalizeResourceType(resource.resource_type),
+        title: title || null,
+        url: url || null,
+        storage_path: null,
+        file_name: null,
+        mime_type: null,
+        size_bytes: null,
+        notes: notes || null,
+      });
+    });
+  });
+
+  let resources: any[] = [];
+
+  if (resourceRows.length > 0) {
+    const { data: insertedResources, error: resourcesError } = await supabase
+      .from("task_resources")
+      .insert(resourceRows)
+      .select("*");
+
+    if (resourcesError) {
+      throw new Error(
+        resourcesError.message || "Failed to create task resources"
+      );
+    }
+
+    resources = insertedResources ?? [];
+  }
+
+  return {
+    project,
+    tasks: cleanTasks,
+    resources,
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
@@ -192,20 +814,39 @@ export async function GET(req: NextRequest) {
         clients (
           id,
           name,
+          contact_name,
           phone,
           email,
           notes,
           created_at
+        ),
+        projects (
+          id,
+          client_id,
+          client_name,
+          contact_name,
+          title,
+          summary,
+          amount,
+          amount_value,
+          currency_code,
+          deadline_text,
+          deadline_date,
+          priority,
+          status,
+          source,
+          raw_input,
+          created_at,
+          updated_at,
+          completed_at,
+          is_archived,
+          archived_at,
+          deleted_at
         )
       `
       )
       .eq("user_id", user.id);
 
-    /*
-      חשוב:
-      active / archived / all = מיועדים להצגת טבלה למשתמש ולכן לא מציגים deleted_at.
-      stats = מיועד לסטטיסטיקות Lifetime ולכן כולל גם משימות שנמחקו לצמיתות.
-    */
     if (view !== "stats") {
       query = query.is("deleted_at", null);
     }
@@ -262,8 +903,57 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
 
-    const { client_name, client_phone, client_email, client_notes } =
-      getClientPayloadFromBody(body);
+    if (isProjectCreateRequest(body)) {
+      try {
+        const duplicate = await checkProjectDuplicateBeforeSave({
+          supabase,
+          userId: user.id,
+          body,
+        });
+
+        if (duplicate) {
+          return NextResponse.json(
+            {
+              error: "DUPLICATE_PROJECT_DETECTED",
+              message:
+                "This project may already exist. Review the existing project before saving again.",
+              duplicate,
+            },
+            { status: 409 }
+          );
+        }
+
+        const result = await createProjectWithSubtasks({
+          supabase,
+          userId: user.id,
+          body,
+        });
+
+        return NextResponse.json({
+          project: result.project,
+          tasks: result.tasks,
+          resources: result.resources,
+        });
+      } catch (projectError: any) {
+        console.error("project create error:", projectError);
+
+        return NextResponse.json(
+          {
+            error:
+              projectError.message || "Failed to save project with subtasks",
+          },
+          { status: 500 }
+        );
+      }
+    }
+
+    const {
+      client_name,
+      contact_name,
+      client_phone,
+      client_email,
+      client_notes,
+    } = getClientPayloadFromBody(body);
 
     const task_title = getTaskTitleFromBody(body);
 
@@ -284,8 +974,8 @@ export async function POST(req: NextRequest) {
       (typeof rawAmountInput === "string"
         ? rawAmountInput
         : typeof rawAmountInput === "number"
-        ? String(rawAmountInput)
-        : null);
+          ? String(rawAmountInput)
+          : null);
 
     const deadline_text = getDeadlineTextFromBody(body);
 
@@ -312,98 +1002,26 @@ export async function POST(req: NextRequest) {
     let clientId: string | null = null;
     let clientData: any = null;
 
-    if (client_name) {
-      const { data: existingClients, error: clientLookupError } = await supabase
-        .from("clients")
-        .select("id, name, phone, email, notes, created_at")
-        .eq("user_id", user.id)
-        .ilike("name", client_name)
-        .limit(1);
+    try {
+      const clientResult = await upsertClientForUser({
+        supabase,
+        userId: user.id,
+        client_name,
+        contact_name,
+        client_phone,
+        client_email,
+        client_notes,
+      });
 
-      if (clientLookupError) {
-        console.error("client lookup error:", clientLookupError);
+      clientId = clientResult.clientId;
+      clientData = clientResult.clientData;
+    } catch (clientError: any) {
+      console.error("client save error:", clientError);
 
-        return NextResponse.json(
-          { error: clientLookupError.message || "Failed to lookup client" },
-          { status: 500 }
-        );
-      }
-
-      if (existingClients && existingClients.length > 0) {
-        const existingClient = existingClients[0];
-
-        clientId = existingClient.id;
-
-        /*
-          חשוב:
-          לא מוחקים מידע קיים אם השדה החדש ריק.
-          אם AI/Preview שלח טלפון או אימייל חדש - מעדכנים את הלקוח.
-          אם לא שלח - משאירים את מה שכבר קיים.
-        */
-        const nextPhone = client_phone || existingClient.phone || null;
-        const nextEmail = client_email || existingClient.email || null;
-        const nextNotes = client_notes || existingClient.notes || null;
-
-        const shouldUpdateClient =
-          nextPhone !== (existingClient.phone || null) ||
-          nextEmail !== (existingClient.email || null) ||
-          nextNotes !== (existingClient.notes || null);
-
-        if (shouldUpdateClient) {
-          const { data: updatedClient, error: updateClientError } =
-            await supabase
-              .from("clients")
-              .update({
-                phone: nextPhone,
-                email: nextEmail,
-                notes: nextNotes,
-              })
-              .eq("id", existingClient.id)
-              .eq("user_id", user.id)
-              .select("id, name, phone, email, notes, created_at")
-              .single();
-
-          if (updateClientError) {
-            console.error("client update error:", updateClientError);
-
-            return NextResponse.json(
-              {
-                error:
-                  updateClientError.message || "Failed to update client details",
-              },
-              { status: 500 }
-            );
-          }
-
-          clientData = updatedClient;
-        } else {
-          clientData = existingClient;
-        }
-      } else {
-        const { data: newClient, error: createClientError } = await supabase
-          .from("clients")
-          .insert({
-            user_id: user.id,
-            name: client_name,
-            phone: client_phone || null,
-            email: client_email || null,
-            notes: client_notes || null,
-          })
-          .select("id, name, phone, email, notes, created_at")
-          .single();
-
-        if (createClientError) {
-          console.error("client create error:", createClientError);
-
-          return NextResponse.json(
-            { error: createClientError.message || "Failed to create client" },
-            { status: 500 }
-          );
-        }
-
-        clientId = newClient.id;
-        clientData = newClient;
-      }
+      return NextResponse.json(
+        { error: clientError.message || "Failed to save client" },
+        { status: 500 }
+      );
     }
 
     const nowIso = new Date().toISOString();
@@ -414,7 +1032,10 @@ export async function POST(req: NextRequest) {
       .insert({
         user_id: user.id,
         client_name,
+        contact_name: contact_name || null,
         client_id: clientId,
+        project_id: null,
+        subtask_order: null,
         task_title,
         amount,
         amount_value: parsedAmount.amountValue,
@@ -436,10 +1057,34 @@ export async function POST(req: NextRequest) {
         clients (
           id,
           name,
+          contact_name,
           phone,
           email,
           notes,
           created_at
+        ),
+        projects (
+          id,
+          client_id,
+          client_name,
+          contact_name,
+          title,
+          summary,
+          amount,
+          amount_value,
+          currency_code,
+          deadline_text,
+          deadline_date,
+          priority,
+          status,
+          source,
+          raw_input,
+          created_at,
+          updated_at,
+          completed_at,
+          is_archived,
+          archived_at,
+          deleted_at
         )
       `
       )
@@ -454,14 +1099,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const task = {
-      ...data,
-      client: Array.isArray((data as any).clients)
-        ? (data as any).clients[0] ?? clientData
-        : (data as any).clients ?? clientData,
-    };
-
-    const { clients, ...cleanTask } = task as any;
+    const cleanTask = cleanTaskWithClientFallback(data, clientData);
 
     return NextResponse.json({ task: cleanTask });
   } catch (error: any) {

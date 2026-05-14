@@ -1,6 +1,6 @@
 "use client";
 
-import EditablePreviewCard from "./editable-preview-card";
+import AiProjectReviewPanel from "./extract/ai-project-review-panel";
 import type {
   ExtractedPreview,
   HybridAppliedChange,
@@ -8,6 +8,10 @@ import type {
 } from "@/lib/preview/hybrid-preview";
 
 type PreviewItem = ExtractedPreview & {
+  contact_name?: string;
+  contactName?: string;
+  contact_person?: string;
+  contactPerson?: string;
   client_phone?: string;
   client_email?: string;
   client_notes?: string;
@@ -16,7 +20,7 @@ type PreviewItem = ExtractedPreview & {
 
 type PreviewFieldName = keyof Omit<PreviewItem, "previewId">;
 
-type DuplicateWarning = {
+type LegacyDuplicateWarning = {
   existingTaskId: number;
   existingTask: string;
   existingClient: string;
@@ -25,278 +29,388 @@ type DuplicateWarning = {
   reason: string;
 };
 
+export type PreviewProjectGroup = {
+  key: string;
+  clientName: string;
+  contactName: string;
+  projectTitle: string;
+  projectSummary: string;
+  amount: string;
+  deadline: string;
+  priority: "Low" | "Medium" | "High";
+  source: string;
+  client_phone: string;
+  client_email: string;
+  client_notes: string;
+  items: Array<{
+    preview: PreviewItem;
+    originalIndex: number;
+  }>;
+};
+
 type EditablePreviewListProps = {
   previewItems: PreviewItem[];
   aiMetaByPreviewId: Record<string, HybridPreviewMeta>;
-  duplicateWarnings: Record<string, DuplicateWarning>;
-  savingPreviewIds: Record<string, boolean>;
-  onSaveDuplicateAnyway: (previewId: string) => void;
-  onSkipDuplicate: (previewId: string) => void;
   onChange: (index: number, field: PreviewFieldName, value: string) => void;
-  onUndoChange: (previewId: string, change: HybridAppliedChange) => void;
+  onUndoChange?: (previewId: string, change: HybridAppliedChange) => void;
+
+  duplicateWarnings?: Record<string, LegacyDuplicateWarning>;
+  savingPreviewIds?: Record<string, boolean>;
+  onSaveDuplicateAnyway?: (previewId: string) => void;
+  onSkipDuplicate?: (previewId: string) => void;
 };
-
-function buildPreviewRenderKey(preview: PreviewItem) {
-  return preview.previewId;
-}
-
-function formatCreatedAtLabel(value: string) {
-  if (!value) return "Unknown date";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toLocaleString();
-}
 
 export default function EditablePreviewList({
   previewItems,
   aiMetaByPreviewId,
-  duplicateWarnings,
-  savingPreviewIds,
-  onSaveDuplicateAnyway,
-  onSkipDuplicate,
   onChange,
-  onUndoChange,
 }: EditablePreviewListProps) {
+  const previewGroups = buildPreviewProjectGroups(previewItems);
+
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      {previewItems.map((preview, index) => {
-        const warning = duplicateWarnings[preview.previewId];
-        const isSavingPreview = !!savingPreviewIds[preview.previewId];
-        const aiMeta = aiMetaByPreviewId[preview.previewId] || {
-          aiApplied: false,
-          changes: [],
-        };
-
-        return (
-          <div
-            key={buildPreviewRenderKey(preview)}
-            style={{
-              display: "grid",
-              gap: 8,
-            }}
-          >
-            {warning ? (
-              <div
-                style={{
-                  border: "1px solid #fde68a",
-                  background:
-                    "linear-gradient(180deg, rgba(255,251,235,1) 0%, rgba(255,255,255,0.98) 100%)",
-                  borderRadius: 16,
-                  padding: 12,
-                  display: "grid",
-                  gap: 10,
-                  boxShadow: "0 6px 14px rgba(245,158,11,0.06)",
-                }}
-              >
-                <div style={{ display: "grid", gap: 4 }}>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 900,
-                      color: "#92400e",
-                      letterSpacing: "-0.02em",
-                    }}
-                  >
-                    Possible duplicate detected
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "#78350f",
-                      lineHeight: 1.55,
-                    }}
-                  >
-                    This task may already exist in your CRM. {warning.reason}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    border: "1px solid #fcd34d",
-                    borderRadius: 14,
-                    padding: 10,
-                    background: "rgba(255,255,255,0.84)",
-                    display: "grid",
-                    gap: 7,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 8,
-                      flexWrap: "wrap",
-                      alignItems: "center",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 900,
-                        color: "#b45309",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                      }}
-                    >
-                      Already in CRM
-                    </div>
-
-                    <div
-                      style={{
-                        border: "1px solid #fde68a",
-                        background: "#fff7ed",
-                        color: "#92400e",
-                        borderRadius: 999,
-                        padding: "4px 8px",
-                        fontSize: 10,
-                        fontWeight: 800,
-                      }}
-                    >
-                      Created {formatCreatedAtLabel(warning.existingCreatedAt)}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: 16,
-                      lineHeight: 1.15,
-                      fontWeight: 900,
-                      letterSpacing: "-0.03em",
-                      color: "#0f172a",
-                    }}
-                  >
-                    {warning.existingTask}
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 6,
-                    }}
-                  >
-                    <MetaChip
-                      label={`Client: ${warning.existingClient || "Unassigned"}`}
-                    />
-                    <MetaChip
-                      label={`Deadline: ${
-                        warning.existingDeadline || "No deadline"
-                      }`}
-                    />
-                    <MetaChip label="Status: Existing task" subtle />
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 8,
-                    alignItems: "center",
-                  }}
-                >
-                  <button
-                    onClick={() => onSaveDuplicateAnyway(preview.previewId)}
-                    disabled={isSavingPreview}
-                    style={{
-                      border: "none",
-                      borderRadius: 12,
-                      padding: "8px 12px",
-                      background:
-                        "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)",
-                      color: "#ffffff",
-                      fontSize: 12,
-                      fontWeight: 800,
-                      cursor: isSavingPreview ? "not-allowed" : "pointer",
-                      opacity: isSavingPreview ? 0.7 : 1,
-                      boxShadow: "0 6px 14px rgba(79,70,229,0.15)",
-                    }}
-                  >
-                    {isSavingPreview ? "Saving..." : "Save anyway"}
-                  </button>
-
-                  <button
-                    onClick={() => onSkipDuplicate(preview.previewId)}
-                    disabled={isSavingPreview}
-                    style={{
-                      border: "1px solid #d6d3d1",
-                      borderRadius: 12,
-                      padding: "8px 12px",
-                      background: "#ffffff",
-                      color: "#334155",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: isSavingPreview ? "not-allowed" : "pointer",
-                      opacity: isSavingPreview ? 0.7 : 1,
-                    }}
-                  >
-                    Skip
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      window.open(
-                        `/dashboard?view=tasks&taskId=${warning.existingTaskId}`,
-                        "_blank"
-                      )
-                    }
-                    style={{
-                      border: "1px solid #c7d2fe",
-                      borderRadius: 12,
-                      padding: "8px 12px",
-                      background: "#eef2ff",
-                      color: "#4338ca",
-                      fontSize: 12,
-                      fontWeight: 800,
-                      cursor: "pointer",
-                    }}
-                  >
-                    View task
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
-            <EditablePreviewCard
-              index={index}
-              preview={preview}
-              aiMeta={aiMeta}
-              onChange={onChange}
-              onUndoChange={(change) => onUndoChange(preview.previewId, change)}
-              suggestions={[]}
-              suggestionsLoading={false}
-              suggestionsError=""
-            />
-          </div>
-        );
-      })}
+    <div
+      className="editable-preview-project-list"
+      style={{
+        display: "grid",
+        gap: 14,
+      }}
+    >
+      {previewGroups.map((group, groupIndex) => (
+        <AiProjectReviewPanel
+          key={group.key}
+          groupIndex={groupIndex}
+          group={group}
+          aiMetaByPreviewId={aiMetaByPreviewId}
+          onChange={onChange}
+        />
+      ))}
     </div>
   );
 }
 
-function MetaChip({
-  label,
-  subtle = false,
-}: {
-  label: string;
-  subtle?: boolean;
-}) {
-  return (
-    <div
-      style={{
-        border: subtle ? "1px solid #e5e7eb" : "1px solid #fde68a",
-        background: subtle ? "#ffffff" : "#fffaf0",
-        color: "#334155",
-        borderRadius: 999,
-        padding: "5px 8px",
-        fontSize: 10,
-        fontWeight: 700,
-      }}
-    >
-      {label}
-    </div>
+export function buildPreviewProjectGroups(
+  previewItems: PreviewItem[]
+): PreviewProjectGroup[] {
+  const grouped = new Map<
+    string,
+    Array<{
+      preview: PreviewItem;
+      originalIndex: number;
+    }>
+  >();
+
+  previewItems.forEach((preview, originalIndex) => {
+    const key = getPreviewProjectKey(preview);
+    const existing = grouped.get(key) || [];
+
+    existing.push({ preview, originalIndex });
+    grouped.set(key, existing);
+  });
+
+  return Array.from(grouped.entries()).map(([key, items]) => {
+    const previews = items.map((item) => item.preview);
+    const primary = previews[0];
+
+    const clientName = primary?.client?.trim() || "Unassigned";
+    const contactName = getFirstFilled(
+      previews.flatMap((preview) => [
+        preview.contact_name,
+        preview.contactName,
+        preview.contact_person,
+        preview.contactPerson,
+      ])
+    );
+
+    const projectTitle = inferProjectTitle(previews);
+    const projectSummary = buildProjectSummary(previews);
+
+    return {
+      key,
+      clientName,
+      contactName,
+      projectTitle,
+      projectSummary,
+      amount: getGroupAmount(previews),
+      deadline: getGroupDeadline(previews),
+      priority: getGroupPriority(previews),
+      source: primary?.source || "Project extraction",
+      client_phone: getFirstFilled(
+        previews.map((preview) => preview.client_phone)
+      ),
+      client_email: getFirstFilled(
+        previews.map((preview) => preview.client_email)
+      ),
+      client_notes: getFirstFilled(
+        previews.map((preview) => preview.client_notes)
+      ),
+      items,
+    };
+  });
+}
+
+export function getPreviewProjectStats(previewItems: PreviewItem[]) {
+  const groups = buildPreviewProjectGroups(previewItems);
+  const projectCount = groups.length;
+  const taskCount = previewItems.length;
+
+  return {
+    groups,
+    projectCount,
+    taskCount,
+    projectLabel: `${projectCount} project${projectCount === 1 ? "" : "s"}`,
+    taskLabel: `${taskCount} task${taskCount === 1 ? "" : "s"}`,
+    detectedLabel: `${projectCount} project${
+      projectCount === 1 ? "" : "s"
+    } · ${taskCount} task${taskCount === 1 ? "" : "s"} detected`,
+    saveLabel: `Save ${projectCount} project${
+      projectCount === 1 ? "" : "s"
+    } to CRM`,
+  };
+}
+
+function getPreviewProjectKey(preview: PreviewItem) {
+  const client = normalize(preview.client || "Unassigned");
+  const rawInput = normalize(preview.raw_input || "");
+
+  if (rawInput) {
+    return `${client}::${hashString(rawInput)}`;
+  }
+
+  const source = normalize(preview.source || "");
+  const deadline = normalize(
+    preview.deadline_original_text || preview.deadline || ""
   );
+  const email = normalize(preview.client_email || "");
+  const phone = normalize(preview.client_phone || "");
+
+  return `${client}::${source}::${deadline}::${email}::${phone}`;
+}
+
+function normalize(value: string) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function hashString(value: string) {
+  let hash = 0;
+
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+
+  return Math.abs(hash).toString(36);
+}
+
+function getFirstFilled(values: Array<string | undefined>) {
+  return values.map((value) => String(value || "").trim()).find(Boolean) || "";
+}
+
+function inferProjectTitle(previews: PreviewItem[]) {
+  if (previews.length === 1) {
+    return cleanTitle(previews[0].task) || "Client project";
+  }
+
+  const combined = previews
+    .map((preview) => preview.task || "")
+    .join(" ")
+    .toLowerCase();
+
+  if (
+    combined.includes("social") ||
+    combined.includes("post") ||
+    combined.includes("posts") ||
+    combined.includes("reel") ||
+    combined.includes("reels") ||
+    combined.includes("story") ||
+    combined.includes("stories") ||
+    combined.includes("caption") ||
+    combined.includes("hashtag")
+  ) {
+    return "Social media content package";
+  }
+
+  if (
+    combined.includes("video") ||
+    combined.includes("clip") ||
+    combined.includes("clips") ||
+    combined.includes("facebook ad") ||
+    combined.includes("product video") ||
+    combined.includes("transitions")
+  ) {
+    return "Video editing package";
+  }
+
+  if (
+    combined.includes("logo") ||
+    combined.includes("linkedin") ||
+    combined.includes("banner") ||
+    combined.includes("brand")
+  ) {
+    return "Brand assets package";
+  }
+
+  if (
+    combined.includes("homepage") ||
+    combined.includes("website") ||
+    combined.includes("contact form") ||
+    combined.includes("testimonials") ||
+    combined.includes("service area") ||
+    combined.includes("header")
+  ) {
+    return "Website updates project";
+  }
+
+  if (
+    combined.includes("follow") ||
+    combined.includes("follow-up") ||
+    combined.includes("spreadsheet") ||
+    combined.includes("reply") ||
+    combined.includes("admin") ||
+    combined.includes("records") ||
+    combined.includes("invoice") ||
+    combined.includes("client")
+  ) {
+    return "Admin support package";
+  }
+
+  return "Client project";
+}
+
+function cleanTitle(value: string) {
+  const clean = String(value || "").trim();
+
+  if (!clean) return "";
+
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
+
+function buildProjectSummary(previews: PreviewItem[]) {
+  if (previews.length === 1) {
+    return previews[0].task || "";
+  }
+
+  const titles = previews
+    .map((preview) => preview.task?.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+
+  const suffix =
+    previews.length > titles.length
+      ? `, +${previews.length - titles.length} more`
+      : "";
+
+  return `${titles.join(", ")}${suffix}`;
+}
+
+function getGroupDeadline(previews: PreviewItem[]) {
+  const firstOriginalDeadline = previews
+    .map((preview) => preview.deadline_original_text?.trim())
+    .filter(Boolean)[0];
+
+  if (firstOriginalDeadline) return firstOriginalDeadline;
+
+  return (
+    previews.map((preview) => preview.deadline?.trim()).filter(Boolean)[0] || ""
+  );
+}
+
+function getGroupAmount(previews: PreviewItem[]) {
+  if (previews.length === 1) {
+    return normalizeAmountDisplay(previews[0].amount || "");
+  }
+
+  const normalizedValues = previews
+    .map((preview) => normalizeAmountDisplay(preview.amount || ""))
+    .filter(Boolean);
+
+  if (!normalizedValues.length) {
+    return normalizeAmountDisplay(previews[0].amount || "");
+  }
+
+  const uniqueRawValues = Array.from(new Set(normalizedValues));
+
+  if (uniqueRawValues.length === 1) {
+    return uniqueRawValues[0];
+  }
+
+  const parsed = normalizedValues
+    .map((value) => parseAmountLikeValue(value))
+    .filter((item): item is { value: number; suffix: string; raw: string } =>
+      Boolean(item)
+    );
+
+  if (!parsed.length) {
+    return normalizedValues[0] || "";
+  }
+
+  const total = parsed.reduce((sum, item) => sum + item.value, 0);
+  const suffix = parsed.find((item) => item.suffix)?.suffix || "";
+
+  return `${formatNumber(total)}${suffix ? ` ${suffix}` : ""}`;
+}
+
+function parseAmountLikeValue(value: string) {
+  const clean = String(value || "").trim();
+  if (!clean) return null;
+
+  const normalized = clean.replace(/,/g, "");
+  const numberMatch = normalized.match(/-?\d+(\.\d+)?/);
+  if (!numberMatch) return null;
+
+  const numberValue = Number(numberMatch[0]);
+  if (Number.isNaN(numberValue)) return null;
+
+  let suffix = clean.replace(numberMatch[0], "").replace(/[$,]/g, "").trim();
+
+  if (clean.includes("$")) {
+    suffix = "USD";
+  }
+
+  return {
+    value: numberValue,
+    suffix,
+    raw: normalizeAmountDisplay(clean),
+  };
+}
+
+function normalizeAmountDisplay(value: string) {
+  const clean = String(value || "").trim();
+
+  if (!clean) return "";
+
+  const numberMatch = clean.replace(/,/g, "").match(/-?\d+(\.\d+)?/);
+  if (!numberMatch) return clean;
+
+  const numberValue = Number(numberMatch[0]);
+  const formattedNumber = formatNumber(numberValue);
+
+  if (clean.includes("$")) {
+    return `${formattedNumber} USD`;
+  }
+
+  const suffix = clean
+    .replace(numberMatch[0], "")
+    .replace(/[$,]/g, "")
+    .trim();
+
+  return `${formattedNumber}${suffix ? ` ${suffix}` : ""}`;
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function getGroupPriority(previews: PreviewItem[]): "Low" | "Medium" | "High" {
+  const priorities = previews.map((preview) =>
+    String(preview.priority || "").trim().toLowerCase()
+  );
+
+  if (priorities.includes("high")) return "High";
+  if (priorities.includes("medium")) return "Medium";
+  return "Low";
 }

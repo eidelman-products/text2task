@@ -9,13 +9,10 @@ import TasksView, {
   TaskRow,
 } from "./dashboard/tasks-view";
 import ExtractWorkspace from "./dashboard/extract-workspace";
-import RevenueSnapshotPremium from "./dashboard/revenue-snapshot-premium";
 import DashboardShell from "./dashboard/dashboard-shell";
 import DashboardSidebarProfile from "./dashboard/dashboard-sidebar-profile";
 import DashboardHeader from "./dashboard/dashboard-header";
-import DashboardTopSummaryStrip from "./dashboard/dashboard-top-summary-strip";
-import DashboardUrgentTasksCard from "./dashboard/dashboard-urgent-tasks-card";
-import DashboardAnalyticsOverviewSection from "./dashboard/dashboard-analytics-overview-section";
+import DashboardOverviewV3 from "./dashboard/overview-v3/dashboard-overview-v3";
 import {
   buildFilteredGroupedTasks,
   type TaskPriorityFilter,
@@ -40,8 +37,6 @@ type DashboardClientProps = {
 
 type DashboardNav = "dashboard" | "extract" | "tasks";
 type TasksApiView = TaskArchiveView | "stats";
-
-
 
 function getActiveNavLabel(activeNav: DashboardNav) {
   if (activeNav === "extract") return "Extract";
@@ -73,6 +68,22 @@ function upsertTaskInList(list: TaskRow[], updatedTask: TaskRow) {
   }
 
   return replaceTaskInList(list, updatedTask);
+}
+
+function replaceProjectInTaskList(
+  list: TaskRow[],
+  projectId: string,
+  updatedProject: NonNullable<TaskRow["project"]>
+) {
+  return list.map((task) =>
+    task.project_id === projectId || task.project?.id === projectId
+      ? {
+          ...task,
+          project_id: projectId,
+          project: updatedProject,
+        }
+      : task
+  );
 }
 
 function removeTaskFromList(list: TaskRow[], taskId: number) {
@@ -318,13 +329,17 @@ export default function DashboardClient({
   }
 
   async function refreshTasks() {
-    const [mappedTasks, mappedStatsTasks, mappedActiveTasks, mappedArchivedTasks] =
-      await Promise.all([
-        fetchTasksFromServer(archiveView),
-        fetchTasksFromServer("stats"),
-        fetchTasksFromServer("active"),
-        fetchTasksFromServer("archived"),
-      ]);
+    const [
+      mappedTasks,
+      mappedStatsTasks,
+      mappedActiveTasks,
+      mappedArchivedTasks,
+    ] = await Promise.all([
+      fetchTasksFromServer(archiveView),
+      fetchTasksFromServer("stats"),
+      fetchTasksFromServer("active"),
+      fetchTasksFromServer("archived"),
+    ]);
 
     setTasks(mappedTasks);
 
@@ -517,12 +532,6 @@ export default function DashboardClient({
     });
   }
 
-  function handleOpenTaskFromDashboard(taskId: number) {
-    setArchiveView("active");
-    setHighlightedTaskId(taskId);
-    setActiveNav("tasks");
-  }
-
   useEffect(() => {
     return () => {
       Object.values(saveTimersRef.current).forEach((timer) =>
@@ -549,7 +558,13 @@ export default function DashboardClient({
     if (taskId) {
       const parsedTaskId = Number(taskId);
       if (!Number.isNaN(parsedTaskId)) {
+        setActiveNav("tasks");
         setHighlightedTaskId(parsedTaskId);
+        setSearchTerm("");
+        setStatusFilter("all");
+        setPriorityFilter("all");
+        setSortOption("client-asc");
+        setArchiveView("active");
       }
     }
   }, []);
@@ -925,6 +940,142 @@ export default function DashboardClient({
     }
   }
 
+  async function updateProjectField(
+    projectId: string,
+    field: string,
+    value: any
+  ) {
+    if (!projectId) return;
+
+    const previousTasks = tasks;
+    const previousAllTasks = allTasksForStats;
+    const affectedTaskIds = tasks
+      .filter(
+        (task) => task.project_id === projectId || task.project?.id === projectId
+      )
+      .map((task) => task.id);
+
+    if (!affectedTaskIds.length) return;
+
+    setSavingTaskIds((prev) => {
+      const next = { ...prev };
+      affectedTaskIds.forEach((id) => {
+        next[id] = true;
+      });
+      return next;
+    });
+
+    setSavedTaskIds((prev) => {
+      const next = { ...prev };
+      affectedTaskIds.forEach((id) => {
+        delete next[id];
+      });
+      return next;
+    });
+
+    function optimisticUpdate(task: TaskRow): TaskRow {
+      if (task.project_id !== projectId && task.project?.id !== projectId) {
+        return task;
+      }
+
+      const currentProject = task.project || {
+        id: projectId,
+      };
+
+      return {
+        ...task,
+        project_id: projectId,
+        project: {
+          ...currentProject,
+          ...(field === "title" ? { title: String(value ?? "").trim() } : {}),
+          ...(field === "summary"
+            ? { summary: String(value ?? "").trim() || null }
+            : {}),
+          ...(field === "amount" ? { amount: String(value ?? "").trim() } : {}),
+          ...(field === "deadline"
+            ? { deadline_text: String(value ?? "").trim() }
+            : {}),
+          ...(field === "priority"
+            ? { priority: String(value ?? "").trim() || "Medium" }
+            : {}),
+          ...(field === "status"
+            ? { status: String(value ?? "").trim() || "New" }
+            : {}),
+          ...(field === "client_name"
+            ? { client_name: String(value ?? "").trim() }
+            : {}),
+          ...(field === "contact_name"
+            ? { contact_name: String(value ?? "").trim() || null }
+            : {}),
+        },
+      };
+    }
+
+    setTasks((prev) => prev.map(optimisticUpdate));
+    setAllTasksForStats((prev) => prev.map(optimisticUpdate));
+
+    try {
+      const res = await fetch("/api/projects/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectId,
+          field,
+          value,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setTasks(previousTasks);
+        setAllTasksForStats(previousAllTasks);
+        throw new Error(data.error || "Failed to update project");
+      }
+
+      const updatedProject = data.project || null;
+
+      if (updatedProject) {
+        setTasks((prev) =>
+          replaceProjectInTaskList(prev, projectId, updatedProject)
+        );
+        setAllTasksForStats((prev) =>
+          replaceProjectInTaskList(prev, projectId, updatedProject)
+        );
+      }
+
+      affectedTaskIds.forEach((id) => markTaskSaved(id));
+
+      toast.success("Project updated", {
+        description: "Your project changes were saved successfully.",
+      });
+    } catch (error: any) {
+      const message = error.message || "Failed to update project";
+      console.error(error);
+
+      setTasks(previousTasks);
+      setAllTasksForStats(previousAllTasks);
+
+      toast.error("Project update failed", {
+        description: message,
+        action: {
+          label: "Retry",
+          onClick: () => updateProjectField(projectId, field, value),
+        },
+      });
+    } finally {
+      setSavingTaskIds((prev) => {
+        const next = { ...prev };
+        affectedTaskIds.forEach((id) => {
+          delete next[id];
+        });
+        return next;
+      });
+    }
+  }
+
   async function copyTask(taskId: number) {
     const task = tasks.find((item) => item.id === taskId);
     if (!task) {
@@ -965,45 +1116,60 @@ export default function DashboardClient({
   }
 
   async function archiveTask(taskId: number) {
-  const taskToArchive = tasks.find((task) => task.id === taskId);
+    const taskToArchive = tasks.find((task) => task.id === taskId);
 
-  if (!taskToArchive) {
-    toast.error("Task not found", {
-      description: "Could not find the task to archive.",
+    if (!taskToArchive) {
+      toast.error("Task not found", {
+        description: "Could not find the task to archive.",
+      });
+      return;
+    }
+
+    const previousTasks = tasks;
+    const previousAllTasks = allTasksForStats;
+    const nowIso = new Date().toISOString();
+
+    setDeletingTaskIds((prev) => ({
+      ...prev,
+      [taskId]: true,
+    }));
+
+    setSavedTaskIds((prev) => {
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
     });
-    return;
-  }
 
-  const previousTasks = tasks;
-  const previousAllTasks = allTasksForStats;
-  const nowIso = new Date().toISOString();
+    setSavingTaskIds((prev) => {
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
+    });
 
-  setDeletingTaskIds((prev) => ({
-    ...prev,
-    [taskId]: true,
-  }));
+    setCopiedTaskIds((prev) => {
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
+    });
 
-  setSavedTaskIds((prev) => {
-    const next = { ...prev };
-    delete next[taskId];
-    return next;
-  });
+    setTasks((prev) => {
+      if (archiveView === "all") {
+        return prev.map((task) =>
+          task.id === taskId
+            ? {
+                ...task,
+                is_archived: true,
+                archived_at: task.archived_at || nowIso,
+              }
+            : task
+        );
+      }
 
-  setSavingTaskIds((prev) => {
-    const next = { ...prev };
-    delete next[taskId];
-    return next;
-  });
+      return removeTaskFromList(prev, taskId);
+    });
 
-  setCopiedTaskIds((prev) => {
-    const next = { ...prev };
-    delete next[taskId];
-    return next;
-  });
-
-  setTasks((prev) => {
-    if (archiveView === "all") {
-      return prev.map((task) =>
+    setAllTasksForStats((prev) =>
+      prev.map((task) =>
         task.id === taskId
           ? {
               ...task,
@@ -1011,68 +1177,53 @@ export default function DashboardClient({
               archived_at: task.archived_at || nowIso,
             }
           : task
-      );
+      )
+    );
+
+    try {
+      const res = await fetch("/api/tasks/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ taskId, mode: "archive" }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to archive task");
+      }
+
+      await refreshStatsOnly();
+
+      toast.success("Task archived", {
+        description: taskToArchive.task
+          ? `"${taskToArchive.task}" is now in Archive.`
+          : "The task is now in Archive.",
+      });
+    } catch (error: any) {
+      const message = error.message || "Failed to archive task";
+      console.error(error);
+
+      setTasks(previousTasks);
+      setAllTasksForStats(previousAllTasks);
+
+      toast.error("Archive failed", {
+        description: message,
+        action: {
+          label: "Retry",
+          onClick: () => archiveTask(taskId),
+        },
+      });
+    } finally {
+      setDeletingTaskIds((prev) => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
     }
-
-    return removeTaskFromList(prev, taskId);
-  });
-
-  setAllTasksForStats((prev) =>
-    prev.map((task) =>
-      task.id === taskId
-        ? {
-            ...task,
-            is_archived: true,
-            archived_at: task.archived_at || nowIso,
-          }
-        : task
-    )
-  );
-
-  try {
-    const res = await fetch("/api/tasks/delete", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ taskId, mode: "archive" }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || "Failed to archive task");
-    }
-
-    await refreshStatsOnly();
-
-    toast.success("Task archived", {
-      description: taskToArchive.task
-        ? `"${taskToArchive.task}" is now in Archive.`
-        : "The task is now in Archive.",
-    });
-  } catch (error: any) {
-    const message = error.message || "Failed to archive task";
-    console.error(error);
-
-    setTasks(previousTasks);
-    setAllTasksForStats(previousAllTasks);
-
-    toast.error("Archive failed", {
-      description: message,
-      action: {
-        label: "Retry",
-        onClick: () => archiveTask(taskId),
-      },
-    });
-  } finally {
-    setDeletingTaskIds((prev) => {
-      const next = { ...prev };
-      delete next[taskId];
-      return next;
-    });
   }
-}
 
   async function restoreTask(taskId: number) {
     const taskToRestore = tasks.find((task) => task.id === taskId);
@@ -1236,43 +1387,24 @@ export default function DashboardClient({
       <div className="dashboard-page-root" style={dashboardPageRootStyle}>
         <style>{dashboardResponsiveCss}</style>
 
-        <DashboardHeader
-          userEmail={email}
-          onBilling={handleBilling}
-          onDisconnect={() => undefined}
-          onLogout={handleLogout}
-          isDisconnecting={false}
-          isLoggingOut={isLoggingOut}
-        />
+        
 
-        <DashboardTopSummaryStrip
+        <DashboardOverviewV3
           openTasks={stats.open}
           highPriority={stats.high}
           doneTasks={stats.done}
           progress={progressStats}
+          urgentTasks={urgentPreviewTasks}
+          overdueCount={dashboardAlerts.counts.overdue}
+          dueTodayCount={dashboardAlerts.counts.dueToday}
+          dueTomorrowCount={dashboardAlerts.counts.dueTomorrow}
+          dueSoonCount={dashboardAlerts.counts.dueSoon}
+          activeTasks={activeTasksForStats}
+          analytics={incomeAnalytics}
+          userEmail={email}
+          onGoToExtract={() => handleNavChange("extract")}
+          onGoToTasks={() => handleNavChange("tasks")}
         />
-
-        <div className="dashboard-primary-grid" style={dashboardPrimaryGridStyle}>
-          <DashboardUrgentTasksCard
-            urgentTasks={urgentPreviewTasks}
-            overdueCount={dashboardAlerts.counts.overdue}
-            dueTodayCount={dashboardAlerts.counts.dueToday}
-            dueTomorrowCount={dashboardAlerts.counts.dueTomorrow}
-            dueSoonCount={dashboardAlerts.counts.dueSoon}
-            onOpenTask={handleOpenTaskFromDashboard}
-          />
-
-          <RevenueSnapshotPremium
-            thisMonth={incomeAnalytics.summary.thisMonth}
-            nextMonth={incomeAnalytics.summary.nextMonth}
-            previousMonth={incomeAnalytics.summary.previousMonth}
-            clients={incomeAnalytics.byClient.length}
-            taskTypes={incomeAnalytics.byTaskType.length}
-            tasks={visibleStatsTasks.length}
-          />
-        </div>
-
-        <DashboardAnalyticsOverviewSection analytics={incomeAnalytics} />
       </div>
     );
   }
@@ -1323,6 +1455,7 @@ export default function DashboardClient({
             toggleClientGroup={toggleClientGroup}
             updateTaskStatus={updateTaskStatus}
             updateTaskField={updateTaskField}
+            updateProjectField={updateProjectField}
             copyTask={copyTask}
             archiveTask={archiveTask}
             restoreTask={restoreTask}
@@ -1370,17 +1503,8 @@ const dashboardResponsiveCss = `
     min-width: 0;
   }
 
-  .dashboard-primary-grid > * {
-    min-width: 0;
-  }
-
   @media (max-width: 900px) {
     .dashboard-page-root {
-      gap: 16px !important;
-    }
-
-    .dashboard-primary-grid {
-      grid-template-columns: 1fr !important;
       gap: 16px !important;
     }
   }
@@ -1388,12 +1512,6 @@ const dashboardResponsiveCss = `
   @media (min-width: 901px) {
     .dashboard-page-root {
       gap: 18px !important;
-    }
-
-    .dashboard-primary-grid {
-      grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr) !important;
-      gap: 18px !important;
-      align-items: stretch !important;
     }
   }
 `;
@@ -1405,16 +1523,5 @@ const dashboardPageRootStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "1fr",
   gap: 18,
-  overflowX: "hidden",
-};
-
-const dashboardPrimaryGridStyle: CSSProperties = {
-  width: "100%",
-  maxWidth: "100%",
-  minWidth: 0,
-  display: "grid",
-  gridTemplateColumns: "1fr",
-  gap: 18,
-  alignItems: "stretch",
   overflowX: "hidden",
 };

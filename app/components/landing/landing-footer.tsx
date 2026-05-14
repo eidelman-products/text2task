@@ -1,130 +1,305 @@
+import Image from "next/image";
 import Link from "next/link";
-import type { CSSProperties } from "react";
+
+const productLinks = [
+  { label: "How it works", href: "#how-it-works" },
+  { label: "Demo", href: "#demo" },
+  { label: "Features", href: "#features" },
+  { label: "Pricing", href: "#pricing" },
+];
+
+const useCaseLinks = [
+  { label: "Web designers", href: "/use-cases/web-designers" },
+  { label: "WordPress freelancers", href: "/use-cases/wordpress-freelancers" },
+  { label: "Graphic designers", href: "/use-cases/graphic-designers" },
+];
+
+const legalLinks = [
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/terms" },
+  { label: "Contact", href: "/contact" },
+];
+
+const accountLinks = [
+  { label: "Log in", href: "/login" },
+  { label: "Start free", href: "/signup" },
+];
 
 export default function LandingFooter() {
   return (
-    <footer style={footerStyle}>
-      <div style={footerTopStyle}>
-        <div style={footerBrandStyle}>
-          <div style={logoRowStyle}>
-            <span style={dotStyle} />
-            <span>Text2Task</span>
-          </div>
+    <footer className="t2t-footer">
+      <style>{footerStyles}</style>
 
-          <p style={footerTextStyle}>
+      <div className="t2t-footer-inner">
+        <div className="t2t-footer-brand">
+          <Link href="/" className="t2t-footer-logo" aria-label="Text2Task home">
+            <Image
+              src="/text2task-logo.png"
+              alt="Text2Task"
+              width={190}
+              height={54}
+            />
+          </Link>
+
+          <p>
             Turn messy client messages, screenshots, and notes into structured
             work with AI.
           </p>
+
+          <a className="t2t-footer-support" href="mailto:support@text2task.com">
+            <span>Support</span>
+            <strong>support@text2task.com</strong>
+          </a>
         </div>
 
-        <div style={linksGridStyle}>
-          <div>
-            <div style={titleStyle}>Product</div>
-            <FooterLink href="#product" label="Product" />
-            <FooterLink href="#how-it-works" label="How it works" />
-            <FooterLink href="#features" label="Features" />
-            <FooterLink href="#pricing" label="Pricing" />
-            <FooterLink href="/use-cases" label="Use Cases" />
-            <FooterLink href="/resources" label="Resources" />
-          </div>
-
-          <div>
-            <div style={titleStyle}>Legal</div>
-            <FooterLink href="/privacy" label="Privacy Policy" />
-            <FooterLink href="/terms" label="Terms of Service" />
-            <FooterLink href="/contact" label="Contact" />
-          </div>
-
-          <div>
-            <div style={titleStyle}>Account</div>
-            <FooterLink href="/login" label="Log in" />
-            <FooterLink href="/signup" label="Try Text2Task" />
-          </div>
-        </div>
+        <nav className="t2t-footer-nav" aria-label="Footer navigation">
+          <FooterColumn title="Product" links={productLinks} />
+          <FooterColumn title="Use cases" links={useCaseLinks} />
+          <FooterColumn title="Legal" links={legalLinks} />
+          <FooterColumn title="Account" links={accountLinks} />
+        </nav>
       </div>
 
-      <div style={footerBottomStyle}>© 2026 Text2Task. All rights reserved.</div>
+      <div className="t2t-footer-bottom">
+        <span>© 2026 Text2Task. All rights reserved.</span>
+
+        <div>
+          <Link href="/privacy">Privacy</Link>
+          <span>•</span>
+          <Link href="/terms">Terms</Link>
+          <span>•</span>
+          <Link href="/contact">Contact</Link>
+        </div>
+      </div>
     </footer>
   );
 }
 
-function FooterLink({ href, label }: { href: string; label: string }) {
+function FooterColumn({
+  title,
+  links,
+}: {
+  title: string;
+  links: { label: string; href: string }[];
+}) {
   return (
-    <Link href={href} style={linkStyle}>
-      {label}
-    </Link>
+    <div className="t2t-footer-column">
+      <h3>{title}</h3>
+
+      <div>
+        {links.map((link) => (
+          <Link key={`${title}-${link.label}`} href={link.href}>
+            {link.label}
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
 
-const footerStyle: CSSProperties = {
-  marginTop: 72,
-  paddingTop: 34,
-  borderTop: "1px solid #e2e8f0",
-};
+const footerStyles = `
+  .t2t-footer {
+    width: min(1180px, calc(100% - 40px));
+    margin: 46px auto 0;
+    overflow: hidden;
+    border-radius: 30px;
+    border: 1px solid #e2e8f0;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(99,102,241,0.10), transparent 34%),
+      linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92));
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.07);
+  }
 
-const footerTopStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: 32,
-  flexWrap: "wrap",
-};
+  .t2t-footer,
+  .t2t-footer * {
+    box-sizing: border-box;
+    min-width: 0;
+  }
 
-const footerBrandStyle: CSSProperties = {
-  maxWidth: 320,
-};
+  .t2t-footer-inner {
+    display: grid;
+    grid-template-columns: 1.05fr 1.95fr;
+    gap: 58px;
+    padding: 34px 34px 32px;
+    align-items: start;
+  }
 
-const logoRowStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 12,
-  fontWeight: 900,
-  fontSize: 22,
-  color: "#0f172a",
-  marginBottom: 12,
-};
+  .t2t-footer-brand {
+    max-width: 390px;
+  }
 
-const dotStyle: CSSProperties = {
-  width: 14,
-  height: 14,
-  borderRadius: 999,
-  background: "linear-gradient(135deg,#8b5cf6,#60a5fa)",
-  boxShadow: "0 0 0 5px rgba(99,102,241,0.12)",
-};
+  .t2t-footer-logo {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+  }
 
-const footerTextStyle: CSSProperties = {
-  margin: 0,
-  color: "#64748b",
-  fontSize: 16,
-  lineHeight: 1.75,
-};
+  .t2t-footer-logo img {
+    width: 168px;
+    height: auto;
+    display: block;
+    object-fit: contain;
+    object-position: left center;
+  }
 
-const linksGridStyle: CSSProperties = {
-  display: "flex",
-  gap: 44,
-  flexWrap: "wrap",
-};
+  .t2t-footer-brand p {
+    margin: 18px 0 0;
+    max-width: 360px;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.72;
+    font-weight: 650;
+  }
 
-const titleStyle: CSSProperties = {
-  fontWeight: 900,
-  marginBottom: 12,
-  color: "#0f172a",
-  fontSize: 16,
-};
+  .t2t-footer-support {
+    margin-top: 20px;
+    display: inline-grid;
+    gap: 4px;
+    max-width: 100%;
+    padding: 11px 15px;
+    border-radius: 16px;
+    border: 1px solid #c7d2fe;
+    background: rgba(238, 242, 255, 0.72);
+    color: #4338ca;
+    text-decoration: none;
+    box-shadow:
+      0 12px 30px rgba(79, 70, 229, 0.08),
+      inset 0 1px 0 rgba(255,255,255,0.9);
+  }
 
-const linkStyle: CSSProperties = {
-  display: "block",
-  marginBottom: 10,
-  color: "#64748b",
-  textDecoration: "none",
-  fontSize: 15,
-  fontWeight: 700,
-};
+  .t2t-footer-support span {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 950;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
 
-const footerBottomStyle: CSSProperties = {
-  marginTop: 28,
-  paddingTop: 18,
-  borderTop: "1px solid #eef2f7",
-  color: "#94a3b8",
-  fontSize: 14,
-};
+  .t2t-footer-support strong {
+    color: #4338ca;
+    font-size: 13px;
+    font-weight: 950;
+    overflow-wrap: anywhere;
+  }
+
+  .t2t-footer-nav {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 30px;
+    padding-top: 8px;
+  }
+
+  .t2t-footer-column h3 {
+    margin: 0 0 14px;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 950;
+    letter-spacing: -0.01em;
+  }
+
+  .t2t-footer-column div {
+    display: grid;
+    gap: 10px;
+  }
+
+  .t2t-footer-column a {
+    color: #475569;
+    text-decoration: none;
+    font-size: 13px;
+    line-height: 1.35;
+    font-weight: 720;
+    transition: color 160ms ease;
+  }
+
+  .t2t-footer-column a:hover {
+    color: #4f46e5;
+  }
+
+  .t2t-footer-bottom {
+    border-top: 1px solid rgba(226,232,240,0.9);
+    padding: 18px 34px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 680;
+  }
+
+  .t2t-footer-bottom div {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+  }
+
+  .t2t-footer-bottom a {
+    color: #334155;
+    text-decoration: none;
+    font-weight: 850;
+    transition: color 160ms ease;
+  }
+
+  .t2t-footer-bottom a:hover {
+    color: #4f46e5;
+  }
+
+  .t2t-footer-bottom div span {
+    color: #818cf8;
+  }
+
+  @media (max-width: 980px) {
+    .t2t-footer {
+      width: min(100% - 40px, 1180px);
+    }
+
+    .t2t-footer-inner {
+      grid-template-columns: 1fr;
+      gap: 34px;
+    }
+
+    .t2t-footer-nav {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .t2t-footer {
+      width: min(100% - 24px, 1180px);
+      margin-top: 38px;
+      border-radius: 26px;
+    }
+
+    .t2t-footer-inner {
+      padding: 28px 22px;
+      gap: 28px;
+    }
+
+    .t2t-footer-logo img {
+      width: 150px;
+    }
+
+    .t2t-footer-nav {
+      grid-template-columns: 1fr;
+      gap: 22px;
+    }
+
+    .t2t-footer-column {
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(226,232,240,0.8);
+    }
+
+    .t2t-footer-column:last-child {
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .t2t-footer-bottom {
+      padding: 18px 22px;
+      align-items: flex-start;
+      flex-direction: column;
+      font-size: 12px;
+    }
+  }
+`;

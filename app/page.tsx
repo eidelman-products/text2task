@@ -1,22 +1,22 @@
 import type { Metadata } from "next";
 import HeroSection from "./components/landing/hero-section";
-import UseCasesPreviewSection from "./components/landing/use-cases-preview-section";
+import LandingFooter from "./components/landing/landing-footer";
 
 const siteUrl = "https://www.text2task.com";
 
 export const metadata: Metadata = {
-  title: "Text2Task | Turn Client Messages Into Tasks",
+  title: "Text2Task | Turn Client Messages Into Organized Work",
   description:
-    "Text2Task turns messy client messages, emails, notes, and screenshots into organized tasks with deadlines, budgets, client details, phone numbers, emails, and priorities.",
+    "Text2Task turns messy client messages, emails, notes, and screenshots into organized work with tasks, deadlines, budgets, and client details.",
 
   alternates: {
     canonical: siteUrl,
   },
 
   openGraph: {
-    title: "Text2Task | Turn Client Messages Into Tasks",
+    title: "Text2Task | Turn Client Messages Into Organized Work",
     description:
-      "Paste a messy client message or upload a screenshot. Text2Task extracts tasks, deadlines, budgets, client details, phone numbers, emails, and notes into one organized workspace.",
+      "Paste a WhatsApp message, email, note, or screenshot. Text2Task extracts the project, tasks, budget, deadline, and client details.",
     url: siteUrl,
     siteName: "Text2Task",
     type: "website",
@@ -25,9 +25,9 @@ export const metadata: Metadata = {
 
   twitter: {
     card: "summary_large_image",
-    title: "Text2Task | Turn Client Messages Into Tasks",
+    title: "Text2Task | Turn Client Messages Into Organized Work",
     description:
-      "AI CRM for freelancers and small teams. Turn messy client messages, emails, notes, and screenshots into structured tasks in seconds.",
+      "Paste a WhatsApp message, email, note, or screenshot. Text2Task extracts the project, tasks, budget, deadline, and client details.",
   },
 
   robots: {
@@ -53,7 +53,7 @@ const structuredData = {
       url: siteUrl,
       name: "Text2Task",
       description:
-        "Text2Task turns messy client messages, emails, notes, and screenshots into organized tasks.",
+        "Text2Task turns messy client messages, emails, notes, and screenshots into organized work.",
       publisher: {
         "@id": `${siteUrl}/#organization`,
       },
@@ -68,7 +68,7 @@ const structuredData = {
       operatingSystem: "Web",
       url: siteUrl,
       description:
-        "Text2Task is an AI CRM that turns messy client messages, emails, notes, and screenshots into organized tasks with deadlines, budgets, client details, phone numbers, emails, and priorities.",
+        "Text2Task is an AI task CRM for freelancers and service teams. It turns messy client messages into organized work with tasks, budgets, deadlines, and client details.",
       offers: {
         "@type": "Offer",
         price: "12.90",
@@ -88,13 +88,7 @@ const structuredData = {
 
 export default function HomePage() {
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, #eef4ff 0%, #f7f9fc 42%, #f8fafc 100%)",
-      }}
-    >
+    <main className="min-h-screen bg-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -103,7 +97,10 @@ export default function HomePage() {
       />
 
       <HeroSection />
-      <UseCasesPreviewSection />
+
+      <div className="mx-auto max-w-7xl px-6 pb-12 lg:px-8">
+        <LandingFooter />
+      </div>
     </main>
   );
 }

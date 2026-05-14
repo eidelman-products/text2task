@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
 type ExtractInputPanelsProps = {
   text: string;
@@ -35,6 +36,9 @@ export default function ExtractInputPanels({
   const [isDraggingImage, setIsDraggingImage] = useState(false);
   const [isPasteFocused, setIsPasteFocused] = useState(false);
   const [pasteHintVisible, setPasteHintVisible] = useState(false);
+
+  const hasText = Boolean(text.trim());
+  const hasImage = Boolean(selectedImagePreviewUrl);
 
   function handleFile(file: File | null) {
     if (!file) return;
@@ -95,484 +99,866 @@ export default function ExtractInputPanels({
   }, [pasteHintVisible]);
 
   return (
-    <div style={{ display: "grid", gap: 22 }}>
-      <div
-        style={{
-          border: "1px solid #e2e8f0",
-          borderRadius: 24,
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(248,250,252,0.82) 100%)",
-          padding: 22,
-          display: "grid",
-          gap: 18,
-          boxShadow: "0 8px 24px rgba(15,23,42,0.04)",
-        }}
-      >
-        <div style={{ display: "grid", gap: 6 }}>
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              color: "#4f46e5",
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            Text to tasks
+    <>
+      <style>{extractInputPanelsCss}</style>
+
+      <div className="extract-input-panels" style={panelsGridStyle}>
+        <section className="extract-input-card" style={panelCardStyle}>
+          <div style={panelHeaderStyle}>
+            <div style={panelTitleRowStyle}>
+              <div className="extract-icon-card" style={textIconStyle}>
+                ✍
+              </div>
+
+              <div style={{ minWidth: 0 }}>
+                <div style={eyebrowStyle}>Text request</div>
+                <h3 style={panelTitleStyle}>Paste client work details</h3>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="extract-soft-button"
+              style={exampleButtonStyle}
+            >
+              ✦ Examples
+            </button>
           </div>
 
-          <div
-            style={{
-              fontSize: 22,
-              fontWeight: 900,
-              color: "#0f172a",
-              letterSpacing: "-0.03em",
-            }}
-          >
-            Paste a messy request and turn it into structured work
-          </div>
+          <p style={panelDescriptionStyle}>
+            Paste an email, WhatsApp message, revision note, or client brief.
+            Text2Task will extract the project, subtasks, budget, deadline,
+            priority, and contact details.
+          </p>
 
-          <div
-            style={{
-              fontSize: 14,
-              color: "#64748b",
-              lineHeight: 1.7,
-              maxWidth: 760,
-            }}
-          >
-            Drop in a client message, email, voice transcript, or rough note.
-            The system will extract clear task items you can review before saving.
-          </div>
-        </div>
+          <div className="extract-textarea-shell" style={textareaShellStyle}>
+            <textarea
+              value={text}
+              onChange={(e) => onTextChange(e.target.value)}
+              placeholder={`Type or paste the client request here...
 
-        <textarea
-          value={text}
-          onChange={(e) => onTextChange(e.target.value)}
-          placeholder={`Example:
+Example:
 Hi, I need a landing page, 3 ad creatives, and a logo for my new product launch.
 Budget is around $2000 and I need the first draft by Friday.`}
-          disabled={isBusy}
-          style={{
-            width: "100%",
-            minHeight: 210,
-            resize: "vertical",
-            borderRadius: 20,
-            border: "1px solid #dbe4f0",
-            background:
-              "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
-            padding: 18,
-            fontSize: 15,
-            lineHeight: 1.8,
-            color: "#0f172a",
-            outline: "none",
-            boxShadow: "inset 0 1px 2px rgba(15,23,42,0.03)",
-          }}
-        />
+              disabled={isBusy}
+              style={textareaStyle}
+            />
 
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 12,
-            alignItems: "center",
-          }}
-        >
-          <button
-            type="button"
-            onClick={onExtractText}
-            disabled={isBusy}
-            style={{
-              border: "none",
-              borderRadius: 16,
-              padding: "14px 22px",
-              background:
-                "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)",
-              color: "#ffffff",
-              fontSize: 15,
-              fontWeight: 800,
-              cursor: isBusy ? "not-allowed" : "pointer",
-              opacity: isBusy ? 0.75 : 1,
-              boxShadow: "0 10px 24px rgba(79,70,229,0.24)",
-            }}
-          >
-            {isBusy ? "AI is extracting..." : "Extract Tasks"}
-          </button>
+            <div style={textareaFooterStyle}>
+              <div style={supportTextStyle}>
+                Works best with client messages, project briefs, edits, budgets,
+                and delivery dates.
+              </div>
 
-          <button
-            type="button"
-            onClick={onClearText}
-            disabled={isBusy || !text.trim()}
-            style={{
-              borderRadius: 16,
-              padding: "14px 20px",
-              background: "#ffffff",
-              color: "#0f172a",
-              fontSize: 15,
-              fontWeight: 800,
-              border: "1px solid #dbe4f0",
-              cursor: isBusy || !text.trim() ? "not-allowed" : "pointer",
-              opacity: isBusy || !text.trim() ? 0.55 : 1,
-            }}
-          >
-            Clear
-          </button>
-
-          <div
-            style={{
-              fontSize: 13,
-              color: "#64748b",
-              fontWeight: 600,
-            }}
-          >
-            Paste first. Review after extraction. Save only when ready.
-          </div>
-        </div>
-      </div>
-
-      <div
-        style={{
-          border: "1px solid #e2e8f0",
-          borderRadius: 24,
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(248,250,252,0.82) 100%)",
-          padding: 22,
-          display: "grid",
-          gap: 18,
-          boxShadow: "0 8px 24px rgba(15,23,42,0.04)",
-        }}
-      >
-        <div style={{ display: "grid", gap: 6 }}>
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              color: "#0ea5e9",
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            Image to tasks
+              <div style={counterStyle}>{text.length} / 8000</div>
+            </div>
           </div>
 
-          <div
-            style={{
-              fontSize: 22,
-              fontWeight: 900,
-              color: "#0f172a",
-              letterSpacing: "-0.03em",
-            }}
-          >
-            Upload or paste a screenshot
+          <div style={extractChipsRowStyle}>
+            <span style={extractLabelStyle}>AI will extract</span>
+            <ExtractChip tone="purple" label="Tasks" />
+            <ExtractChip tone="green" label="Budget" />
+            <ExtractChip tone="blue" label="Deadline" />
+            <ExtractChip tone="orange" label="Priority" />
+            <ExtractChip tone="slate" label="Contact" />
           </div>
 
-          <div
-            style={{
-              fontSize: 14,
-              color: "#64748b",
-              lineHeight: 1.7,
-              maxWidth: 760,
-            }}
-          >
-            Use this when the task request lives inside WhatsApp, email, a quote,
-            a PDF screenshot, or any image-based message.
-          </div>
-        </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleInputChange}
-          style={{ display: "none" }}
-        />
-
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 12,
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isBusy}
-            style={{
-              border: "1px solid #dbe4f0",
-              borderRadius: 16,
-              padding: "12px 18px",
-              background: "#ffffff",
-              color: "#0f172a",
-              fontSize: 14,
-              fontWeight: 800,
-              cursor: isBusy ? "not-allowed" : "pointer",
-              opacity: isBusy ? 0.6 : 1,
-            }}
-          >
-            Upload image
-          </button>
-
-          <button
-            type="button"
-            onClick={focusPasteZone}
-            disabled={isBusy}
-            style={{
-              border: "1px solid #dbe4f0",
-              borderRadius: 16,
-              padding: "12px 18px",
-              background: "#ffffff",
-              color: "#0f172a",
-              fontSize: 14,
-              fontWeight: 800,
-              cursor: isBusy ? "not-allowed" : "pointer",
-              opacity: isBusy ? 0.6 : 1,
-            }}
-          >
-            Focus paste area
-          </button>
-        </div>
-
-        <div
-          ref={pasteZoneRef}
-          tabIndex={0}
-          onClick={() => {
-            if (!isBusy) {
-              pasteZoneRef.current?.focus();
-            }
-          }}
-          onFocus={() => setIsPasteFocused(true)}
-          onBlur={() => setIsPasteFocused(false)}
-          onDragEnter={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setIsDraggingImage(true);
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setIsDraggingImage(true);
-          }}
-          onDragLeave={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setIsDraggingImage(false);
-          }}
-          onDrop={handleDrop}
-          onPaste={handlePaste}
-          style={{
-            border:
-              isDraggingImage || isPasteFocused
-                ? "2px solid #4f46e5"
-                : "2px dashed #cbd5e1",
-            borderRadius: 22,
-            background:
-              isDraggingImage || isPasteFocused
-                ? "linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%)"
-                : "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
-            padding: 24,
-            minHeight: selectedImagePreviewUrl ? 280 : 190,
-            transition: "all 0.2s ease",
-            outline: "none",
-            cursor: isBusy ? "not-allowed" : "pointer",
-            display: "grid",
-            alignItems: "center",
-          }}
-        >
-          {selectedImagePreviewUrl ? (
-            <div
+          <div style={actionRowStyle}>
+            <button
+              type="button"
+              className="extract-primary-button"
+              onClick={onExtractText}
+              disabled={isBusy || !hasText}
               style={{
-                display: "grid",
-                gap: 18,
+                ...primaryButtonStyle,
+                cursor: isBusy || !hasText ? "not-allowed" : "pointer",
+                opacity: isBusy || !hasText ? 0.68 : 1,
               }}
             >
-              <div
-                style={{
-                  width: "100%",
-                  maxWidth: 560,
-                  borderRadius: 20,
-                  overflow: "hidden",
-                  border: "1px solid #e2e8f0",
-                  background: "#ffffff",
-                  boxShadow: "0 14px 30px rgba(15,23,42,0.08)",
-                }}
-              >
-                <img
-                  src={selectedImagePreviewUrl}
-                  alt={selectedImageName || "Selected image"}
+              {isBusy ? "AI is extracting..." : "✦ Extract tasks"}
+            </button>
+
+            <button
+              type="button"
+              className="extract-secondary-button"
+              onClick={onClearText}
+              disabled={isBusy || !hasText}
+              style={{
+                ...secondaryButtonStyle,
+                cursor: isBusy || !hasText ? "not-allowed" : "pointer",
+                opacity: isBusy || !hasText ? 0.55 : 1,
+              }}
+            >
+              Clear
+            </button>
+
+            <span style={actionHintStyle}>
+              Review before saving. You stay in control.
+            </span>
+          </div>
+        </section>
+
+        <section className="extract-input-card" style={panelCardStyle}>
+          <div style={panelHeaderStyle}>
+            <div style={panelTitleRowStyle}>
+              <div className="extract-icon-card" style={imageIconStyle}>
+                ▣
+              </div>
+
+              <div style={{ minWidth: 0 }}>
+                <div style={{ ...eyebrowStyle, color: "#0284c7" }}>
+                  Screenshot request
+                </div>
+                <h3 style={panelTitleStyle}>Upload or paste an image</h3>
+              </div>
+            </div>
+
+            <div style={imageStatusPillStyle}>
+              {hasImage ? "Image ready" : "Optional"}
+            </div>
+          </div>
+
+          <p style={panelDescriptionStyle}>
+            Use screenshots of WhatsApp, email, quotes, mobile messages, or
+            image-based project requests.
+          </p>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleInputChange}
+            style={{ display: "none" }}
+          />
+
+          <div style={imageTabsStyle}>
+            <button
+              type="button"
+              className="extract-tab-button extract-tab-button-active"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isBusy}
+              style={{
+                ...tabButtonStyle,
+                color: "#4f46e5",
+                borderColor: "rgba(199,210,254,0.95)",
+                background: "#eef2ff",
+                cursor: isBusy ? "not-allowed" : "pointer",
+                opacity: isBusy ? 0.6 : 1,
+              }}
+            >
+              Upload
+            </button>
+
+            <button
+              type="button"
+              className="extract-tab-button"
+              onClick={focusPasteZone}
+              disabled={isBusy}
+              style={{
+                ...tabButtonStyle,
+                cursor: isBusy ? "not-allowed" : "pointer",
+                opacity: isBusy ? 0.6 : 1,
+              }}
+            >
+              Paste from clipboard
+            </button>
+
+            <button
+              type="button"
+              className="extract-tab-button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isBusy}
+              style={{
+                ...tabButtonStyle,
+                cursor: isBusy ? "not-allowed" : "pointer",
+                opacity: isBusy ? 0.6 : 1,
+              }}
+            >
+              From device
+            </button>
+          </div>
+
+          <div
+            ref={pasteZoneRef}
+            tabIndex={0}
+            className="extract-drop-zone"
+            onClick={() => {
+              if (!isBusy) {
+                pasteZoneRef.current?.focus();
+              }
+            }}
+            onFocus={() => setIsPasteFocused(true)}
+            onBlur={() => setIsPasteFocused(false)}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDraggingImage(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDraggingImage(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDraggingImage(false);
+            }}
+            onDrop={handleDrop}
+            onPaste={handlePaste}
+            style={{
+              ...dropZoneStyle,
+              border:
+                isDraggingImage || isPasteFocused
+                  ? "2px solid #4f46e5"
+                  : "2px dashed rgba(148,163,184,0.65)",
+              background:
+                isDraggingImage || isPasteFocused
+                  ? "linear-gradient(180deg, #eef2ff 0%, #ffffff 100%)"
+                  : "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+              cursor: isBusy ? "not-allowed" : "pointer",
+              minHeight: hasImage ? 250 : 198,
+            }}
+          >
+            {selectedImagePreviewUrl ? (
+              <div style={selectedImageShellStyle}>
+                <div style={selectedImagePreviewFrameStyle}>
+                  <img
+                    src={selectedImagePreviewUrl}
+                    alt={selectedImageName || "Selected image"}
+                    style={selectedImagePreviewStyle}
+                  />
+                </div>
+
+                <div style={selectedImageMetaStyle}>
+                  <div style={selectedImageNameStyle}>{selectedImageName}</div>
+
+                  <div style={selectedImageTextStyle}>
+                    Screenshot selected. You can analyze it now, replace it, or
+                    remove it before extracting.
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={emptyDropContentStyle}>
+                <div className="extract-upload-icon" style={uploadIconStyle}>
+                  ☁
+                </div>
+
+                <div style={dropTitleStyle}>
+                  Drag & drop here, paste screenshot, or upload manually
+                </div>
+
+                <div style={dropTextStyle}>
+                  Click this area first, then press{" "}
+                  <span style={keyboardStyle}>Ctrl + V</span> to paste a
+                  screenshot directly.
+                </div>
+
+                <div style={fileSupportStyle}>PNG, JPG, JPEG up to 10MB</div>
+
+                {pasteHintVisible ? (
+                  <div style={pasteHintStyle}>
+                    Paste area focused. Now press Ctrl + V.
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          {isBusy && imageProgress > 0 ? (
+            <div style={progressShellStyle}>
+              <div style={progressTopStyle}>
+                <span>AI is processing the image...</span>
+                <span>{imageProgress}%</span>
+              </div>
+
+              <div style={progressTrackStyle}>
+                <div
                   style={{
-                    width: "100%",
-                    maxHeight: 320,
-                    objectFit: "contain",
-                    display: "block",
-                    background: "#ffffff",
+                    ...progressFillStyle,
+                    width: `${imageProgress}%`,
                   }}
                 />
               </div>
-
-              <div style={{ display: "grid", gap: 6 }}>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 800,
-                    color: "#0f172a",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {selectedImageName}
-                </div>
-
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "#64748b",
-                    lineHeight: 1.7,
-                  }}
-                >
-                  Image selected successfully. You can extract now, replace it
-                  with a different screenshot, or remove it first.
-                </div>
-              </div>
             </div>
-          ) : (
-            <div
+          ) : null}
+
+          <div style={actionRowStyle}>
+            <button
+              type="button"
+              className="extract-outline-action"
+              onClick={onExtractImage}
+              disabled={isBusy || !hasImage}
               style={{
-                display: "grid",
-                gap: 12,
-                justifyItems: "start",
+                ...primaryOutlineButtonStyle,
+                cursor: isBusy || !hasImage ? "not-allowed" : "pointer",
+                opacity: isBusy || !hasImage ? 0.64 : 1,
               }}
             >
-              <div
-                style={{
-                  fontSize: 20,
-                  fontWeight: 900,
-                  color: "#0f172a",
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                Drop image here, paste a screenshot, or upload manually
-              </div>
+              {isBusy ? "Extracting..." : "✦ Analyze image"}
+            </button>
 
-              <div
-                style={{
-                  fontSize: 14,
-                  color: "#64748b",
-                  lineHeight: 1.8,
-                  maxWidth: 760,
-                }}
-              >
-                This zone supports drag & drop and clipboard paste. Click here
-                first and then press{" "}
-                <span style={{ fontWeight: 800, color: "#0f172a" }}>
-                  Ctrl + V
-                </span>{" "}
-                to paste a screenshot directly.
-              </div>
-
-              {pasteHintVisible ? (
-                <div
-                  style={{
-                    marginTop: 2,
-                    fontSize: 13,
-                    fontWeight: 800,
-                    color: "#3730a3",
-                    background: "#e0e7ff",
-                    border: "1px solid #c7d2fe",
-                    borderRadius: 14,
-                    padding: "10px 12px",
-                  }}
-                >
-                  Paste area focused. Now press Ctrl + V.
-                </div>
-              ) : null}
-            </div>
-          )}
-        </div>
-
-        {isBusy && imageProgress > 0 ? (
-          <div style={{ display: "grid", gap: 10 }}>
-            <div
+            <button
+              type="button"
+              className="extract-danger-button"
+              onClick={onRemoveImage}
+              disabled={isBusy || !hasImage}
               style={{
-                fontSize: 13,
-                fontWeight: 800,
-                color: "#334155",
+                ...dangerButtonStyle,
+                cursor: isBusy || !hasImage ? "not-allowed" : "pointer",
+                opacity: isBusy || !hasImage ? 0.5 : 1,
               }}
             >
-              AI is processing the image...
-            </div>
-
-            <div
-              style={{
-                width: "100%",
-                height: 10,
-                borderRadius: 999,
-                background: "#e2e8f0",
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  width: `${imageProgress}%`,
-                  height: "100%",
-                  background:
-                    "linear-gradient(90deg, #4f46e5 0%, #0ea5e9 100%)",
-                  transition: "width 0.25s ease",
-                }}
-              />
-            </div>
+              Remove image
+            </button>
           </div>
-        ) : null}
-
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 12,
-            alignItems: "center",
-          }}
-        >
-          <button
-            type="button"
-            onClick={onExtractImage}
-            disabled={isBusy || !selectedImagePreviewUrl}
-            style={{
-              border: "none",
-              borderRadius: 16,
-              padding: "14px 22px",
-              background:
-                "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)",
-              color: "#ffffff",
-              fontSize: 15,
-              fontWeight: 800,
-              cursor:
-                isBusy || !selectedImagePreviewUrl ? "not-allowed" : "pointer",
-              opacity: isBusy || !selectedImagePreviewUrl ? 0.75 : 1,
-              boxShadow: "0 10px 24px rgba(79,70,229,0.24)",
-            }}
-          >
-            {isBusy ? "Extracting..." : "Extract Tasks from Image"}
-          </button>
-
-          <button
-            type="button"
-            onClick={onRemoveImage}
-            disabled={isBusy || !selectedImagePreviewUrl}
-            style={{
-              borderRadius: 16,
-              padding: "14px 20px",
-              background: "#ffffff",
-              color: "#dc2626",
-              fontSize: 15,
-              fontWeight: 800,
-              border: "1px solid #fecaca",
-              cursor:
-                isBusy || !selectedImagePreviewUrl ? "not-allowed" : "pointer",
-              opacity: isBusy || !selectedImagePreviewUrl ? 0.6 : 1,
-            }}
-          >
-            Remove image
-          </button>
-        </div>
+        </section>
       </div>
-    </div>
+    </>
   );
 }
+
+function ExtractChip({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "purple" | "green" | "blue" | "orange" | "slate";
+}) {
+  const palette = {
+    purple: {
+      background: "#eef2ff",
+      border: "#c7d2fe",
+      color: "#4338ca",
+    },
+    green: {
+      background: "#ecfdf5",
+      border: "#bbf7d0",
+      color: "#047857",
+    },
+    blue: {
+      background: "#eff6ff",
+      border: "#bfdbfe",
+      color: "#1d4ed8",
+    },
+    orange: {
+      background: "#fff7ed",
+      border: "#fed7aa",
+      color: "#c2410c",
+    },
+    slate: {
+      background: "#f8fafc",
+      border: "#e2e8f0",
+      color: "#475569",
+    },
+  }[tone];
+
+  return (
+    <span
+      className="extract-chip"
+      style={{
+        ...chipStyle,
+        background: palette.background,
+        borderColor: palette.border,
+        color: palette.color,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+const panelsGridStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1.12fr) minmax(360px, 0.88fr)",
+  gap: 18,
+  alignItems: "stretch",
+};
+
+const panelCardStyle: CSSProperties = {
+  position: "relative",
+  display: "grid",
+  alignContent: "start",
+  gap: 15,
+  borderRadius: 24,
+  padding: 18,
+  background:
+    "radial-gradient(circle at top left, rgba(238,242,255,0.82) 0%, transparent 36%), linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.92) 100%)",
+  border: "1px solid rgba(226,232,240,0.95)",
+  boxShadow:
+    "0 18px 45px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.9)",
+  transition:
+    "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease",
+};
+
+const panelHeaderStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
+const panelTitleRowStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  minWidth: 0,
+};
+
+const textIconStyle: CSSProperties = {
+  width: 42,
+  height: 42,
+  borderRadius: 16,
+  display: "grid",
+  placeItems: "center",
+  background: "#eef2ff",
+  color: "#4f46e5",
+  border: "1px solid rgba(199,210,254,0.95)",
+  boxShadow: "0 12px 24px rgba(79,70,229,0.08)",
+  flexShrink: 0,
+  transition: "transform 180ms ease, box-shadow 180ms ease",
+};
+
+const imageIconStyle: CSSProperties = {
+  ...textIconStyle,
+  background: "#ecfeff",
+  color: "#0284c7",
+  border: "1px solid rgba(186,230,253,0.95)",
+};
+
+const eyebrowStyle: CSSProperties = {
+  color: "#4f46e5",
+  fontSize: 11,
+  fontWeight: 900,
+  textTransform: "uppercase",
+  letterSpacing: "0.12em",
+};
+
+const panelTitleStyle: CSSProperties = {
+  margin: "3px 0 0",
+  color: "#0f172a",
+  fontSize: 19,
+  lineHeight: 1.2,
+  fontWeight: 850,
+  letterSpacing: "-0.03em",
+};
+
+const panelDescriptionStyle: CSSProperties = {
+  margin: 0,
+  color: "#64748b",
+  fontSize: 13,
+  lineHeight: 1.65,
+  fontWeight: 620,
+};
+
+const exampleButtonStyle: CSSProperties = {
+  border: "1px solid rgba(199,210,254,0.92)",
+  background: "#ffffff",
+  color: "#4f46e5",
+  borderRadius: 14,
+  padding: "9px 12px",
+  fontSize: 12,
+  fontWeight: 850,
+  whiteSpace: "nowrap",
+  boxShadow: "0 8px 18px rgba(15,23,42,0.04)",
+  transition:
+    "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease",
+};
+
+const textareaShellStyle: CSSProperties = {
+  borderRadius: 20,
+  border: "1px solid rgba(203,213,225,0.86)",
+  background: "#ffffff",
+  overflow: "hidden",
+  boxShadow:
+    "0 12px 28px rgba(15,23,42,0.045), inset 0 1px 0 rgba(255,255,255,0.9)",
+  transition: "box-shadow 180ms ease, border-color 180ms ease",
+};
+
+const textareaStyle: CSSProperties = {
+  width: "100%",
+  minHeight: 226,
+  resize: "vertical",
+  border: "none",
+  background:
+    "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(248,250,252,0.7) 100%)",
+  padding: 17,
+  fontSize: 14,
+  lineHeight: 1.75,
+  color: "#0f172a",
+  outline: "none",
+  fontWeight: 560,
+};
+
+const textareaFooterStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+  padding: "10px 14px",
+  borderTop: "1px solid rgba(226,232,240,0.85)",
+  background: "rgba(248,250,252,0.78)",
+};
+
+const supportTextStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 11,
+  fontWeight: 700,
+  lineHeight: 1.4,
+};
+
+const counterStyle: CSSProperties = {
+  color: "#94a3b8",
+  fontSize: 11,
+  fontWeight: 850,
+  whiteSpace: "nowrap",
+};
+
+const extractChipsRowStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: 8,
+};
+
+const extractLabelStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  fontWeight: 850,
+};
+
+const chipStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: 999,
+  border: "1px solid",
+  padding: "6px 9px",
+  fontSize: 11,
+  fontWeight: 850,
+  transition: "transform 150ms ease, box-shadow 150ms ease",
+};
+
+const actionRowStyle: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 10,
+  alignItems: "center",
+};
+
+const primaryButtonStyle: CSSProperties = {
+  border: "none",
+  borderRadius: 15,
+  padding: "13px 18px",
+  background: "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)",
+  color: "#ffffff",
+  fontSize: 14,
+  fontWeight: 850,
+  boxShadow: "0 14px 28px rgba(79,70,229,0.24)",
+  transition:
+    "transform 160ms ease, box-shadow 160ms ease, filter 160ms ease",
+};
+
+const secondaryButtonStyle: CSSProperties = {
+  borderRadius: 15,
+  padding: "13px 17px",
+  background: "#ffffff",
+  color: "#0f172a",
+  fontSize: 14,
+  fontWeight: 800,
+  border: "1px solid #dbe4f0",
+  transition:
+    "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease",
+};
+
+const actionHintStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  fontWeight: 700,
+};
+
+const imageStatusPillStyle: CSSProperties = {
+  borderRadius: 999,
+  padding: "7px 10px",
+  background: "#ffffff",
+  color: "#64748b",
+  border: "1px solid #e2e8f0",
+  fontSize: 11,
+  fontWeight: 850,
+  whiteSpace: "nowrap",
+  boxShadow: "0 8px 18px rgba(15,23,42,0.035)",
+};
+
+const imageTabsStyle: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 8,
+};
+
+const tabButtonStyle: CSSProperties = {
+  border: "1px solid rgba(226,232,240,0.95)",
+  borderRadius: 999,
+  padding: "8px 12px",
+  background: "#ffffff",
+  color: "#475569",
+  fontSize: 12,
+  fontWeight: 820,
+  transition:
+    "transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease, background 150ms ease",
+};
+
+const dropZoneStyle: CSSProperties = {
+  borderRadius: 21,
+  padding: 18,
+  transition:
+    "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease",
+  outline: "none",
+  display: "grid",
+  alignItems: "center",
+};
+
+const emptyDropContentStyle: CSSProperties = {
+  display: "grid",
+  justifyItems: "center",
+  textAlign: "center",
+  gap: 9,
+};
+
+const uploadIconStyle: CSSProperties = {
+  width: 42,
+  height: 42,
+  borderRadius: 17,
+  display: "grid",
+  placeItems: "center",
+  background: "#eef2ff",
+  color: "#4f46e5",
+  border: "1px solid rgba(199,210,254,0.95)",
+  fontSize: 18,
+  fontWeight: 900,
+  transition: "transform 180ms ease, box-shadow 180ms ease",
+};
+
+const dropTitleStyle: CSSProperties = {
+  color: "#0f172a",
+  fontSize: 15,
+  fontWeight: 850,
+  letterSpacing: "-0.02em",
+};
+
+const dropTextStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  lineHeight: 1.6,
+  maxWidth: 420,
+  fontWeight: 650,
+};
+
+const keyboardStyle: CSSProperties = {
+  color: "#0f172a",
+  fontWeight: 900,
+};
+
+const fileSupportStyle: CSSProperties = {
+  color: "#94a3b8",
+  fontSize: 11,
+  fontWeight: 800,
+};
+
+const pasteHintStyle: CSSProperties = {
+  marginTop: 3,
+  fontSize: 12,
+  fontWeight: 850,
+  color: "#3730a3",
+  background: "#e0e7ff",
+  border: "1px solid #c7d2fe",
+  borderRadius: 14,
+  padding: "9px 11px",
+};
+
+const selectedImageShellStyle: CSSProperties = {
+  display: "grid",
+  gap: 12,
+};
+
+const selectedImagePreviewFrameStyle: CSSProperties = {
+  width: "100%",
+  borderRadius: 18,
+  overflow: "hidden",
+  border: "1px solid #e2e8f0",
+  background: "#ffffff",
+  boxShadow: "0 14px 30px rgba(15,23,42,0.08)",
+};
+
+const selectedImagePreviewStyle: CSSProperties = {
+  width: "100%",
+  maxHeight: 280,
+  objectFit: "contain",
+  display: "block",
+  background: "#ffffff",
+};
+
+const selectedImageMetaStyle: CSSProperties = {
+  display: "grid",
+  gap: 4,
+};
+
+const selectedImageNameStyle: CSSProperties = {
+  color: "#0f172a",
+  fontSize: 13,
+  fontWeight: 850,
+  wordBreak: "break-word",
+};
+
+const selectedImageTextStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  lineHeight: 1.55,
+  fontWeight: 650,
+};
+
+const progressShellStyle: CSSProperties = {
+  display: "grid",
+  gap: 9,
+};
+
+const progressTopStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+  color: "#334155",
+  fontSize: 12,
+  fontWeight: 850,
+};
+
+const progressTrackStyle: CSSProperties = {
+  width: "100%",
+  height: 9,
+  borderRadius: 999,
+  background: "#e2e8f0",
+  overflow: "hidden",
+};
+
+const progressFillStyle: CSSProperties = {
+  height: "100%",
+  borderRadius: 999,
+  background: "linear-gradient(90deg, #4f46e5 0%, #0ea5e9 100%)",
+  transition: "width 0.25s ease",
+};
+
+const primaryOutlineButtonStyle: CSSProperties = {
+  border: "1px solid rgba(199,210,254,0.95)",
+  borderRadius: 15,
+  padding: "13px 18px",
+  background: "#ffffff",
+  color: "#4f46e5",
+  fontSize: 14,
+  fontWeight: 850,
+  boxShadow: "0 12px 24px rgba(79,70,229,0.08)",
+  transition:
+    "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease",
+};
+
+const dangerButtonStyle: CSSProperties = {
+  borderRadius: 15,
+  padding: "13px 17px",
+  background: "#ffffff",
+  color: "#dc2626",
+  fontSize: 14,
+  fontWeight: 820,
+  border: "1px solid #fecaca",
+  transition:
+    "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease",
+};
+
+const extractInputPanelsCss = `
+  .extract-input-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(129, 140, 248, 0.68) !important;
+    box-shadow:
+      0 28px 70px rgba(79, 70, 229, 0.12),
+      0 14px 35px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255,255,255,0.95) !important;
+    background:
+      radial-gradient(circle at top left, rgba(238,242,255,0.95) 0%, transparent 38%),
+      linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(248,250,252,0.96) 100%) !important;
+  }
+
+  .extract-input-card:hover .extract-icon-card {
+    transform: translateY(-1px) scale(1.03);
+    box-shadow: 0 16px 30px rgba(79,70,229,0.14) !important;
+  }
+
+  .extract-textarea-shell:focus-within {
+    border-color: rgba(99,102,241,0.72) !important;
+    box-shadow:
+      0 0 0 4px rgba(99,102,241,0.08),
+      0 14px 32px rgba(15,23,42,0.06),
+      inset 0 1px 0 rgba(255,255,255,0.95) !important;
+  }
+
+  .extract-drop-zone:hover {
+    transform: translateY(-1px);
+    border-color: rgba(99,102,241,0.82) !important;
+    box-shadow:
+      0 0 0 4px rgba(99,102,241,0.055),
+      0 18px 36px rgba(15,23,42,0.07) !important;
+  }
+
+  .extract-drop-zone:hover .extract-upload-icon {
+    transform: translateY(-1px) scale(1.04);
+    box-shadow: 0 14px 28px rgba(79,70,229,0.12);
+  }
+
+  .extract-primary-button:not(:disabled):hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+    box-shadow: 0 18px 34px rgba(79,70,229,0.30) !important;
+  }
+
+  .extract-secondary-button:not(:disabled):hover,
+  .extract-soft-button:hover,
+  .extract-outline-action:not(:disabled):hover,
+  .extract-tab-button:not(:disabled):hover {
+    transform: translateY(-1px);
+    border-color: rgba(129,140,248,0.72) !important;
+    box-shadow: 0 12px 24px rgba(15,23,42,0.07) !important;
+    background: #ffffff !important;
+  }
+
+  .extract-danger-button:not(:disabled):hover {
+    transform: translateY(-1px);
+    border-color: rgba(248,113,113,0.72) !important;
+    background: #fff7f7 !important;
+    box-shadow: 0 12px 24px rgba(220,38,38,0.08) !important;
+  }
+
+  .extract-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(15,23,42,0.055);
+  }
+
+  @media (max-width: 1180px) {
+    .extract-input-panels {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .extract-input-panels section {
+      padding: 15px !important;
+      border-radius: 20px !important;
+    }
+
+    .extract-input-panels textarea {
+      min-height: 190px !important;
+      font-size: 13px !important;
+    }
+
+    .extract-input-panels button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+`;

@@ -21,6 +21,42 @@ const UpdateTaskSchema = z.object({
   value: z.union([z.string(), z.number(), z.boolean(), z.null()]).optional(),
 });
 
+const TASK_WITH_CONTEXT_SELECT = `
+  *,
+  clients (
+    id,
+    name,
+    contact_name,
+    phone,
+    email,
+    notes,
+    created_at
+  ),
+  projects (
+    id,
+    client_id,
+    client_name,
+    contact_name,
+    title,
+    summary,
+    amount,
+    amount_value,
+    currency_code,
+    deadline_text,
+    deadline_date,
+    priority,
+    status,
+    source,
+    raw_input,
+    created_at,
+    updated_at,
+    completed_at,
+    is_archived,
+    archived_at,
+    deleted_at
+  )
+`;
+
 function normalizeAmountInput(value: unknown): string | number | null {
   if (value === null || value === undefined) return null;
 
@@ -53,9 +89,12 @@ function cleanJoinedTask(data: any, fallbackClient: any = null) {
     client: Array.isArray(data?.clients)
       ? data.clients[0] ?? fallbackClient
       : data?.clients ?? fallbackClient,
+    project: Array.isArray(data?.projects)
+      ? data.projects[0] ?? null
+      : data?.projects ?? null,
   };
 
-  const { clients, ...cleanTask } = task;
+  const { clients, projects, ...cleanTask } = task;
   return cleanTask;
 }
 
@@ -65,26 +104,14 @@ async function reloadTask({
   userId,
   fallbackClient,
 }: {
-  supabase: any;
+  supabase: Awaited<ReturnType<typeof createClient>>;
   taskId: number;
   userId: string;
   fallbackClient?: any;
 }) {
   const { data, error } = await supabase
     .from("tasks")
-    .select(
-      `
-      *,
-      clients (
-        id,
-        name,
-        phone,
-        email,
-        notes,
-        created_at
-      )
-    `
-    )
+    .select(TASK_WITH_CONTEXT_SELECT)
     .eq("id", taskId)
     .eq("user_id", userId)
     .is("deleted_at", null)
@@ -95,6 +122,29 @@ async function reloadTask({
   }
 
   return cleanJoinedTask(data, fallbackClient ?? null);
+}
+
+async function touchTaskForActivity({
+  supabase,
+  taskId,
+  userId,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  taskId: number;
+  userId: string;
+}) {
+  const { error } = await supabase
+    .from("tasks")
+    .update({
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", taskId)
+    .eq("user_id", userId)
+    .is("deleted_at", null);
+
+  if (error) {
+    throw new Error(error.message || "Failed to update task activity");
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -129,6 +179,7 @@ export async function POST(req: NextRequest) {
         id,
         user_id,
         client_id,
+        project_id,
         client_name,
         task_title,
         amount,
@@ -145,13 +196,38 @@ export async function POST(req: NextRequest) {
         completed_at,
         deleted_at,
         created_at,
+        updated_at,
         clients (
           id,
           name,
+          contact_name,
           phone,
           email,
           notes,
           created_at
+        ),
+        projects (
+          id,
+          client_id,
+          client_name,
+          contact_name,
+          title,
+          summary,
+          amount,
+          amount_value,
+          currency_code,
+          deadline_text,
+          deadline_date,
+          priority,
+          status,
+          source,
+          raw_input,
+          created_at,
+          updated_at,
+          completed_at,
+          is_archived,
+          archived_at,
+          deleted_at
         )
       `
       )
@@ -216,6 +292,12 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      await touchTaskForActivity({
+        supabase,
+        taskId,
+        userId: user.id,
+      });
+
       const cleanTask = await reloadTask({
         supabase,
         taskId,
@@ -247,8 +329,8 @@ export async function POST(req: NextRequest) {
           (typeof normalizedInput === "string"
             ? normalizedInput
             : typeof normalizedInput === "number"
-            ? String(normalizedInput)
-            : null);
+              ? String(normalizedInput)
+              : null);
 
         updateData.amount_value = parsedAmount.amountValue;
         updateData.currency_code = parsedAmount.currencyCode;
@@ -314,19 +396,7 @@ export async function POST(req: NextRequest) {
       .eq("id", taskId)
       .eq("user_id", user.id)
       .is("deleted_at", null)
-      .select(
-        `
-        *,
-        clients (
-          id,
-          name,
-          phone,
-          email,
-          notes,
-          created_at
-        )
-      `
-      )
+      .select(TASK_WITH_CONTEXT_SELECT)
       .single();
 
     if (error) {

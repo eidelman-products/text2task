@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 
 type SidebarButtonProps = {
@@ -6,12 +8,23 @@ type SidebarButtonProps = {
   onClick: () => void;
 };
 
+function getNavIcon(label: string) {
+  const normalized = label.toLowerCase();
+
+  if (normalized.includes("dashboard")) return "▦";
+  if (normalized.includes("extract")) return "✦";
+  if (normalized.includes("tasks")) return "✓";
+
+  return "•";
+}
+
 export default function SidebarButton({
   label,
   active,
   onClick,
 }: SidebarButtonProps) {
   const [hovered, setHovered] = useState(false);
+  const icon = getNavIcon(label);
 
   return (
     <button
@@ -21,33 +34,34 @@ export default function SidebarButton({
       onMouseLeave={() => setHovered(false)}
       style={{
         width: "100%",
+        minHeight: 46,
         textAlign: "left",
         border: active
-          ? "1px solid rgba(96,165,250,0.30)"
+          ? "1px solid rgba(99,102,241,0.24)"
           : hovered
-          ? "1px solid rgba(148,163,184,0.18)"
-          : "1px solid transparent",
+            ? "1px solid rgba(203,213,225,0.68)"
+            : "1px solid transparent",
         background: active
-          ? "linear-gradient(90deg, rgba(59,130,246,0.10) 0%, rgba(99,102,241,0.08) 100%)"
+          ? "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(238,242,255,0.92) 100%)"
           : hovered
-          ? "linear-gradient(90deg, rgba(255,255,255,0.88) 0%, rgba(239,246,255,0.92) 100%)"
-          : "transparent",
-        color: active ? "#2563eb" : "#334155",
-        borderRadius: 20,
-        padding: "15px 16px 15px 18px",
-        fontSize: 16,
-        fontWeight: active ? 850 : hovered ? 800 : 760,
+            ? "linear-gradient(135deg, rgba(255,255,255,0.88) 0%, rgba(248,250,252,0.92) 100%)"
+            : "transparent",
+        color: active ? "#3730a3" : hovered ? "#1e293b" : "#475569",
+        borderRadius: 16,
+        padding: "9px 11px",
+        fontSize: 14,
+        fontWeight: active ? 920 : hovered ? 850 : 780,
         cursor: "pointer",
         position: "relative",
         overflow: "hidden",
         transition:
-          "all 180ms ease, transform 140ms ease, box-shadow 180ms ease",
-        transform: hovered ? "translateX(4px)" : "translateX(0)",
+          "border-color 170ms ease, background 170ms ease, color 170ms ease, transform 170ms ease, box-shadow 170ms ease",
+        transform: hovered ? "translateX(2px)" : "translateX(0)",
         boxShadow: active
-          ? "0 12px 24px rgba(59,130,246,0.10)"
+          ? "0 14px 28px rgba(79,70,229,0.105), inset 0 1px 0 rgba(255,255,255,0.92)"
           : hovered
-          ? "0 10px 18px rgba(15,23,42,0.05)"
-          : "none",
+            ? "0 10px 22px rgba(15,23,42,0.045)"
+            : "none",
         outline: "none",
       }}
     >
@@ -57,48 +71,66 @@ export default function SidebarButton({
           left: 0,
           top: 10,
           bottom: 10,
-          width: active ? 5 : hovered ? 4 : 0,
-          borderRadius: 999,
+          width: active ? 4 : hovered ? 3 : 0,
+          borderRadius: "0 999px 999px 0",
           background: active
-            ? "linear-gradient(180deg, #60a5fa 0%, #6366f1 100%)"
-            : hovered
-            ? "rgba(59,130,246,0.28)"
-            : "transparent",
-          boxShadow: active ? "0 0 14px rgba(99,102,241,0.24)" : "none",
-          transition: "all 180ms ease",
+            ? "linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%)"
+            : "rgba(99,102,241,0.28)",
+          boxShadow: active ? "0 0 18px rgba(99,102,241,0.30)" : "none",
+          transition: "width 170ms ease, background 170ms ease",
         }}
       />
 
       <span
         style={{
-          display: "inline-flex",
+          display: "flex",
           alignItems: "center",
-          gap: 12,
+          gap: 10,
           position: "relative",
           zIndex: 1,
+          minWidth: 0,
         }}
       >
         <span
           style={{
-            width: 10,
-            height: 10,
-            borderRadius: 999,
-            background: active
-              ? "linear-gradient(180deg, #60a5fa 0%, #6366f1 100%)"
-              : hovered
-              ? "rgba(59,130,246,0.46)"
-              : "rgba(148,163,184,0.45)",
-            boxShadow: active
-              ? "0 0 0 6px rgba(59,130,246,0.10)"
-              : hovered
-              ? "0 0 0 5px rgba(59,130,246,0.08)"
-              : "none",
-            transition: "all 180ms ease",
+            width: 28,
+            height: 28,
+            borderRadius: 11,
+            display: "grid",
+            placeItems: "center",
             flexShrink: 0,
+            fontSize: 13,
+            fontWeight: 950,
+            color: active ? "#ffffff" : hovered ? "#4f46e5" : "#94a3b8",
+            background: active
+              ? "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)"
+              : hovered
+                ? "rgba(238,242,255,0.95)"
+                : "rgba(248,250,252,0.86)",
+            border: active
+              ? "1px solid rgba(99,102,241,0.10)"
+              : "1px solid rgba(226,232,240,0.82)",
+            boxShadow: active
+              ? "0 10px 18px rgba(79,70,229,0.22)"
+              : "none",
+            transition:
+              "background 170ms ease, color 170ms ease, box-shadow 170ms ease",
           }}
-        />
+        >
+          {icon}
+        </span>
 
-        <span>{label}</span>
+        <span
+          style={{
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            letterSpacing: "-0.015em",
+          }}
+        >
+          {label}
+        </span>
       </span>
     </button>
   );
