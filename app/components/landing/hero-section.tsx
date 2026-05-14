@@ -77,9 +77,9 @@ export default function HeroSection() {
             </div>
 
             <h1>
-              See the chaos.
+              Turn client messages
               <br />
-              Get it <span>organized.</span>
+              into <span>organized</span> work.
             </h1>
 
             <p>
@@ -507,8 +507,8 @@ const styles = `
 
   .t2t-hero h1 {
     margin: 22px 0 0;
-    font-size: clamp(48px, 5.1vw, 70px);
-    line-height: 0.96;
+    font-size: clamp(46px, 4.8vw, 66px);
+    line-height: 1.02;
     letter-spacing: -0.072em;
     font-weight: 950;
   }
