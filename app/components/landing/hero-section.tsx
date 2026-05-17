@@ -77,13 +77,15 @@ export default function HeroSection() {
             </div>
 
             <h1>
-              Turn client messages
+              Turn messy client
               <br />
-              into <span>organized</span> work.
+              requests into
+              <br />
+              <span>ready-to-work projects.</span>
             </h1>
 
             <p>
-              Text2Task turns messy client messages into clean projects with
+              Text2Task turns messy client requests into clean projects with
               tasks, budgets, deadlines, and client details — in seconds.
             </p>
 
@@ -97,34 +99,19 @@ export default function HeroSection() {
             </div>
           </div>
 
-          <div className="t2t-hero-proof">
-            <div className="t2t-proof-card">
-              <span className="t2t-proof-label">What Text2Task does</span>
-              <h2>From messy request to ready-to-work project.</h2>
-              <p>
-                Paste a WhatsApp message, email, note, or screenshot. Review the
-                AI draft before anything is saved.
-              </p>
-
-              <div className="t2t-proof-points">
-                <span>✓ Tasks</span>
-                <span>✓ Budget</span>
-                <span>✓ Deadline</span>
-                <span>✓ Client details</span>
-              </div>
-            </div>
-          </div>
         </section>
 
         <section className="t2t-transform-section">
           <div className="t2t-transform-heading">
             <div className="t2t-section-kicker">Request to project</div>
-            <h2>One messy client message becomes organized work.</h2>
+            <h2>One messy client request becomes a ready-to-work project.</h2>
           </div>
 
           <div className="t2t-transform-grid">
             <div className="t2t-transform-card">
-              <div className="t2t-card-label green">Messy client message</div>
+              <div className="t2t-card-label green">
+                Step 1: Messy client request
+              </div>
               <div className="t2t-transform-image whatsapp">
                 <Image
                   src="/landing/text2task-whatsapp-message.png"
@@ -136,7 +123,7 @@ export default function HeroSection() {
               </div>
             </div>
 
-            <div className="t2t-arrow-wrap" aria-hidden="true">
+            <div className="t2t-arrow-wrap">
               <div className="t2t-arrow-circle">
                 <svg
                   viewBox="0 0 120 120"
@@ -144,26 +131,13 @@ export default function HeroSection() {
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
-                    d="M24 62C24 41.0132 41.0132 24 62 24C78.4972 24 92.5351 34.515 97.7792 49.2097"
+                    d="M24 60H92"
                     stroke="currentColor"
                     strokeWidth="8"
                     strokeLinecap="round"
                   />
                   <path
-                    d="M96 30V52H74"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M96 58C96 78.9868 78.9868 96 58 96C41.5028 96 27.4649 85.485 22.2208 70.7903"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M24 90V68H46"
+                    d="M68 36L92 60L68 84"
                     stroke="currentColor"
                     strokeWidth="8"
                     strokeLinecap="round"
@@ -175,7 +149,9 @@ export default function HeroSection() {
             </div>
 
             <div className="t2t-transform-card result">
-              <div className="t2t-card-label purple">Clean project draft</div>
+              <div className="t2t-card-label purple">
+                Step 2: Ready-to-work project
+              </div>
               <div className="t2t-transform-image preview">
                 <Image
                   src="/landing/text2task-ai-project-preview.png"
@@ -470,15 +446,17 @@ const styles = `
   }
 
   .t2t-hero {
-    display: grid;
-    grid-template-columns: 0.95fr 1.05fr;
-    gap: 48px;
-    align-items: center;
-    padding: 58px 0 34px;
+    display: flex;
+    justify-content: center;
+    padding: 62px 0 42px;
+    text-align: center;
   }
 
   .t2t-hero-copy {
-    max-width: 560px;
+    max-width: 820px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   .t2t-pill {
@@ -506,29 +484,31 @@ const styles = `
   }
 
   .t2t-hero h1 {
-    margin: 22px 0 0;
-    font-size: clamp(46px, 4.8vw, 66px);
-    line-height: 1.02;
-    letter-spacing: -0.072em;
-    font-weight: 950;
+    margin: 18px 0 0;
+    font-size: clamp(51px, 6vw, 81px);
+    line-height: 1.03;
+    letter-spacing: -0.026em;
+    font-weight: 800;
   }
 
   .t2t-hero h1 span {
     color: #4f46e5;
+    white-space: nowrap;
   }
 
   .t2t-hero-copy p {
-    margin: 20px 0 0;
-    font-size: 16px;
-    line-height: 1.72;
+    margin: 18px auto 0;
+    font-size: clamp(18px, 2vw, 22px);
+    line-height: 1.6;
     color: #475569;
-    max-width: 480px;
+    max-width: 720px;
     font-weight: 560;
   }
 
   .t2t-actions {
     margin-top: 26px;
     display: flex;
+    justify-content: center;
     gap: 14px;
     flex-wrap: wrap;
   }
@@ -565,69 +545,6 @@ const styles = `
     transform: translateY(-1px);
   }
 
-  .t2t-hero-proof {
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  .t2t-proof-card {
-    width: min(100%, 470px);
-    border-radius: 30px;
-    border: 1px solid rgba(226, 232, 240, 0.95);
-    background:
-      radial-gradient(circle at top right, rgba(99,102,241,0.14), transparent 38%),
-      rgba(255,255,255,0.82);
-    padding: 30px;
-    box-shadow: 0 24px 70px rgba(15,23,42,0.075);
-    backdrop-filter: blur(18px);
-  }
-
-  .t2t-proof-label {
-    display: inline-flex;
-    border-radius: 999px;
-    background: #eef2ff;
-    color: #4f46e5;
-    padding: 8px 12px;
-    font-size: 11px;
-    font-weight: 950;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-  }
-
-  .t2t-proof-card h2 {
-    margin: 18px 0 0;
-    font-size: 30px;
-    line-height: 1.08;
-    letter-spacing: -0.05em;
-    font-weight: 950;
-  }
-
-  .t2t-proof-card p {
-    margin: 14px 0 0;
-    color: #64748b;
-    font-size: 14px;
-    line-height: 1.7;
-    font-weight: 650;
-  }
-
-  .t2t-proof-points {
-    margin-top: 20px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .t2t-proof-points span {
-    border-radius: 999px;
-    background: white;
-    border: 1px solid #e2e8f0;
-    padding: 8px 10px;
-    color: #334155;
-    font-size: 12px;
-    font-weight: 900;
-    box-shadow: 0 10px 24px rgba(15,23,42,0.035);
-  }
-
   .t2t-transform-section {
     padding: 28px 0 44px;
   }
@@ -648,8 +565,8 @@ const styles = `
 
   .t2t-transform-grid {
     display: grid;
-    grid-template-columns: minmax(0, 0.82fr) 120px minmax(0, 1.18fr);
-    gap: 20px;
+    grid-template-columns: minmax(0, 1fr) 104px minmax(0, 1.2fr);
+    gap: 22px;
     align-items: center;
   }
 
@@ -657,11 +574,19 @@ const styles = `
     border: 1px solid rgba(226, 232, 240, 0.96);
     background: rgba(255, 255, 255, 0.92);
     border-radius: 28px;
-    padding: 14px;
+    padding: 16px;
     box-shadow:
       0 24px 65px rgba(15, 23, 42, 0.10),
       inset 0 1px 0 rgba(255,255,255,0.9);
     backdrop-filter: blur(16px);
+    transition: transform 160ms ease, box-shadow 160ms ease;
+  }
+
+  .t2t-transform-card:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 30px 76px rgba(15, 23, 42, 0.12),
+      inset 0 1px 0 rgba(255,255,255,0.9);
   }
 
   .t2t-transform-card.result {
@@ -670,13 +595,20 @@ const styles = `
       inset 0 1px 0 rgba(255,255,255,0.9);
   }
 
+  .t2t-transform-card.result:hover {
+    box-shadow:
+      0 34px 86px rgba(79, 70, 229, 0.17),
+      inset 0 1px 0 rgba(255,255,255,0.9);
+  }
+
   .t2t-card-label {
     display: inline-flex;
     align-items: center;
-    height: 27px;
-    padding: 0 10px;
+    min-height: 27px;
+    padding: 6px 10px;
     border-radius: 999px;
     font-size: 11px;
+    line-height: 1.2;
     font-weight: 950;
     text-transform: uppercase;
     letter-spacing: 0.13em;
@@ -709,17 +641,17 @@ const styles = `
   }
 
   .t2t-transform-image.whatsapp img {
-    height: 290px;
+    height: 340px;
   }
 
   .t2t-transform-image.preview img {
-    height: 290px;
+    height: 340px;
   }
 
   .t2t-arrow-wrap {
     display: grid;
     justify-items: center;
-    gap: 10px;
+    gap: 12px;
     color: #4f46e5;
   }
 
@@ -737,16 +669,16 @@ const styles = `
   }
 
   .t2t-arrow-circle svg {
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
   }
 
   .t2t-arrow-wrap p {
     margin: 0;
-    max-width: 110px;
+    max-width: 120px;
     text-align: center;
     color: #475569;
-    font-size: 12px;
+    font-size: 12.5px;
     line-height: 1.35;
     font-weight: 950;
   }
@@ -883,30 +815,42 @@ const styles = `
   }
 
   .t2t-feature-card {
-    background: rgba(255,255,255,0.9);
-    border: 1px solid #e2e8f0;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.9));
+    border: 1px solid rgba(226, 232, 240, 0.96);
     border-radius: 24px;
-    padding: 22px;
-    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.05);
-    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+    padding: 20px;
+    box-shadow:
+      0 18px 54px rgba(15, 23, 42, 0.07),
+      inset 0 1px 0 rgba(255,255,255,0.92);
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
   }
 
   .t2t-feature-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px);
     border-color: #c7d2fe;
-    box-shadow: 0 24px 58px rgba(79, 70, 229, 0.10);
+    background:
+      linear-gradient(180deg, #ffffff, #f8f7ff);
+    box-shadow:
+      0 28px 68px rgba(79, 70, 229, 0.13),
+      inset 0 1px 0 rgba(255,255,255,0.96);
   }
 
   .t2t-feature-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+    width: 44px;
+    height: 44px;
+    border-radius: 15px;
+    background:
+      radial-gradient(circle at 30% 20%, #ffffff, transparent 34%),
+      linear-gradient(135deg, #eef2ff, #f5f3ff);
     color: #4f46e5;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 950;
+    box-shadow:
+      0 12px 28px rgba(79, 70, 229, 0.12),
+      inset 0 1px 0 rgba(255,255,255,0.9);
   }
 
   .t2t-feature-card h3 {
@@ -931,11 +875,23 @@ const styles = `
   }
 
   .t2t-product-card {
-    background: rgba(255,255,255,0.92);
-    border: 1px solid #e2e8f0;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.92));
+    border: 1px solid rgba(226, 232, 240, 0.95);
     border-radius: 26px;
-    padding: 18px;
-    box-shadow: 0 18px 56px rgba(15, 23, 42, 0.055);
+    padding: 16px;
+    box-shadow:
+      0 22px 62px rgba(15, 23, 42, 0.075),
+      inset 0 1px 0 rgba(255,255,255,0.94);
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  }
+
+  .t2t-product-card:hover {
+    transform: translateY(-3px);
+    border-color: #c7d2fe;
+    box-shadow:
+      0 32px 78px rgba(79, 70, 229, 0.13),
+      inset 0 1px 0 rgba(255,255,255,0.96);
   }
 
   .t2t-product-head h3 {
@@ -946,22 +902,25 @@ const styles = `
   }
 
   .t2t-product-head p {
-    margin: 4px 0 14px;
+    margin: 4px 0 12px;
     color: #64748b;
     font-size: 13px;
   }
 
   .t2t-product-image {
     overflow: hidden;
-    border-radius: 19px;
-    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    border: 1px solid rgba(203, 213, 225, 0.9);
     background: #f8fafc;
+    box-shadow:
+      0 18px 42px rgba(15, 23, 42, 0.075),
+      inset 0 1px 0 rgba(255,255,255,0.9);
   }
 
   .t2t-product-image img {
     display: block;
     width: 100%;
-    height: 196px;
+    height: 238px;
     object-fit: contain;
     object-position: center;
     background: #f8fafc;
@@ -977,16 +936,44 @@ const styles = `
 
   .t2t-price-card {
     position: relative;
-    background: rgba(255,255,255,0.95);
-    border: 1px solid #e2e8f0;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.92));
+    border: 1px solid rgba(226, 232, 240, 0.96);
     border-radius: 26px;
     padding: 26px;
-    box-shadow: 0 18px 56px rgba(15, 23, 42, 0.055);
+    box-shadow:
+      0 20px 58px rgba(15, 23, 42, 0.075),
+      inset 0 1px 0 rgba(255,255,255,0.94);
+    transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease, background 170ms ease;
+  }
+
+  .t2t-price-card:hover {
+    transform: translateY(-4px);
+    border-color: #c7d2fe;
+    background:
+      linear-gradient(180deg, #ffffff, #f8f7ff);
+    box-shadow:
+      0 34px 82px rgba(79, 70, 229, 0.13),
+      inset 0 1px 0 rgba(255,255,255,0.96);
   }
 
   .t2t-price-card.popular {
-    border-color: #c4b5fd;
-    box-shadow: 0 24px 68px rgba(79, 70, 229, 0.12);
+    border-color: #b8a6ff;
+    background:
+      radial-gradient(circle at 85% 0%, rgba(124, 58, 237, 0.12), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,0.99), rgba(245,243,255,0.9));
+    box-shadow:
+      0 28px 74px rgba(79, 70, 229, 0.14),
+      0 0 0 1px rgba(124, 58, 237, 0.06),
+      inset 0 1px 0 rgba(255,255,255,0.96);
+  }
+
+  .t2t-price-card.popular:hover {
+    border-color: #9b8cff;
+    box-shadow:
+      0 38px 92px rgba(79, 70, 229, 0.2),
+      0 0 0 1px rgba(124, 58, 237, 0.12),
+      inset 0 1px 0 rgba(255,255,255,0.98);
   }
 
   .t2t-popular {
@@ -1000,7 +987,7 @@ const styles = `
     padding: 7px 18px;
     font-size: 11px;
     font-weight: 950;
-    box-shadow: 0 14px 30px rgba(79, 70, 229, 0.2);
+    box-shadow: 0 14px 30px rgba(79, 70, 229, 0.24);
   }
 
   .t2t-price-card h3 {
@@ -1057,6 +1044,12 @@ const styles = `
     align-items: center;
     justify-content: center;
     box-shadow: 0 14px 34px rgba(79, 70, 229, 0.18);
+    transition: transform 160ms ease, box-shadow 160ms ease;
+  }
+
+  .t2t-price-card a:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 20px 44px rgba(79, 70, 229, 0.28);
   }
 
   .t2t-bottom-cta {
@@ -1108,17 +1101,11 @@ const styles = `
     }
 
     .t2t-hero {
-      grid-template-columns: 1fr;
       padding-top: 34px;
     }
 
-    .t2t-hero-copy,
-    .t2t-proof-card {
+    .t2t-hero-copy {
       max-width: 680px;
-    }
-
-    .t2t-hero-proof {
-      justify-content: flex-start;
     }
 
     .t2t-transform-grid {
@@ -1126,17 +1113,16 @@ const styles = `
     }
 
     .t2t-arrow-wrap {
-      transform: rotate(90deg);
-      margin: -6px 0;
+      margin: -2px 0;
     }
 
-    .t2t-arrow-wrap p {
-      display: none;
+    .t2t-arrow-circle {
+      transform: rotate(90deg);
     }
 
     .t2t-transform-image.whatsapp img,
     .t2t-transform-image.preview img {
-      height: 250px;
+      height: 280px;
     }
 
     .t2t-demo-grid,
@@ -1171,19 +1157,16 @@ const styles = `
     }
 
     .t2t-hero h1 {
-      font-size: 42px;
+      font-size: 40px;
+      line-height: 1.08;
+    }
+
+    .t2t-hero h1 span {
+      white-space: normal;
     }
 
     .t2t-hero-copy p {
-      font-size: 15px;
-    }
-
-    .t2t-proof-card {
-      padding: 22px;
-    }
-
-    .t2t-proof-card h2 {
-      font-size: 25px;
+      font-size: 17px;
     }
 
     .t2t-transform-heading h2 {
