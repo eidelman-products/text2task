@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import type React from "react";
@@ -5,7 +6,7 @@ import type React from "react";
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Contact Text2Task for support, billing questions, privacy requests, and product feedback.",
+    "Contact Text2Task for support, billing questions, privacy requests, partnerships, and product feedback.",
 };
 
 type ContactPageProps = {
@@ -22,15 +23,28 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
   const backLabel = cameFromDashboard ? "Back to workspace" : "Back to Home";
   const footerHomeLabel = cameFromDashboard ? "Dashboard" : "Home";
 
+  const supportMailto =
+    "mailto:support@text2task.com?subject=Text2Task%20support%20request";
+  const privacyMailto =
+    "mailto:support@text2task.com?subject=Text2Task%20privacy%20request";
+  const feedbackMailto =
+    "mailto:support@text2task.com?subject=Text2Task%20product%20feedback";
+
   return (
     <main style={pageStyle}>
       <style>{responsiveCss}</style>
 
       <div className="contact-container" style={containerStyle}>
         <header className="contact-header" style={headerStyle}>
-          <Link href={backHref} style={brandStyle}>
-            <span style={brandDotStyle} />
-            Text2Task
+          <Link href={backHref} style={brandStyle} aria-label="Text2Task home">
+            <Image
+              src="/text2task-logo.png"
+              alt="Text2Task"
+              width={170}
+              height={52}
+              priority
+              style={logoStyle}
+            />
           </Link>
 
           <Link href={backHref} style={backButtonStyle}>
@@ -39,58 +53,81 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
         </header>
 
         <section className="contact-hero" style={heroStyle}>
-          <div style={badgeStyle}>Contact</div>
+          <div style={heroCopyStyle}>
+            <div style={statusPillStyle}>
+              <span style={statusDotStyle} />
+              Contact Text2Task
+            </div>
 
-          <h1 className="contact-title" style={h1Style}>
-            Need help with Text2Task?
-          </h1>
+            <h1 className="contact-title" style={h1Style}>
+              How can we help?
+            </h1>
 
-          <p className="contact-lead" style={leadStyle}>
-            For support, billing questions, privacy requests, product feedback,
-            or general questions, contact us by email.
-          </p>
+            <p className="contact-lead" style={leadStyle}>
+              For support, billing, privacy requests, partnerships, or product
+              feedback — email the Text2Task team directly.
+            </p>
+          </div>
+
+          <div className="contact-primary-card" style={primaryCardStyle}>
+            <div style={primaryIconStyle}>✉</div>
+
+            <div style={primaryCardCopyStyle}>
+              <div style={primaryLabelStyle}>Main support email</div>
+              <a href={supportMailto} style={primaryEmailStyle}>
+                support@text2task.com
+              </a>
+              <p style={primaryTextStyle}>
+                Use this email for account help, billing questions, product
+                feedback, and partnership messages.
+              </p>
+            </div>
+
+            <a href={supportMailto} style={primaryButtonStyle}>
+              Email Text2Task Support
+            </a>
+          </div>
         </section>
 
         <section className="contact-cards-grid" style={cardsGridStyle}>
-          <div style={cardStyle}>
-            <div style={iconStyle}>✉️</div>
-            <h2 style={cardTitleStyle}>Support</h2>
-            <p style={cardTextStyle}>
-              Questions about your account, dashboard, extracts, tasks, billing,
-              or subscription status.
-            </p>
-            <a
-              className="contact-action-button"
-              href="mailto:support@text2task.com"
-              style={emailButtonStyle}
-            >
-              support@text2task.com
-            </a>
-          </div>
+          <ContactCard
+            icon="💬"
+            title="Support & billing"
+            text="For account access, dashboard questions, extracts, billing, or subscription status, use the main support email above."
+            href={supportMailto}
+            cta="Send support email"
+          />
 
-          <div style={cardStyle}>
-            <div style={iconStyle}>🔐</div>
-            <h2 style={cardTitleStyle}>Privacy requests</h2>
-            <p style={cardTextStyle}>
-              Contact us to request account deletion, data deletion, or privacy
-              support.
-            </p>
-            <a
-              className="contact-action-button"
-              href="mailto:support@text2task.com"
-              style={secondaryButtonStyle}
-            >
-              Send privacy request
-            </a>
-          </div>
+          <ContactCard
+            icon="🔐"
+            title="Privacy requests"
+            text="Request account deletion, data deletion, privacy help, or information about your data."
+            href={privacyMailto}
+            cta="Send privacy request"
+          />
+
+          <ContactCard
+            icon="✨"
+            title="Feedback & partnerships"
+            text="Share product feedback, report unclear flows, or contact us about partnerships."
+            href={feedbackMailto}
+            cta="Send feedback"
+          />
         </section>
 
         <section className="contact-info-box" style={infoBoxStyle}>
-          <h2 style={infoTitleStyle}>Before contacting us</h2>
+          <div style={infoHeaderStyle}>
+            <div>
+              <h2 style={infoTitleStyle}>Before contacting us</h2>
+              <p style={infoSubtitleStyle}>
+                A little context helps us answer faster.
+              </p>
+            </div>
+          </div>
 
           <div style={infoGridStyle}>
             <InfoRow
-              label="Billing"
+              label="Billing or subscription"
               text="Include the email address used for your Text2Task account."
             />
             <InfoRow
@@ -124,6 +161,34 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
   );
 }
 
+function ContactCard({
+  icon,
+  title,
+  text,
+  href,
+  cta,
+}: {
+  icon: string;
+  title: string;
+  text: string;
+  href?: string;
+  cta?: string;
+}) {
+  return (
+    <article style={cardStyle}>
+      <div style={iconStyle}>{icon}</div>
+      <h2 style={cardTitleStyle}>{title}</h2>
+      <p style={cardTextStyle}>{text}</p>
+
+      {href && cta ? (
+        <a className="contact-action-button" href={href} style={secondaryButtonStyle}>
+          {cta}
+        </a>
+      ) : null}
+    </article>
+  );
+}
+
 function InfoRow({ label, text }: { label: string; text: string }) {
   return (
     <div style={infoRowStyle}>
@@ -134,33 +199,48 @@ function InfoRow({ label, text }: { label: string; text: string }) {
 }
 
 const responsiveCss = `
+  @media (max-width: 900px) {
+    .contact-hero {
+      grid-template-columns: 1fr !important;
+      padding: 30px !important;
+    }
+
+    .contact-primary-card {
+      max-width: 100% !important;
+    }
+
+    .contact-cards-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
   @media (max-width: 700px) {
     .contact-container {
       max-width: 100% !important;
     }
 
     .contact-header {
-      margin-bottom: 32px !important;
+      margin-bottom: 28px !important;
     }
 
     .contact-hero {
-      padding: 32px 26px !important;
-      border-radius: 30px !important;
+      border-radius: 28px !important;
+      padding: 24px !important;
     }
 
     .contact-title {
       font-size: 42px !important;
-      line-height: 1.05 !important;
+      line-height: 1.04 !important;
     }
 
     .contact-lead {
-      font-size: 17px !important;
-      line-height: 1.68 !important;
+      font-size: 16px !important;
+      line-height: 1.65 !important;
     }
 
-    .contact-cards-grid {
-      grid-template-columns: 1fr !important;
-      gap: 16px !important;
+    .contact-primary-card {
+      padding: 22px !important;
+      border-radius: 24px !important;
     }
 
     .contact-action-button {
@@ -192,10 +272,6 @@ const responsiveCss = `
       font-size: 13px !important;
     }
 
-    .contact-hero {
-      padding: 30px 22px !important;
-    }
-
     .contact-title {
       font-size: 38px !important;
     }
@@ -204,14 +280,14 @@ const responsiveCss = `
 
 const pageStyle: React.CSSProperties = {
   minHeight: "100vh",
-  padding: "28px 24px 56px",
+  padding: "30px 24px 56px",
   background:
-    "radial-gradient(circle at top left, #eef4ff 0%, #f8fafc 46%, #ffffff 100%)",
+    "radial-gradient(circle at 12% 8%, rgba(91,91,214,0.10), transparent 30%), radial-gradient(circle at 90% 20%, rgba(79,124,255,0.08), transparent 28%), linear-gradient(180deg, #fcfcfe 0%, #f8f9fc 100%)",
   color: "#0f172a",
 };
 
 const containerStyle: React.CSSProperties = {
-  maxWidth: 980,
+  maxWidth: 1040,
   margin: "0 auto",
 };
 
@@ -220,32 +296,28 @@ const headerStyle: React.CSSProperties = {
   justifyContent: "space-between",
   alignItems: "center",
   gap: 16,
-  marginBottom: 48,
+  marginBottom: 42,
   flexWrap: "wrap",
 };
 
 const brandStyle: React.CSSProperties = {
+  width: "fit-content",
   display: "inline-flex",
   alignItems: "center",
-  gap: 12,
   textDecoration: "none",
-  color: "#0f172a",
-  fontSize: 22,
-  fontWeight: 900,
-  letterSpacing: "-0.04em",
 };
 
-const brandDotStyle: React.CSSProperties = {
-  width: 16,
-  height: 16,
-  borderRadius: 999,
-  background: "linear-gradient(135deg, #60a5fa, #6366f1, #8b5cf6)",
-  boxShadow: "0 0 0 8px rgba(99,102,241,0.10)",
+const logoStyle: React.CSSProperties = {
+  width: 170,
+  height: "auto",
+  objectFit: "contain",
+  objectPosition: "left center",
+  display: "block",
 };
 
 const backButtonStyle: React.CSSProperties = {
-  minHeight: 42,
-  padding: "0 16px",
+  minHeight: 44,
+  padding: "0 18px",
   borderRadius: 14,
   background: "#0f172a",
   color: "#ffffff",
@@ -255,98 +327,128 @@ const backButtonStyle: React.CSSProperties = {
   textDecoration: "none",
   fontSize: 14,
   fontWeight: 900,
-  boxShadow: "0 14px 28px rgba(15,23,42,0.14)",
+  boxShadow: "0 16px 34px rgba(15,23,42,0.16)",
 };
 
 const heroStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1.06fr 0.94fr",
+  gap: 28,
+  alignItems: "stretch",
   borderRadius: 34,
-  padding: 38,
+  padding: 34,
   background:
-    "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(239,246,255,0.55))",
-  border: "1px solid rgba(191,219,254,0.90)",
+    "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(246,244,255,0.72))",
+  border: "1px solid #e7e9f2",
   boxShadow:
-    "0 28px 70px rgba(37,99,235,0.10), inset 0 1px 0 rgba(255,255,255,0.94)",
-  marginBottom: 24,
+    "0 30px 80px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.92)",
+  marginBottom: 20,
 };
 
-const badgeStyle: React.CSSProperties = {
+const heroCopyStyle: React.CSSProperties = {
+  display: "grid",
+  alignContent: "center",
+  gap: 16,
+};
+
+const statusPillStyle: React.CSSProperties = {
   width: "fit-content",
-  padding: "8px 14px",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "8px 12px",
   borderRadius: 999,
-  background: "rgba(99,102,241,0.10)",
+  background: "#eeecff",
+  border: "1px solid #ddd9ff",
   color: "#4f46e5",
-  fontSize: 13,
+  fontSize: 12,
   fontWeight: 900,
   letterSpacing: "0.08em",
   textTransform: "uppercase",
-  marginBottom: 18,
+};
+
+const statusDotStyle: React.CSSProperties = {
+  width: 8,
+  height: 8,
+  borderRadius: 999,
+  background: "#22c55e",
+  boxShadow: "0 0 0 4px rgba(34,197,94,0.14)",
 };
 
 const h1Style: React.CSSProperties = {
   margin: 0,
-  fontSize: "clamp(42px, 6vw, 64px)",
-  lineHeight: 1.08,
-  letterSpacing: "-0.055em",
-  fontWeight: 780,
-  color: "#111827",
-  marginBottom: 18,
+  fontSize: "clamp(44px, 5.5vw, 66px)",
+  lineHeight: 1.02,
+  letterSpacing: "-0.06em",
+  fontWeight: 900,
+  color: "#102045",
 };
 
 const leadStyle: React.CSSProperties = {
   margin: 0,
-  color: "#475569",
+  color: "#5f6b85",
   fontSize: 18,
-  lineHeight: 1.75,
-  maxWidth: 760,
+  lineHeight: 1.72,
+  maxWidth: 680,
 };
 
-const cardsGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: 18,
-  marginBottom: 24,
-};
-
-const cardStyle: React.CSSProperties = {
+const primaryCardStyle: React.CSSProperties = {
   borderRadius: 28,
   padding: 26,
-  background: "rgba(255,255,255,0.95)",
-  border: "1px solid rgba(226,232,240,0.96)",
-  boxShadow: "0 24px 60px rgba(15,23,42,0.07)",
+  background: "#ffffff",
+  border: "1px solid #eceef5",
+  boxShadow: "0 24px 60px rgba(15,23,42,0.08)",
+  display: "grid",
+  alignContent: "center",
+  gap: 18,
 };
 
-const iconStyle: React.CSSProperties = {
-  width: 44,
-  height: 44,
+const primaryIconStyle: React.CSSProperties = {
+  width: 46,
+  height: 46,
   borderRadius: 16,
   display: "grid",
   placeItems: "center",
-  background: "rgba(99,102,241,0.10)",
-  fontSize: 22,
-  marginBottom: 16,
-};
-
-const cardTitleStyle: React.CSSProperties = {
-  margin: "0 0 10px",
+  background: "#f5f3ff",
+  color: "#5550d6",
   fontSize: 24,
+  fontWeight: 900,
+};
+
+const primaryCardCopyStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 7,
+};
+
+const primaryLabelStyle: React.CSSProperties = {
+  color: "#667085",
+  fontSize: 13,
+  fontWeight: 800,
+};
+
+const primaryEmailStyle: React.CSSProperties = {
+  width: "fit-content",
+  color: "#102045",
+  fontSize: 22,
   lineHeight: 1.2,
+  fontWeight: 900,
   letterSpacing: "-0.035em",
-  fontWeight: 850,
-  color: "#0f172a",
+  textDecoration: "none",
+  overflowWrap: "anywhere",
 };
 
-const cardTextStyle: React.CSSProperties = {
-  margin: "0 0 18px",
-  color: "#475569",
-  fontSize: 15,
-  lineHeight: 1.7,
+const primaryTextStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#667085",
+  fontSize: 14,
+  lineHeight: 1.65,
 };
 
-const emailButtonStyle: React.CSSProperties = {
-  minHeight: 44,
-  padding: "0 16px",
+const primaryButtonStyle: React.CSSProperties = {
+  minHeight: 48,
+  padding: "0 18px",
   borderRadius: 14,
-  background: "#4f46e5",
+  background: "linear-gradient(135deg, #5b5bd6 0%, #4a49c7 100%)",
   color: "#ffffff",
   display: "inline-flex",
   alignItems: "center",
@@ -354,73 +456,131 @@ const emailButtonStyle: React.CSSProperties = {
   textDecoration: "none",
   fontSize: 14,
   fontWeight: 900,
-  boxShadow: "0 14px 28px rgba(79,70,229,0.20)",
+  boxShadow: "0 16px 32px rgba(91,91,214,0.22)",
+};
+
+const cardsGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: 16,
+  marginBottom: 20,
+};
+
+const cardStyle: React.CSSProperties = {
+  borderRadius: 26,
+  padding: 22,
+  background: "rgba(255,255,255,0.96)",
+  border: "1px solid #eceef5",
+  boxShadow: "0 22px 56px rgba(15,23,42,0.06)",
+};
+
+const iconStyle: React.CSSProperties = {
+  width: 42,
+  height: 42,
+  borderRadius: 15,
+  display: "grid",
+  placeItems: "center",
+  background: "#f5f3ff",
+  fontSize: 21,
+  marginBottom: 16,
+};
+
+const cardTitleStyle: React.CSSProperties = {
+  margin: "0 0 9px",
+  fontSize: 21,
+  lineHeight: 1.18,
+  letterSpacing: "-0.035em",
+  fontWeight: 900,
+  color: "#102045",
+};
+
+const cardTextStyle: React.CSSProperties = {
+  margin: "0 0 18px",
+  color: "#5f6b85",
+  fontSize: 14,
+  lineHeight: 1.68,
 };
 
 const secondaryButtonStyle: React.CSSProperties = {
-  minHeight: 44,
-  padding: "0 16px",
-  borderRadius: 14,
+  minHeight: 42,
+  padding: "0 14px",
+  borderRadius: 13,
   background: "#ffffff",
-  color: "#0f172a",
+  color: "#102045",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   textDecoration: "none",
-  fontSize: 14,
+  fontSize: 13,
   fontWeight: 900,
-  border: "1px solid #cbd5e1",
+  border: "1px solid #d8dce8",
 };
 
 const infoBoxStyle: React.CSSProperties = {
   borderRadius: 28,
   padding: 26,
-  background: "rgba(255,255,255,0.95)",
-  border: "1px solid rgba(226,232,240,0.96)",
-  boxShadow: "0 24px 60px rgba(15,23,42,0.07)",
+  background: "rgba(255,255,255,0.96)",
+  border: "1px solid #eceef5",
+  boxShadow: "0 22px 56px rgba(15,23,42,0.06)",
+};
+
+const infoHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 18,
+  alignItems: "flex-start",
+  marginBottom: 18,
 };
 
 const infoTitleStyle: React.CSSProperties = {
-  margin: "0 0 18px",
+  margin: 0,
   fontSize: 24,
-  lineHeight: 1.2,
-  letterSpacing: "-0.035em",
-  fontWeight: 850,
-  color: "#0f172a",
+  lineHeight: 1.18,
+  letterSpacing: "-0.04em",
+  fontWeight: 900,
+  color: "#102045",
+};
+
+const infoSubtitleStyle: React.CSSProperties = {
+  margin: "6px 0 0",
+  color: "#667085",
+  fontSize: 14,
+  lineHeight: 1.6,
 };
 
 const infoGridStyle: React.CSSProperties = {
   display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
   gap: 12,
 };
 
 const infoRowStyle: React.CSSProperties = {
   borderRadius: 18,
   padding: 16,
-  background: "#f8fafc",
-  border: "1px solid #e2e8f0",
+  background: "#f8f9fc",
+  border: "1px solid #e6e8f0",
 };
 
 const infoLabelStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 15,
-  fontWeight: 850,
-  marginBottom: 4,
+  color: "#102045",
+  fontSize: 14,
+  fontWeight: 900,
+  marginBottom: 5,
 };
 
 const infoTextStyle: React.CSSProperties = {
-  color: "#475569",
-  fontSize: 14,
-  lineHeight: 1.65,
+  color: "#5f6b85",
+  fontSize: 13,
+  lineHeight: 1.62,
 };
 
 const footerStyle: React.CSSProperties = {
-  marginTop: 26,
+  marginTop: 24,
   display: "flex",
   justifyContent: "space-between",
   gap: 16,
   flexWrap: "wrap",
-  color: "#64748b",
+  color: "#667085",
   fontSize: 14,
   fontWeight: 700,
 };
