@@ -86,7 +86,9 @@ export default function SignupPage() {
               <span className="signup-hero-line" style={heroLineStyle}>
                 Turn client requests into
               </span>
-              <span style={heroAccentStyle}>ready-to-work projects.</span>
+              <span className="signup-hero-accent" style={heroAccentStyle}>
+                ready-to-work projects.
+              </span>
             </h1>
 
             <p style={heroTextStyle}>
@@ -220,10 +222,16 @@ export default function SignupPage() {
 }
 
 const responsiveCss = `
+  /* Prevent any accidental horizontal scroll from this page */
+  html, body, main { overflow-x: hidden; }
+
   @media (max-width: 980px) {
     .signup-shell {
       grid-template-columns: 1fr !important;
-      max-width: 620px !important;
+      max-width: calc(100% - 48px) !important;
+      margin: 0 auto !important;
+      box-sizing: border-box !important;
+      overflow-x: hidden !important;
     }
 
     .signup-left {
@@ -232,22 +240,30 @@ const responsiveCss = `
       border-right: none !important;
       border-bottom: 1px solid #e7e9f2 !important;
       min-height: auto !important;
+      box-sizing: border-box !important;
+      width: 100% !important;
     }
 
     .signup-right {
       padding: 30px !important;
       min-height: auto !important;
+      box-sizing: border-box !important;
+      width: 100% !important;
     }
 
     .signup-card {
       max-width: 100% !important;
       padding: 28px !important;
+      box-sizing: border-box !important;
     }
   }
 
   @media (max-width: 640px) {
-    .signup-hero-line {
+    .signup-hero-line,
+    .signup-hero-accent {
       white-space: normal !important;
+      overflow-wrap: break-word !important;
+      word-break: break-word !important;
     }
 
     .signup-left {
@@ -261,6 +277,19 @@ const responsiveCss = `
     .signup-card {
       padding: 24px !important;
       border-radius: 24px !important;
+      max-width: 100% !important;
+    }
+
+    .signup-left h1,
+    .signup-left h1 span {
+      font-size: 28px !important;
+      line-height: 1.08 !important;
+      max-width: 100% !important;
+    }
+
+    .signup-left * {
+      max-width: 100% !important;
+      box-sizing: border-box !important;
     }
   }
 `;

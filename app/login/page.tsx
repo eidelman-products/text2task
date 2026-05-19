@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type React from "react";
 
@@ -35,10 +36,16 @@ export default async function LoginPage({ searchParams }: PageProps) {
       <style>{responsiveCss}</style>
 
       <section className="auth-shell" style={shellStyle}>
-        <div className="auth-brand-panel" style={brandPanelStyle}>
-          <Link href="/" style={brandStyle}>
-            <span style={brandDotStyle} />
-            Text2Task
+        <aside className="auth-brand-panel" style={brandPanelStyle}>
+          <Link href="/" style={brandStyle} aria-label="Back to Text2Task home">
+            <Image
+              src="/text2task-logo.png"
+              alt="Text2Task"
+              width={180}
+              height={55}
+              priority
+              style={logoStyle}
+            />
           </Link>
 
           <div style={brandContentStyle}>
@@ -50,14 +57,14 @@ export default async function LoginPage({ searchParams }: PageProps) {
             </p>
 
             <div style={trustListStyle}>
-              <span>✓ Structured task workspace</span>
-              <span>✓ Client and revenue tracking</span>
-              <span>✓ AI extraction history</span>
+              <div style={bulletItemStyle}>✓ Structured task workspace</div>
+              <div style={bulletItemStyle}>✓ Client and revenue tracking</div>
+              <div style={bulletItemStyle}>✓ AI extraction history</div>
             </div>
           </div>
-        </div>
+        </aside>
 
-        <section className="auth-card" style={cardStyle}>
+        <div className="auth-card" style={cardStyle}>
           <div>
             <div style={kickerStyle}>Text2Task</div>
             <h2 style={titleStyle}>Log in</h2>
@@ -134,56 +141,63 @@ export default async function LoginPage({ searchParams }: PageProps) {
           <Link href="/" style={backLinkStyle}>
             ← Back to home
           </Link>
-        </section>
+        </div>
       </section>
     </main>
   );
 }
 
 const responsiveCss = `
-  @media (max-width: 860px) {
-  .auth-shell {
-    grid-template-columns: 1fr !important;
-    max-width: 520px !important;
-  }
+  /* prevent horizontal overflow on small screens */
+  html, body, main { overflow-x: hidden; }
 
-  .auth-brand-panel {
-    min-height: auto !important;
-    padding: 20px !important;
-    gap: 12px !important;
-  }
-
-  .auth-card {
-    padding: 22px !important;
-  }
-
-  .auth-brand-panel h1 {
-    font-size: 28px !important;
-    line-height: 1.15 !important;
-  }
-
-  .auth-brand-panel p {
-    font-size: 14px !important;
-  }
-
-  .auth-brand-panel span {
-    font-size: 13px !important;
-  }
-}
-
-  @media (max-width: 430px) {
+  @media (max-width: 980px) {
     .auth-shell {
-      border-radius: 28px !important;
+      grid-template-columns: 1fr !important;
+      max-width: calc(100% - 48px) !important;
+      margin: 0 auto !important;
+      box-sizing: border-box !important;
+      overflow-x: hidden !important;
     }
 
     .auth-brand-panel {
-      padding: 24px !important;
-      border-radius: 28px 28px 0 0 !important;
+      padding: 30px !important;
+      gap: 20px !important;
+      border-right: none !important;
+      border-bottom: 1px solid #e7e9f2 !important;
+      min-height: auto !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
     }
 
     .auth-card {
+      padding: 28px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .auth-brand-panel h1,
+    .auth-brand-panel p {
+      max-width: 100% !important;
+      overflow-wrap: break-word !important;
+      word-break: break-word !important;
+    }
+
+    .auth-brand-panel h1 {
+      font-size: 28px !important;
+      line-height: 1.08 !important;
+    }
+
+    .auth-brand-panel, .auth-card {
       padding: 24px !important;
-      border-radius: 0 0 28px 28px !important;
+      box-sizing: border-box !important;
+    }
+
+    .auth-card {
+      border-radius: 24px !important;
+      max-width: 100% !important;
     }
   }
 `;
@@ -199,23 +213,25 @@ const pageStyle: React.CSSProperties = {
 
 const shellStyle: React.CSSProperties = {
   width: "100%",
-  maxWidth: 980,
+  maxWidth: 1180,
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
-  borderRadius: 34,
+  background: "#ffffff",
+  borderRadius: 32,
   overflow: "hidden",
-  background: "rgba(255,255,255,0.74)",
-  border: "1px solid rgba(191,219,254,0.78)",
-  boxShadow: "0 34px 90px rgba(15,23,42,0.12)",
+  border: "1px solid #e8eaf2",
+  boxShadow: "0 32px 80px rgba(15, 23, 42, 0.10)",
 };
 
 const brandPanelStyle: React.CSSProperties = {
   minHeight: 620,
-  padding: 34,
+  padding: 42,
   display: "grid",
-  alignContent: "space-between",
+  alignContent: "start",
+  gap: 28,
   background:
-    "linear-gradient(180deg, rgba(239,246,255,0.94), rgba(224,231,255,0.52))",
+    "linear-gradient(180deg, #f6f4ff 0%, #f8f8ff 52%, #fbfcff 100%)",
+  borderRight: "1px solid #e7e9f2",
 };
 
 const brandStyle: React.CSSProperties = {
@@ -280,11 +296,15 @@ const trustListStyle: React.CSSProperties = {
 };
 
 const cardStyle: React.CSSProperties = {
-  padding: 38,
-  background: "rgba(255,255,255,0.96)",
+  width: "100%",
+  maxWidth: 420,
+  padding: 34,
+  borderRadius: 28,
+  background: "#ffffff",
+  border: "1px solid #eceef5",
+  boxShadow: "0 24px 60px rgba(15, 23, 42, 0.08)",
   display: "grid",
-  alignContent: "center",
-  gap: 18,
+  gap: 24,
 };
 
 const kickerStyle: React.CSSProperties = {
@@ -296,18 +316,34 @@ const kickerStyle: React.CSSProperties = {
 
 const titleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#0f172a",
-  fontSize: 34,
-  lineHeight: 1.05,
-  letterSpacing: "-0.045em",
+  color: "#102045",
+  fontSize: 24,
+  lineHeight: 1.1,
+  letterSpacing: "-0.035em",
   fontWeight: 900,
 };
 
 const subtitleStyle: React.CSSProperties = {
   margin: "10px 0 0",
-  color: "#64748b",
+  color: "#6b7280",
   fontSize: 15,
-  lineHeight: 1.65,
+  lineHeight: 1.6,
+};
+
+const logoStyle: React.CSSProperties = {
+  width: 180,
+  height: "auto",
+  objectFit: "contain",
+  display: "block",
+};
+
+const bulletItemStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  color: "#344054",
+  fontSize: 15,
+  fontWeight: 700,
 };
 
 const successStyle: React.CSSProperties = {
