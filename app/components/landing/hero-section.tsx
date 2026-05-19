@@ -1,26 +1,26 @@
 import Image from "next/image";
 import Link from "next/link";
 
-const features = [
+const workflowSteps = [
   {
-    icon: "✦",
-    title: "AI extraction",
-    text: "Extract tasks, budgets, deadlines, client details, and notes.",
+    number: "1",
+    title: "Paste or upload a client request",
+    text: "Add a message, email, note, or screenshot from your client.",
   },
   {
-    icon: "✎",
+    number: "2",
+    title: "AI extracts the work",
+    text: "Text2Task finds the project, tasks, budget, deadline, and client details.",
+  },
+  {
+    number: "3",
     title: "Review before saving",
-    text: "Edit the AI draft before anything is saved.",
+    text: "Edit the draft, fix details, and save only when everything looks right.",
   },
   {
-    icon: "▣",
-    title: "Task CRM",
-    text: "Manage client projects, subtasks, deadlines, and status.",
-  },
-  {
-    icon: "⚑",
-    title: "Urgent board",
-    text: "See what needs attention before deadlines slip.",
+    number: "4",
+    title: "Manage it in your workspace",
+    text: "Track tasks, urgent work, deadlines, resources, and recent activity.",
   },
 ];
 
@@ -71,11 +71,6 @@ export default function HeroSection() {
       <main className="t2t-main">
         <section className="t2t-hero">
           <div className="t2t-hero-copy">
-            <div className="t2t-pill">
-              <span />
-              AI task CRM for freelancers and small teams
-            </div>
-
             <h1>
               Turn messy client
               <br />
@@ -98,7 +93,6 @@ export default function HeroSection() {
               </a>
             </div>
           </div>
-
         </section>
 
         <section className="t2t-transform-section">
@@ -209,15 +203,20 @@ export default function HeroSection() {
           </div>
         </section>
 
-        <section id="features" className="t2t-features">
-          <div className="t2t-section-kicker">Core features</div>
+        <section id="features" className="t2t-workflow">
+          <div className="t2t-section-kicker">How Text2Task works</div>
+          <h2>From client request to organized work</h2>
 
-          <div className="t2t-feature-grid">
-            {features.map((feature) => (
-              <div className="t2t-feature-card" key={feature.title}>
-                <div className="t2t-feature-icon">{feature.icon}</div>
-                <h3>{feature.title}</h3>
-                <p>{feature.text}</p>
+          <div className="t2t-workflow-track" aria-label="Text2Task workflow">
+            <div className="t2t-workflow-line" aria-hidden="true" />
+
+            {workflowSteps.map((step) => (
+              <div className="t2t-workflow-step" key={step.title}>
+                <div className="t2t-workflow-number">{step.number}</div>
+                <div className="t2t-workflow-content">
+                  <h3>{step.title}</h3>
+                  <p>{step.text}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -459,30 +458,6 @@ const styles = `
     align-items: center;
   }
 
-  .t2t-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 32px;
-    padding: 0 13px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.78);
-    color: #4f46e5;
-    border: 1px solid #ddd6fe;
-    font-size: 12px;
-    font-weight: 900;
-    box-shadow: 0 12px 30px rgba(79, 70, 229, 0.07);
-    backdrop-filter: blur(14px);
-  }
-
-  .t2t-pill span {
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-    background: #22c55e;
-    box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.12);
-  }
-
   .t2t-hero h1 {
     margin: 18px 0 0;
     font-size: clamp(51px, 6vw, 81px);
@@ -684,7 +659,7 @@ const styles = `
   }
 
   .t2t-demo-section,
-  .t2t-features,
+  .t2t-workflow,
   .t2t-workspace,
   .t2t-pricing {
     padding: 30px 0;
@@ -807,64 +782,113 @@ const styles = `
     line-height: 1.55;
   }
 
-  .t2t-feature-grid {
-    margin-top: 22px;
+  .t2t-workflow {
+    position: relative;
+  }
+
+  .t2t-workflow h2 {
+    margin: 12px auto 0;
+    max-width: 680px;
+    text-align: center;
+    font-size: 32px;
+    line-height: 1.1;
+    letter-spacing: -0.045em;
+    font-weight: 950;
+  }
+
+  .t2t-workflow-track {
+    position: relative;
+    max-width: 1040px;
+    margin: 34px auto 0;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 18px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    isolation: isolate;
   }
 
-  .t2t-feature-card {
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.9));
-    border: 1px solid rgba(226, 232, 240, 0.96);
-    border-radius: 24px;
-    padding: 20px;
-    box-shadow:
-      0 18px 54px rgba(15, 23, 42, 0.07),
-      inset 0 1px 0 rgba(255,255,255,0.92);
-    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+  .t2t-workflow-line {
+    position: absolute;
+    top: 25px;
+    left: calc(12.5% + 24px);
+    right: calc(12.5% + 24px);
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      rgba(79, 70, 229, 0.14),
+      rgba(79, 70, 229, 0.38),
+      rgba(124, 58, 237, 0.38),
+      rgba(124, 58, 237, 0.14)
+    );
+    z-index: 0;
   }
 
-  .t2t-feature-card:hover {
-    transform: translateY(-3px);
-    border-color: #c7d2fe;
-    background:
-      linear-gradient(180deg, #ffffff, #f8f7ff);
-    box-shadow:
-      0 28px 68px rgba(79, 70, 229, 0.13),
-      inset 0 1px 0 rgba(255,255,255,0.96);
+  .t2t-workflow-line::before,
+  .t2t-workflow-line::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-top: 2px solid rgba(79, 70, 229, 0.34);
+    border-right: 2px solid rgba(79, 70, 229, 0.34);
+    transform: translateY(-50%) rotate(45deg);
   }
 
-  .t2t-feature-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 15px;
+  .t2t-workflow-line::before {
+    left: 31%;
+  }
+
+  .t2t-workflow-line::after {
+    right: 31%;
+  }
+
+  .t2t-workflow-step {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+    padding: 0 16px;
+    text-align: center;
+  }
+
+  .t2t-workflow-number {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto;
+    border-radius: 999px;
     background:
-      radial-gradient(circle at 30% 20%, #ffffff, transparent 34%),
+      radial-gradient(circle at 30% 20%, #ffffff 0%, #ffffff 28%, transparent 40%),
       linear-gradient(135deg, #eef2ff, #f5f3ff);
+    border: 1px solid rgba(199, 210, 254, 0.92);
     color: #4f46e5;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 15px;
     font-weight: 950;
     box-shadow:
-      0 12px 28px rgba(79, 70, 229, 0.12),
-      inset 0 1px 0 rgba(255,255,255,0.9);
+      0 14px 30px rgba(79, 70, 229, 0.12),
+      0 0 0 8px rgba(255, 255, 255, 0.86),
+      inset 0 1px 0 rgba(255,255,255,0.95);
   }
 
-  .t2t-feature-card h3 {
-    margin: 16px 0 0;
+  .t2t-workflow-content {
+    margin-top: 18px;
+  }
+
+  .t2t-workflow-content h3 {
+    margin: 0;
     font-size: 16px;
     font-weight: 950;
-    letter-spacing: -0.03em;
+    line-height: 1.2;
+    letter-spacing: -0.032em;
   }
 
-  .t2t-feature-card p {
-    margin: 10px 0 0;
+  .t2t-workflow-content p {
+    margin: 9px auto 0;
+    max-width: 215px;
     color: #64748b;
     font-size: 13px;
-    line-height: 1.6;
+    line-height: 1.58;
   }
 
   .t2t-workspace-grid {
@@ -1131,8 +1155,58 @@ const styles = `
       grid-template-columns: 1fr;
     }
 
-    .t2t-feature-grid {
-      grid-template-columns: repeat(2, 1fr);
+    .t2t-workflow-track {
+      max-width: 620px;
+      grid-template-columns: 1fr;
+      gap: 26px;
+      margin-top: 30px;
+    }
+
+    .t2t-workflow-line {
+      top: 26px;
+      bottom: 26px;
+      left: 26px;
+      right: auto;
+      width: 2px;
+      height: auto;
+      background: linear-gradient(
+        180deg,
+        rgba(79, 70, 229, 0.12),
+        rgba(79, 70, 229, 0.36),
+        rgba(124, 58, 237, 0.12)
+      );
+    }
+
+    .t2t-workflow-line::before,
+    .t2t-workflow-line::after {
+      display: none;
+    }
+
+    .t2t-workflow-step {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 18px;
+      padding: 0;
+      text-align: left;
+      align-items: flex-start;
+    }
+
+    .t2t-workflow-number {
+      margin: 0;
+      box-shadow:
+        0 14px 30px rgba(79, 70, 229, 0.12),
+        0 0 0 7px rgba(255, 255, 255, 0.9),
+        inset 0 1px 0 rgba(255,255,255,0.95);
+    }
+
+    .t2t-workflow-content {
+      margin-top: 2px;
+    }
+
+    .t2t-workflow-content p {
+      margin-left: 0;
+      margin-right: 0;
+      max-width: 460px;
     }
   }
 
@@ -1173,8 +1247,12 @@ const styles = `
       font-size: 28px;
     }
 
-    .t2t-feature-grid {
-      grid-template-columns: 1fr;
+    .t2t-workflow h2 {
+      font-size: 28px;
+    }
+
+    .t2t-workflow-track {
+      gap: 24px;
     }
 
     .t2t-bottom-cta {
