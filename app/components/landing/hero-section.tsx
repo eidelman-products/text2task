@@ -101,21 +101,37 @@ export default function HeroSection() {
             <h2>One messy client request becomes a ready-to-work project.</h2>
           </div>
 
+          <div className="t2t-transform-meta">
+            <div className="t2t-demo-preview-label">Example preview</div>
+            <p className="t2t-transform-note">
+              Sample preview. Try it with your own client message.
+            </p>
+            <Link href="/signup" className="t2t-transform-cta">
+              Try with your own message
+            </Link>
+          </div>
+
           <div className="t2t-transform-grid">
-            <div className="t2t-transform-card">
-              <div className="t2t-card-label green">
-                Step 1: Messy client request
+            <Link
+              href="/signup"
+              aria-label="Try Text2Task with your own client message"
+              className="t2t-transform-card-link"
+            >
+              <div className="t2t-transform-card">
+                <div className="t2t-card-label green">
+                  Step 1: Messy client request
+                </div>
+                <div className="t2t-transform-image whatsapp">
+                  <Image
+                    src="/landing/text2task-whatsapp-message.png"
+                    alt="WhatsApp client request"
+                    width={760}
+                    height={760}
+                    priority
+                  />
+                </div>
               </div>
-              <div className="t2t-transform-image whatsapp">
-                <Image
-                  src="/landing/text2task-whatsapp-message.png"
-                  alt="WhatsApp client request"
-                  width={760}
-                  height={760}
-                  priority
-                />
-              </div>
-            </div>
+            </Link>
 
             <div className="t2t-arrow-wrap">
               <div className="t2t-arrow-circle">
@@ -142,20 +158,26 @@ export default function HeroSection() {
               <p>AI extracts the work</p>
             </div>
 
-            <div className="t2t-transform-card result">
-              <div className="t2t-card-label purple">
-                Step 2: Ready-to-work project
+            <Link
+              href="/signup"
+              aria-label="Create a free account to generate your own project preview"
+              className="t2t-transform-card-link"
+            >
+              <div className="t2t-transform-card result">
+                <div className="t2t-card-label purple">
+                  Step 2: Ready-to-work project
+                </div>
+                <div className="t2t-transform-image preview">
+                  <Image
+                    src="/landing/text2task-ai-project-preview.png"
+                    alt="Text2Task extracted project preview"
+                    width={1600}
+                    height={720}
+                    priority
+                  />
+                </div>
               </div>
-              <div className="t2t-transform-image preview">
-                <Image
-                  src="/landing/text2task-ai-project-preview.png"
-                  alt="Text2Task extracted project preview"
-                  width={1600}
-                  height={720}
-                  priority
-                />
-              </div>
-            </div>
+            </Link>
           </div>
         </section>
 
@@ -536,6 +558,57 @@ const styles = `
     line-height: 1.08;
     letter-spacing: -0.055em;
     font-weight: 950;
+  }
+
+  .t2t-transform-meta {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    margin: 0 auto 24px;
+    max-width: 720px;
+  }
+
+  .t2t-demo-preview-label {
+    color: #6b7280;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 900;
+  }
+
+  .t2t-transform-note {
+    margin: 0;
+    max-width: 640px;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  .t2t-transform-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    height: 42px;
+    border-radius: 14px;
+    background: rgba(79, 70, 229, 0.08);
+    color: #4f46e5;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 900;
+    border: 1px solid rgba(79, 70, 229, 0.16);
+    transition: transform 160ms ease, background 160ms ease;
+  }
+
+  .t2t-transform-cta:hover {
+    transform: translateY(-1px);
+    background: rgba(79, 70, 229, 0.12);
+  }
+
+  .t2t-transform-card-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
   }
 
   .t2t-transform-grid {
