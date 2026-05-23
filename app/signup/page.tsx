@@ -128,9 +128,9 @@ export default function SignupPage() {
         <div className="signup-right" style={rightPanelStyle}>
           <div className="signup-card" style={cardStyle}>
             <div style={cardHeaderStyle}>
-              <h2 style={cardTitleStyle}>Create your account</h2>
+              <h2 style={cardTitleStyle}>Create your Text2Task workspace</h2>
               <p style={cardSubtitleStyle}>
-                Start organizing client requests with Text2Task.
+                Paste your first client message and turn it into organized work.
               </p>
             </div>
 
@@ -198,8 +198,17 @@ export default function SignupPage() {
               {error ? <div style={errorStyle}>{error}</div> : null}
 
               <button type="submit" disabled={loading} style={submitButtonStyle}>
-                {loading ? "Creating account..." : "Create account"}
+                {loading ? "Creating workspace..." : "Create my workspace"}
               </button>
+
+              <div style={reassuranceStyle}>
+                <p style={reassuranceLineStyle}>
+                  After signup, you'll go straight to your workspace and can test Text2Task with your own message.
+                </p>
+                <p style={reassuranceLineStyle}>
+                  Free account. Upgrade only when you need more.
+                </p>
+              </div>
             </form>
 
             <div style={cardFooterStyle}>
@@ -227,6 +236,8 @@ const responsiveCss = `
 
   @media (max-width: 980px) {
     .signup-shell {
+      display: flex !important;
+      flex-direction: column-reverse !important;
       grid-template-columns: 1fr !important;
       max-width: calc(100% - 48px) !important;
       margin: 0 auto !important;
@@ -268,6 +279,7 @@ const responsiveCss = `
 
     .signup-left {
       padding: 24px !important;
+      gap: 20px !important;
     }
 
     .signup-right {
@@ -282,9 +294,16 @@ const responsiveCss = `
 
     .signup-left h1,
     .signup-left h1 span {
-      font-size: 28px !important;
-      line-height: 1.08 !important;
+      font-size: 24px !important;
+      line-height: 1.2 !important;
       max-width: 100% !important;
+      margin-bottom: 8px !important;
+    }
+
+    .signup-left p {
+      font-size: 14px !important;
+      line-height: 1.5 !important;
+      margin-bottom: 16px !important;
     }
 
     .signup-left * {
@@ -605,5 +624,20 @@ const backLinkStyle: React.CSSProperties = {
   fontSize: 14,
   fontWeight: 800,
   textDecoration: "none",
+  textAlign: "center",
+};
+
+const reassuranceStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+  marginTop: 12,
+  padding: "12px 0",
+};
+
+const reassuranceLineStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#6b7280",
+  fontSize: 12,
+  lineHeight: 1.6,
   textAlign: "center",
 };
