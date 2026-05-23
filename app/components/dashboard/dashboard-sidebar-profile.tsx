@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackBeginCheckout } from "@/lib/analytics/events";
 import SidebarButton from "./sidebar-button";
 
 type DashboardNav = "dashboard" | "extract" | "tasks";
@@ -31,6 +32,7 @@ export default function DashboardSidebarProfile({
       }
 
       if (data?.url) {
+        trackBeginCheckout();
         window.location.href = data.url;
         return;
       }

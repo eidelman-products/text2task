@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { trackBeginCheckout } from "@/lib/analytics/events";
 
 type Props = {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export default function UpgradeModal({ isOpen, onClose }: Props) {
       }
 
       if (data?.url) {
+        trackBeginCheckout();
         window.location.href = data.url;
         return;
       }

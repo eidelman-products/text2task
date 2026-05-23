@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DashboardUserMenu from "@/app/components/dashboard/dashboard-user-menu";
+import { trackBeginCheckout } from "@/lib/analytics/events";
 
 type AccountInfo = {
   email: string;
@@ -61,6 +62,7 @@ export default function BillingPage() {
       }
 
       if (data?.url) {
+        trackBeginCheckout();
         window.location.href = data.url;
         return;
       }

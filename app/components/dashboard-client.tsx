@@ -8,6 +8,7 @@ import TasksView, {
   TaskGroup,
   TaskRow,
 } from "./dashboard/tasks-view";
+import { trackBeginCheckout } from "@/lib/analytics/events";
 import ExtractWorkspace from "./dashboard/extract-workspace";
 import DashboardShell from "./dashboard/dashboard-shell";
 import DashboardSidebarProfile from "./dashboard/dashboard-sidebar-profile";
@@ -386,6 +387,7 @@ export default function DashboardClient({
       }
 
       if (data?.url) {
+        trackBeginCheckout();
         window.location.href = data.url;
         return;
       }
