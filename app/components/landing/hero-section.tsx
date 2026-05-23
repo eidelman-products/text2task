@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const workflowSteps = [
   {
@@ -40,6 +43,42 @@ const proPlan = [
 ];
 
 export default function HeroSection() {
+  const [lightboxImage, setLightboxImage] = useState<
+    | {
+        title: string;
+        image: string;
+        alt: string;
+        ctaText: string;
+        ctaHref: string;
+      }
+    | null
+  >(null);
+
+  useEffect(() => {
+    if (!lightboxImage) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setLightboxImage(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lightboxImage]);
+
+  const openLightbox = (payload: {
+    title: string;
+    image: string;
+    alt: string;
+    ctaText: string;
+    ctaHref: string;
+  }) => {
+    setLightboxImage(payload);
+  };
+
+  const closeLightbox = () => setLightboxImage(null);
+
   return (
     <div className="t2t-page">
       <style>{styles}</style>
@@ -112,15 +151,25 @@ export default function HeroSection() {
           </div>
 
           <div className="t2t-transform-grid">
-            <Link
-              href="/signup"
-              aria-label="Try Text2Task with your own client message"
-              className="t2t-transform-card-link"
+            <button
+              type="button"
+              className="t2t-transform-card-button"
+              onClick={() =>
+                openLightbox({
+                  title: "Messy client request preview",
+                  image: "/landing/text2task-whatsapp-message.png",
+                  alt: "WhatsApp client request",
+                  ctaText: "Try with your own message",
+                  ctaHref: "/signup",
+                })
+              }
+              aria-label="Open messy client request preview"
             >
               <div className="t2t-transform-card">
                 <div className="t2t-card-label green">
                   Step 1: Messy client request
                 </div>
+                <div className="t2t-transform-preview-pill">Click to enlarge</div>
                 <div className="t2t-transform-image whatsapp">
                   <Image
                     src="/landing/text2task-whatsapp-message.png"
@@ -131,7 +180,7 @@ export default function HeroSection() {
                   />
                 </div>
               </div>
-            </Link>
+            </button>
 
             <div className="t2t-arrow-wrap">
               <div className="t2t-arrow-circle">
@@ -158,15 +207,25 @@ export default function HeroSection() {
               <p>AI extracts the work</p>
             </div>
 
-            <Link
-              href="/signup"
-              aria-label="Create a free account to generate your own project preview"
-              className="t2t-transform-card-link"
+            <button
+              type="button"
+              className="t2t-transform-card-button"
+              onClick={() =>
+                openLightbox({
+                  title: "Ready-to-work project preview",
+                  image: "/landing/text2task-ai-project-preview.png",
+                  alt: "Text2Task extracted project preview",
+                  ctaText: "Try Text2Task free",
+                  ctaHref: "/signup",
+                })
+              }
+              aria-label="Open ready-to-work project preview"
             >
               <div className="t2t-transform-card result">
                 <div className="t2t-card-label purple">
                   Step 2: Ready-to-work project
                 </div>
+                <div className="t2t-transform-preview-pill">Click to enlarge</div>
                 <div className="t2t-transform-image preview">
                   <Image
                     src="/landing/text2task-ai-project-preview.png"
@@ -177,7 +236,7 @@ export default function HeroSection() {
                   />
                 </div>
               </div>
-            </Link>
+            </button>
           </div>
         </section>
 
@@ -253,6 +312,16 @@ export default function HeroSection() {
               text="Manage all your client projects and tasks."
               image="/landing/text2task-task-crm.png"
               alt="Text2Task task CRM"
+              onOpen={() =>
+                openLightbox({
+                  title: "Task CRM preview",
+                  image: "/landing/text2task-task-crm.png",
+                  alt: "Text2Task task CRM",
+                  ctaText: "Try Text2Task free",
+                  ctaHref: "/signup",
+                })
+              }
+              ariaLabel="Open Task CRM preview"
             />
 
             <ProductCard
@@ -260,9 +329,62 @@ export default function HeroSection() {
               text="See what needs attention now."
               image="/landing/text2task-urgent-board.png"
               alt="Text2Task urgent tasks board"
+              onOpen={() =>
+                openLightbox({
+                  title: "Urgent Tasks Board preview",
+                  image: "/landing/text2task-urgent-board.png",
+                  alt: "Text2Task urgent tasks board",
+                  ctaText: "Try Text2Task free",
+                  ctaHref: "/signup",
+                })
+              }
+              ariaLabel="Open Urgent Tasks Board preview"
             />
           </div>
         </section>
+
+        {lightboxImage ? (
+          <div
+            className="t2t-lightbox-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${lightboxImage.title} preview`}
+            onClick={closeLightbox}
+          >
+            <div
+              className="t2t-lightbox-panel"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="t2t-lightbox-close"
+                onClick={closeLightbox}
+                aria-label="Close preview"
+              >
+                ×
+              </button>
+
+              <div className="t2t-lightbox-copy">
+                <div className="t2t-lightbox-kicker">Preview</div>
+                <h3>{lightboxImage.title}</h3>
+              </div>
+
+              <div className="t2t-lightbox-image">
+                <Image
+                  src={lightboxImage.image}
+                  alt={lightboxImage.alt}
+                  width={1200}
+                  height={720}
+                  priority
+                />
+              </div>
+
+              <Link href={lightboxImage.ctaHref} className="t2t-lightbox-cta">
+                {lightboxImage.ctaText}
+              </Link>
+            </div>
+          </div>
+        ) : null}
 
         <section id="pricing" className="t2t-pricing">
           <div className="t2t-section-kicker">Simple pricing</div>
@@ -325,24 +447,48 @@ function ProductCard({
   text,
   image,
   alt,
+  onOpen,
+  ariaLabel,
 }: {
   title: string;
   text: string;
   image: string;
   alt: string;
+  onOpen?: () => void;
+  ariaLabel?: string;
 }) {
-  return (
-    <div className="t2t-product-card">
+  const cardContent = (
+    <>
       <div className="t2t-product-head">
-        <h3>{title}</h3>
-        <p>{text}</p>
+        <div>
+          <h3>{title}</h3>
+          <p>{text}</p>
+        </div>
+        {onOpen ? (
+          <div className="t2t-product-preview-pill">View preview</div>
+        ) : null}
       </div>
 
       <div className="t2t-product-image">
         <Image src={image} alt={alt} width={1000} height={560} />
       </div>
-    </div>
+    </>
   );
+
+  if (onOpen) {
+    return (
+      <button
+        type="button"
+        className="t2t-product-card t2t-product-card-button"
+        onClick={onOpen}
+        aria-label={ariaLabel}
+      >
+        {cardContent}
+      </button>
+    );
+  }
+
+  return <div className="t2t-product-card">{cardContent}</div>;
 }
 
 function PricingCard({
@@ -603,6 +749,35 @@ const styles = `
   .t2t-transform-cta:hover {
     transform: translateY(-1px);
     background: rgba(79, 70, 229, 0.12);
+  }
+
+  .t2t-transform-card-button {
+    border: none;
+    background: transparent;
+    width: 100%;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .t2t-transform-card-button:focus-visible {
+    outline: 3px solid rgba(79, 70, 229, 0.36);
+    outline-offset: 4px;
+  }
+
+  .t2t-transform-preview-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 0 0;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(79, 70, 229, 0.08);
+    color: #4f46e5;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
   }
 
   .t2t-transform-card-link {
@@ -1021,6 +1196,140 @@ const styles = `
     object-fit: contain;
     object-position: center;
     background: #f8fafc;
+  }
+
+  .t2t-product-card-button {
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .t2t-product-card-button:focus-visible {
+    outline: 3px solid rgba(79, 70, 229, 0.35);
+    outline-offset: 4px;
+  }
+
+  .t2t-product-preview-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(99, 102, 241, 0.10);
+    color: #4f46e5;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .t2t-lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(15, 23, 42, 0.72);
+    padding: 22px;
+    z-index: 9999;
+  }
+
+  .t2t-lightbox-panel {
+    position: relative;
+    width: min(100%, 1040px);
+    max-height: min(100%, 96vh);
+    padding: 28px;
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 28px;
+    box-shadow: 0 34px 90px rgba(15, 23, 42, 0.18);
+    overflow: auto;
+  }
+
+  .t2t-lightbox-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.08);
+    color: #0f172a;
+    font-size: 22px;
+    cursor: pointer;
+  }
+
+  .t2t-lightbox-close:hover {
+    background: rgba(15, 23, 42, 0.12);
+  }
+
+  .t2t-lightbox-copy {
+    margin-bottom: 18px;
+  }
+
+  .t2t-lightbox-kicker {
+    display: inline-flex;
+    margin-bottom: 10px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .t2t-lightbox-panel h3 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.08;
+    color: #102045;
+  }
+
+  .t2t-lightbox-image {
+    margin: 18px 0 22px;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    background: #f8fafc;
+  }
+
+  .t2t-lightbox-image img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    display: block;
+  }
+
+  .t2t-lightbox-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    padding: 0 22px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: white;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  @media (max-width: 760px) {
+    .t2t-lightbox-panel {
+      width: 100%;
+      max-height: 100%;
+      padding: 20px;
+      border-radius: 20px;
+    }
+
+    .t2t-lightbox-panel h3 {
+      font-size: 24px;
+    }
+
+    .t2t-lightbox-image {
+      margin: 16px 0 18px;
+    }
   }
 
   .t2t-pricing-grid {
