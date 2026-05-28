@@ -33,20 +33,21 @@ export function useTaskDerivedData({
 
   const flatTasks = useMemo(() => {
     /*
-      New project-based architecture:
-      Use the real tasks array returned from /api/tasks as the source of truth.
+      The Tasks CRM must render from the same filtered data that powers the
+      toolbar counts. dashboard-client builds groupedTasks from the current
+      search/status/priority filters, while preserving the original TaskRow
+      objects and their project metadata.
 
-      Do NOT rebuild flatTasks from groupedTasks here, because groupedTasks is a
-      legacy view model and may not carry newer project fields such as:
-      - project_id
-      - subtask_order
-      - contact_name
-
-      Resources, subtasks, project grouping, and future project-level features
-      must rely on the normalized task rows from the real API response.
+      Rebuilding from raw tasks here makes filters/counts disagree with the
+      visible project cards.
     */
-    return sortFlatTasks(allNormalizedTasks, sortOption);
-  }, [allNormalizedTasks, sortOption]);
+    const visibleTasks = groupedTasks.flatMap((group) => group.tasks);
+
+    return sortFlatTasks(
+      visibleTasks.map((task) => normalizeTask(task)),
+      sortOption
+    );
+  }, [groupedTasks, sortOption]);
 
   const projectGroups = useMemo(() => {
     const groups = buildTaskProjectGroups(flatTasks);
