@@ -80,6 +80,7 @@ type TasksViewProps = {
   archiveTask: (taskId: number) => Promise<void> | void;
   restoreTask: (taskId: number) => Promise<void> | void;
   permanentlyDeleteTask: (taskId: number) => Promise<void> | void;
+  onRefreshTasks: () => Promise<void> | void;
 };
 
 export default function TasksView({
@@ -112,6 +113,7 @@ export default function TasksView({
   archiveTask,
   restoreTask,
   permanentlyDeleteTask,
+  onRefreshTasks,
 }: TasksViewProps) {
   const {
     allNormalizedTasks,
@@ -419,6 +421,7 @@ export default function TasksView({
                 restoreTask={restoreTask}
                 permanentlyDeleteTask={requestSinglePermanentDelete}
                 formatCreatedDate={formatCreatedDate}
+                onRefreshTasks={onRefreshTasks}
               />
             </>
           )}

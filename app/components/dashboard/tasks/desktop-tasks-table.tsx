@@ -15,6 +15,12 @@ import { buildTaskProjectGroups } from "./task-utils";
 import ClientContactEditor from "./client-contact-editor";
 import ProjectMetaEditor from "./project-meta-editor";
 import ProjectHeaderEditor from "./project-header-editor";
+import ProjectUpdateButton from "./project-updates/project-update-button";
+import ProjectUpdateHistoryModal from "./project-updates/project-update-history-modal";
+import ProjectUpdateModal from "./project-updates/project-update-modal";
+import { useProjectUpdate } from "./project-updates/use-project-update";
+import { useProjectUpdateHistory } from "./project-updates/use-project-update-history";
+import * as historyStyles from "./project-updates/project-update-history-styles";
 
 type DesktopTasksTableProps = {
   tasks: TaskRow[];
@@ -46,6 +52,7 @@ type DesktopTasksTableProps = {
   restoreTask: (taskId: number) => Promise<void> | void;
   permanentlyDeleteTask: (taskId: number) => Promise<void> | void;
   formatCreatedDate: (value?: string | null) => string;
+  onRefreshTasks: () => Promise<void> | void;
 };
 
 export default function DesktopTasksTable({
@@ -72,6 +79,7 @@ export default function DesktopTasksTable({
   restoreTask,
   permanentlyDeleteTask,
   formatCreatedDate,
+  onRefreshTasks,
 }: DesktopTasksTableProps) {
   const projectGroups = useMemo(() => buildTaskProjectGroups(tasks), [tasks]);
 
@@ -83,9 +91,14 @@ export default function DesktopTasksTable({
   );
   const [resourcesProject, setResourcesProject] =
     useState<TaskProjectGroup | null>(null);
+  const [hoveredHistoryProjectKey, setHoveredHistoryProjectKey] =
+    useState<string | null>(null);
   const [projectResourceCounts, setProjectResourceCounts] = useState<
     Record<string, number>
   >({});
+
+  const projectUpdateState = useProjectUpdate();
+  const projectUpdateHistoryState = useProjectUpdateHistory();
 
   useEffect(() => {
     let isMounted = true;
@@ -430,6 +443,35 @@ export default function DesktopTasksTable({
                         ) : null}
                       </button>
 
+                      <ProjectUpdateButton
+                        project={project}
+                        isDeleting={isDeleting}
+                        onOpenModal={projectUpdateState.openModal}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => projectUpdateHistoryState.openHistory(project)}
+                        disabled={!canManageResources || isDeleting}
+                        onMouseEnter={() => setHoveredHistoryProjectKey(project.key)}
+                        onMouseLeave={() => setHoveredHistoryProjectKey(null)}
+                        className="crm-soft-button-v3"
+                        title={
+                          canManageResources
+                            ? "Review previous client updates for this project"
+                            : "History is available for saved projects"
+                        }
+                        style={
+                          !canManageResources || isDeleting
+                            ? historyStyles.historyButtonDisabledStyle
+                            : hoveredHistoryProjectKey === project.key
+                              ? historyStyles.historyButtonHoverStyle
+                              : historyStyles.historyButtonStyle
+                        }
+                      >
+                        History
+                      </button>
+
                       {(isSaving || isSaved || isDeleting) && (
                         <span
                           style={{
@@ -670,6 +712,26 @@ export default function DesktopTasksTable({
         }
         onClose={closeProjectResources}
         onResourcesChanged={syncOpenProjectResourceCount}
+      />
+
+      <ProjectUpdateModal
+        uiState={projectUpdateState.uiState}
+        onClose={projectUpdateState.closeModal}
+        onRawInputChange={projectUpdateState.setRawInput}
+        onInputMethodChange={projectUpdateState.setInputMethod}
+        onAnalyze={projectUpdateState.analyzeCurrentUpdate}
+        onImageSelected={projectUpdateState.setSelectedImage}
+        onRemoveImage={projectUpdateState.removeSelectedImage}
+        onImageError={projectUpdateState.setImageError}
+        onToggleSuggestedItem={projectUpdateState.toggleSuggestedItem}
+        onUpdateSuggestedItemValue={projectUpdateState.updateSuggestedItemValue}
+        onApply={() => projectUpdateState.applySelectedChanges(onRefreshTasks)}
+      />
+
+      <ProjectUpdateHistoryModal
+        state={projectUpdateHistoryState.state}
+        onClose={projectUpdateHistoryState.closeHistory}
+        onRefresh={projectUpdateHistoryState.refreshHistory}
       />
     </>
   );

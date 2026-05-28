@@ -1,3 +1,9 @@
+import {
+  cleanTaskTitle,
+  getTextSimilarity,
+  normalizeText,
+} from "./task-title-similarity";
+
 export type DuplicateProjectSubtaskCandidate = {
   task_title?: string | null;
   task?: string | null;
@@ -490,29 +496,6 @@ function getNumericClosenessScore(candidateValue: string, existingValue: string)
   return smaller / larger;
 }
 
-function normalizeText(value: unknown) {
-  return String(value || "")
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\b(the|a|an|llc|ltd|inc|co|company|studio|agency)\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function cleanTaskTitle(value: string) {
-  return String(value || "")
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\b(the|a|an|please|need|needs|for|to|and|with|new)\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function normalizeAmount(value: unknown) {
   const raw = String(value || "").toLowerCase().trim();
 
@@ -539,26 +522,3 @@ function normalizeDeadline(value: unknown) {
     .trim();
 }
 
-function getTextSimilarity(a: string, b: string) {
-  const aTokens = tokenize(a);
-  const bTokens = tokenize(b);
-
-  if (aTokens.size === 0 || bTokens.size === 0) return 0;
-
-  const intersection = new Set(
-    Array.from(aTokens).filter((token) => bTokens.has(token))
-  );
-
-  const union = new Set([...Array.from(aTokens), ...Array.from(bTokens)]);
-
-  return intersection.size / union.size;
-}
-
-function tokenize(value: string) {
-  return new Set(
-    String(value || "")
-      .split(/\s+/)
-      .map((token) => token.trim())
-      .filter((token) => token.length >= 2)
-  );
-}

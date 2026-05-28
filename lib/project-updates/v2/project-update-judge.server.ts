@@ -1,0 +1,856 @@
+import type {
+  ExistingProjectUpdateContext,
+  JsonRecord,
+} from "@/lib/project-updates/project-update-types";
+import { compareSubtaskTitles } from "@/lib/tasks/task-title-similarity";
+
+import type {
+  ProjectUpdateExtractedFacts,
+  ProjectUpdateExtractedSubtaskFact,
+  ProjectUpdateFactPriority,
+  ProjectUpdateFactStatus,
+  ProjectUpdateJudgeDecision,
+  ProjectUpdateV2AnalysisSummary,
+  ProjectUpdateV2JudgeResult,
+} from "@/lib/project-updates/v2/project-update-facts.types";
+
+type ExistingSubtask = ExistingProjectUpdateContext["subtasks"][number];
+
+type DuplicateMatch = {
+  existingTaskId: number;
+  existingTitle: string;
+  proposedTitle: string;
+  score: number;
+  reason: string;
+};
+
+type JudgeProjectUpdateInput = {
+  facts: ProjectUpdateExtractedFacts;
+  context: ExistingProjectUpdateContext;
+};
+
+export function judgeProjectUpdateFacts({
+  facts,
+  context,
+}: JudgeProjectUpdateInput): ProjectUpdateV2JudgeResult {
+  const decisions: ProjectUpdateJudgeDecision[] = [];
+
+  facts.requestedSubtasks.forEach((subtask, index) => {
+    decisions.push(
+      judgeRequestedSubtask({
+        subtask,
+        context,
+        index,
+      })
+    );
+  });
+
+  const deadlineDecision = judgeProjectDeadlineChange({
+    deadlineText: facts.projectChanges.deadlineText,
+    context,
+  });
+
+  if (deadlineDecision) {
+    decisions.push(deadlineDecision);
+  }
+
+  const amountDecision = judgeProjectAmountChange({
+    amount: facts.projectChanges.amount,
+    context,
+  });
+
+  if (amountDecision) {
+    decisions.push(amountDecision);
+  }
+
+  const priorityDecision = judgeProjectPriorityChange({
+    priority: facts.projectChanges.priority,
+    context,
+  });
+
+  if (priorityDecision) {
+    decisions.push(priorityDecision);
+  }
+
+  const statusDecision = judgeProjectStatusChange({
+    status: facts.projectChanges.status,
+    context,
+  });
+
+  if (statusDecision) {
+    decisions.push(statusDecision);
+  }
+
+  const clientDecision = judgeClientChanges({
+    facts,
+    context,
+  });
+
+  if (clientDecision) {
+    decisions.push(clientDecision);
+  }
+
+
+  if (decisions.length === 0) {
+    decisions.push({
+      id: "no-action-1",
+      kind: "no_change",
+      itemType: "no_action",
+      title: "No new project changes found",
+      description:
+        "Text2Task did not find a clear update that changes this project.",
+      targetTaskId: null,
+      targetField: null,
+      oldValue: null,
+      newValue: null,
+      confidence: facts.confidence,
+      reason:
+        "The extracted update did not include requested work, project changes, client changes, or useful notes.",
+      reviewLabel: "No change",
+    });
+  }
+
+  return {
+    summary: buildJudgeSummary(decisions),
+    decisions,
+  };
+}
+
+function judgeRequestedSubtask({
+  subtask,
+  context,
+  index,
+}: {
+  subtask: ProjectUpdateExtractedSubtaskFact;
+  context: ExistingProjectUpdateContext;
+  index: number;
+}): ProjectUpdateJudgeDecision {
+  const title = cleanTitle(subtask.title);
+  const duplicate = findDuplicateSubtask({
+    subtasks: context.subtasks,
+    candidateTitle: title,
+  });
+
+  if (duplicate) {
+    const exact = isExactDuplicate(duplicate);
+
+    return {
+      id: `subtask-${index + 1}`,
+      kind: "already_exists",
+      itemType: "duplicate_warning",
+      title: exact ? "This task already exists" : "Possible duplicate subtask",
+      description: exact
+        ? "Text2Task found this requested work already in the project, so it will not create another subtask."
+        : "Text2Task found a similar existing subtask. Review before creating anything new.",
+      targetTaskId: duplicate.existingTaskId,
+      targetField: "task_title",
+      oldValue: {
+        existing_task_id: duplicate.existingTaskId,
+        existing_title: duplicate.existingTitle,
+      },
+      newValue: {
+        proposed_title: duplicate.proposedTitle,
+        existing_task_id: duplicate.existingTaskId,
+        existing_title: duplicate.existingTitle,
+        score: duplicate.score,
+        reason: duplicate.reason,
+      },
+      confidence: exact ? 0.98 : 0.82,
+      reason: exact
+        ? "The requested subtask title matches an existing subtask."
+        : "The requested subtask title is similar to an existing subtask.",
+      reviewLabel: "Already exists",
+    };
+  }
+
+  const relatedSubtask = findRelatedSubtask({
+    subtasks: context.subtasks,
+    candidateTitle: title,
+  });
+
+  if (relatedSubtask) {
+    return {
+      id: `subtask-${index + 1}`,
+      kind: "apply",
+      itemType: "update_subtask",
+      title,
+      description:
+        subtask.description ||
+        `Client requested an update to existing subtask: ${relatedSubtask.existingTitle}.`,
+      targetTaskId: relatedSubtask.existingTaskId,
+      targetField: "task_title",
+      oldValue: {
+        existing_task_id: relatedSubtask.existingTaskId,
+        existing_title: relatedSubtask.existingTitle,
+      },
+      newValue: compactRecord({
+        task_title: title,
+        deadline_text: subtask.deadlineText,
+        amount: subtask.amount,
+        priority: subtask.priority,
+        status: subtask.status,
+      }),
+      confidence: 0.84,
+      reason:
+        "The requested work appears to update an existing subtask with additional detail rather than create a completely new subtask.",
+      reviewLabel: "Apply",
+    };
+  }
+
+  return {
+    id: `subtask-${index + 1}`,
+    kind: "apply",
+    itemType: "new_subtask",
+    title,
+    description:
+      subtask.description || "Client requested this additional work item.",
+    targetTaskId: null,
+    targetField: "task_title",
+    oldValue: null,
+    newValue: compactRecord({
+      task_title: title,
+      deadline_text: subtask.deadlineText,
+      amount: subtask.amount,
+      priority: subtask.priority || "Medium",
+      status: subtask.status || "New",
+    }),
+    confidence: 0.9,
+    reason:
+      "This requested work item does not match an existing subtask in the project.",
+    reviewLabel: "Apply",
+  };
+}
+
+function judgeProjectDeadlineChange({
+  deadlineText,
+  context,
+}: {
+  deadlineText: string | null;
+  context: ExistingProjectUpdateContext;
+}): ProjectUpdateJudgeDecision | null {
+  if (!deadlineText) return null;
+
+  const currentDeadline =
+    context.project.deadline_text || context.project.deadline_date || null;
+
+  if (currentDeadline && areSameDeadlineValue(currentDeadline, deadlineText)) {
+    return {
+      id: "project-deadline",
+      kind: "no_change",
+      itemType: "no_action",
+      title: "Deadline already matches this project",
+      description:
+        "The client mentioned the deadline, but it already matches the current project deadline.",
+      targetTaskId: null,
+      targetField: "deadline_text",
+      oldValue: {
+        deadline_text: context.project.deadline_text,
+        deadline_date: context.project.deadline_date,
+      },
+      newValue: {
+        deadline_text: deadlineText,
+      },
+      confidence: 0.95,
+      reason:
+        "The requested deadline normalizes to the same value as the current project deadline.",
+      reviewLabel: "No change",
+    };
+  }
+
+  return {
+    id: "project-deadline",
+    kind: "apply",
+    itemType: "deadline_change",
+    title: `Update project deadline to ${deadlineText}`,
+    description: "Client requested a project-wide deadline change.",
+    targetTaskId: null,
+    targetField: "deadline_text",
+    oldValue: {
+      deadline_text: context.project.deadline_text,
+      deadline_date: context.project.deadline_date,
+    },
+    newValue: {
+      deadline_text: deadlineText,
+    },
+    confidence: 0.9,
+    reason:
+      "The client update includes a project-wide deadline that differs from the current project deadline.",
+    reviewLabel: "Apply",
+  };
+}
+
+function judgeProjectAmountChange({
+  amount,
+  context,
+}: {
+  amount: string | null;
+  context: ExistingProjectUpdateContext;
+}): ProjectUpdateJudgeDecision | null {
+  if (!amount) return null;
+
+  const currentAmount =
+    context.project.amount ||
+    (typeof context.project.amount_value === "number"
+      ? String(context.project.amount_value)
+      : null);
+
+  if (currentAmount && areSameMoneyValue(currentAmount, amount)) {
+    return {
+      id: "project-budget",
+      kind: "no_change",
+      itemType: "no_action",
+      title: "Budget already matches this project",
+      description:
+        "The client mentioned the budget, but it already matches the current project budget.",
+      targetTaskId: null,
+      targetField: "amount",
+      oldValue: {
+        amount: context.project.amount,
+        amount_value: context.project.amount_value,
+        currency_code: context.project.currency_code,
+      },
+      newValue: {
+        amount,
+      },
+      confidence: 0.95,
+      reason:
+        "The requested budget normalizes to the same value as the current project budget.",
+      reviewLabel: "No change",
+    };
+  }
+
+  return {
+    id: "project-budget",
+    kind: "apply",
+    itemType: "budget_change",
+    title: `Update project budget to ${amount}`,
+    description: "Client requested a project-wide budget change.",
+    targetTaskId: null,
+    targetField: "amount",
+    oldValue: {
+      amount: context.project.amount,
+      amount_value: context.project.amount_value,
+      currency_code: context.project.currency_code,
+    },
+    newValue: {
+      amount,
+    },
+    confidence: 0.9,
+    reason:
+      "The client update includes a project-wide budget that differs from the current project budget.",
+    reviewLabel: "Apply",
+  };
+}
+
+function judgeProjectPriorityChange({
+  priority,
+  context,
+}: {
+  priority: ProjectUpdateFactPriority | null;
+  context: ExistingProjectUpdateContext;
+}): ProjectUpdateJudgeDecision | null {
+  if (!priority) return null;
+
+  const currentPriority = normalizePriority(context.project.priority);
+
+  if (currentPriority && currentPriority === priority) {
+    return {
+      id: "project-priority",
+      kind: "no_change",
+      itemType: "no_action",
+      title: "Priority already matches this project",
+      description:
+        "The client mentioned the priority, but the project already has this priority.",
+      targetTaskId: null,
+      targetField: "priority",
+      oldValue: {
+        priority: context.project.priority,
+      },
+      newValue: {
+        priority,
+      },
+      confidence: 0.95,
+      reason:
+        "The requested priority is the same as the current project priority.",
+      reviewLabel: "No change",
+    };
+  }
+
+  return {
+    id: "project-priority",
+    kind: "apply",
+    itemType: "priority_change",
+    title: `Update project priority to ${priority}`,
+    description: "Client requested a project-wide priority change.",
+    targetTaskId: null,
+    targetField: "priority",
+    oldValue: {
+      priority: context.project.priority,
+    },
+    newValue: {
+      priority,
+    },
+    confidence: 0.9,
+    reason:
+      "The client update includes a project-wide priority that differs from the current project priority.",
+    reviewLabel: "Apply",
+  };
+}
+
+function judgeProjectStatusChange({
+  status,
+  context,
+}: {
+  status: ProjectUpdateFactStatus | null;
+  context: ExistingProjectUpdateContext;
+}): ProjectUpdateJudgeDecision | null {
+  if (!status) return null;
+
+  const currentStatus = normalizeStatus(context.project.status);
+
+  if (currentStatus && currentStatus === status) {
+    return {
+      id: "project-status",
+      kind: "no_change",
+      itemType: "no_action",
+      title: "Status already matches this project",
+      description:
+        "The client mentioned the status, but the project already has this status.",
+      targetTaskId: null,
+      targetField: "status",
+      oldValue: {
+        status: context.project.status,
+      },
+      newValue: {
+        status,
+      },
+      confidence: 0.95,
+      reason: "The requested status is the same as the current project status.",
+      reviewLabel: "No change",
+    };
+  }
+
+  return {
+    id: "project-status",
+    kind: "apply",
+    itemType: "status_change",
+    title: `Update project status to ${status}`,
+    description: "Client requested a project-wide status change.",
+    targetTaskId: null,
+    targetField: "status",
+    oldValue: {
+      status: context.project.status,
+    },
+    newValue: {
+      status,
+    },
+    confidence: 0.9,
+    reason:
+      "The client update includes a project-wide status that differs from the current project status.",
+    reviewLabel: "Apply",
+  };
+}
+
+function judgeClientChanges({
+  facts,
+  context,
+}: {
+  facts: ProjectUpdateExtractedFacts;
+  context: ExistingProjectUpdateContext;
+}): ProjectUpdateJudgeDecision | null {
+  const nextClient = compactRecord({
+    client_name: facts.clientChanges.clientName,
+    contact_name: facts.clientChanges.contactName,
+    phone: facts.clientChanges.phone,
+    email: facts.clientChanges.email,
+    notes: facts.clientChanges.notes,
+  });
+
+  if (Object.keys(nextClient).length === 0) {
+    return null;
+  }
+
+  const currentClient = {
+    client_name: context.project.client_name || context.client?.name || null,
+    contact_name: context.project.contact_name || null,
+    phone: context.client?.phone || null,
+    email: context.client?.email || null,
+    notes: context.client?.notes || null,
+  };
+
+  const changedFields = Object.entries(nextClient).filter(([key, value]) => {
+    const currentValue = currentClient[key as keyof typeof currentClient];
+
+    return !areSameLooseTextValue(currentValue, value);
+  });
+
+  if (changedFields.length === 0) {
+    return null;
+  }
+
+  return {
+    id: "client-details",
+    kind: "apply",
+    itemType: "client_detail_change",
+    title: "Update client details",
+    description: "The client update included client/contact information changes.",
+    targetTaskId: null,
+    targetField: "client_details",
+    oldValue: currentClient,
+    newValue: nextClient,
+    confidence: 0.88,
+    reason: "One or more extracted client details differ from the saved record.",
+    reviewLabel: "Apply",
+  };
+}
+
+function buildJudgeSummary(
+  decisions: ProjectUpdateJudgeDecision[]
+): ProjectUpdateV2AnalysisSummary {
+  const applyCount = decisions.filter((decision) => decision.kind === "apply").length;
+  const alreadyExistsCount = decisions.filter(
+    (decision) => decision.kind === "already_exists"
+  ).length;
+  const noChangeCount = decisions.filter(
+    (decision) => decision.kind === "no_change"
+  ).length;
+  const needsReviewCount = decisions.filter(
+    (decision) => decision.kind === "needs_review"
+  ).length;
+
+  const parts = [
+    applyCount > 0
+      ? `${applyCount} ${applyCount === 1 ? "change" : "changes"} can be applied`
+      : null,
+    alreadyExistsCount > 0
+      ? `${alreadyExistsCount} already ${alreadyExistsCount === 1 ? "exists" : "exist"}`
+      : null,
+    noChangeCount > 0
+      ? `${noChangeCount} ${noChangeCount === 1 ? "thing already matches" : "things already match"}`
+      : null,
+    needsReviewCount > 0
+      ? `${needsReviewCount} ${needsReviewCount === 1 ? "item needs" : "items need"} review`
+      : null,
+  ].filter(Boolean);
+
+  const headline =
+    parts.length > 0
+      ? parts.join(", ")
+      : "No new project changes found";
+
+  return {
+    headline,
+    reasoning:
+      "Text2Task extracted simple facts from the client update, then compared them against the existing project and subtasks.",
+    riskLevel: needsReviewCount > 0 ? "medium" : "low",
+    detectedChanges: buildDetectedChanges(decisions),
+  };
+}
+
+function buildDetectedChanges(decisions: ProjectUpdateJudgeDecision[]) {
+  const labels = new Set<string>();
+
+  decisions.forEach((decision) => {
+    if (decision.kind === "apply") {
+      labels.add(decision.itemType);
+      return;
+    }
+
+    if (decision.kind === "already_exists") {
+      labels.add("already_exists");
+      return;
+    }
+
+    if (decision.kind === "no_change") {
+      labels.add("no_change");
+      return;
+    }
+
+    if (decision.kind === "needs_review") {
+      labels.add("needs_review");
+    }
+  });
+
+  return Array.from(labels);
+}
+
+function findDuplicateSubtask({
+  subtasks,
+  candidateTitle,
+}: {
+  subtasks: ExistingProjectUpdateContext["subtasks"];
+  candidateTitle: string;
+}): DuplicateMatch | null {
+  let bestMatch: DuplicateMatch | null = null;
+
+  for (const subtask of subtasks) {
+    const existingTitle = subtask.task_title?.trim();
+
+    if (!existingTitle) continue;
+
+    const comparison = compareSubtaskTitles(candidateTitle, existingTitle);
+
+    if (!comparison.isDuplicate) continue;
+
+    const match: DuplicateMatch = {
+      existingTaskId: Number(subtask.id),
+      existingTitle,
+      proposedTitle: candidateTitle,
+      score: comparison.score,
+      reason: comparison.reason,
+    };
+
+    if (!bestMatch || match.score > bestMatch.score) {
+      bestMatch = match;
+    }
+  }
+
+  return bestMatch;
+}
+
+function findRelatedSubtask({
+  subtasks,
+  candidateTitle,
+}: {
+  subtasks: ExistingProjectUpdateContext["subtasks"];
+  candidateTitle: string;
+}): DuplicateMatch | null {
+  const candidateTokens = getRelationTokens(candidateTitle);
+
+  if (candidateTokens.length < 2) {
+    return null;
+  }
+
+  let bestMatch: DuplicateMatch | null = null;
+
+  for (const subtask of subtasks) {
+    const existingTitle = subtask.task_title?.trim();
+
+    if (!existingTitle) continue;
+
+    const comparison = compareSubtaskTitles(candidateTitle, existingTitle);
+
+    if (comparison.isDuplicate) continue;
+
+    const existingTokens = getRelationTokens(existingTitle);
+    const sharedScore = getTokenOverlapScore(candidateTokens, existingTokens);
+
+    if (sharedScore < 2) continue;
+
+    const candidateContainsExisting = existingTokens.every((token) =>
+      candidateTokens.includes(token)
+    );
+    const existingCoversCandidate =
+      candidateTokens.length > 0 &&
+      sharedScore / candidateTokens.length >= 0.7;
+
+    if (!candidateContainsExisting && !existingCoversCandidate) {
+      continue;
+    }
+
+    const match: DuplicateMatch = {
+      existingTaskId: Number(subtask.id),
+      existingTitle,
+      proposedTitle: candidateTitle,
+      score: sharedScore,
+      reason: "related title match",
+    };
+
+    if (!bestMatch || match.score > bestMatch.score) {
+      bestMatch = match;
+    }
+  }
+
+  return bestMatch;
+}
+
+function getRelationTokens(value: string): string[] {
+  const ignoredTokens = new Set([
+    "the",
+    "a",
+    "an",
+    "to",
+    "for",
+    "with",
+    "new",
+    "update",
+    "add",
+    "create",
+    "build",
+    "make",
+    "website",
+    "site",
+    "web",
+    "page",
+    "homepage",
+    "section",
+  ]);
+
+  return Array.from(
+    new Set(
+      String(value || "")
+        .toLowerCase()
+        .replace(/[^ -]/g, " ")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim()
+        .split(/\s+/)
+        .filter((token) => token && !ignoredTokens.has(token))
+    )
+  );
+}
+
+function getTokenOverlapScore(
+  candidateTokens: string[],
+  existingTokens: string[]
+): number {
+  const existingSet = new Set(existingTokens);
+
+  return candidateTokens.filter((token) => existingSet.has(token)).length;
+}
+
+function isExactDuplicate(duplicate: DuplicateMatch) {
+  return duplicate.score >= 100 || duplicate.reason === "normalized title match";
+}
+
+function compactRecord(record: Record<string, unknown>): JsonRecord {
+  const compacted: JsonRecord = {};
+
+  Object.entries(record).forEach(([key, value]) => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+
+      if (trimmed) {
+        compacted[key] = trimmed;
+      }
+
+      return;
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      compacted[key] = value;
+      return;
+    }
+
+    if (value !== null && value !== undefined) {
+      compacted[key] = value;
+    }
+  });
+
+  return compacted;
+}
+
+function cleanTitle(value: string) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[.;]+$/g, "")
+    .trim();
+}
+
+function normalizePriority(value: unknown): ProjectUpdateFactPriority | null {
+  const normalized = normalizePlainText(value);
+
+  if (normalized === "low") return "Low";
+  if (normalized === "medium") return "Medium";
+  if (normalized === "high") return "High";
+
+  return null;
+}
+
+function normalizeStatus(value: unknown): ProjectUpdateFactStatus | null {
+  const normalized = normalizePlainText(value).replace(/[_-]+/g, " ");
+
+  if (normalized === "new") return "New";
+  if (normalized === "in progress") return "In Progress";
+  if (normalized === "review") return "Review";
+  if (normalized === "urgent") return "Urgent";
+
+  if (
+    normalized === "done" ||
+    normalized === "complete" ||
+    normalized === "completed"
+  ) {
+    return "Done";
+  }
+
+  return null;
+}
+
+function areSameDeadlineValue(a: unknown, b: unknown) {
+  const normalizedA = normalizeComparableDeadline(a);
+  const normalizedB = normalizeComparableDeadline(b);
+
+  if (!normalizedA || !normalizedB) return false;
+
+  return normalizedA === normalizedB;
+}
+
+function areSameMoneyValue(a: unknown, b: unknown) {
+  const normalizedA = normalizeMoneyishValue(a);
+  const normalizedB = normalizeMoneyishValue(b);
+
+  if (!normalizedA || !normalizedB) return false;
+
+  return normalizedA === normalizedB;
+}
+
+function areSameLooseTextValue(a: unknown, b: unknown) {
+  const normalizedA = normalizeComparableText(a);
+  const normalizedB = normalizeComparableText(b);
+
+  if (!normalizedA || !normalizedB) return false;
+
+  return normalizedA === normalizedB;
+}
+
+function normalizePlainText(value: unknown) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function normalizeComparableText(value: unknown) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeComparableDeadline(value: unknown) {
+  return normalizeComparableText(value)
+    .replace(/\bby\b/g, " ")
+    .replace(/\bdue\b/g, " ")
+    .replace(/\bdeadline\b/g, " ")
+    .replace(/\bproject\b/g, " ")
+    .replace(/\bmove\b/g, " ")
+    .replace(/\bchange\b/g, " ")
+    .replace(/\bupdate\b/g, " ")
+    .replace(/\bto\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeMoneyishValue(value: unknown) {
+  const raw = String(value || "").toLowerCase();
+
+  const numeric = raw.match(/\d+(?:[.,]\d+)?/g)?.join("") || "";
+  const currency =
+    raw.includes("usd") || raw.includes("$")
+      ? "usd"
+      : raw.includes("eur") || raw.includes("€")
+        ? "eur"
+        : raw.includes("gbp") || raw.includes("£")
+          ? "gbp"
+          : "";
+
+  if (!numeric) {
+    return normalizeComparableText(raw);
+  }
+
+  return `${numeric}${currency}`;
+}

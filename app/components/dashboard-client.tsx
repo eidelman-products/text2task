@@ -1462,6 +1462,7 @@ export default function DashboardClient({
             archiveTask={archiveTask}
             restoreTask={restoreTask}
             permanentlyDeleteTask={permanentlyDeleteTask}
+            onRefreshTasks={refreshTasks}
           />
         );
 
