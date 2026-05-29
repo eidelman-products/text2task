@@ -80,6 +80,8 @@ export default function TasksToolbar({
           onChange={(value) => onSortOptionChange(value as TaskSortOption)}
           ariaLabel="Sort tasks"
         >
+          <option value="created-desc">Newest first</option>
+          <option value="created-asc">Oldest first</option>
           <option value="client-asc">Client A → Z</option>
           <option value="client-desc">Client Z → A</option>
           <option value="task-asc">Project A → Z</option>

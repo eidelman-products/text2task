@@ -31,15 +31,22 @@ export function normalizeTask(task: TaskRow): TaskRow {
 }
 
 export function formatCreatedDate(value?: string | null) {
-  if (!value) return "—";
+  if (!value) return "Created —";
 
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "—";
+  if (Number.isNaN(parsed.getTime())) return "Created —";
 
-  return parsed.toLocaleDateString("en-US", {
+  const date = parsed.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });
+
+  const time = parsed.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  return `Created ${date} · ${time}`;
 }
 
 export function getDeadlineSortValue(task: TaskRow) {
@@ -208,10 +215,7 @@ function buildSingleTaskProjectGroup(
   ).length;
 
   const contact = getBestContactDetails(tasks);
-  const amount =
-    project?.amount !== null && project?.amount !== undefined
-      ? String(project.amount)
-      : getProjectAmount(tasks, rawInput);
+  const amount = getCleanProjectAmount(project, tasks, rawInput);
   const deadlineTask = chooseProjectDeadlineTask(tasks);
   const projectDeadline = getProjectDeadlineFromEntity(project);
 
@@ -252,7 +256,15 @@ function buildSingleTaskProjectGroup(
     status: project?.status?.trim() || getProjectStatus(tasks),
     source: project?.source?.trim() || primaryTask.source || "",
 
-    created_at: project?.created_at || primaryTask.created_at,
+    created_at:
+      project?.created_at ||
+      getEarliestTaskCreatedAt(tasks) ||
+      primaryTask.created_at,
+    updated_at:
+      project?.updated_at ||
+      getLatestTaskUpdatedAt(tasks) ||
+      primaryTask.updated_at ||
+      null,
     completed_at:
       project?.completed_at ||
       (completedSubtaskCount === subtasks.length && subtasks.length > 0
@@ -283,6 +295,41 @@ function getProjectId(tasks: TaskRow[]) {
 
 function getBestProject(tasks: TaskRow[]) {
   return tasks.find((task) => task.project && task.project.id)?.project || null;
+}
+
+function getEarliestTaskCreatedAt(tasks: TaskRow[]) {
+  let earliest: { value: string; time: number } | null = null;
+
+  for (const task of tasks) {
+    if (!task.created_at) continue;
+
+    const time = new Date(task.created_at).getTime();
+    if (Number.isNaN(time)) continue;
+
+    if (!earliest || time < earliest.time) {
+      earliest = { value: task.created_at, time };
+    }
+  }
+
+  return earliest?.value || null;
+}
+
+function getLatestTaskUpdatedAt(tasks: TaskRow[]) {
+  let latest: { value: string; time: number } | null = null;
+
+  for (const task of tasks) {
+    const value = task.updated_at || task.created_at;
+    if (!value) continue;
+
+    const time = new Date(value).getTime();
+    if (Number.isNaN(time)) continue;
+
+    if (!latest || time > latest.time) {
+      latest = { value, time };
+    }
+  }
+
+  return latest?.value || null;
 }
 
 function getProjectDeadlineFromEntity(
@@ -557,6 +604,59 @@ function getProjectAmount(tasks: TaskRow[], rawInput: string) {
   const currency = currencies[0] || "USD";
 
   return `${formatNumberWithoutNoise(rounded)} ${currency}`;
+}
+
+function getCleanProjectAmount(
+  project: NonNullable<TaskRow["project"]> | null,
+  tasks: TaskRow[],
+  rawInput: string
+) {
+  const structuredAmount = formatStructuredAmount(
+    project?.amount_value,
+    project?.currency_code
+  );
+
+  if (structuredAmount) return structuredAmount;
+
+  if (isSafeDisplayAmount(project?.amount)) {
+    return String(project?.amount || "").trim();
+  }
+
+  return getProjectAmount(tasks, rawInput);
+}
+
+function formatStructuredAmount(value?: number | null, currency?: string | null) {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "";
+  }
+
+  const formattedValue = value.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+  const cleanCurrency = String(currency || "USD").trim().toUpperCase();
+
+  return `${formattedValue} ${cleanCurrency}`;
+}
+
+function isSafeDisplayAmount(value?: string | null) {
+  const clean = String(value || "").trim();
+
+  if (!clean) return false;
+
+  const numberMatches = clean.match(/\d[\d,]*(?:\.\d+)?/g) || [];
+  const normalizedNumbers = numberMatches
+    .map((match) => Number(match.replace(/,/g, "")))
+    .filter((amount) => Number.isFinite(amount));
+
+  const seen = new Set<number>();
+
+  for (const amount of normalizedNumbers) {
+    if (seen.has(amount)) return false;
+    seen.add(amount);
+  }
+
+  return true;
 }
 
 function extractBudgetFromRawInput(rawInput: string) {

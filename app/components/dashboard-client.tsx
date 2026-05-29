@@ -185,7 +185,7 @@ export default function DashboardClient({
   const [statusFilter, setStatusFilter] = useState<TaskStatusFilter>("all");
   const [priorityFilter, setPriorityFilter] =
     useState<TaskPriorityFilter>("all");
-  const [sortOption, setSortOption] = useState<TaskSortOption>("client-asc");
+  const [sortOption, setSortOption] = useState<TaskSortOption>("created-desc");
   const [highlightedTaskId, setHighlightedTaskId] = useState<number | null>(
     null
   );
@@ -309,7 +309,7 @@ export default function DashboardClient({
     setSearchTerm("");
     setStatusFilter("all");
     setPriorityFilter("all");
-    setSortOption("client-asc");
+    setSortOption("created-desc");
   }
 
   async function fetchTasksFromServer(
@@ -565,7 +565,7 @@ export default function DashboardClient({
         setSearchTerm("");
         setStatusFilter("all");
         setPriorityFilter("all");
-        setSortOption("client-asc");
+        setSortOption("created-desc");
         setArchiveView("active");
       }
     }

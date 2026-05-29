@@ -24,7 +24,11 @@ export default function ProjectMetaEditor({
   const canEditProject = Boolean(projectId) && !isDeleting;
 
   const amount = project.amount || "";
-  const deadline = project.deadline_original_text || project.deadline || "";
+  const deadline = formatDeadlineDisplay(
+    project.deadline_date,
+    project.deadline,
+    project.deadline_original_text
+  );
 
   function commitProjectField(
     field: "amount" | "deadline",
@@ -66,6 +70,7 @@ export default function ProjectMetaEditor({
         label="Deadline"
         placeholder="May 15, 2026"
         defaultValue={deadline}
+        variant="deadline"
         disabled={!canEditProject}
         onEnterBlur={onEnterBlur}
         onCommit={(nextValue) =>
@@ -114,10 +119,31 @@ export default function ProjectMetaEditor({
   );
 }
 
+function formatDeadlineDisplay(
+  deadlineDate?: string | null,
+  formattedDeadline?: string | null,
+  originalText?: string | null
+) {
+  if (deadlineDate) {
+    const parsed = new Date(deadlineDate);
+
+    if (!Number.isNaN(parsed.getTime())) {
+      const year = parsed.getFullYear();
+      const month = String(parsed.getMonth() + 1).padStart(2, "0");
+      const day = String(parsed.getDate()).padStart(2, "0");
+
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  return formattedDeadline || originalText || "";
+}
+
 function EditableMetaTextField({
   label,
   placeholder,
   defaultValue,
+  variant,
   disabled,
   onEnterBlur,
   onCommit,
@@ -125,14 +151,22 @@ function EditableMetaTextField({
   label: string;
   placeholder: string;
   defaultValue: string;
+  variant?: "deadline";
   disabled: boolean;
   onEnterBlur: (
     e: KeyboardEvent<HTMLInputElement | HTMLSelectElement>
   ) => void;
   onCommit: (value: string) => void;
 }) {
+  const isDeadline = variant === "deadline";
+
   return (
-    <label style={metaFieldStyle}>
+    <label
+      style={{
+        ...metaFieldStyle,
+        ...(isDeadline ? deadlineFieldStyle : {}),
+      }}
+    >
       <span style={metaLabelStyle}>{label}</span>
 
       <input
@@ -143,7 +177,10 @@ function EditableMetaTextField({
         onBlur={(e) => onCommit(e.currentTarget.value)}
         onKeyDown={onEnterBlur}
         className="project-meta-editor-input"
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          ...(isDeadline ? deadlineInputStyle : {}),
+        }}
       />
     </label>
   );
@@ -229,6 +266,10 @@ const metaFieldStyle: CSSProperties = {
   borderRight: "1px solid rgba(226,232,240,0.28)",
 };
 
+const deadlineFieldStyle: CSSProperties = {
+  minWidth: 116,
+};
+
 const metaLabelStyle: CSSProperties = {
   fontSize: 10,
   fontWeight: 950,
@@ -249,6 +290,10 @@ const inputStyle: CSSProperties = {
   padding: "0 9px",
   outline: "none",
   boxShadow: "none",
+};
+
+const deadlineInputStyle: CSSProperties = {
+  minWidth: 100,
 };
 
 const selectStyle: CSSProperties = {

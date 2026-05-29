@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import CustomerStoriesSection from "./customer-stories-section";
 
 const workflowSteps = [
   {
@@ -385,6 +386,8 @@ export default function HeroSection() {
             </div>
           </div>
         ) : null}
+
+        <CustomerStoriesSection />
 
         <section id="pricing" className="t2t-pricing">
           <div className="t2t-section-kicker">Simple pricing</div>

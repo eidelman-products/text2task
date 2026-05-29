@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
 import DashboardUserMenu from "@/app/components/dashboard/dashboard-user-menu";
 
 type AccountInfo = {
@@ -10,9 +16,32 @@ type AccountInfo = {
   created_at?: string | null;
 };
 
+type FeedbackFormState = {
+  displayName: string;
+  roleOrBusinessType: string;
+  rating: string;
+  feedbackText: string;
+  publicPermission: boolean;
+};
+
+const initialFeedbackForm: FeedbackFormState = {
+  displayName: "",
+  roleOrBusinessType: "",
+  rating: "",
+  feedbackText: "",
+  publicPermission: true,
+};
+
 export default function ProfilePage() {
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [feedbackForm, setFeedbackForm] =
+    useState<FeedbackFormState>(initialFeedbackForm);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackError, setFeedbackError] = useState("");
+  const [feedbackSuccess, setFeedbackSuccess] = useState("");
 
   useEffect(() => {
     async function loadAccount() {
@@ -48,96 +77,502 @@ export default function ProfilePage() {
   }, []);
 
   const displayName = account?.email?.split("@")[0] || "Text2Task user";
+  const displayEmail = isLoading ? "Loading account..." : account?.email || "Unavailable";
+  const isPro = account?.plan === "pro";
+  const planLabel = isLoading ? "Loading" : isPro ? "Pro plan" : "Free plan";
+  const memberSince = formatMemberSince(account?.created_at);
+
+  const suggestedDisplayName = useMemo(() => {
+    if (!account?.email) return "";
+
+    const localPart = account.email.split("@")[0] || "";
+    const clean = localPart
+      .replace(/[._-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!clean) return "";
+
+    return clean
+      .split(" ")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }, [account?.email]);
+
+  useEffect(() => {
+    if (!suggestedDisplayName) return;
+
+    setFeedbackForm((current) => {
+      if (current.displayName.trim()) return current;
+
+      return {
+        ...current,
+        displayName: suggestedDisplayName,
+      };
+    });
+  }, [suggestedDisplayName]);
+
+  useEffect(() => {
+    if (!isFeedbackModalOpen) return;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !isSubmittingFeedback) {
+        setIsFeedbackModalOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isFeedbackModalOpen, isSubmittingFeedback]);
+
+  function updateFeedbackField<K extends keyof FeedbackFormState>(
+    field: K,
+    value: FeedbackFormState[K]
+  ) {
+    setFeedbackForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+
+    setFeedbackError("");
+    setFeedbackSuccess("");
+  }
+
+  async function submitFeedback(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (isSubmittingFeedback) return;
+
+    const cleanDisplayName = feedbackForm.displayName.trim();
+    const cleanRole = feedbackForm.roleOrBusinessType.trim();
+    const cleanFeedback = feedbackForm.feedbackText.trim();
+    const ratingValue = feedbackForm.rating
+      ? Number(feedbackForm.rating)
+      : null;
+
+    if (cleanDisplayName.length < 2) {
+      setFeedbackError("Please enter a display name with at least 2 characters.");
+      return;
+    }
+
+    if (cleanFeedback.length < 20) {
+      setFeedbackError("Please write at least 20 characters of feedback.");
+      return;
+    }
+
+    if (
+      ratingValue !== null &&
+      (!Number.isInteger(ratingValue) || ratingValue < 1 || ratingValue > 5)
+    ) {
+      setFeedbackError("Rating must be between 1 and 5.");
+      return;
+    }
+
+    try {
+      setIsSubmittingFeedback(true);
+      setFeedbackError("");
+      setFeedbackSuccess("");
+
+      const res = await fetch("/api/customer-stories/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          displayName: cleanDisplayName,
+          roleOrBusinessType: cleanRole || null,
+          rating: ratingValue,
+          feedbackText: cleanFeedback,
+          publicPermission: feedbackForm.publicPermission,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to submit feedback.");
+      }
+
+      setFeedbackSuccess(
+        data?.message ||
+          "Thanks - your feedback was sent for review. If you allowed public display, it may appear after approval."
+      );
+
+      setFeedbackForm({
+        ...initialFeedbackForm,
+        displayName: cleanDisplayName,
+      });
+    } catch (error: any) {
+      console.error(error);
+      setFeedbackError(
+        error?.message || "Could not submit feedback right now."
+      );
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  }
 
   return (
     <main style={styles.page}>
+      <style>{responsiveCss}</style>
+
       <div style={styles.accountMenu}>
         <DashboardUserMenu />
       </div>
 
-      <section style={styles.card}>
-        <div style={styles.topRow}>
-          <a href="/dashboard" style={styles.backLink}>
-            ← Back to workspace
-          </a>
-
-          <div
-            style={{
-              ...styles.planBadge,
-              ...(account?.plan === "pro" ? styles.proBadge : styles.freeBadge),
-            }}
-          >
-            {account?.plan === "pro" ? "Pro plan" : "Free plan"}
-          </div>
-        </div>
-
-        <div style={styles.hero}>
-          <div style={styles.avatar}>
-            {(account?.email || "U").charAt(0).toUpperCase()}
-          </div>
-
-          <div>
-            <div style={styles.kicker}>Profile</div>
-            <h1 style={styles.title}>{displayName}</h1>
-            <p style={styles.subtitle}>
-              Manage your Text2Task account details and workspace identity.
-            </p>
-          </div>
-        </div>
-
-        <div style={styles.grid}>
-          <div style={styles.fieldCard}>
-            <div style={styles.label}>Email</div>
-            <div style={styles.value}>
-              {isLoading ? "Loading..." : account?.email || "Unavailable"}
-            </div>
-          </div>
-
-          <div style={styles.fieldCard}>
-            <div style={styles.label}>Current plan</div>
-            <div style={styles.value}>
-              {isLoading
-                ? "Loading..."
-                : account?.plan === "pro"
-                  ? "Pro"
-                  : "Free"}
-            </div>
-          </div>
-
-          <div style={styles.fieldCard}>
-            <div style={styles.label}>Workspace</div>
-            <div style={styles.value}>Text2Task CRM</div>
-          </div>
-
-          <div style={styles.fieldCard}>
-            <div style={styles.label}>Support</div>
-            <a href="mailto:support@text2task.com" style={styles.linkValue}>
-              support@text2task.com
+      <section className="account-center-shell" style={styles.shell}>
+        <header style={styles.heroCard}>
+          <div style={styles.heroTopRow}>
+            <a href="/dashboard" style={styles.backLink}>
+              Back to workspace
             </a>
+
+            <div
+              style={{
+                ...styles.planBadge,
+                ...(isPro ? styles.proBadge : styles.freeBadge),
+              }}
+            >
+              <span
+                style={{
+                  ...styles.planDot,
+                  background: isPro ? "#22c55e" : "#6366f1",
+                }}
+              />
+              {planLabel}
+            </div>
           </div>
+
+          <div style={styles.heroMain}>
+            <div style={styles.avatar}>{getInitials(account?.email)}</div>
+
+            <div style={styles.heroCopy}>
+              <div style={styles.kicker}>Profile</div>
+              <h1 style={styles.title}>Account center</h1>
+              <p style={styles.accountIdentity}>{displayEmail}</p>
+              <p style={styles.subtitle}>
+                Manage your Text2Task account, billing, support, and feedback.
+              </p>
+            </div>
+          </div>
+        </header>
+
+        <div className="account-center-grid" style={styles.accountGrid}>
+          <section style={styles.mainCard}>
+            <div style={styles.cardHeader}>
+              <div>
+                <div style={styles.cardEyebrow}>Account details</div>
+                <h2 style={styles.cardTitle}>{displayName}</h2>
+              </div>
+            </div>
+
+            <div style={styles.detailList}>
+              <InfoRow label="Email" value={displayEmail} />
+              <InfoRow label="Workspace" value="Text2Task CRM" />
+              <InfoRow label="Member since" value={memberSince} />
+            </div>
+          </section>
+
+          <aside style={styles.sideColumn}>
+            <section style={styles.sideCard}>
+              <div style={styles.cardEyebrow}>Plan & support</div>
+              <div style={styles.planSummary}>
+                <div>
+                  <h2 style={styles.sideTitle}>
+                    {isLoading ? "Loading plan" : isPro ? "Text2Task Pro" : "Text2Task Free"}
+                  </h2>
+                  <p style={styles.sideText}>
+                    {isPro
+                      ? "Your unlimited workspace is active."
+                      : "Upgrade when you are ready for the full workspace."}
+                  </p>
+                </div>
+              </div>
+
+              <div style={styles.actionStack}>
+                <a
+                  href="/dashboard/billing"
+                  className="account-center-primary-button"
+                  style={styles.primaryButton}
+                >
+                  Open billing
+                </a>
+
+                <a href="/contact" style={styles.secondaryButton}>
+                  Contact support
+                </a>
+              </div>
+            </section>
+          </aside>
         </div>
 
-        <div style={styles.actions}>
-          <a href="/dashboard/billing" style={styles.primaryButton}>
-            Open billing
-          </a>
+        <section style={styles.feedbackCtaCard}>
+          <div style={styles.feedbackCtaCopy}>
+            <div>
+              <h2 style={styles.feedbackCtaTitle}>Share feedback</h2>
+              <p style={styles.feedbackCtaText}>
+                Tell us how Text2Task is working for you. Approved feedback may
+                appear in Customer stories.
+              </p>
+            </div>
 
-          <a href="/contact" style={styles.secondaryButton}>
-            Contact support
-          </a>
-        </div>
+            <span style={styles.feedbackCtaNote}>Reviewed before publishing.</span>
+          </div>
+
+          <button
+            type="button"
+            className="account-center-feedback-button"
+            onClick={() => setIsFeedbackModalOpen(true)}
+            style={styles.feedbackCtaButton}
+          >
+            Share your experience
+          </button>
+        </section>
       </section>
+
+      {isFeedbackModalOpen ? (
+        <div
+          role="presentation"
+          style={styles.modalOverlay}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isSubmittingFeedback) {
+              setIsFeedbackModalOpen(false);
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-feedback-title"
+            style={styles.feedbackModal}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div style={styles.feedbackHeader}>
+              <div>
+                <div style={styles.feedbackKicker}>Share feedback</div>
+                <h2 id="share-feedback-title" style={styles.feedbackTitle}>
+                  Share your experience
+                </h2>
+                <p style={styles.feedbackSubtitle}>
+                  Tell us how Text2Task helps you organize client work. With
+                  your permission, approved feedback may appear publicly.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsFeedbackModalOpen(false)}
+                disabled={isSubmittingFeedback}
+                aria-label="Close feedback form"
+                style={{
+                  ...styles.modalCloseButton,
+                  opacity: isSubmittingFeedback ? 0.62 : 1,
+                  cursor: isSubmittingFeedback ? "not-allowed" : "pointer",
+                }}
+              >
+                x
+              </button>
+            </div>
+
+            <form onSubmit={submitFeedback} style={styles.feedbackForm}>
+              <div className="profile-feedback-form-grid" style={styles.formGrid}>
+                <label style={styles.formField}>
+                  <span style={styles.formLabel}>Display name</span>
+                  <input
+                    value={feedbackForm.displayName}
+                    onChange={(event) =>
+                      updateFeedbackField("displayName", event.target.value)
+                    }
+                    placeholder="Yan E."
+                    maxLength={80}
+                    style={styles.input}
+                    disabled={isSubmittingFeedback}
+                  />
+                </label>
+
+                <label style={styles.formField}>
+                  <span style={styles.formLabel}>Role or business type</span>
+                  <input
+                    value={feedbackForm.roleOrBusinessType}
+                    onChange={(event) =>
+                      updateFeedbackField("roleOrBusinessType", event.target.value)
+                    }
+                    placeholder="Freelancer, designer, agency owner..."
+                    maxLength={120}
+                    style={styles.input}
+                    disabled={isSubmittingFeedback}
+                  />
+                </label>
+              </div>
+
+              <label style={styles.formField}>
+                <span style={styles.formLabel}>Rating</span>
+                <select
+                  value={feedbackForm.rating}
+                  onChange={(event) =>
+                    updateFeedbackField("rating", event.target.value)
+                  }
+                  style={styles.select}
+                  disabled={isSubmittingFeedback}
+                >
+                  <option value="">No rating</option>
+                  <option value="5">5 - Excellent</option>
+                  <option value="4">4 - Very good</option>
+                  <option value="3">3 - Good</option>
+                  <option value="2">2 - Needs work</option>
+                  <option value="1">1 - Not helpful</option>
+                </select>
+              </label>
+
+              <label style={styles.formField}>
+                <span style={styles.formLabel}>Your feedback</span>
+                <textarea
+                  value={feedbackForm.feedbackText}
+                  onChange={(event) =>
+                    updateFeedbackField("feedbackText", event.target.value)
+                  }
+                  placeholder="Example: Text2Task helps me turn messy client messages into clear projects, tasks, deadlines, and follow-ups..."
+                  minLength={20}
+                  maxLength={1200}
+                  rows={6}
+                  style={styles.textarea}
+                  disabled={isSubmittingFeedback}
+                />
+                <span style={styles.characterHint}>
+                  {feedbackForm.feedbackText.trim().length}/1200 characters
+                </span>
+              </label>
+
+              <label style={styles.permissionRow}>
+                <input
+                  type="checkbox"
+                  checked={feedbackForm.publicPermission}
+                  onChange={(event) =>
+                    updateFeedbackField("publicPermission", event.target.checked)
+                  }
+                  disabled={isSubmittingFeedback}
+                  style={styles.checkbox}
+                />
+                <span>
+                  I allow Text2Task to display this feedback publicly after approval.
+                </span>
+              </label>
+
+              {feedbackError ? (
+                <div style={styles.errorBox}>{feedbackError}</div>
+              ) : null}
+
+              {feedbackSuccess ? (
+                <div style={styles.successBox}>{feedbackSuccess}</div>
+              ) : null}
+
+              <div style={styles.feedbackActions}>
+                <button
+                  type="submit"
+                  className="account-center-submit-button"
+                  disabled={isSubmittingFeedback}
+                  style={{
+                    ...styles.submitButton,
+                    ...(isSubmittingFeedback ? styles.disabledButton : {}),
+                  }}
+                >
+                  {isSubmittingFeedback ? "Sending..." : "Send feedback"}
+                </button>
+
+                <span style={styles.reviewNote}>
+                  Feedback is reviewed before it appears publicly.
+                </span>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <span style={styles.infoValue}>{value}</span>
+    </div>
+  );
+}
+
+function getInitials(email?: string | null) {
+  const value = String(email || "U").trim();
+  if (!value || value === "U") return "U";
+
+  const localPart = value.split("@")[0] || value;
+  const clean = localPart.replace(/[._-]+/g, " ").trim();
+  const words = clean.split(" ").filter(Boolean);
+
+  if (words.length >= 2) {
+    return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  }
+
+  return clean.slice(0, 2).toUpperCase() || "U";
+}
+
+function formatMemberSince(value?: string | null) {
+  if (!value) return "Not available";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not available";
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+const responsiveCss = `
+  @media (max-width: 860px) {
+    .account-center-grid,
+    .profile-feedback-form-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .account-center-shell {
+      padding: 0 !important;
+    }
+  }
+
+  .account-center-primary-button:hover,
+  .account-center-feedback-button:hover,
+  .account-center-submit-button:hover {
+    transform: translateY(-1px);
+  }
+`;
+
+const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: "100vh",
     padding: "32px",
     background:
-      "radial-gradient(circle at top left, #eef4ff 0%, #f8fafc 46%, #ffffff 100%)",
+      "radial-gradient(circle at 7% 4%, rgba(99,102,241,0.16), transparent 32%), radial-gradient(circle at 92% 6%, rgba(14,165,233,0.11), transparent 30%), linear-gradient(180deg, #f8fafc 0%, #ffffff 52%, #f8fafc 100%)",
     color: "#0f172a",
+    boxSizing: "border-box",
   },
 
   accountMenu: {
@@ -147,38 +582,54 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 1000,
   },
 
-  card: {
+  shell: {
     width: "100%",
-    maxWidth: 900,
+    maxWidth: 1080,
     margin: "70px auto 0",
-    borderRadius: 30,
-    border: "1px solid rgba(226,232,240,0.95)",
-    background: "rgba(255,255,255,0.96)",
-    boxShadow: "0 24px 70px rgba(15,23,42,0.08)",
+  },
+
+  heroCard: {
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: 34,
+    border: "1px solid rgba(255,255,255,0.78)",
+    background:
+      "radial-gradient(circle at 84% -10%, rgba(199,210,254,0.82), transparent 34%), linear-gradient(135deg, rgba(255,255,255,0.99), rgba(248,250,252,0.92))",
+    boxShadow:
+      "0 34px 90px rgba(15,23,42,0.10), 0 16px 48px rgba(79,70,229,0.10), inset 0 1px 0 rgba(255,255,255,0.96)",
     padding: 30,
   },
 
-  topRow: {
+  heroTopRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     gap: 16,
-    marginBottom: 26,
+    marginBottom: 28,
+    flexWrap: "wrap",
   },
 
   backLink: {
-    color: "#4f46e5",
-    textDecoration: "none",
-    fontSize: 13,
-    fontWeight: 900,
-  },
-
-  planBadge: {
-    height: 30,
+    minHeight: 34,
     padding: "0 12px",
     borderRadius: 999,
     display: "inline-flex",
     alignItems: "center",
+    color: "#4f46e5",
+    background: "rgba(238,242,255,0.72)",
+    border: "1px solid rgba(199,210,254,0.72)",
+    textDecoration: "none",
+    fontSize: 12,
+    fontWeight: 950,
+  },
+
+  planBadge: {
+    minHeight: 32,
+    padding: "0 12px",
+    borderRadius: 999,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 7,
     fontSize: 11,
     fontWeight: 950,
     textTransform: "uppercase",
@@ -187,110 +638,211 @@ const styles: Record<string, React.CSSProperties> = {
 
   proBadge: {
     color: "#166534",
-    background: "rgba(34,197,94,0.12)",
-    border: "1px solid rgba(34,197,94,0.22)",
+    background: "rgba(240,253,244,0.9)",
+    border: "1px solid rgba(187,247,208,0.82)",
   },
 
   freeBadge: {
-    color: "#1d4ed8",
-    background: "rgba(59,130,246,0.10)",
-    border: "1px solid rgba(59,130,246,0.18)",
+    color: "#4338ca",
+    background: "rgba(238,242,255,0.9)",
+    border: "1px solid rgba(199,210,254,0.82)",
   },
 
-  hero: {
+  planDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 999,
+    boxShadow: "0 0 0 4px rgba(99,102,241,0.11)",
+  },
+
+  heroMain: {
     display: "flex",
     alignItems: "center",
-    gap: 18,
-    marginBottom: 28,
+    gap: 20,
   },
 
   avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 24,
+    width: 76,
+    height: 76,
+    borderRadius: 28,
     display: "grid",
     placeItems: "center",
-    background: "linear-gradient(135deg, #f97316, #f59e0b)",
     color: "#ffffff",
-    fontSize: 26,
+    background: "linear-gradient(135deg, #f97316, #f59e0b)",
+    fontSize: 23,
     fontWeight: 950,
-    boxShadow: "0 18px 38px rgba(249,115,22,0.22)",
+    boxShadow:
+      "0 22px 44px rgba(249,115,22,0.22), inset 0 1px 0 rgba(255,255,255,0.28)",
+    flexShrink: 0,
+  },
+
+  heroCopy: {
+    minWidth: 0,
   },
 
   kicker: {
-    color: "#6366f1",
-    fontSize: 12,
+    color: "#4f46e5",
+    fontSize: 11,
     fontWeight: 950,
     textTransform: "uppercase",
-    letterSpacing: "0.10em",
-    marginBottom: 6,
+    letterSpacing: "0.12em",
+    marginBottom: 7,
   },
 
   title: {
     margin: 0,
     color: "#0f172a",
-    fontSize: 34,
+    fontSize: 42,
     lineHeight: 1,
     fontWeight: 950,
-    letterSpacing: "-0.055em",
+    letterSpacing: "-0.06em",
+  },
+
+  accountIdentity: {
+    margin: "8px 0 0",
+    color: "#334155",
+    fontSize: 15,
+    lineHeight: 1.4,
+    fontWeight: 850,
+    wordBreak: "break-word",
   },
 
   subtitle: {
-    margin: "8px 0 0",
+    margin: "7px 0 0",
     color: "#64748b",
     fontSize: 15,
     lineHeight: 1.6,
     fontWeight: 650,
+    maxWidth: 720,
   },
 
-  grid: {
+  accountGrid: {
+    marginTop: 18,
     display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: 14,
+    gridTemplateColumns: "minmax(0, 1.3fr) minmax(300px, 0.7fr)",
+    gap: 18,
+    alignItems: "stretch",
   },
 
-  fieldCard: {
-    borderRadius: 20,
-    border: "1px solid rgba(226,232,240,0.95)",
-    background: "linear-gradient(180deg, #ffffff, #f8fafc)",
-    padding: 18,
+  mainCard: {
+    borderRadius: 30,
+    border: "1px solid rgba(226,232,240,0.78)",
+    background:
+      "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.86))",
+    boxShadow:
+      "0 22px 60px rgba(15,23,42,0.065), inset 0 1px 0 rgba(255,255,255,0.92)",
+    padding: 24,
   },
 
-  label: {
+  sideColumn: {
+    display: "grid",
+    minWidth: 0,
+  },
+
+  sideCard: {
+    borderRadius: 30,
+    border: "1px solid rgba(199,210,254,0.72)",
+    background:
+      "radial-gradient(circle at 90% 0%, rgba(199,210,254,0.42), transparent 35%), linear-gradient(180deg, rgba(255,255,255,0.98), rgba(238,242,255,0.58))",
+    boxShadow:
+      "0 24px 68px rgba(79,70,229,0.10), inset 0 1px 0 rgba(255,255,255,0.92)",
+    padding: 24,
+    display: "grid",
+    gap: 18,
+  },
+
+  cardHeader: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 16,
+    marginBottom: 18,
+  },
+
+  cardEyebrow: {
+    color: "#6366f1",
+    fontSize: 11,
+    fontWeight: 950,
+    textTransform: "uppercase",
+    letterSpacing: "0.10em",
+    marginBottom: 7,
+  },
+
+  cardTitle: {
+    margin: 0,
+    color: "#0f172a",
+    fontSize: 25,
+    lineHeight: 1.1,
+    fontWeight: 950,
+    letterSpacing: "-0.045em",
+    textTransform: "capitalize",
+  },
+
+  detailList: {
+    display: "grid",
+    gap: 10,
+  },
+
+  infoRow: {
+    minHeight: 58,
+    borderRadius: 19,
+    border: "1px solid rgba(226,232,240,0.78)",
+    background: "rgba(255,255,255,0.72)",
+    padding: "12px 14px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 16,
+  },
+
+  infoLabel: {
     color: "#94a3b8",
     fontSize: 11,
     fontWeight: 950,
     textTransform: "uppercase",
     letterSpacing: "0.08em",
-    marginBottom: 7,
+    flexShrink: 0,
   },
 
-  value: {
+  infoValue: {
     color: "#0f172a",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: 900,
+    textAlign: "right",
     wordBreak: "break-word",
   },
 
-  linkValue: {
-    color: "#4338ca",
-    fontSize: 15,
-    fontWeight: 900,
-    wordBreak: "break-word",
-    textDecoration: "none",
+  planSummary: {
+    display: "grid",
+    gap: 8,
   },
 
-  actions: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 12,
-    marginTop: 24,
+  sideTitle: {
+    margin: 0,
+    color: "#0f172a",
+    fontSize: 22,
+    lineHeight: 1.12,
+    fontWeight: 950,
+    letterSpacing: "-0.045em",
+  },
+
+  sideText: {
+    margin: "7px 0 0",
+    color: "#64748b",
+    fontSize: 13,
+    lineHeight: 1.55,
+    fontWeight: 750,
+  },
+
+  actionStack: {
+    display: "grid",
+    gap: 10,
   },
 
   primaryButton: {
     minHeight: 44,
     padding: "0 18px",
-    borderRadius: 15,
+    borderRadius: 16,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -299,21 +851,324 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 950,
     textDecoration: "none",
-    boxShadow: "0 14px 28px rgba(79,70,229,0.22)",
+    boxShadow: "0 16px 34px rgba(79,70,229,0.24)",
   },
 
   secondaryButton: {
     minHeight: 44,
     padding: "0 18px",
-    borderRadius: 15,
+    borderRadius: 16,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#ffffff",
+    background: "rgba(255,255,255,0.82)",
     color: "#0f172a",
-    border: "1px solid rgba(203,213,225,0.95)",
+    border: "1px solid rgba(203,213,225,0.86)",
     fontSize: 14,
     fontWeight: 950,
     textDecoration: "none",
+    boxShadow: "0 10px 24px rgba(15,23,42,0.045)",
+  },
+
+  feedbackCtaCard: {
+    marginTop: 18,
+    borderRadius: 28,
+    border: "1px solid rgba(226,232,240,0.82)",
+    background:
+      "linear-gradient(135deg, rgba(255,255,255,0.92), rgba(248,250,252,0.82))",
+    boxShadow:
+      "0 18px 48px rgba(15,23,42,0.052), inset 0 1px 0 rgba(255,255,255,0.92)",
+    padding: 22,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 18,
+  },
+
+  feedbackCtaCopy: {
+    minWidth: 0,
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    flexWrap: "wrap",
+  },
+
+  feedbackCtaTitle: {
+    margin: 0,
+    color: "#0f172a",
+    fontSize: 19,
+    lineHeight: 1.15,
+    fontWeight: 950,
+    letterSpacing: "-0.035em",
+  },
+
+  feedbackCtaText: {
+    margin: "5px 0 0",
+    maxWidth: 570,
+    color: "#64748b",
+    fontSize: 13,
+    lineHeight: 1.55,
+    fontWeight: 700,
+  },
+
+  feedbackCtaNote: {
+    minHeight: 28,
+    padding: "0 11px",
+    borderRadius: 999,
+    display: "inline-flex",
+    alignItems: "center",
+    background: "rgba(238,242,255,0.78)",
+    border: "1px solid rgba(199,210,254,0.72)",
+    color: "#4f46e5",
+    fontSize: 11,
+    fontWeight: 900,
+    whiteSpace: "nowrap",
+  },
+
+  feedbackCtaButton: {
+    minHeight: 42,
+    border: 0,
+    borderRadius: 15,
+    padding: "0 16px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: 950,
+    cursor: "pointer",
+    boxShadow: "0 14px 30px rgba(79,70,229,0.20)",
+    whiteSpace: "nowrap",
+  },
+
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 5000,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 18,
+    background:
+      "radial-gradient(circle at 50% 18%, rgba(79,70,229,0.18), transparent 32%), rgba(15,23,42,0.58)",
+    backdropFilter: "blur(16px) saturate(126%)",
+    boxSizing: "border-box",
+  },
+
+  feedbackModal: {
+    width: "min(720px, calc(100vw - 36px))",
+    maxHeight: "calc(100dvh - 36px)",
+    overflowY: "auto",
+    borderRadius: 30,
+    border: "1px solid rgba(255,255,255,0.78)",
+    background:
+      "radial-gradient(circle at 86% -8%, rgba(199,210,254,0.62), transparent 34%), linear-gradient(135deg, rgba(255,255,255,0.99), rgba(248,250,252,0.96))",
+    boxShadow:
+      "0 50px 130px rgba(15,23,42,0.34), 0 26px 70px rgba(79,70,229,0.18), inset 0 1px 0 rgba(255,255,255,0.96)",
+    padding: 26,
+    boxSizing: "border-box",
+  },
+
+  feedbackHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 20,
+    marginBottom: 22,
+  },
+
+  feedbackKicker: {
+    color: "#4f46e5",
+    fontSize: 12,
+    fontWeight: 950,
+    textTransform: "uppercase",
+    letterSpacing: "0.11em",
+    marginBottom: 7,
+  },
+
+  feedbackTitle: {
+    margin: 0,
+    color: "#0f172a",
+    fontSize: 28,
+    lineHeight: 1.05,
+    fontWeight: 950,
+    letterSpacing: "-0.05em",
+  },
+
+  feedbackSubtitle: {
+    margin: "9px 0 0",
+    maxWidth: 590,
+    color: "#64748b",
+    fontSize: 14,
+    lineHeight: 1.65,
+    fontWeight: 650,
+  },
+
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 15,
+    border: "1px solid rgba(203,213,225,0.84)",
+    background: "rgba(255,255,255,0.92)",
+    color: "#0f172a",
+    fontSize: 18,
+    lineHeight: 1,
+    fontWeight: 950,
+    display: "grid",
+    placeItems: "center",
+    boxShadow: "0 12px 26px rgba(15,23,42,0.08)",
+    flexShrink: 0,
+  },
+
+  feedbackForm: {
+    display: "grid",
+    gap: 14,
+  },
+
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 14,
+  },
+
+  formField: {
+    display: "grid",
+    gap: 7,
+  },
+
+  formLabel: {
+    color: "#475569",
+    fontSize: 12,
+    fontWeight: 900,
+  },
+
+  input: {
+    width: "100%",
+    minHeight: 46,
+    borderRadius: 16,
+    border: "1px solid rgba(203,213,225,0.95)",
+    background: "rgba(255,255,255,0.92)",
+    color: "#0f172a",
+    padding: "0 14px",
+    fontSize: 14,
+    fontWeight: 750,
+    outline: "none",
+    boxSizing: "border-box",
+  },
+
+  select: {
+    width: "100%",
+    minHeight: 46,
+    borderRadius: 16,
+    border: "1px solid rgba(203,213,225,0.95)",
+    background: "rgba(255,255,255,0.92)",
+    color: "#0f172a",
+    padding: "0 14px",
+    fontSize: 14,
+    fontWeight: 750,
+    outline: "none",
+    boxSizing: "border-box",
+  },
+
+  textarea: {
+    width: "100%",
+    resize: "vertical",
+    minHeight: 138,
+    borderRadius: 18,
+    border: "1px solid rgba(203,213,225,0.95)",
+    background: "rgba(255,255,255,0.92)",
+    color: "#0f172a",
+    padding: "14px",
+    fontSize: 14,
+    lineHeight: 1.65,
+    fontWeight: 650,
+    outline: "none",
+    boxSizing: "border-box",
+  },
+
+  characterHint: {
+    color: "#94a3b8",
+    fontSize: 11,
+    fontWeight: 800,
+    textAlign: "right",
+  },
+
+  permissionRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 10,
+    padding: 14,
+    borderRadius: 18,
+    border: "1px solid rgba(199,210,254,0.7)",
+    background: "rgba(255,255,255,0.66)",
+    color: "#475569",
+    fontSize: 13,
+    lineHeight: 1.45,
+    fontWeight: 750,
+  },
+
+  checkbox: {
+    width: 17,
+    height: 17,
+    marginTop: 1,
+    accentColor: "#4f46e5",
+    flexShrink: 0,
+  },
+
+  errorBox: {
+    borderRadius: 16,
+    border: "1px solid rgba(248,113,113,0.35)",
+    background: "rgba(254,242,242,0.88)",
+    color: "#b91c1c",
+    padding: "12px 14px",
+    fontSize: 13,
+    fontWeight: 800,
+  },
+
+  successBox: {
+    borderRadius: 16,
+    border: "1px solid rgba(34,197,94,0.28)",
+    background: "rgba(240,253,244,0.9)",
+    color: "#166534",
+    padding: "12px 14px",
+    fontSize: 13,
+    fontWeight: 800,
+  },
+
+  feedbackActions: {
+    display: "flex",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 2,
+  },
+
+  submitButton: {
+    minHeight: 46,
+    border: 0,
+    borderRadius: 16,
+    padding: "0 18px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: 950,
+    cursor: "pointer",
+    boxShadow: "0 14px 28px rgba(79,70,229,0.22)",
+  },
+
+  disabledButton: {
+    opacity: 0.68,
+    cursor: "not-allowed",
+  },
+
+  reviewNote: {
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: 800,
   },
 };

@@ -3,6 +3,8 @@ import type { TaskGroup, TaskRow } from "./tasks-view";
 export type TaskStatusFilter = "all" | "new" | "in-progress" | "done";
 export type TaskPriorityFilter = "all" | "low" | "medium" | "high";
 export type TaskSortOption =
+  | "created-desc"
+  | "created-asc"
   | "client-asc"
   | "client-desc"
   | "task-asc"
@@ -21,8 +23,62 @@ function normalize(value: string) {
   return value.toLowerCase().trim();
 }
 
+function normalizeStatus(value: string | null | undefined): TaskStatusFilter {
+  const status = normalize(value || "");
+
+  if (!status) return "new";
+
+  if (status === "new") return "new";
+  if (status === "done" || status === "completed" || status === "complete") {
+    return "done";
+  }
+
+  if (
+    status === "in progress" ||
+    status === "in-progress" ||
+    status === "in_progress" ||
+    status === "progress"
+  ) {
+    return "in-progress";
+  }
+
+  return "new";
+}
+
+function getFilterableStatus(task: TaskRow): TaskStatusFilter {
+  return normalizeStatus(task.project?.status || task.status);
+}
+
 function getClientDisplayName(task: TaskRow) {
   return task.client?.name?.trim() || "";
+}
+
+function getTaskCreatedTime(task: TaskRow) {
+  const value = task.project?.created_at || task.created_at;
+  if (!value) return 0;
+
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function getGroupCreatedTime(
+  group: TaskGroup,
+  direction: "newest" | "oldest"
+) {
+  const times = group.tasks
+    .map((task) => getTaskCreatedTime(task))
+    .filter((time) => time > 0);
+
+  if (!times.length) return 0;
+
+  return direction === "newest" ? Math.max(...times) : Math.min(...times);
+}
+
+function getSearchableStatus(task: TaskRow) {
+  const status = getFilterableStatus(task);
+
+  if (status === "in-progress") return "in progress";
+  return status;
 }
 
 function matchesSearch(task: TaskRow, searchTerm: string) {
@@ -31,11 +87,17 @@ function matchesSearch(task: TaskRow, searchTerm: string) {
 
   const haystack = [
     getClientDisplayName(task),
+    task.project?.client_name || "",
+    task.project?.contact_name || "",
+    task.project?.title || "",
+    task.project?.summary || "",
     task.task,
     task.amount,
     task.deadline,
     task.priority,
     task.status,
+    task.project?.status || "",
+    getSearchableStatus(task),
     task.source,
     task.raw_input || "",
   ]
@@ -48,13 +110,7 @@ function matchesSearch(task: TaskRow, searchTerm: string) {
 function matchesStatus(task: TaskRow, statusFilter: TaskStatusFilter) {
   if (statusFilter === "all") return true;
 
-  const status = normalize(task.status);
-
-  if (statusFilter === "new") return status === "new";
-  if (statusFilter === "in-progress") return status === "in progress";
-  if (statusFilter === "done") return status === "done";
-
-  return true;
+  return getFilterableStatus(task) === statusFilter;
 }
 
 function matchesPriority(task: TaskRow, priorityFilter: TaskPriorityFilter) {
@@ -68,18 +124,30 @@ function sortTasks(tasks: TaskRow[], sortOption: TaskSortOption) {
 
   sorted.sort((a, b) => {
     switch (sortOption) {
+      case "created-desc":
+        return getTaskCreatedTime(b) - getTaskCreatedTime(a);
+
+      case "created-asc":
+        return getTaskCreatedTime(a) - getTaskCreatedTime(b);
+
       case "client-asc":
         return getClientDisplayName(a).localeCompare(getClientDisplayName(b));
+
       case "client-desc":
         return getClientDisplayName(b).localeCompare(getClientDisplayName(a));
+
       case "task-asc":
         return a.task.localeCompare(b.task);
+
       case "task-desc":
         return b.task.localeCompare(a.task);
+
       case "deadline-asc":
         return a.deadline.localeCompare(b.deadline);
+
       case "deadline-desc":
         return b.deadline.localeCompare(a.deadline);
+
       default:
         return 0;
     }
@@ -96,6 +164,18 @@ function sortGroups(groups: TaskGroup[], sortOption: TaskSortOption) {
     const bFirst = b.tasks[0];
 
     switch (sortOption) {
+      case "created-desc":
+        return (
+          getGroupCreatedTime(b, "newest") -
+          getGroupCreatedTime(a, "newest")
+        );
+
+      case "created-asc":
+        return (
+          getGroupCreatedTime(a, "oldest") -
+          getGroupCreatedTime(b, "oldest")
+        );
+
       case "client-asc":
         return a.clientName.localeCompare(b.clientName);
 

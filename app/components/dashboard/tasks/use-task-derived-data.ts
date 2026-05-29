@@ -131,6 +131,12 @@ export function useTaskDerivedData({
 function sortFlatTasks(tasks: TaskRow[], sortOption: TaskSortOption) {
   return [...tasks].sort((a, b) => {
     switch (sortOption) {
+      case "created-desc":
+        return getTaskCreatedTime(b) - getTaskCreatedTime(a);
+
+      case "created-asc":
+        return getTaskCreatedTime(a) - getTaskCreatedTime(b);
+
       case "client-asc":
         return getClientName(a).localeCompare(getClientName(b));
 
@@ -150,8 +156,8 @@ function sortFlatTasks(tasks: TaskRow[], sortOption: TaskSortOption) {
         return getDeadlineSortValue(b) - getDeadlineSortValue(a);
 
       default: {
-        const createdA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const createdB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        const createdA = getTaskCreatedTime(a);
+        const createdB = getTaskCreatedTime(b);
 
         if (createdA !== createdB) {
           return createdB - createdA;
@@ -182,6 +188,20 @@ function sortProjectGroups(
 ) {
   return [...groups].sort((a, b) => {
     switch (sortOption) {
+      case "created-desc": {
+        const createdCompare =
+          getProjectCreatedTime(b) - getProjectCreatedTime(a);
+
+        return createdCompare || compareProjectGroupsByName(a, b);
+      }
+
+      case "created-asc": {
+        const createdCompare =
+          getProjectCreatedTime(a) - getProjectCreatedTime(b);
+
+        return createdCompare || compareProjectGroupsByName(a, b);
+      }
+
       case "client-asc":
         return a.clientName.localeCompare(b.clientName);
 
@@ -201,17 +221,44 @@ function sortProjectGroups(
         return getProjectDeadlineSortValue(b) - getProjectDeadlineSortValue(a);
 
       default: {
-        const createdA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const createdB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        const createdA = getProjectCreatedTime(a);
+        const createdB = getProjectCreatedTime(b);
 
         if (createdA !== createdB) {
           return createdB - createdA;
         }
 
-        return a.clientName.localeCompare(b.clientName);
+        return compareProjectGroupsByName(a, b);
       }
     }
   });
+}
+
+function getTaskCreatedTime(task: TaskRow) {
+  const value = task.project?.created_at || task.created_at;
+  if (!value) return 0;
+
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function getProjectCreatedTime(group: TaskProjectGroup) {
+  const value = group.project?.created_at || group.created_at;
+  if (!value) return 0;
+
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function compareProjectGroupsByName(
+  a: TaskProjectGroup,
+  b: TaskProjectGroup
+) {
+  const clientCompare = a.clientName.localeCompare(b.clientName);
+
+  if (clientCompare !== 0) return clientCompare;
+
+  return a.projectTitle.localeCompare(b.projectTitle);
 }
 
 function getProjectDeadlineSortValue(group: TaskProjectGroup) {
