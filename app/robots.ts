@@ -13,6 +13,7 @@ export default function robots(): MetadataRoute.Robots {
           "/use-cases",
           "/use-cases/",
           "/contact",
+          "/about",
           "/privacy",
           "/terms",
         ],

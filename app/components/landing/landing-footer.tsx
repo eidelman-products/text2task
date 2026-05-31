@@ -6,6 +6,7 @@ const productLinks = [
   { label: "Demo", href: "#demo" },
   { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
+  { label: "About", href: "/about" },
 ];
 
 const useCaseLinks = [
@@ -67,6 +68,8 @@ export default function LandingFooter() {
           <Link href="/privacy">Privacy</Link>
           <span>•</span>
           <Link href="/terms">Terms</Link>
+          <span>•</span>
+          <Link href="/about">About</Link>
           <span>•</span>
           <Link href="/contact">Contact</Link>
         </div>

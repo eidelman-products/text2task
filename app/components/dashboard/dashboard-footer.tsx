@@ -17,6 +17,7 @@ const footerColumns: FooterColumn[] = [
       { label: "How it works", href: "/#how-it-works" },
       { label: "Features", href: "/#features" },
       { label: "Pricing", href: "/pricing" },
+      { label: "About", href: "/about?from=dashboard" },
     ],
   },
   {
@@ -105,6 +106,10 @@ export default function DashboardFooter() {
           <span style={styles.dotSeparator}>•</span>
           <a href="/terms" style={styles.bottomLink}>
             Terms
+          </a>
+          <span style={styles.dotSeparator}>•</span>
+          <a href="/about?from=dashboard" style={styles.bottomLink}>
+            About
           </a>
           <span style={styles.dotSeparator}>•</span>
           <a href="/contact" style={styles.bottomLink}>

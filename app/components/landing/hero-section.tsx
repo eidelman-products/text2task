@@ -28,6 +28,30 @@ const workflowSteps = [
   },
 ];
 
+const proofSteps = [
+  {
+    step: "1",
+    label: "Client WhatsApp message",
+    src: "/landing/text2task-client-whatsapp-graphic-designers.png",
+    alt: "Client WhatsApp message with graphic design revision request.",
+    title: "Client WhatsApp message",
+  },
+  {
+    step: "2",
+    label: "AI extracts the work",
+    src: "/landing/text2task-client-whatsapp-graphic-designers extracted.png",
+    alt: "Text2Task AI extraction preview from a client WhatsApp message.",
+    title: "AI extraction preview",
+  },
+  {
+    step: "3",
+    label: "Saved in the CRM",
+    src: "/landing/New-Task-CRM.png",
+    alt: "Extracted client task saved inside the Text2Task CRM.",
+    title: "Saved CRM task",
+  },
+];
+
 const freePlan = [
   "30 total AI extracts",
   "Text + image extraction",
@@ -43,17 +67,18 @@ const proPlan = [
   "Future Pro features included",
 ];
 
+type LightboxImage = {
+  title: string;
+  image: string;
+  alt: string;
+  ctaText: string;
+  ctaHref: string;
+};
+
 export default function HeroSection() {
-  const [lightboxImage, setLightboxImage] = useState<
-    | {
-        title: string;
-        image: string;
-        alt: string;
-        ctaText: string;
-        ctaHref: string;
-      }
-    | null
-  >(null);
+  const [lightboxImage, setLightboxImage] = useState<LightboxImage | null>(
+    null
+  );
 
   useEffect(() => {
     if (!lightboxImage) return;
@@ -64,17 +89,16 @@ export default function HeroSection() {
       }
     }
 
+    document.documentElement.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.documentElement.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [lightboxImage]);
 
-  const openLightbox = (payload: {
-    title: string;
-    image: string;
-    alt: string;
-    ctaText: string;
-    ctaHref: string;
-  }) => {
+  const openLightbox = (payload: LightboxImage) => {
     setLightboxImage(payload);
   };
 
@@ -95,11 +119,12 @@ export default function HeroSection() {
           />
         </Link>
 
-        <nav className="t2t-nav">
+        <nav className="t2t-nav" aria-label="Main navigation">
           <a href="#how-it-works">How it works</a>
           <a href="#demo">Demo</a>
           <a href="#features">Features</a>
           <a href="#pricing">Pricing</a>
+          <Link href="/about">About</Link>
           <Link href="/login">Log in</Link>
         </nav>
 
@@ -112,16 +137,14 @@ export default function HeroSection() {
         <section className="t2t-hero">
           <div className="t2t-hero-copy">
             <h1>
-              Turn messy client
-              <br />
-              requests into
-              <br />
+              Turn messy client requests into{" "}
               <span>ready-to-work projects.</span>
             </h1>
 
             <p>
-              Text2Task turns messy client requests into clean projects with
-              tasks, budgets, deadlines, and client details — in seconds.
+              Text2Task turns emails, WhatsApp messages, screenshots, notes, and
+              client revisions into clean projects with tasks, budgets,
+              deadlines, and client details.
             </p>
 
             <div className="t2t-actions">
@@ -136,114 +159,72 @@ export default function HeroSection() {
         </section>
 
         <section className="t2t-transform-section">
-          <div className="t2t-transform-heading">
-            <div className="t2t-section-kicker">Request to project</div>
-            <h2>One messy client request becomes a ready-to-work project.</h2>
-          </div>
-
-          <div className="t2t-transform-meta">
-            <div className="t2t-demo-preview-label">Example preview</div>
-            <p className="t2t-transform-note">
-              Sample preview. Try it with your own client message.
+          <div className="t2t-section-heading">
+            <h2>From client message to organized work.</h2>
+            <p>
+              A real client request can move from messy communication to AI
+              extraction and finally into your workspace.
             </p>
-            <Link href="/signup" className="t2t-transform-cta">
-              Try with your own message
-            </Link>
           </div>
 
-          <div className="t2t-transform-grid">
-            <button
-              type="button"
-              className="t2t-transform-card-button"
-              onClick={() =>
-                openLightbox({
-                  title: "Messy client request preview",
-                  image: "/landing/text2task-whatsapp-message.png",
-                  alt: "WhatsApp client request",
-                  ctaText: "Try with your own message",
-                  ctaHref: "/signup",
-                })
-              }
-              aria-label="Open messy client request preview"
-            >
-              <div className="t2t-transform-card">
-                <div className="t2t-card-label green">
-                  Step 1: Messy client request
-                </div>
-                <div className="t2t-transform-preview-pill">Click to enlarge</div>
-                <div className="t2t-transform-image whatsapp">
-                  <Image
-                    src="/landing/text2task-whatsapp-message.png"
-                    alt="WhatsApp client request"
-                    width={760}
-                    height={760}
-                    priority
-                  />
-                </div>
-              </div>
-            </button>
+          <div className="t2t-proof-flow">
+            {proofSteps.map((image, index) => (
+              <div key={image.src} className="t2t-proof-step">
+                {index > 0 ? (
+                  <div className="t2t-proof-connector" aria-hidden="true">
+                    -&gt;
+                  </div>
+                ) : null}
 
-            <div className="t2t-arrow-wrap">
-              <div className="t2t-arrow-circle">
-                <svg
-                  viewBox="0 0 120 120"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
+                <button
+                  type="button"
+                  className="t2t-proof-card"
+                  onClick={() =>
+                    openLightbox({
+                      title: image.title,
+                      image: image.src,
+                      alt: image.alt,
+                      ctaText: "Try Text2Task free",
+                      ctaHref: "/signup",
+                    })
+                  }
+                  aria-label={`Open preview: ${image.alt}`}
                 >
-                  <path
-                    d="M24 60H92"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M68 36L92 60L68 84"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              <p>AI extracts the work</p>
-            </div>
+                  <div className="t2t-proof-image">
+                    <Image
+                      src={image.src}
+                      alt={image.alt}
+                      width={1400}
+                      height={900}
+                      priority={index === 0}
+                    />
+                  </div>
 
-            <button
-              type="button"
-              className="t2t-transform-card-button"
-              onClick={() =>
-                openLightbox({
-                  title: "Ready-to-work project preview",
-                  image: "/landing/text2task-ai-project-preview.png",
-                  alt: "Text2Task extracted project preview",
-                  ctaText: "Try Text2Task free",
-                  ctaHref: "/signup",
-                })
-              }
-              aria-label="Open ready-to-work project preview"
-            >
-              <div className="t2t-transform-card result">
-                <div className="t2t-card-label purple">
-                  Step 2: Ready-to-work project
-                </div>
-                <div className="t2t-transform-preview-pill">Click to enlarge</div>
-                <div className="t2t-transform-image preview">
-                  <Image
-                    src="/landing/text2task-ai-project-preview.png"
-                    alt="Text2Task extracted project preview"
-                    width={1600}
-                    height={720}
-                    priority
-                  />
-                </div>
+                  <div className="t2t-proof-label">
+                    <span>{image.step}</span>
+                    <strong>{image.label}</strong>
+                  </div>
+
+                  <div className="t2t-proof-hover">Click to enlarge</div>
+                </button>
               </div>
-            </button>
+            ))}
+          </div>
+
+          <div className="t2t-transform-cta-row">
+            <Link href="/signup" className="t2t-soft-cta">
+              Try with your own client message
+            </Link>
           </div>
         </section>
 
         <section id="demo" className="t2t-demo-section">
-          <div className="t2t-section-kicker">See it in action</div>
-          <h2>From request to ready-to-work</h2>
+          <div className="t2t-section-heading compact">
+            <h2>Watch the real Text2Task demo.</h2>
+            <p>
+              See how a client request becomes organized work inside the system.
+            </p>
+          </div>
 
           <div className="t2t-demo-grid">
             <div className="t2t-video-card">
@@ -265,29 +246,30 @@ export default function HeroSection() {
               </video>
             </div>
 
-            <div id="how-it-works" className="t2t-steps">
+            <div id="how-it-works" className="t2t-demo-steps">
               <Step
                 number="1"
                 title="Paste a request"
-                text="Add a message, email, or screenshot."
+                text="Add a client message, email, note, or screenshot."
               />
               <Step
                 number="2"
                 title="AI extracts the work"
-                text="It finds tasks, budget, deadline, and client details."
+                text="It finds the project, tasks, budget, deadline, and client details."
               />
               <Step
                 number="3"
                 title="Review & save"
-                text="Check everything and save to your workspace."
+                text="Check the draft, edit details, and save only when it looks right."
               />
             </div>
           </div>
         </section>
 
         <section id="features" className="t2t-workflow">
-          <div className="t2t-section-kicker">How Text2Task works</div>
-          <h2>From client request to organized work</h2>
+          <div className="t2t-section-heading compact">
+            <h2>From client request to organized work.</h2>
+          </div>
 
           <div className="t2t-workflow-track" aria-label="Text2Task workflow">
             <div className="t2t-workflow-line" aria-hidden="true" />
@@ -305,42 +287,71 @@ export default function HeroSection() {
         </section>
 
         <section className="t2t-workspace">
-          <div className="t2t-section-kicker">Workspace preview</div>
+          <div className="t2t-section-heading">
+            <h2>Manage everything in one clean workspace.</h2>
+            <p>
+              Keep extracted client work, urgent tasks, deadlines, and project
+              updates connected in one organized CRM.
+            </p>
+          </div>
 
-          <div className="t2t-workspace-grid">
-            <ProductCard
-              title="Task CRM"
-              text="Manage all your client projects and tasks."
-              image="/landing/text2task-task-crm.png"
-              alt="Text2Task task CRM"
-              onOpen={() =>
+          <div className="t2t-workspace-premium">
+            <button
+              type="button"
+              className="t2t-workspace-main-preview"
+              onClick={() =>
                 openLightbox({
                   title: "Task CRM preview",
-                  image: "/landing/text2task-task-crm.png",
-                  alt: "Text2Task task CRM",
+                  image: "/landing/New-Task-CRM.png",
+                  alt: "Text2Task CRM showing extracted client work saved as organized projects and tasks.",
                   ctaText: "Try Text2Task free",
                   ctaHref: "/signup",
                 })
               }
-              ariaLabel="Open Task CRM preview"
-            />
+              aria-label="Open Task CRM preview"
+            >
+              <Image
+                src="/landing/New-Task-CRM.png"
+                alt="Text2Task CRM showing extracted client work saved as organized projects and tasks."
+                width={1400}
+                height={900}
+              />
 
-            <ProductCard
-              title="Urgent Tasks Board"
-              text="See what needs attention now."
-              image="/landing/text2task-urgent-board.png"
-              alt="Text2Task urgent tasks board"
-              onOpen={() =>
+              <span>View CRM preview</span>
+            </button>
+
+            <button
+              type="button"
+              className="t2t-workspace-floating-preview"
+              onClick={() =>
                 openLightbox({
                   title: "Urgent Tasks Board preview",
                   image: "/landing/text2task-urgent-board.png",
-                  alt: "Text2Task urgent tasks board",
+                  alt: "Text2Task urgent tasks board with upcoming client tasks.",
                   ctaText: "Try Text2Task free",
                   ctaHref: "/signup",
                 })
               }
-              ariaLabel="Open Urgent Tasks Board preview"
-            />
+              aria-label="Open Urgent Tasks Board preview"
+            >
+              <div>
+                <strong>Urgent work stays visible</strong>
+                <p>See what needs attention before it gets missed.</p>
+              </div>
+
+              <Image
+                src="/landing/text2task-urgent-board.png"
+                alt="Text2Task urgent tasks board with upcoming client tasks."
+                width={1200}
+                height={680}
+              />
+
+              <span>View urgent board</span>
+            </button>
+
+            <div className="t2t-workspace-badge" aria-hidden="true">
+              Organized workspace
+            </div>
           </div>
         </section>
 
@@ -374,8 +385,8 @@ export default function HeroSection() {
                 <Image
                   src={lightboxImage.image}
                   alt={lightboxImage.alt}
-                  width={1200}
-                  height={720}
+                  width={1400}
+                  height={900}
                   priority
                 />
               </div>
@@ -390,7 +401,9 @@ export default function HeroSection() {
         <CustomerStoriesSection />
 
         <section id="pricing" className="t2t-pricing">
-          <div className="t2t-section-kicker">Simple pricing</div>
+          <div className="t2t-section-heading compact">
+            <h2>Start free. Upgrade when you need more.</h2>
+          </div>
 
           <div className="t2t-pricing-grid">
             <PricingCard
@@ -445,55 +458,6 @@ function Step({
   );
 }
 
-function ProductCard({
-  title,
-  text,
-  image,
-  alt,
-  onOpen,
-  ariaLabel,
-}: {
-  title: string;
-  text: string;
-  image: string;
-  alt: string;
-  onOpen?: () => void;
-  ariaLabel?: string;
-}) {
-  const cardContent = (
-    <>
-      <div className="t2t-product-head">
-        <div>
-          <h3>{title}</h3>
-          <p>{text}</p>
-        </div>
-        {onOpen ? (
-          <div className="t2t-product-preview-pill">View preview</div>
-        ) : null}
-      </div>
-
-      <div className="t2t-product-image">
-        <Image src={image} alt={alt} width={1000} height={560} />
-      </div>
-    </>
-  );
-
-  if (onOpen) {
-    return (
-      <button
-        type="button"
-        className="t2t-product-card t2t-product-card-button"
-        onClick={onOpen}
-        aria-label={ariaLabel}
-      >
-        {cardContent}
-      </button>
-    );
-  }
-
-  return <div className="t2t-product-card">{cardContent}</div>;
-}
-
 function PricingCard({
   title,
   price,
@@ -535,10 +499,10 @@ const styles = `
   .t2t-page {
     min-height: 100vh;
     background:
-      radial-gradient(circle at 12% 4%, rgba(99, 102, 241, 0.15), transparent 31%),
-      radial-gradient(circle at 84% 12%, rgba(168, 85, 247, 0.13), transparent 33%),
-      radial-gradient(circle at 50% 58%, rgba(14, 165, 233, 0.055), transparent 38%),
-      linear-gradient(180deg, #ffffff 0%, #f8fbff 48%, #ffffff 100%);
+      radial-gradient(circle at 16% 8%, rgba(199, 210, 254, 0.34), transparent 30%),
+      radial-gradient(circle at 88% 10%, rgba(221, 214, 254, 0.26), transparent 28%),
+      radial-gradient(circle at 48% 54%, rgba(219, 234, 254, 0.20), transparent 36%),
+      linear-gradient(180deg, #ffffff 0%, #fbfbff 44%, #f8fbff 72%, #ffffff 100%);
     color: #0f172a;
   }
 
@@ -549,7 +513,7 @@ const styles = `
   .t2t-header {
     width: min(1180px, calc(100% - 40px));
     margin: 0 auto;
-    padding: 18px 0 6px;
+    padding: 20px 0 8px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -575,7 +539,7 @@ const styles = `
     align-items: center;
     gap: 25px;
     font-size: 13px;
-    font-weight: 800;
+    font-weight: 850;
   }
 
   .t2t-nav a {
@@ -595,18 +559,18 @@ const styles = `
     height: 42px;
     padding: 0 19px;
     border-radius: 15px;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: linear-gradient(135deg, #4f46e5, #6d28d9);
     color: white;
     text-decoration: none;
     font-size: 13px;
     font-weight: 950;
-    box-shadow: 0 16px 36px rgba(79, 70, 229, 0.24);
+    box-shadow: 0 16px 36px rgba(79, 70, 229, 0.18);
     transition: transform 160ms ease, box-shadow 160ms ease;
   }
 
   .t2t-nav-cta:hover {
     transform: translateY(-1px);
-    box-shadow: 0 20px 42px rgba(79, 70, 229, 0.28);
+    box-shadow: 0 20px 42px rgba(79, 70, 229, 0.22);
   }
 
   .t2t-main {
@@ -618,41 +582,41 @@ const styles = `
   .t2t-hero {
     display: flex;
     justify-content: center;
-    padding: 62px 0 42px;
+    padding: 78px 0 52px;
     text-align: center;
   }
 
   .t2t-hero-copy {
-    max-width: 820px;
+    max-width: 920px;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
 
   .t2t-hero h1 {
-    margin: 18px 0 0;
-    font-size: clamp(51px, 6vw, 81px);
+    margin: 0;
+    max-width: 940px;
+    font-size: clamp(48px, 6.2vw, 82px);
     line-height: 1.03;
-    letter-spacing: -0.026em;
-    font-weight: 800;
+    letter-spacing: -0.045em;
+    font-weight: 950;
   }
 
   .t2t-hero h1 span {
     color: #4f46e5;
-    white-space: nowrap;
   }
 
   .t2t-hero-copy p {
-    margin: 18px auto 0;
+    margin: 22px auto 0;
     font-size: clamp(18px, 2vw, 22px);
-    line-height: 1.6;
+    line-height: 1.62;
     color: #475569;
-    max-width: 720px;
+    max-width: 780px;
     font-weight: 560;
   }
 
   .t2t-actions {
-    margin-top: 26px;
+    margin-top: 30px;
     display: flex;
     justify-content: center;
     gap: 14px;
@@ -661,9 +625,9 @@ const styles = `
 
   .t2t-primary,
   .t2t-secondary {
-    height: 44px;
-    padding: 0 22px;
-    border-radius: 15px;
+    height: 46px;
+    padding: 0 24px;
+    border-radius: 16px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -674,16 +638,16 @@ const styles = `
   }
 
   .t2t-primary {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: linear-gradient(135deg, #4f46e5, #6d28d9);
     color: white;
-    box-shadow: 0 16px 36px rgba(79, 70, 229, 0.22);
+    box-shadow: 0 16px 36px rgba(79, 70, 229, 0.18);
   }
 
   .t2t-secondary {
-    background: rgba(255,255,255,0.88);
+    background: rgba(255,255,255,0.9);
     color: #0f172a;
     border: 1px solid #dbe4f0;
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
   }
 
   .t2t-primary:hover,
@@ -691,272 +655,240 @@ const styles = `
     transform: translateY(-1px);
   }
 
-  .t2t-transform-section {
-    padding: 28px 0 44px;
+  .t2t-transform-section,
+  .t2t-demo-section,
+  .t2t-workflow,
+  .t2t-workspace,
+  .t2t-pricing {
+    padding: 42px 0;
   }
 
-  .t2t-transform-heading {
+  .t2t-section-heading {
+    margin: 0 auto 26px;
+    max-width: 760px;
     text-align: center;
+  }
+
+  .t2t-section-heading.compact {
     margin-bottom: 24px;
   }
 
-  .t2t-transform-heading h2 {
-    margin: 12px auto 0;
-    max-width: 720px;
-    font-size: 34px;
+  .t2t-section-heading h2 {
+    margin: 0 auto;
+    max-width: 760px;
+    color: #0f172a;
+    font-size: clamp(30px, 3vw, 42px);
     line-height: 1.08;
     letter-spacing: -0.055em;
     font-weight: 950;
   }
 
-  .t2t-transform-meta {
+  .t2t-section-heading p {
+    margin: 14px auto 0;
+    max-width: 650px;
+    color: #64748b;
+    font-size: 15px;
+    line-height: 1.72;
+    font-weight: 620;
+  }
+
+  .t2t-proof-flow {
     display: grid;
-    justify-items: center;
-    gap: 12px;
-    margin: 0 auto 24px;
-    max-width: 720px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    align-items: stretch;
+    margin-top: 30px;
+    padding: 24px;
+    border-radius: 34px;
+    border: 1px solid rgba(226, 232, 240, 0.72);
+    background:
+      radial-gradient(circle at 18% 16%, rgba(219, 234, 254, 0.46), transparent 32%),
+      radial-gradient(circle at 82% 18%, rgba(238, 242, 255, 0.70), transparent 34%),
+      rgba(255,255,255,0.50);
+    box-shadow: 0 26px 90px rgba(15, 23, 42, 0.052);
   }
 
-  .t2t-demo-preview-label {
-    color: #6b7280;
-    font-size: 12px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    font-weight: 900;
+  .t2t-proof-step {
+    position: relative;
+    min-width: 0;
   }
 
-  .t2t-transform-note {
-    margin: 0;
-    max-width: 640px;
-    color: #475569;
-    font-size: 14px;
-    line-height: 1.65;
-  }
-
-  .t2t-transform-cta {
-    display: inline-flex;
+  .t2t-proof-connector {
+    pointer-events: none;
+    position: absolute;
+    left: -29px;
+    top: 41%;
+    z-index: 10;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 20px;
-    height: 42px;
-    border-radius: 14px;
-    background: rgba(79, 70, 229, 0.08);
+    border: 1px solid rgba(199,210,254,0.88);
+    background: rgba(255,255,255,0.94);
     color: #4f46e5;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 900;
-    border: 1px solid rgba(79, 70, 229, 0.16);
-    transition: transform 160ms ease, background 160ms ease;
+    font-size: 18px;
+    font-weight: 950;
+    box-shadow: 0 14px 34px rgba(79,70,229,0.10);
   }
 
-  .t2t-transform-cta:hover {
-    transform: translateY(-1px);
-    background: rgba(79, 70, 229, 0.12);
-  }
-
-  .t2t-transform-card-button {
-    border: none;
-    background: transparent;
+  .t2t-proof-card {
+    position: relative;
     width: 100%;
-    padding: 0;
-    text-align: left;
+    min-width: 0;
+    height: 100%;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    overflow: hidden;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 28px;
+    background: rgba(255,255,255,0.92);
+    padding: 12px;
     cursor: pointer;
+    text-align: left;
+    box-shadow:
+      0 24px 70px rgba(15, 23, 42, 0.07),
+      inset 0 1px 0 rgba(255,255,255,0.94);
+    transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
   }
 
-  .t2t-transform-card-button:focus-visible {
-    outline: 3px solid rgba(79, 70, 229, 0.36);
+  .t2t-proof-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(165, 180, 252, 0.95);
+    box-shadow:
+      0 34px 88px rgba(79, 70, 229, 0.10),
+      inset 0 1px 0 rgba(255,255,255,0.96);
+  }
+
+  .t2t-proof-card:focus-visible {
+    outline: 4px solid rgba(99,102,241,0.22);
     outline-offset: 4px;
   }
 
-  .t2t-transform-preview-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin: 10px 0 0;
-    padding: 6px 12px;
-    border-radius: 999px;
-    background: rgba(79, 70, 229, 0.08);
-    color: #4f46e5;
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  .t2t-transform-card-link {
-    display: block;
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .t2t-transform-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 104px minmax(0, 1.2fr);
-    gap: 22px;
-    align-items: center;
-  }
-
-  .t2t-transform-card {
-    border: 1px solid rgba(226, 232, 240, 0.96);
-    background: rgba(255, 255, 255, 0.92);
-    border-radius: 28px;
-    padding: 16px;
-    box-shadow:
-      0 24px 65px rgba(15, 23, 42, 0.10),
-      inset 0 1px 0 rgba(255,255,255,0.9);
-    backdrop-filter: blur(16px);
-    transition: transform 160ms ease, box-shadow 160ms ease;
-  }
-
-  .t2t-transform-card:hover {
-    transform: translateY(-2px);
-    box-shadow:
-      0 30px 76px rgba(15, 23, 42, 0.12),
-      inset 0 1px 0 rgba(255,255,255,0.9);
-  }
-
-  .t2t-transform-card.result {
-    box-shadow:
-      0 28px 78px rgba(79, 70, 229, 0.15),
-      inset 0 1px 0 rgba(255,255,255,0.9);
-  }
-
-  .t2t-transform-card.result:hover {
-    box-shadow:
-      0 34px 86px rgba(79, 70, 229, 0.17),
-      inset 0 1px 0 rgba(255,255,255,0.9);
-  }
-
-  .t2t-card-label {
-    display: inline-flex;
-    align-items: center;
-    min-height: 27px;
-    padding: 6px 10px;
-    border-radius: 999px;
-    font-size: 11px;
-    line-height: 1.2;
-    font-weight: 950;
-    text-transform: uppercase;
-    letter-spacing: 0.13em;
-    margin-bottom: 10px;
-  }
-
-  .t2t-card-label.green {
-    background: #dcfce7;
-    color: #047857;
-  }
-
-  .t2t-card-label.purple {
-    background: #eef2ff;
-    color: #4f46e5;
-  }
-
-  .t2t-transform-image {
+  .t2t-proof-image {
     overflow: hidden;
     border-radius: 20px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid rgba(203, 213, 225, 0.88);
     background: #f8fafc;
   }
 
-  .t2t-transform-image img {
+  .t2t-proof-image img {
     display: block;
     width: 100%;
+    height: 225px;
     object-fit: contain;
     object-position: center;
     background: #f8fafc;
   }
 
-  .t2t-transform-image.whatsapp img {
-    height: 340px;
-  }
-
-  .t2t-transform-image.preview img {
-    height: 340px;
-  }
-
-  .t2t-arrow-wrap {
-    display: grid;
-    justify-items: center;
-    gap: 12px;
-    color: #4f46e5;
-  }
-
-  .t2t-arrow-circle {
-    width: 74px;
-    height: 74px;
-    border-radius: 999px;
+  .t2t-proof-label {
     display: flex;
     align-items: center;
+    gap: 11px;
+    padding: 14px 4px 2px;
+  }
+
+  .t2t-proof-label span {
+    display: flex;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
+    align-items: center;
     justify-content: center;
-    background:
-      radial-gradient(circle at top left, #ffffff, #eef2ff);
-    border: 1px solid #c7d2fe;
-    box-shadow: 0 18px 42px rgba(79, 70, 229, 0.16);
-  }
-
-  .t2t-arrow-circle svg {
-    width: 44px;
-    height: 44px;
-  }
-
-  .t2t-arrow-wrap p {
-    margin: 0;
-    max-width: 120px;
-    text-align: center;
-    color: #475569;
-    font-size: 12.5px;
-    line-height: 1.35;
-    font-weight: 950;
-  }
-
-  .t2t-demo-section,
-  .t2t-workflow,
-  .t2t-workspace,
-  .t2t-pricing {
-    padding: 30px 0;
-  }
-
-  .t2t-section-kicker {
-    text-align: center;
-    color: #475569;
-    text-transform: uppercase;
-    letter-spacing: 0.19em;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #4f46e5;
     font-size: 12px;
     font-weight: 950;
   }
 
-  .t2t-demo-section h2 {
-    margin: 12px 0 24px;
-    text-align: center;
-    font-size: 29px;
-    line-height: 1.12;
-    letter-spacing: -0.048em;
+  .t2t-proof-label strong {
+    color: #0f172a;
+    font-size: 14px;
+    line-height: 1.2;
     font-weight: 950;
   }
 
+  .t2t-proof-hover {
+    pointer-events: none;
+    position: absolute;
+    right: 22px;
+    top: 22px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.75);
+    background: rgba(15,23,42,0.72);
+    color: white;
+    padding: 7px 11px;
+    font-size: 11px;
+    font-weight: 950;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 160ms ease, transform 160ms ease;
+    backdrop-filter: blur(10px);
+  }
+
+  .t2t-proof-card:hover .t2t-proof-hover,
+  .t2t-proof-card:focus-visible .t2t-proof-hover {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .t2t-transform-cta-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 22px;
+  }
+
+  .t2t-soft-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 22px;
+    border-radius: 16px;
+    background: rgba(238, 242, 255, 0.72);
+    color: #4338ca;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 950;
+    border: 1px solid rgba(199, 210, 254, 0.9);
+    transition: transform 160ms ease, background 160ms ease;
+  }
+
+  .t2t-soft-cta:hover {
+    transform: translateY(-1px);
+    background: rgba(238, 242, 255, 0.95);
+  }
+
   .t2t-demo-grid {
-    max-width: 820px;
+    max-width: 920px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 1.22fr 0.78fr;
-    gap: 28px;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 34px;
     align-items: center;
+    padding: 22px;
+    border-radius: 32px;
+    border: 1px solid rgba(226,232,240,0.74);
+    background: rgba(255,255,255,0.58);
+    box-shadow: 0 24px 80px rgba(15,23,42,0.055);
   }
 
   .t2t-video-card {
     overflow: hidden;
-    border-radius: 24px;
+    border-radius: 26px;
     background: #020617;
     padding: 10px;
-    box-shadow: 0 24px 66px rgba(15, 23, 42, 0.17);
+    box-shadow: 0 28px 72px rgba(15, 23, 42, 0.18);
   }
 
   .t2t-video-top {
-    height: 31px;
+    height: 34px;
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 0 8px;
+    padding: 0 9px;
   }
 
   .t2t-video-top span {
@@ -980,23 +912,24 @@ const styles = `
 
   .t2t-video-top strong {
     margin-left: 8px;
-    color: #94a3b8;
+    color: #cbd5e1;
     font-size: 11px;
+    font-weight: 850;
   }
 
   .t2t-video {
     display: block;
     width: 100%;
-    max-height: 240px;
+    max-height: 280px;
     aspect-ratio: 16 / 9;
     object-fit: cover;
-    border-radius: 17px;
+    border-radius: 18px;
     background: #020617;
   }
 
-  .t2t-steps {
+  .t2t-demo-steps {
     display: grid;
-    gap: 17px;
+    gap: 18px;
   }
 
   .t2t-step {
@@ -1006,8 +939,8 @@ const styles = `
   }
 
   .t2t-step-icon {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     flex: 0 0 auto;
     border-radius: 16px;
     background: #eef2ff;
@@ -1030,21 +963,12 @@ const styles = `
     margin: 5px 0 0;
     color: #64748b;
     font-size: 13px;
-    line-height: 1.55;
+    line-height: 1.58;
+    font-weight: 640;
   }
 
   .t2t-workflow {
     position: relative;
-  }
-
-  .t2t-workflow h2 {
-    margin: 12px auto 0;
-    max-width: 680px;
-    text-align: center;
-    font-size: 32px;
-    line-height: 1.1;
-    letter-spacing: -0.045em;
-    font-weight: 950;
   }
 
   .t2t-workflow-track {
@@ -1065,32 +989,12 @@ const styles = `
     height: 2px;
     background: linear-gradient(
       90deg,
-      rgba(79, 70, 229, 0.14),
-      rgba(79, 70, 229, 0.38),
-      rgba(124, 58, 237, 0.38),
-      rgba(124, 58, 237, 0.14)
+      rgba(99, 102, 241, 0.12),
+      rgba(99, 102, 241, 0.34),
+      rgba(79, 70, 229, 0.34),
+      rgba(99, 102, 241, 0.12)
     );
     z-index: 0;
-  }
-
-  .t2t-workflow-line::before,
-  .t2t-workflow-line::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    width: 7px;
-    height: 7px;
-    border-top: 2px solid rgba(79, 70, 229, 0.34);
-    border-right: 2px solid rgba(79, 70, 229, 0.34);
-    transform: translateY(-50%) rotate(45deg);
-  }
-
-  .t2t-workflow-line::before {
-    left: 31%;
-  }
-
-  .t2t-workflow-line::after {
-    right: 31%;
   }
 
   .t2t-workflow-step {
@@ -1108,7 +1012,7 @@ const styles = `
     border-radius: 999px;
     background:
       radial-gradient(circle at 30% 20%, #ffffff 0%, #ffffff 28%, transparent 40%),
-      linear-gradient(135deg, #eef2ff, #f5f3ff);
+      linear-gradient(135deg, #eef2ff, #f8fafc);
     border: 1px solid rgba(199, 210, 254, 0.92);
     color: #4f46e5;
     display: flex;
@@ -1117,7 +1021,7 @@ const styles = `
     font-size: 15px;
     font-weight: 950;
     box-shadow:
-      0 14px 30px rgba(79, 70, 229, 0.12),
+      0 14px 30px rgba(79, 70, 229, 0.10),
       0 0 0 8px rgba(255, 255, 255, 0.86),
       inset 0 1px 0 rgba(255,255,255,0.95);
   }
@@ -1140,93 +1044,174 @@ const styles = `
     color: #64748b;
     font-size: 13px;
     line-height: 1.58;
+    font-weight: 610;
   }
 
-  .t2t-workspace-grid {
-    margin-top: 22px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 22px;
+  .t2t-workspace-premium {
+    position: relative;
+    max-width: 960px;
+    min-height: 520px;
+    margin: 34px auto 0;
   }
 
-  .t2t-product-card {
+  .t2t-workspace-main-preview {
+    position: absolute;
+    left: 0;
+    top: 24px;
+    width: 72%;
+    overflow: hidden;
+    border: 1px solid rgba(226,232,240,0.92);
+    border-radius: 34px;
     background:
-      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.92));
-    border: 1px solid rgba(226, 232, 240, 0.95);
-    border-radius: 26px;
-    padding: 16px;
+      radial-gradient(circle at 15% 0%, rgba(238,242,255,0.72), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.9));
+    padding: 14px;
+    cursor: pointer;
+    text-align: left;
     box-shadow:
-      0 22px 62px rgba(15, 23, 42, 0.075),
-      inset 0 1px 0 rgba(255,255,255,0.94);
-    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
-  }
-
-  .t2t-product-card:hover {
-    transform: translateY(-3px);
-    border-color: #c7d2fe;
-    box-shadow:
-      0 32px 78px rgba(79, 70, 229, 0.13),
+      0 30px 90px rgba(15,23,42,0.08),
       inset 0 1px 0 rgba(255,255,255,0.96);
+    transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
   }
 
-  .t2t-product-head h3 {
-    margin: 0;
-    font-size: 18px;
+  .t2t-workspace-main-preview:hover {
+    transform: translateY(-4px);
+    border-color: rgba(165,180,252,0.95);
+    box-shadow:
+      0 40px 110px rgba(79,70,229,0.13),
+      inset 0 1px 0 rgba(255,255,255,0.98);
+  }
+
+  .t2t-workspace-main-preview:focus-visible,
+  .t2t-workspace-floating-preview:focus-visible {
+    outline: 4px solid rgba(99,102,241,0.22);
+    outline-offset: 4px;
+  }
+
+  .t2t-workspace-main-preview img {
+    display: block;
+    width: 100%;
+    height: 390px;
+    object-fit: contain;
+    object-position: center;
+    border-radius: 24px;
+    border: 1px solid rgba(203,213,225,0.9);
+    background: #f8fafc;
+  }
+
+  .t2t-workspace-main-preview span {
+    position: absolute;
+    right: 28px;
+    top: 28px;
+    border-radius: 999px;
+    background: rgba(79,70,229,0.08);
+    color: #4f46e5;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 950;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    box-shadow: 0 10px 24px rgba(79,70,229,0.06);
+  }
+
+  .t2t-workspace-floating-preview {
+    position: absolute;
+    right: 0;
+    bottom: 8px;
+    z-index: 4;
+    width: 45%;
+    overflow: hidden;
+    border: 1px solid rgba(226,232,240,0.95);
+    border-radius: 30px;
+    background:
+      radial-gradient(circle at 85% 0%, rgba(219,234,254,0.72), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.92));
+    padding: 15px;
+    cursor: pointer;
+    text-align: left;
+    box-shadow:
+      0 32px 88px rgba(15,23,42,0.11),
+      0 18px 54px rgba(79,70,229,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.96);
+    transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
+  }
+
+  .t2t-workspace-floating-preview:hover {
+    transform: translateY(-4px);
+    border-color: rgba(165,180,252,0.95);
+    box-shadow:
+      0 42px 110px rgba(79,70,229,0.14),
+      0 18px 54px rgba(15,23,42,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.98);
+  }
+
+  .t2t-workspace-floating-preview div {
+    margin-bottom: 12px;
+    padding-right: 110px;
+  }
+
+  .t2t-workspace-floating-preview strong {
+    display: block;
+    color: #0f172a;
+    font-size: 16px;
+    line-height: 1.2;
     font-weight: 950;
     letter-spacing: -0.03em;
   }
 
-  .t2t-product-head p {
-    margin: 4px 0 12px;
+  .t2t-workspace-floating-preview p {
+    margin: 5px 0 0;
     color: #64748b;
-    font-size: 13px;
+    font-size: 12px;
+    line-height: 1.45;
+    font-weight: 680;
   }
 
-  .t2t-product-image {
-    overflow: hidden;
-    border-radius: 18px;
-    border: 1px solid rgba(203, 213, 225, 0.9);
-    background: #f8fafc;
-    box-shadow:
-      0 18px 42px rgba(15, 23, 42, 0.075),
-      inset 0 1px 0 rgba(255,255,255,0.9);
-  }
-
-  .t2t-product-image img {
+  .t2t-workspace-floating-preview img {
     display: block;
     width: 100%;
-    height: 238px;
+    height: 210px;
     object-fit: contain;
     object-position: center;
+    border-radius: 20px;
+    border: 1px solid rgba(203,213,225,0.9);
     background: #f8fafc;
   }
 
-  .t2t-product-card-button {
-    background: transparent;
-    border: none;
-    width: 100%;
-    text-align: left;
-    cursor: pointer;
-    padding: 0;
+  .t2t-workspace-floating-preview span {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    border-radius: 999px;
+    background: rgba(79,70,229,0.08);
+    color: #4f46e5;
+    padding: 7px 10px;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
   }
 
-  .t2t-product-card-button:focus-visible {
-    outline: 3px solid rgba(79, 70, 229, 0.35);
-    outline-offset: 4px;
-  }
-
-  .t2t-product-preview-pill {
+  .t2t-workspace-badge {
+    position: absolute;
+    left: 52%;
+    top: 10px;
+    z-index: 5;
+    transform: translateX(-50%);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 6px 10px;
+    min-height: 40px;
+    padding: 0 17px;
     border-radius: 999px;
-    background: rgba(99, 102, 241, 0.10);
-    color: #4f46e5;
-    font-size: 11px;
-    font-weight: 900;
-    text-transform: uppercase;
+    border: 1px solid rgba(199,210,254,0.9);
+    background: rgba(255,255,255,0.9);
+    color: #4338ca;
+    font-size: 12px;
+    font-weight: 950;
     letter-spacing: 0.12em;
+    text-transform: uppercase;
+    box-shadow: 0 18px 42px rgba(79,70,229,0.10);
   }
 
   .t2t-lightbox-overlay {
@@ -1234,19 +1219,20 @@ const styles = `
     inset: 0;
     display: grid;
     place-items: center;
-    background: rgba(15, 23, 42, 0.72);
+    background: rgba(15, 23, 42, 0.76);
     padding: 22px;
     z-index: 9999;
+    backdrop-filter: blur(10px);
   }
 
   .t2t-lightbox-panel {
     position: relative;
-    width: min(100%, 1040px);
+    width: min(100%, 1080px);
     max-height: min(100%, 96vh);
     padding: 28px;
     background: rgba(255, 255, 255, 0.98);
-    border-radius: 28px;
-    box-shadow: 0 34px 90px rgba(15, 23, 42, 0.18);
+    border-radius: 30px;
+    box-shadow: 0 34px 90px rgba(15, 23, 42, 0.22);
     overflow: auto;
   }
 
@@ -1291,7 +1277,7 @@ const styles = `
 
   .t2t-lightbox-image {
     margin: 18px 0 22px;
-    border-radius: 22px;
+    border-radius: 24px;
     overflow: hidden;
     border: 1px solid rgba(226, 232, 240, 0.95);
     background: #f8fafc;
@@ -1300,6 +1286,7 @@ const styles = `
   .t2t-lightbox-image img {
     width: 100%;
     height: auto;
+    max-height: 68vh;
     object-fit: contain;
     display: block;
   }
@@ -1311,33 +1298,16 @@ const styles = `
     height: 44px;
     padding: 0 22px;
     border-radius: 14px;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: linear-gradient(135deg, #4f46e5, #6d28d9);
     color: white;
     text-decoration: none;
     font-size: 14px;
     font-weight: 900;
   }
 
-  @media (max-width: 760px) {
-    .t2t-lightbox-panel {
-      width: 100%;
-      max-height: 100%;
-      padding: 20px;
-      border-radius: 20px;
-    }
-
-    .t2t-lightbox-panel h3 {
-      font-size: 24px;
-    }
-
-    .t2t-lightbox-image {
-      margin: 16px 0 18px;
-    }
-  }
-
   .t2t-pricing-grid {
-    max-width: 740px;
-    margin: 22px auto 0;
+    max-width: 760px;
+    margin: 24px auto 0;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 22px;
@@ -1348,10 +1318,10 @@ const styles = `
     background:
       linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.92));
     border: 1px solid rgba(226, 232, 240, 0.96);
-    border-radius: 26px;
-    padding: 26px;
+    border-radius: 28px;
+    padding: 28px;
     box-shadow:
-      0 20px 58px rgba(15, 23, 42, 0.075),
+      0 20px 58px rgba(15, 23, 42, 0.07),
       inset 0 1px 0 rgba(255,255,255,0.94);
     transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease, background 170ms ease;
   }
@@ -1362,27 +1332,15 @@ const styles = `
     background:
       linear-gradient(180deg, #ffffff, #f8f7ff);
     box-shadow:
-      0 34px 82px rgba(79, 70, 229, 0.13),
+      0 34px 82px rgba(79, 70, 229, 0.12),
       inset 0 1px 0 rgba(255,255,255,0.96);
   }
 
   .t2t-price-card.popular {
-    border-color: #b8a6ff;
+    border-color: rgba(129, 140, 248, 0.84);
     background:
-      radial-gradient(circle at 85% 0%, rgba(124, 58, 237, 0.12), transparent 34%),
-      linear-gradient(180deg, rgba(255,255,255,0.99), rgba(245,243,255,0.9));
-    box-shadow:
-      0 28px 74px rgba(79, 70, 229, 0.14),
-      0 0 0 1px rgba(124, 58, 237, 0.06),
-      inset 0 1px 0 rgba(255,255,255,0.96);
-  }
-
-  .t2t-price-card.popular:hover {
-    border-color: #9b8cff;
-    box-shadow:
-      0 38px 92px rgba(79, 70, 229, 0.2),
-      0 0 0 1px rgba(124, 58, 237, 0.12),
-      inset 0 1px 0 rgba(255,255,255,0.98);
+      radial-gradient(circle at 85% 0%, rgba(129, 140, 248, 0.12), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.94));
   }
 
   .t2t-popular {
@@ -1390,13 +1348,13 @@ const styles = `
     top: -14px;
     left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: linear-gradient(135deg, #4f46e5, #6d28d9);
     color: white;
     border-radius: 999px;
     padding: 7px 18px;
     font-size: 11px;
     font-weight: 950;
-    box-shadow: 0 14px 30px rgba(79, 70, 229, 0.24);
+    box-shadow: 0 14px 30px rgba(79, 70, 229, 0.20);
   }
 
   .t2t-price-card h3 {
@@ -1444,7 +1402,7 @@ const styles = `
     width: 100%;
     height: 44px;
     border-radius: 15px;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: linear-gradient(135deg, #4f46e5, #6d28d9);
     color: white;
     text-decoration: none;
     font-size: 13px;
@@ -1452,27 +1410,29 @@ const styles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 14px 34px rgba(79, 70, 229, 0.18);
+    box-shadow: 0 14px 34px rgba(79, 70, 229, 0.16);
     transition: transform 160ms ease, box-shadow 160ms ease;
   }
 
   .t2t-price-card a:hover {
     transform: translateY(-1px);
-    box-shadow: 0 20px 44px rgba(79, 70, 229, 0.28);
+    box-shadow: 0 20px 44px rgba(79, 70, 229, 0.24);
   }
 
   .t2t-bottom-cta {
-    margin: 26px auto 0;
+    margin: 32px auto 0;
     max-width: 930px;
-    border-radius: 26px;
-    background: linear-gradient(135deg, #f1efff, #eef2ff);
-    border: 1px solid #e0e7ff;
-    padding: 24px 28px;
+    border-radius: 28px;
+    background:
+      radial-gradient(circle at top left, rgba(199,210,254,0.5), transparent 34%),
+      linear-gradient(135deg, #f8fafc, #eef2ff);
+    border: 1px solid #dbe4f0;
+    padding: 26px 30px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 24px;
-    box-shadow: 0 18px 54px rgba(79, 70, 229, 0.08);
+    box-shadow: 0 18px 54px rgba(79, 70, 229, 0.07);
   }
 
   .t2t-bottom-cta h2 {
@@ -1487,13 +1447,14 @@ const styles = `
     margin: 6px 0 0;
     color: #64748b;
     font-size: 14px;
+    font-weight: 650;
   }
 
   .t2t-bottom-cta a {
     height: 44px;
     min-width: 170px;
     border-radius: 15px;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: linear-gradient(135deg, #4f46e5, #6d28d9);
     color: white;
     text-decoration: none;
     font-weight: 950;
@@ -1510,34 +1471,64 @@ const styles = `
     }
 
     .t2t-hero {
-      padding-top: 34px;
+      padding-top: 44px;
     }
 
     .t2t-hero-copy {
-      max-width: 680px;
+      max-width: 720px;
     }
 
-    .t2t-transform-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .t2t-arrow-wrap {
-      margin: -2px 0;
-    }
-
-    .t2t-arrow-circle {
-      transform: rotate(90deg);
-    }
-
-    .t2t-transform-image.whatsapp img,
-    .t2t-transform-image.preview img {
-      height: 280px;
-    }
-
+    .t2t-proof-flow,
     .t2t-demo-grid,
-    .t2t-workspace-grid,
     .t2t-pricing-grid {
       grid-template-columns: 1fr;
+    }
+
+    .t2t-proof-flow {
+      padding: 18px;
+    }
+
+    .t2t-proof-connector {
+      left: 50%;
+      top: -28px;
+      transform: translateX(-50%) rotate(90deg);
+    }
+
+    .t2t-proof-image img {
+      height: 300px;
+    }
+
+    .t2t-workspace-premium {
+      min-height: auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .t2t-workspace-main-preview,
+    .t2t-workspace-floating-preview {
+      position: relative;
+      left: auto;
+      right: auto;
+      top: auto;
+      bottom: auto;
+      width: 100%;
+    }
+
+    .t2t-workspace-main-preview img {
+      height: 320px;
+    }
+
+    .t2t-workspace-floating-preview img {
+      height: 260px;
+    }
+
+    .t2t-workspace-badge {
+      position: relative;
+      left: auto;
+      top: auto;
+      transform: none;
+      justify-self: center;
+      order: -1;
     }
 
     .t2t-workflow-track {
@@ -1557,14 +1548,9 @@ const styles = `
       background: linear-gradient(
         180deg,
         rgba(79, 70, 229, 0.12),
-        rgba(79, 70, 229, 0.36),
-        rgba(124, 58, 237, 0.12)
+        rgba(79, 70, 229, 0.34),
+        rgba(79, 70, 229, 0.12)
       );
-    }
-
-    .t2t-workflow-line::before,
-    .t2t-workflow-line::after {
-      display: none;
     }
 
     .t2t-workflow-step {
@@ -1578,10 +1564,6 @@ const styles = `
 
     .t2t-workflow-number {
       margin: 0;
-      box-shadow:
-        0 14px 30px rgba(79, 70, 229, 0.12),
-        0 0 0 7px rgba(255, 255, 255, 0.9),
-        inset 0 1px 0 rgba(255,255,255,0.95);
     }
 
     .t2t-workflow-content {
@@ -1615,34 +1597,74 @@ const styles = `
       font-size: 12px;
     }
 
-    .t2t-hero h1 {
-      font-size: 40px;
-      line-height: 1.08;
+    .t2t-hero {
+      padding: 42px 0 34px;
     }
 
-    .t2t-hero h1 span {
-      white-space: normal;
+    .t2t-hero h1 {
+      font-size: 42px;
+      line-height: 1.08;
     }
 
     .t2t-hero-copy p {
       font-size: 17px;
     }
 
-    .t2t-transform-heading h2 {
-      font-size: 28px;
+    .t2t-section-heading h2 {
+      font-size: 30px;
     }
 
-    .t2t-workflow h2 {
-      font-size: 28px;
+    .t2t-transform-section,
+    .t2t-demo-section,
+    .t2t-workflow,
+    .t2t-workspace,
+    .t2t-pricing {
+      padding: 34px 0;
     }
 
-    .t2t-workflow-track {
-      gap: 24px;
+    .t2t-proof-image img,
+    .t2t-workspace-main-preview img,
+    .t2t-workspace-floating-preview img {
+      height: 260px;
+    }
+
+    .t2t-workspace-floating-preview div {
+      padding-right: 0;
+    }
+
+    .t2t-workspace-main-preview span,
+    .t2t-workspace-floating-preview span {
+      position: static;
+      width: fit-content;
+      margin-top: 12px;
+      display: inline-flex;
+    }
+
+    .t2t-proof-flow,
+    .t2t-demo-grid {
+      padding: 14px;
+      border-radius: 26px;
+    }
+
+    .t2t-lightbox-panel {
+      width: 100%;
+      max-height: 100%;
+      padding: 20px;
+      border-radius: 22px;
+    }
+
+    .t2t-lightbox-panel h3 {
+      font-size: 23px;
+    }
+
+    .t2t-pricing-grid {
+      grid-template-columns: 1fr;
     }
 
     .t2t-bottom-cta {
       flex-direction: column;
       align-items: stretch;
+      padding: 24px;
     }
 
     .t2t-bottom-cta a {

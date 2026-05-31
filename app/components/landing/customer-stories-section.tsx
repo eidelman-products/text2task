@@ -89,7 +89,6 @@ export default function CustomerStoriesSection() {
 
       <div className="t2t-customer-stories-shell">
         <div className="t2t-customer-stories-header">
-          <div className="t2t-section-kicker">CUSTOMER STORIES</div>
           <h2 id="customer-stories-title">What our users are saying</h2>
           <p>Real feedback from people organizing client work with Text2Task.</p>
         </div>
@@ -109,7 +108,9 @@ export default function CustomerStoriesSection() {
                 </div>
 
                 <div className="t2t-customer-story-person">
-                  <div className="t2t-customer-story-name">{story.displayName}</div>
+                  <div className="t2t-customer-story-name">
+                    {story.displayName}
+                  </div>
 
                   {story.roleOrBusinessType ? (
                     <div className="t2t-customer-story-role">
@@ -166,7 +167,7 @@ const customerStoriesCss = `
   }
 
   .t2t-customer-stories-header h2 {
-    margin: 10px 0 0;
+    margin: 0;
     color: #0f172a;
     font-size: clamp(25px, 2.8vw, 34px);
     line-height: 1.08;
