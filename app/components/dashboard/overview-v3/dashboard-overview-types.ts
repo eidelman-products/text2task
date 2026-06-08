@@ -41,6 +41,7 @@ export type UrgentBoardNote = {
   title: string;
   clientName: string;
   deadlineLabel: string;
+  usesProjectDeadline: boolean;
   tone: UrgentNoteTone;
   openLabel: string;
 };
@@ -52,6 +53,9 @@ export type ProjectSnapshotItem = {
   summary: string;
   amount: string;
   deadline: string;
+  createdAt: string | null;
+  taskCount: number;
+  completedTaskCount: number;
   priority: string;
   status: string;
   tone: ProjectCardTone;

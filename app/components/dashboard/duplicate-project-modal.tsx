@@ -186,8 +186,8 @@ const overlayStyle: CSSProperties = {
   display: "grid",
   placeItems: "center",
   padding: 18,
-  background: "rgba(15,23,42,0.52)",
-  backdropFilter: "blur(10px)",
+  background: "rgba(15,23,42,0.38)",
+  backdropFilter: "blur(8px)",
 };
 
 const modalStyle: CSSProperties = {
@@ -195,24 +195,25 @@ const modalStyle: CSSProperties = {
   width: "min(680px, 100%)",
   maxHeight: "calc(100vh - 36px)",
   overflow: "auto",
-  borderRadius: 28,
-  border: "1px solid rgba(226,232,240,0.92)",
+  borderRadius: 26,
+  border: "1px solid rgba(191,219,254,0.82)",
   background:
-    "linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 52%, rgba(238,242,255,0.92) 100%)",
+    "linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,252,0.96) 100%)",
   boxShadow:
-    "0 34px 90px rgba(15,23,42,0.26), 0 0 0 1px rgba(255,255,255,0.56)",
+    "0 24px 70px rgba(15,23,42,0.16), inset 0 1px 0 rgba(255,255,255,0.96)",
   padding: 18,
 };
 
 const glowStyle: CSSProperties = {
+  display: "none",
   position: "absolute",
   top: -110,
   right: -80,
   width: 260,
   height: 260,
   borderRadius: 999,
-  background: "rgba(99,102,241,0.16)",
-  filter: "blur(18px)",
+  background: "rgba(37,99,235,0.06)",
+  filter: "blur(24px)",
   pointerEvents: "none",
 };
 
@@ -227,16 +228,18 @@ const topRowStyle: CSSProperties = {
 const iconWrapStyle: CSSProperties = {
   width: 46,
   height: 46,
-  borderRadius: 18,
+  borderRadius: 17,
   display: "grid",
   placeItems: "center",
-  background: "rgba(238,242,255,0.96)",
-  border: "1px solid rgba(199,210,254,0.95)",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.8)",
+  background:
+    "linear-gradient(135deg, rgba(239,246,255,0.98), rgba(255,255,255,0.98))",
+  border: "1px solid rgba(191,219,254,0.9)",
+  boxShadow:
+    "0 10px 22px rgba(37,99,235,0.07), inset 0 1px 0 rgba(255,255,255,0.92)",
 };
 
 const iconStyle: CSSProperties = {
-  color: "#4f46e5",
+  color: "#2563eb",
   fontSize: 20,
   fontWeight: 950,
 };
@@ -245,8 +248,8 @@ const closeButtonStyle: CSSProperties = {
   width: 38,
   height: 38,
   borderRadius: 14,
-  border: "1px solid rgba(226,232,240,0.95)",
-  background: "rgba(255,255,255,0.9)",
+  border: "1px solid rgba(226,232,240,0.88)",
+  background: "rgba(255,255,255,0.94)",
   color: "#64748b",
   fontSize: 24,
   lineHeight: 1,
@@ -256,16 +259,21 @@ const closeButtonStyle: CSSProperties = {
 const contentStyle: CSSProperties = {
   position: "relative",
   display: "grid",
-  gap: 12,
+  gap: 13,
   paddingTop: 14,
 };
 
 const eyebrowStyle: CSSProperties = {
-  color: "#4f46e5",
-  fontSize: 12,
+  width: "fit-content",
+  borderRadius: 999,
+  padding: "6px 9px",
+  color: "#1d4ed8",
+  background: "rgba(239,246,255,0.72)",
+  border: "1px solid rgba(191,219,254,0.82)",
+  fontSize: 10.5,
   fontWeight: 950,
   textTransform: "uppercase",
-  letterSpacing: "0.11em",
+  letterSpacing: "0.08em",
 };
 
 const titleStyle: CSSProperties = {
@@ -279,19 +287,21 @@ const titleStyle: CSSProperties = {
 
 const descriptionStyle: CSSProperties = {
   margin: 0,
-  color: "#64748b",
+  color: "#475569",
   fontSize: 14,
   lineHeight: 1.6,
-  fontWeight: 700,
+  fontWeight: 680,
 };
 
 const duplicateCardStyle: CSSProperties = {
   display: "grid",
   gap: 12,
-  borderRadius: 22,
-  border: "1px solid rgba(199,210,254,0.72)",
-  background: "rgba(255,255,255,0.82)",
+  borderRadius: 20,
+  border: "1px solid rgba(226,232,240,0.9)",
+  background:
+    "linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(248,250,252,0.72) 100%)",
   padding: 14,
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.86)",
 };
 
 const duplicateHeaderStyle: CSSProperties = {
@@ -313,16 +323,16 @@ const contactTextStyle: CSSProperties = {
   marginTop: 3,
   color: "#64748b",
   fontSize: 12,
-  fontWeight: 850,
+  fontWeight: 760,
 };
 
 const scorePillStyle: CSSProperties = {
-  padding: "8px 10px",
+  padding: "7px 10px",
   borderRadius: 999,
-  border: "1px solid rgba(253,230,138,0.95)",
-  background: "rgba(255,251,235,0.96)",
-  color: "#92400e",
-  fontSize: 12,
+  border: "1px solid rgba(191,219,254,0.92)",
+  background: "rgba(239,246,255,0.82)",
+  color: "#1d4ed8",
+  fontSize: 11.5,
   fontWeight: 950,
   whiteSpace: "nowrap",
 };
@@ -337,24 +347,24 @@ const metricStyle: CSSProperties = {
   display: "grid",
   gap: 4,
   minWidth: 0,
-  borderRadius: 16,
-  border: "1px solid rgba(226,232,240,0.92)",
-  background: "rgba(248,250,252,0.86)",
-  padding: "10px 11px",
+  borderRadius: 14,
+  border: "1px solid rgba(226,232,240,0.78)",
+  background: "rgba(255,255,255,0.72)",
+  padding: "9px 10px",
 };
 
 const metricLabelStyle: CSSProperties = {
   color: "#94a3b8",
   fontSize: 10,
-  fontWeight: 950,
+  fontWeight: 900,
   textTransform: "uppercase",
-  letterSpacing: "0.08em",
+  letterSpacing: "0.07em",
 };
 
 const metricValueStyle: CSSProperties = {
   color: "#0f172a",
   fontSize: 13,
-  fontWeight: 900,
+  fontWeight: 860,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
@@ -363,9 +373,9 @@ const metricValueStyle: CSSProperties = {
 const reasonBoxStyle: CSSProperties = {
   display: "grid",
   gap: 4,
-  borderRadius: 16,
-  border: "1px solid rgba(191,219,254,0.95)",
-  background: "rgba(239,246,255,0.82)",
+  borderRadius: 15,
+  border: "1px solid rgba(191,219,254,0.72)",
+  background: "rgba(239,246,255,0.56)",
   padding: "10px 11px",
 };
 
@@ -381,7 +391,7 @@ const reasonTextStyle: CSSProperties = {
   color: "#334155",
   fontSize: 12,
   lineHeight: 1.5,
-  fontWeight: 760,
+  fontWeight: 700,
 };
 
 const tasksBoxStyle: CSSProperties = {
@@ -405,9 +415,9 @@ const taskRowStyle: CSSProperties = {
   gridTemplateColumns: "26px minmax(0, 1fr)",
   alignItems: "center",
   gap: 8,
-  borderRadius: 13,
-  border: "1px solid rgba(226,232,240,0.9)",
-  background: "rgba(248,250,252,0.8)",
+  borderRadius: 12,
+  border: "1px solid rgba(226,232,240,0.72)",
+  background: "rgba(255,255,255,0.72)",
   padding: 7,
 };
 
@@ -417,9 +427,9 @@ const taskIndexStyle: CSSProperties = {
   borderRadius: 9,
   display: "grid",
   placeItems: "center",
-  border: "1px solid rgba(226,232,240,0.95)",
-  background: "#ffffff",
-  color: "#64748b",
+  border: "1px solid rgba(191,219,254,0.78)",
+  background: "rgba(239,246,255,0.72)",
+  color: "#2563eb",
   fontSize: 11,
   fontWeight: 950,
 };
@@ -434,14 +444,14 @@ const taskTitleStyle: CSSProperties = {
 };
 
 const noticeStyle: CSSProperties = {
-  borderRadius: 16,
-  border: "1px solid rgba(187,247,208,0.95)",
-  background: "rgba(240,253,244,0.86)",
+  borderRadius: 15,
+  border: "1px solid rgba(187,247,208,0.72)",
+  background: "rgba(240,253,244,0.62)",
   color: "#166534",
   padding: "11px 12px",
   fontSize: 12,
   lineHeight: 1.55,
-  fontWeight: 760,
+  fontWeight: 700,
 };
 
 const actionsStyle: CSSProperties = {
@@ -456,7 +466,7 @@ const actionsStyle: CSSProperties = {
 const secondaryButtonStyle: CSSProperties = {
   minHeight: 42,
   borderRadius: 14,
-  border: "1px solid rgba(226,232,240,0.95)",
+  border: "1px solid rgba(226,232,240,0.9)",
   background: "#ffffff",
   color: "#334155",
   padding: "0 15px",
@@ -468,9 +478,9 @@ const secondaryButtonStyle: CSSProperties = {
 const lightButtonStyle: CSSProperties = {
   minHeight: 42,
   borderRadius: 14,
-  border: "1px solid rgba(199,210,254,0.95)",
-  background: "rgba(238,242,255,0.9)",
-  color: "#4338ca",
+  border: "1px solid rgba(191,219,254,0.9)",
+  background: "rgba(239,246,255,0.78)",
+  color: "#1d4ed8",
   padding: "0 15px",
   fontSize: 13,
   fontWeight: 900,
@@ -481,10 +491,10 @@ const primaryButtonStyle: CSSProperties = {
   minHeight: 42,
   borderRadius: 14,
   border: "none",
-  background: "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)",
+  background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
   color: "#ffffff",
   padding: "0 16px",
   fontSize: 13,
   fontWeight: 950,
-  boxShadow: "0 14px 28px rgba(79,70,229,0.22)",
+  boxShadow: "0 14px 28px rgba(37,99,235,0.18)",
 };

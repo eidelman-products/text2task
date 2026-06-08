@@ -10,6 +10,13 @@ import {
   YAxis,
 } from "recharts";
 import { getIncomeAnalytics } from "@/lib/tasks/get-income-analytics";
+import {
+  dashboardColors,
+  dashboardRadii,
+  dashboardShadows,
+  dashboardSpacing,
+  dashboardTypography,
+} from "../ui/tokens";
 import { getRevenueChange, money } from "./dashboard-overview-utils";
 
 type Props = {
@@ -62,11 +69,15 @@ export default function DashboardBusinessPulse({ analytics }: Props) {
   const previousMonth = analytics.summary.previousMonth || 0;
   const revenueChange = getRevenueChange(thisMonth, previousMonth);
   const timelineData = buildTimelineData(analytics);
+  const clientCount = analytics.byClient.length;
+  const avgRevenue = thisMonth / Math.max(1, clientCount || 1);
 
   return (
-    <section style={shellStyle}>
+    <section className="business-pulse-root" style={shellStyle}>
+      <style>{responsiveCss}</style>
+
       <div style={headerStyle}>
-        <div style={{ display: "grid", gap: 4 }}>
+        <div style={headerTextStyle}>
           <div style={sectionKickerStyle}>Business pulse</div>
           <div style={titleStyle}>Revenue and pipeline</div>
         </div>
@@ -74,8 +85,8 @@ export default function DashboardBusinessPulse({ analytics }: Props) {
         <div style={periodPillStyle}>This month</div>
       </div>
 
-      <div style={mainMetricStyle}>
-        <div>
+      <div style={metricRowStyle}>
+        <div style={mainMetricStyle}>
           <div style={metricLabelStyle}>Tracked revenue</div>
           <div style={revenueValueStyle}>{money(thisMonth)}</div>
         </div>
@@ -84,15 +95,18 @@ export default function DashboardBusinessPulse({ analytics }: Props) {
           <div
             style={{
               ...changePillStyle,
-              color: revenueChange >= 0 ? "#15803d" : "#dc2626",
+              color:
+                revenueChange >= 0
+                  ? dashboardColors.status.green
+                  : dashboardColors.status.red,
               background:
                 revenueChange >= 0
-                  ? "rgba(34,197,94,0.08)"
-                  : "rgba(239,68,68,0.08)",
+                  ? "rgba(236, 253, 245, 0.78)"
+                  : "rgba(254, 242, 242, 0.78)",
               border:
                 revenueChange >= 0
-                  ? "1px solid rgba(34,197,94,0.14)"
-                  : "1px solid rgba(239,68,68,0.14)",
+                  ? "1px solid rgba(34, 197, 94, 0.14)"
+                  : "1px solid rgba(239, 68, 68, 0.14)",
             }}
           >
             {revenueChange >= 0 ? "↑" : "↓"} {Math.abs(revenueChange)}% vs last month
@@ -102,21 +116,17 @@ export default function DashboardBusinessPulse({ analytics }: Props) {
         )}
       </div>
 
-      <div style={miniGridStyle}>
-        <MiniMetric label="Next month" value={money(nextMonth)} />
-        <MiniMetric label="Previous" value={money(previousMonth)} />
-        <MiniMetric label="Clients" value={String(analytics.byClient.length)} />
-        <MiniMetric label="Avg. revenue" value={money(thisMonth / Math.max(1, analytics.byClient.length || 1))} />
-      </div>
-
       <div style={chartWrapStyle}>
-        <ResponsiveContainer width="100%" height={190}>
-          <AreaChart data={timelineData} margin={{ top: 8, right: 6, left: -18, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={74}>
+          <AreaChart
+            data={timelineData}
+            margin={{ top: 8, right: 2, left: -24, bottom: 0 }}
+          >
             <defs>
-              <linearGradient id="businessPulsePurple" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.28} />
-                <stop offset="58%" stopColor="#7c3aed" stopOpacity={0.1} />
-                <stop offset="100%" stopColor="#7c3aed" stopOpacity={0} />
+              <linearGradient id="businessPulseBlue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#2563eb" stopOpacity={0.16} />
+                <stop offset="62%" stopColor="#2563eb" stopOpacity={0.055} />
+                <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
               </linearGradient>
             </defs>
 
@@ -124,14 +134,15 @@ export default function DashboardBusinessPulse({ analytics }: Props) {
               dataKey="label"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: "#64748b", fontSize: 11, fontWeight: 700 }}
-              dy={8}
+              tick={{ fill: dashboardColors.text.muted, fontSize: 10, fontWeight: 700 }}
+              dy={7}
             />
 
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: "#64748b", fontSize: 11, fontWeight: 700 }}
+              width={36}
+              tick={{ fill: dashboardColors.text.muted, fontSize: 10, fontWeight: 700 }}
               tickFormatter={(value) => `$${Math.round(Number(value) / 1000)}K`}
             />
 
@@ -140,24 +151,31 @@ export default function DashboardBusinessPulse({ analytics }: Props) {
             <Area
               type="monotone"
               dataKey="value"
-              stroke="#7c3aed"
-              strokeWidth={2.4}
-              fill="url(#businessPulsePurple)"
+              stroke={dashboardColors.primary[600]}
+              strokeWidth={2}
+              fill="url(#businessPulseBlue)"
               dot={{
-                r: 3.5,
-                strokeWidth: 2,
-                stroke: "#7c3aed",
+                r: 2.8,
+                strokeWidth: 1.8,
+                stroke: dashboardColors.primary[600],
                 fill: "#ffffff",
               }}
               activeDot={{
-                r: 5,
+                r: 4.4,
                 strokeWidth: 2,
-                stroke: "#7c3aed",
+                stroke: dashboardColors.primary[600],
                 fill: "#ffffff",
               }}
             />
           </AreaChart>
         </ResponsiveContainer>
+      </div>
+
+      <div className="business-mini-grid" style={miniGridStyle}>
+        <MiniMetric label="Next" value={money(nextMonth)} />
+        <MiniMetric label="Previous" value={money(previousMonth)} />
+        <MiniMetric label="Clients" value={String(clientCount)} />
+        <MiniMetric label="Avg." value={money(avgRevenue)} />
       </div>
     </section>
   );
@@ -166,24 +184,40 @@ export default function DashboardBusinessPulse({ analytics }: Props) {
 function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
     <div style={miniMetricStyle}>
-      <div style={miniLabelStyle}>{label}</div>
-      <div style={miniValueStyle}>{value}</div>
+      <span style={miniLabelStyle}>{label}</span>
+      <span style={miniValueStyle}>{value}</span>
     </div>
   );
 }
 
+const responsiveCss = `
+  .business-pulse-root,
+  .business-pulse-root * {
+    box-sizing: border-box;
+  }
+
+  @media (max-width: 760px) {
+    .business-pulse-root {
+      padding: 12px !important;
+    }
+
+    .business-mini-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+    }
+  }
+`;
+
 const shellStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 0,
-  borderRadius: 24,
-  padding: 18,
-  border: "1px solid rgba(226,232,240,0.82)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(250,250,255,0.92) 100%)",
-  boxShadow:
-    "0 22px 50px rgba(15,23,42,0.055), inset 0 1px 0 rgba(255,255,255,0.96)",
+  borderRadius: dashboardRadii.xl,
+  padding: "12px 13px",
+  border: "1px solid rgba(226, 232, 240, 0.72)",
+  background: "rgba(248, 250, 252, 0.42)",
+  boxShadow: "none",
   display: "grid",
-  gap: 16,
+  gap: 11,
   overflow: "hidden",
 };
 
@@ -191,75 +225,95 @@ const headerStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "flex-start",
   justifyContent: "space-between",
-  gap: 12,
+  gap: dashboardSpacing[3],
+};
+
+const headerTextStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 5,
+  minWidth: 0,
 };
 
 const sectionKickerStyle: React.CSSProperties = {
-  fontSize: 11,
-  color: "#4f46e5",
-  fontWeight: 950,
+  fontSize: 10.5,
+  color: dashboardColors.primary[600],
+  fontWeight: dashboardTypography.weight.black,
   textTransform: "uppercase",
   letterSpacing: "0.12em",
 };
 
 const titleStyle: React.CSSProperties = {
-  fontSize: 19,
-  lineHeight: 1.15,
-  color: "#0f172a",
-  fontWeight: 950,
-  letterSpacing: "-0.045em",
+  fontSize: 18,
+  lineHeight: 1.12,
+  color: dashboardColors.text.primary,
+  fontWeight: dashboardTypography.weight.black,
+  letterSpacing: "-0.04em",
 };
 
 const periodPillStyle: React.CSSProperties = {
-  borderRadius: 999,
-  padding: "8px 11px",
-  border: "1px solid rgba(226,232,240,0.9)",
-  background: "rgba(255,255,255,0.74)",
-  color: "#334155",
-  fontSize: 12,
-  fontWeight: 850,
+  borderRadius: dashboardRadii.full,
+  padding: "6px 9px",
+  border: "1px solid rgba(226, 232, 240, 0.72)",
+  background: "rgba(255, 255, 255, 0.68)",
+  color: dashboardColors.text.muted,
+  fontSize: 11,
+  fontWeight: dashboardTypography.weight.bold,
   whiteSpace: "nowrap",
 };
 
-const mainMetricStyle: React.CSSProperties = {
+const metricRowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "flex-end",
   justifyContent: "space-between",
-  gap: 12,
+  gap: dashboardSpacing[3],
   flexWrap: "wrap",
 };
 
+const mainMetricStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 5,
+};
+
 const metricLabelStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 13,
-  fontWeight: 700,
-  marginBottom: 6,
+  color: dashboardColors.text.muted,
+  fontSize: 11.5,
+  fontWeight: dashboardTypography.weight.bold,
 };
 
 const revenueValueStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 34,
+  color: dashboardColors.text.primary,
+  fontSize: 28,
   lineHeight: 1,
-  fontWeight: 950,
-  letterSpacing: "-0.06em",
+  fontWeight: dashboardTypography.weight.black,
+  letterSpacing: "-0.055em",
 };
 
 const changePillStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  borderRadius: 999,
-  padding: "7px 10px",
-  fontSize: 12,
-  fontWeight: 900,
+  borderRadius: dashboardRadii.full,
+  padding: "5px 8px",
+  fontSize: 10.5,
+  fontWeight: dashboardTypography.weight.medium,
   whiteSpace: "nowrap",
 };
 
 const neutralChangePillStyle: React.CSSProperties = {
   ...changePillStyle,
-  color: "#64748b",
-  background: "rgba(148,163,184,0.08)",
-  border: "1px solid rgba(148,163,184,0.12)",
+  color: dashboardColors.text.muted,
+  background: "rgba(248, 250, 252, 0.74)",
+  border: `1px solid ${dashboardColors.border.subtle}`,
+};
+
+const chartWrapStyle: React.CSSProperties = {
+  width: "100%",
+  height: 86,
+  minWidth: 0,
+  borderRadius: dashboardRadii.lg,
+  background: "rgba(255, 255, 255, 0.38)",
+  border: "1px solid rgba(226, 232, 240, 0.46)",
+  padding: "2px 3px 0",
 };
 
 const miniGridStyle: React.CSSProperties = {
@@ -270,59 +324,51 @@ const miniGridStyle: React.CSSProperties = {
 
 const miniMetricStyle: React.CSSProperties = {
   minWidth: 0,
-  borderRadius: 14,
-  padding: "11px 10px",
-  border: "1px solid rgba(226,232,240,0.82)",
-  background: "rgba(255,255,255,0.72)",
   display: "grid",
-  gap: 4,
+  gap: 3,
+  padding: "6px 7px",
+  borderRadius: dashboardRadii.md,
+  border: "1px solid rgba(226, 232, 240, 0.62)",
+  background: "rgba(255, 255, 255, 0.58)",
 };
 
 const miniLabelStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 11,
-  fontWeight: 800,
+  color: dashboardColors.text.muted,
+  fontSize: 10,
+  lineHeight: 1,
+  fontWeight: dashboardTypography.weight.bold,
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
 };
 
 const miniValueStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 15,
+  color: dashboardColors.text.primary,
+  fontSize: 13,
   lineHeight: 1.1,
-  fontWeight: 950,
+  fontWeight: dashboardTypography.weight.black,
   letterSpacing: "-0.035em",
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
 };
 
-const chartWrapStyle: React.CSSProperties = {
-  width: "100%",
-  height: 210,
-  minWidth: 0,
-  borderRadius: 18,
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(248,250,255,0.72) 100%)",
-  border: "1px solid rgba(226,232,240,0.56)",
-  padding: "10px 8px 4px",
-};
-
 const tooltipStyle: React.CSSProperties = {
-  borderRadius: 12,
+  borderRadius: dashboardRadii.md,
   padding: "9px 10px",
-  background: "rgba(15,23,42,0.92)",
-  color: "#ffffff",
-  boxShadow: "0 16px 32px rgba(15,23,42,0.18)",
+  background: "rgba(15, 23, 42, 0.92)",
+  color: dashboardColors.text.inverse,
+  boxShadow: dashboardShadows.lg,
 };
 
 const tooltipLabelStyle: React.CSSProperties = {
   fontSize: 11,
   color: "rgba(255,255,255,0.72)",
-  fontWeight: 800,
+  fontWeight: dashboardTypography.weight.bold,
   marginBottom: 3,
 };
 
 const tooltipValueStyle: React.CSSProperties = {
   fontSize: 13,
-  color: "#ffffff",
-  fontWeight: 950,
+  color: dashboardColors.text.inverse,
+  fontWeight: dashboardTypography.weight.black,
 };

@@ -366,7 +366,7 @@ export const useCases: UseCasePageData[] = [
     productProofTitle: "Track WordPress fixes in one client workspace.",
     productProofDescription:
       "Text2Task gives WordPress freelancers a clean CRM-style view for plugin updates, page edits, form bugs, mobile issues, priorities, and deadlines.",
-    productProofImage: "/landing/text2task-task-crm.png",
+    productProofImage: "/landing/New-Task-CRM.png",
     productProofImageAlt:
       "Text2Task Task CRM showing client projects, statuses, priorities, deadlines, and resources for WordPress maintenance work.",
     productProofBullets: [
@@ -472,7 +472,7 @@ export const useCases: UseCasePageData[] = [
       proofDescription:
         "Use Text2Task to track fixes, keep project updates reviewable, and manage maintenance requests without losing client context.",
       proofImages: [
-        { src: "/landing/text2task-task-crm.png", alt: "Text2Task CRM view for tracking client projects and WordPress maintenance work.", label: "Task CRM" },
+        { src: "/landing/New-Task-CRM.png", alt: "Text2Task CRM view for tracking client projects and WordPress maintenance work.", label: "Task CRM" },
         { src: "/landing/text2task-client-update-review.png", alt: "Text2Task client update review flow for analyzing new updates before saving changes.", label: "Client update review" },
       ],
       manageTitle: "What WordPress freelancers can manage",
@@ -999,7 +999,7 @@ export const useCases: UseCasePageData[] = [
         "Use Text2Task to capture social content requests from messages and manage them in a clean task workspace.",
       proofImages: [
         { src: "/landing/text2task-whatsapp-message.png", alt: "Text2Task WhatsApp-style message example for client requests.", label: "Client message intake" },
-        { src: "/landing/text2task-task-crm.png", alt: "Text2Task CRM view for managing content tasks and client projects.", label: "Task CRM" },
+        { src: "/landing/New-Task-CRM.png", alt: "Text2Task CRM view for managing content tasks and client projects.", label: "Task CRM" },
       ],
       manageTitle: "What social media managers can organize",
       manageDescription:
@@ -1175,7 +1175,7 @@ export const useCases: UseCasePageData[] = [
         "Use Text2Task to keep urgent edits visible and manage video revisions until final delivery.",
       proofImages: [
         { src: "/landing/text2task-urgent-board.png", alt: "Text2Task urgent board for tracking time-sensitive video edits.", label: "Urgent board" },
-        { src: "/landing/text2task-task-crm.png", alt: "Text2Task CRM view for managing video editing tasks and client projects.", label: "Task CRM" },
+        { src: "/landing/New-Task-CRM.png", alt: "Text2Task CRM view for managing video editing tasks and client projects.", label: "Task CRM" },
       ],
       manageTitle: "What video editors can organize",
       manageDescription:
@@ -1244,7 +1244,7 @@ export const useCases: UseCasePageData[] = [
     productProofTitle: "Turn admin instructions into a clean task workspace.",
     productProofDescription:
       "Text2Task helps virtual assistants organize mixed admin requests, follow-ups, scheduling tasks, spreadsheet work, invoice reminders, and research notes by client.",
-    productProofImage: "/landing/text2task-task-crm.png",
+    productProofImage: "/landing/New-Task-CRM.png",
     productProofImageAlt:
       "Text2Task Task CRM showing organized client tasks for admin and virtual assistant workflows.",
     productProofBullets: [
@@ -1349,7 +1349,7 @@ export const useCases: UseCasePageData[] = [
       proofDescription:
         "Use Text2Task to manage admin tasks by client, review new updates, and keep context attached to each project.",
       proofImages: [
-        { src: "/landing/text2task-task-crm.png", alt: "Text2Task CRM view for admin tasks and client work.", label: "Task CRM" },
+        { src: "/landing/New-Task-CRM.png", alt: "Text2Task CRM view for admin tasks and client work.", label: "Task CRM" },
         { src: "/landing/text2task-client-update-review.png", alt: "Text2Task client update review flow for admin updates.", label: "Client update review" },
       ],
       manageTitle: "What virtual assistants can manage",
@@ -1419,7 +1419,7 @@ export const useCases: UseCasePageData[] = [
     productProofTitle: "Keep small agency work visible across clients.",
     productProofDescription:
       "Text2Task gives small teams a focused workspace for client requests, resources, deadlines, budgets, priorities, and delivery status without the weight of an enterprise CRM.",
-    productProofImage: "/landing/text2task-task-crm.png",
+    productProofImage: "/landing/New-Task-CRM.png",
     productProofImageAlt:
       "Text2Task Task CRM showing organized client projects for small agency work.",
     productProofBullets: [
@@ -1524,7 +1524,7 @@ export const useCases: UseCasePageData[] = [
       proofDescription:
         "Use Text2Task to manage client projects, keep resources attached, and track tasks across small service teams.",
       proofImages: [
-        { src: "/landing/text2task-task-crm.png", alt: "Text2Task CRM view for small agency client work.", label: "Task CRM" },
+        { src: "/landing/New-Task-CRM.png", alt: "Text2Task CRM view for small agency client work.", label: "Task CRM" },
         { src: "/landing/text2task-project-resources.png", alt: "Text2Task project resources view for agency files, links, and notes.", label: "Project resources" },
       ],
       manageTitle: "What small agencies can organize",

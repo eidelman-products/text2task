@@ -73,7 +73,7 @@ export default function ProjectUpdateInputCard({
   }
 
   return (
-    <section style={ui.card}>
+    <section className={ui.responsiveClassNames.inputCard} style={ui.card}>
       <div style={ui.cardHeader}>
         <div style={ui.cardIcon}>{isImageMode ? "▣" : "✎"}</div>
 
@@ -82,7 +82,11 @@ export default function ProjectUpdateInputCard({
         </div>
       </div>
 
-      <div style={ui.tabs} aria-label="Update source">
+      <div
+        className={ui.responsiveClassNames.inputTabs}
+        style={ui.tabs}
+        aria-label="Update source"
+      >
         <SourceTab
           active={!isImageMode}
           icon="✎"
@@ -212,7 +216,7 @@ function ScreenshotUpdateInput({
   if (selectedImage) {
     return (
       <div style={{ display: "grid", gap: 10 }}>
-        <div style={ui.imagePreview}>
+        <div className={ui.responsiveClassNames.imagePreview} style={ui.imagePreview}>
           <div style={ui.imageFrame}>
             <img
               src={selectedImage.previewUrl}

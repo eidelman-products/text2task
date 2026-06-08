@@ -5,29 +5,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import CustomerStoriesSection from "./customer-stories-section";
 
-const workflowSteps = [
-  {
-    number: "1",
-    title: "Paste or upload a client request",
-    text: "Add a message, email, note, or screenshot from your client.",
-  },
-  {
-    number: "2",
-    title: "AI extracts the work",
-    text: "Text2Task finds the project, tasks, budget, deadline, and client details.",
-  },
-  {
-    number: "3",
-    title: "Review before saving",
-    text: "Edit the draft, fix details, and save only when everything looks right.",
-  },
-  {
-    number: "4",
-    title: "Manage it in your workspace",
-    text: "Track tasks, urgent work, deadlines, resources, and recent activity.",
-  },
-];
-
 const proofSteps = [
   {
     step: "1",
@@ -56,14 +33,19 @@ const freePlan = [
   "30 total AI extracts",
   "Text + image extraction",
   "Review before saving",
-  "Basic workspace",
+  "Project CRM workspace",
+  "Client updates & history",
+  "Resource attachments",
 ];
 
 const proPlan = [
   "Unlimited AI extracts",
-  "Unlimited saved tasks",
+  "Text + image extraction",
+  "Review before saving",
+  "Project CRM workspace",
+  "Client updates & history",
+  "Resource attachments",
   "CSV export",
-  "Dashboard analytics",
   "Future Pro features included",
 ];
 
@@ -137,33 +119,67 @@ export default function HeroSection() {
         <section className="t2t-hero">
           <div className="t2t-hero-copy">
             <h1>
-              Turn messy client requests into{" "}
-              <span>ready-to-work projects.</span>
+              <span className="t2t-hero-line">
+                Stop copying client requests.
+              </span>
+              <span className="t2t-hero-line">
+                Let Text2Task turn them into
+              </span>
+              <span className="t2t-hero-line t2t-hero-value">
+                ready-to-work projects.
+              </span>
             </h1>
 
             <p>
-              Text2Task turns emails, WhatsApp messages, screenshots, notes, and
-              client revisions into clean projects with tasks, budgets,
-              deadlines, and client details.
+              Paste a WhatsApp message, email, screenshot, or client note.
+              Text2Task does the hard work. You stay in control.
             </p>
+          </div>
 
-            <div className="t2t-actions">
-              <Link href="/signup" className="t2t-primary">
-                Start for free
-              </Link>
-              <a href="#demo" className="t2t-secondary">
-                Watch demo
-              </a>
-            </div>
+          <button
+            type="button"
+            className="t2t-hero-visual"
+            onClick={() =>
+              openLightbox({
+                title: "Client WhatsApp request",
+                image:
+                  "/landing/text2task-client-whatsapp-social-media-managers.png",
+                alt: "Detailed client WhatsApp request ready to be organized with Text2Task.",
+                ctaText: "Try Text2Task free",
+                ctaHref: "/signup",
+              })
+            }
+            aria-label="Open client WhatsApp request preview"
+          >
+            <Image
+              src="/landing/text2task-client-whatsapp-social-media-managers.png"
+              alt="Detailed client WhatsApp request ready to be organized with Text2Task."
+              width={1450}
+              height={1086}
+              priority
+            />
+          </button>
+
+          <div className="t2t-actions">
+            <Link href="/signup" className="t2t-primary">
+              Start for free
+            </Link>
+            <a href="#demo" className="t2t-secondary">
+              Watch demo
+            </a>
           </div>
         </section>
 
         <section className="t2t-transform-section">
           <div className="t2t-section-heading">
-            <h2>From client message to organized work.</h2>
+            <h2>
+              Just paste text or upload an image.
+              <br />
+              Text2Task extracts the work for you.
+            </h2>
             <p>
-              A real client request can move from messy communication to AI
-              extraction and finally into your workspace.
+              Text2Task finds the tasks, deadline, budget, and client details —
+              then lets you review everything before saving.
             </p>
           </div>
 
@@ -213,16 +229,17 @@ export default function HeroSection() {
 
           <div className="t2t-transform-cta-row">
             <Link href="/signup" className="t2t-soft-cta">
-              Try with your own client message
+              Try it with your own request →
             </Link>
           </div>
         </section>
 
         <section id="demo" className="t2t-demo-section">
           <div className="t2t-section-heading compact">
-            <h2>Watch the real Text2Task demo.</h2>
+            <h2>Watch a client request become a project.</h2>
             <p>
-              See how a client request becomes organized work inside the system.
+              See how one message becomes a clean project draft you can review
+              and save.
             </p>
           </div>
 
@@ -255,43 +272,26 @@ export default function HeroSection() {
               <Step
                 number="2"
                 title="AI extracts the work"
-                text="It finds the project, tasks, budget, deadline, and client details."
+                text="Text2Task finds the task, deadline, budget, and client details."
               />
               <Step
                 number="3"
                 title="Review & save"
-                text="Check the draft, edit details, and save only when it looks right."
+                text="Check the draft, edit anything, and save it when it looks right."
               />
             </div>
           </div>
         </section>
 
-        <section id="features" className="t2t-workflow">
-          <div className="t2t-section-heading compact">
-            <h2>From client request to organized work.</h2>
-          </div>
-
-          <div className="t2t-workflow-track" aria-label="Text2Task workflow">
-            <div className="t2t-workflow-line" aria-hidden="true" />
-
-            {workflowSteps.map((step) => (
-              <div className="t2t-workflow-step" key={step.title}>
-                <div className="t2t-workflow-number">{step.number}</div>
-                <div className="t2t-workflow-content">
-                  <h3>{step.title}</h3>
-                  <p>{step.text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="t2t-workspace">
+        <section id="features" className="t2t-workspace">
           <div className="t2t-section-heading">
-            <h2>Manage everything in one clean workspace.</h2>
+            <h2>
+              Keep client projects organized
+              <br className="t2t-workspace-heading-break" /> in one workspace.
+            </h2>
             <p>
-              Keep extracted client work, urgent tasks, deadlines, and project
-              updates connected in one organized CRM.
+              Track extracted projects, urgent tasks, deadlines, and project
+              updates in one clean CRM.
             </p>
           </div>
 
@@ -316,8 +316,6 @@ export default function HeroSection() {
                 width={1400}
                 height={900}
               />
-
-              <span>View CRM preview</span>
             </button>
 
             <button
@@ -345,13 +343,7 @@ export default function HeroSection() {
                 width={1200}
                 height={680}
               />
-
-              <span>View urgent board</span>
             </button>
-
-            <div className="t2t-workspace-badge" aria-hidden="true">
-              Organized workspace
-            </div>
           </div>
         </section>
 
@@ -398,11 +390,21 @@ export default function HeroSection() {
           </div>
         ) : null}
 
-        <CustomerStoriesSection />
+        <div className="t2t-customer-stories-wrap">
+          <div className="t2t-customer-stories-intro">
+            <h2>Real feedback from people using Text2Task.</h2>
+            <p>
+              A small look at how users organize client requests, projects, and
+              follow-ups.
+            </p>
+          </div>
+
+          <CustomerStoriesSection />
+        </div>
 
         <section id="pricing" className="t2t-pricing">
           <div className="t2t-section-heading compact">
-            <h2>Start free. Upgrade when you need more.</h2>
+            <h2>Start free. Upgrade when you’re ready.</h2>
           </div>
 
           <div className="t2t-pricing-grid">
@@ -423,15 +425,6 @@ export default function HeroSection() {
               popular
             />
           </div>
-        </section>
-
-        <section className="t2t-bottom-cta">
-          <div>
-            <h2>Stop copying. Start organizing.</h2>
-            <p>Try Text2Task with your next real client request.</p>
-          </div>
-
-          <Link href="/signup">Get started free</Link>
         </section>
       </main>
     </div>
@@ -498,11 +491,7 @@ function PricingCard({
 const styles = `
   .t2t-page {
     min-height: 100vh;
-    background:
-      radial-gradient(circle at 16% 8%, rgba(199, 210, 254, 0.34), transparent 30%),
-      radial-gradient(circle at 88% 10%, rgba(221, 214, 254, 0.26), transparent 28%),
-      radial-gradient(circle at 48% 54%, rgba(219, 234, 254, 0.20), transparent 36%),
-      linear-gradient(180deg, #ffffff 0%, #fbfbff 44%, #f8fbff 72%, #ffffff 100%);
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 48%, #ffffff 100%);
     color: #0f172a;
   }
 
@@ -513,11 +502,12 @@ const styles = `
   .t2t-header {
     width: min(1180px, calc(100% - 40px));
     margin: 0 auto;
-    padding: 20px 0 8px;
+    padding: 16px 0 10px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 24px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.72);
   }
 
   .t2t-logo {
@@ -537,19 +527,19 @@ const styles = `
   .t2t-nav {
     display: flex;
     align-items: center;
-    gap: 25px;
+    gap: 23px;
     font-size: 13px;
-    font-weight: 850;
+    font-weight: 750;
   }
 
   .t2t-nav a {
-    color: #0f172a;
+    color: #475569;
     text-decoration: none;
     transition: color 160ms ease;
   }
 
   .t2t-nav a:hover {
-    color: #4f46e5;
+    color: #1d4ed8;
   }
 
   .t2t-nav-cta {
@@ -558,19 +548,20 @@ const styles = `
     justify-content: center;
     height: 42px;
     padding: 0 19px;
-    border-radius: 15px;
-    background: linear-gradient(135deg, #4f46e5, #6d28d9);
+    border-radius: 12px;
+    border: 1px solid #2563eb;
+    background: #2563eb;
     color: white;
     text-decoration: none;
     font-size: 13px;
-    font-weight: 950;
-    box-shadow: 0 16px 36px rgba(79, 70, 229, 0.18);
+    font-weight: 850;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
     transition: transform 160ms ease, box-shadow 160ms ease;
   }
 
   .t2t-nav-cta:hover {
     transform: translateY(-1px);
-    box-shadow: 0 20px 42px rgba(79, 70, 229, 0.22);
+    box-shadow: 0 14px 30px rgba(37, 99, 235, 0.22);
   }
 
   .t2t-main {
@@ -580,45 +571,60 @@ const styles = `
   }
 
   .t2t-hero {
-    display: flex;
-    justify-content: center;
-    padding: 78px 0 52px;
-    text-align: center;
+    display: grid;
+    grid-template-columns: minmax(0, 655px) minmax(0, 495px);
+    grid-template-areas:
+      "copy visual"
+      "actions visual";
+    column-gap: 24px;
+    row-gap: 28px;
+    align-items: center;
+    padding: 86px 0 56px;
+    text-align: left;
   }
 
   .t2t-hero-copy {
-    max-width: 920px;
+    grid-area: copy;
+    width: 100%;
+    max-width: 655px;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
   }
 
   .t2t-hero h1 {
     margin: 0;
-    max-width: 940px;
-    font-size: clamp(48px, 6.2vw, 82px);
-    line-height: 1.03;
-    letter-spacing: -0.045em;
+    max-width: 655px;
+    font-size: clamp(43px, 4vw, 49px);
+    line-height: 1.14;
+    letter-spacing: -0.05em;
     font-weight: 950;
   }
 
-  .t2t-hero h1 span {
-    color: #4f46e5;
+  .t2t-hero-line {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .t2t-hero-value {
+    color: #2563eb;
   }
 
   .t2t-hero-copy p {
-    margin: 22px auto 0;
-    font-size: clamp(18px, 2vw, 22px);
-    line-height: 1.62;
+    margin: 28px 0 0;
+    font-size: clamp(16px, 1.55vw, 19px);
+    line-height: 1.58;
     color: #475569;
-    max-width: 780px;
-    font-weight: 560;
+    max-width: 530px;
+    font-weight: 540;
   }
 
   .t2t-actions {
-    margin-top: 30px;
+    grid-area: actions;
+    margin-top: 0;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
+    align-self: start;
     gap: 14px;
     flex-wrap: wrap;
   }
@@ -626,28 +632,29 @@ const styles = `
   .t2t-primary,
   .t2t-secondary {
     height: 46px;
-    padding: 0 24px;
-    border-radius: 16px;
+    padding: 0 22px;
+    border-radius: 13px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
     font-size: 14px;
-    font-weight: 950;
+    font-weight: 850;
     transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
   }
 
   .t2t-primary {
-    background: linear-gradient(135deg, #4f46e5, #6d28d9);
+    border: 1px solid #2563eb;
+    background: #2563eb;
     color: white;
-    box-shadow: 0 16px 36px rgba(79, 70, 229, 0.18);
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.18);
   }
 
   .t2t-secondary {
-    background: rgba(255,255,255,0.9);
-    color: #0f172a;
-    border: 1px solid #dbe4f0;
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+    background: rgba(255, 255, 255, 0.92);
+    color: #334155;
+    border: 1px solid rgba(203, 213, 225, 0.92);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045);
   }
 
   .t2t-primary:hover,
@@ -655,12 +662,110 @@ const styles = `
     transform: translateY(-1px);
   }
 
+  .t2t-hero-visual {
+    grid-area: visual;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    justify-self: end;
+    align-self: center;
+    overflow: hidden;
+    border: 1px solid rgba(203, 213, 225, 0.78);
+    border-radius: 18px;
+    background: rgba(37, 99, 235, 0.085);
+    box-shadow: 0 10px 32px rgba(15, 23, 42, 0.055);
+    cursor: pointer;
+    transform: translateY(30px);
+    transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
+  }
+
+  .t2t-hero-visual:hover {
+    transform: translateY(27px);
+    border-color: rgba(147, 197, 253, 0.9);
+    box-shadow: 0 14px 38px rgba(37, 99, 235, 0.075);
+  }
+
+  .t2t-hero-visual:focus-visible {
+    outline: 4px solid rgba(37, 99, 235, 0.18);
+    outline-offset: 4px;
+  }
+
+  .t2t-hero-visual img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
   .t2t-transform-section,
   .t2t-demo-section,
-  .t2t-workflow,
   .t2t-workspace,
   .t2t-pricing {
-    padding: 42px 0;
+    padding: 48px 0;
+  }
+
+  .t2t-transform-section {
+    padding-top: 68px;
+  }
+
+  .t2t-transform-section .t2t-section-heading {
+    max-width: none;
+    margin: 0 0 20px;
+    text-align: left;
+  }
+
+  .t2t-transform-section .t2t-section-heading h2,
+  .t2t-transform-section .t2t-section-heading p {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .t2t-transform-section .t2t-section-heading h2 {
+    font-size: clamp(28px, 2.7vw, 38px);
+    line-height: 1.16;
+    font-weight: 700;
+  }
+
+  .t2t-demo-section {
+    padding-top: 72px;
+    padding-bottom: 42px;
+  }
+
+  .t2t-demo-section .t2t-section-heading {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    text-align: left;
+  }
+
+  .t2t-demo-section .t2t-section-heading h2,
+  .t2t-demo-section .t2t-section-heading p {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .t2t-demo-section .t2t-section-heading h2 {
+    line-height: 1.14;
+    font-weight: 600;
+  }
+
+  .t2t-pricing {
+    padding-top: 96px;
+    padding-bottom: 38px;
+  }
+
+  .t2t-pricing .t2t-section-heading {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    text-align: left;
+  }
+
+  .t2t-pricing .t2t-section-heading h2 {
+    margin-left: 0;
+    margin-right: 0;
+    font-size: clamp(28px, 2.7vw, 38px);
+    line-height: 1.16;
+    font-weight: 700;
   }
 
   .t2t-section-heading {
@@ -695,17 +800,13 @@ const styles = `
   .t2t-proof-flow {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
+    gap: 30px;
     align-items: stretch;
-    margin-top: 30px;
-    padding: 24px;
-    border-radius: 34px;
-    border: 1px solid rgba(226, 232, 240, 0.72);
-    background:
-      radial-gradient(circle at 18% 16%, rgba(219, 234, 254, 0.46), transparent 32%),
-      radial-gradient(circle at 82% 18%, rgba(238, 242, 255, 0.70), transparent 34%),
-      rgba(255,255,255,0.50);
-    box-shadow: 0 26px 90px rgba(15, 23, 42, 0.052);
+    margin-top: 10px;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .t2t-proof-step {
@@ -716,21 +817,17 @@ const styles = `
   .t2t-proof-connector {
     pointer-events: none;
     position: absolute;
-    left: -29px;
-    top: 41%;
+    left: -30px;
+    top: 37%;
     z-index: 10;
-    width: 40px;
-    height: 40px;
-    border-radius: 999px;
+    width: 30px;
+    height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(199,210,254,0.88);
-    background: rgba(255,255,255,0.94);
-    color: #4f46e5;
-    font-size: 18px;
-    font-weight: 950;
-    box-shadow: 0 14px 34px rgba(79,70,229,0.10);
+    color: #93c5fd;
+    font-size: 19px;
+    font-weight: 750;
   }
 
   .t2t-proof-card {
@@ -740,43 +837,45 @@ const styles = `
     height: 100%;
     display: grid;
     grid-template-rows: 1fr auto;
-    overflow: hidden;
-    border: 1px solid rgba(226, 232, 240, 0.95);
-    border-radius: 28px;
-    background: rgba(255,255,255,0.92);
-    padding: 12px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
     cursor: pointer;
     text-align: left;
-    box-shadow:
-      0 24px 70px rgba(15, 23, 42, 0.07),
-      inset 0 1px 0 rgba(255,255,255,0.94);
+    box-shadow: none;
     transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
   }
 
   .t2t-proof-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(165, 180, 252, 0.95);
-    box-shadow:
-      0 34px 88px rgba(79, 70, 229, 0.10),
-      inset 0 1px 0 rgba(255,255,255,0.96);
+    box-shadow: none;
   }
 
   .t2t-proof-card:focus-visible {
-    outline: 4px solid rgba(99,102,241,0.22);
+    outline: 4px solid rgba(37, 99, 235, 0.18);
     outline-offset: 4px;
   }
 
   .t2t-proof-image {
     overflow: hidden;
-    border-radius: 20px;
-    border: 1px solid rgba(203, 213, 225, 0.88);
-    background: #f8fafc;
+    border-radius: 13px;
+    border: 1px solid rgba(203, 213, 225, 0.52);
+    background: #ffffff;
+    box-shadow: 0 5px 18px rgba(15, 23, 42, 0.03);
+    transition: border-color 170ms ease, box-shadow 170ms ease;
+  }
+
+  .t2t-proof-card:hover .t2t-proof-image {
+    border-color: rgba(147, 197, 253, 0.88);
+    box-shadow: 0 9px 24px rgba(37, 99, 235, 0.055);
   }
 
   .t2t-proof-image img {
     display: block;
     width: 100%;
-    height: 225px;
+    height: 238px;
     object-fit: contain;
     object-position: center;
     background: #f8fafc;
@@ -786,26 +885,27 @@ const styles = `
     display: flex;
     align-items: center;
     gap: 11px;
-    padding: 14px 4px 2px;
+    padding: 12px 2px 0;
   }
 
   .t2t-proof-label span {
     display: flex;
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    background: #eef2ff;
-    color: #4f46e5;
-    font-size: 12px;
-    font-weight: 950;
+    background: rgba(239, 246, 255, 0.92);
+    color: #2563eb;
+    font-size: 10px;
+    font-weight: 850;
+    border: 1px solid rgba(191, 219, 254, 0.82);
   }
 
   .t2t-proof-label strong {
     color: #0f172a;
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.2;
     font-weight: 950;
   }
@@ -837,7 +937,7 @@ const styles = `
   .t2t-transform-cta-row {
     display: flex;
     justify-content: center;
-    margin-top: 22px;
+    margin-top: 20px;
   }
 
   .t2t-soft-cta {
@@ -846,45 +946,53 @@ const styles = `
     justify-content: center;
     min-height: 44px;
     padding: 0 22px;
-    border-radius: 16px;
-    background: rgba(238, 242, 255, 0.72);
-    color: #4338ca;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1d4ed8;
     text-decoration: none;
     font-size: 14px;
-    font-weight: 950;
-    border: 1px solid rgba(199, 210, 254, 0.9);
-    transition: transform 160ms ease, background 160ms ease;
+    font-weight: 750;
+    border: 1px solid rgba(37, 99, 235, 0.14);
+    box-shadow: 0 7px 20px rgba(37, 99, 235, 0.07);
+    transition:
+      transform 160ms ease,
+      background 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease,
+      box-shadow 160ms ease;
   }
 
   .t2t-soft-cta:hover {
     transform: translateY(-1px);
-    background: rgba(238, 242, 255, 0.95);
+    background: rgba(37, 99, 235, 0.13);
+    border-color: rgba(37, 99, 235, 0.2);
+    color: #1d4ed8;
+    box-shadow: 0 10px 26px rgba(37, 99, 235, 0.1);
   }
 
   .t2t-demo-grid {
     max-width: 920px;
-    margin: 0 auto;
+    margin: 36px 0 0;
     display: grid;
     grid-template-columns: 1.15fr 0.85fr;
-    gap: 34px;
+    gap: 22px;
     align-items: center;
-    padding: 22px;
-    border-radius: 32px;
-    border: 1px solid rgba(226,232,240,0.74);
-    background: rgba(255,255,255,0.58);
-    box-shadow: 0 24px 80px rgba(15,23,42,0.055);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .t2t-video-card {
     overflow: hidden;
-    border-radius: 26px;
-    background: #020617;
-    padding: 10px;
-    box-shadow: 0 28px 72px rgba(15, 23, 42, 0.18);
+    border-radius: 16px;
+    background: #0f172a;
+    padding: 6px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
   }
 
   .t2t-video-top {
-    height: 34px;
+    height: 30px;
     display: flex;
     align-items: center;
     gap: 7px;
@@ -923,135 +1031,87 @@ const styles = `
     max-height: 280px;
     aspect-ratio: 16 / 9;
     object-fit: cover;
-    border-radius: 18px;
+    border-radius: 12px;
     background: #020617;
   }
 
   .t2t-demo-steps {
     display: grid;
-    gap: 18px;
+    gap: 22px;
+    align-content: center;
   }
 
   .t2t-step {
     display: flex;
-    gap: 14px;
+    gap: 13px;
     align-items: flex-start;
   }
 
   .t2t-step-icon {
-    width: 42px;
-    height: 42px;
+    width: 34px;
+    height: 34px;
     flex: 0 0 auto;
-    border-radius: 16px;
-    background: #eef2ff;
-    color: #4f46e5;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #2563eb;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 950;
-    box-shadow: 0 10px 24px rgba(79, 70, 229, 0.08);
+    font-size: 12px;
+    font-weight: 800;
+    border: 1px solid rgba(96, 165, 250, 0.82);
+    box-shadow:
+      0 4px 12px rgba(37, 99, 235, 0.08),
+      0 0 0 3px rgba(239, 246, 255, 0.68);
   }
 
   .t2t-step h3 {
     margin: 0;
     font-size: 15px;
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: -0.02em;
   }
 
   .t2t-step p {
-    margin: 5px 0 0;
+    margin: 8px 0 0;
     color: #64748b;
     font-size: 13px;
     line-height: 1.58;
-    font-weight: 640;
+    font-weight: 520;
   }
 
-  .t2t-workflow {
-    position: relative;
+  .t2t-workspace {
+    padding-top: 72px;
   }
 
-  .t2t-workflow-track {
-    position: relative;
-    max-width: 1040px;
-    margin: 34px auto 0;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0;
-    isolation: isolate;
+  .t2t-workspace .t2t-section-heading {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    text-align: left;
   }
 
-  .t2t-workflow-line {
-    position: absolute;
-    top: 25px;
-    left: calc(12.5% + 24px);
-    right: calc(12.5% + 24px);
-    height: 2px;
-    background: linear-gradient(
-      90deg,
-      rgba(99, 102, 241, 0.12),
-      rgba(99, 102, 241, 0.34),
-      rgba(79, 70, 229, 0.34),
-      rgba(99, 102, 241, 0.12)
-    );
-    z-index: 0;
+  .t2t-workspace .t2t-section-heading h2,
+  .t2t-workspace .t2t-section-heading p {
+    margin-left: 0;
+    margin-right: 0;
   }
 
-  .t2t-workflow-step {
-    position: relative;
-    z-index: 1;
-    min-width: 0;
-    padding: 0 16px;
-    text-align: center;
+  .t2t-workspace .t2t-section-heading h2 {
+    font-size: clamp(28px, 2.7vw, 38px);
+    line-height: 1.16;
+    font-weight: 700;
   }
 
-  .t2t-workflow-number {
-    width: 52px;
-    height: 52px;
-    margin: 0 auto;
-    border-radius: 999px;
-    background:
-      radial-gradient(circle at 30% 20%, #ffffff 0%, #ffffff 28%, transparent 40%),
-      linear-gradient(135deg, #eef2ff, #f8fafc);
-    border: 1px solid rgba(199, 210, 254, 0.92);
-    color: #4f46e5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 15px;
-    font-weight: 950;
-    box-shadow:
-      0 14px 30px rgba(79, 70, 229, 0.10),
-      0 0 0 8px rgba(255, 255, 255, 0.86),
-      inset 0 1px 0 rgba(255,255,255,0.95);
-  }
-
-  .t2t-workflow-content {
-    margin-top: 18px;
-  }
-
-  .t2t-workflow-content h3 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 950;
-    line-height: 1.2;
-    letter-spacing: -0.032em;
-  }
-
-  .t2t-workflow-content p {
-    margin: 9px auto 0;
-    max-width: 215px;
-    color: #64748b;
-    font-size: 13px;
-    line-height: 1.58;
-    font-weight: 610;
+  .t2t-workspace-heading-break {
+    display: block;
   }
 
   .t2t-workspace-premium {
     position: relative;
     max-width: 960px;
-    min-height: 520px;
-    margin: 34px auto 0;
+    min-height: 468px;
+    margin: 24px auto 0;
   }
 
   .t2t-workspace-main-preview {
@@ -1060,31 +1120,25 @@ const styles = `
     top: 24px;
     width: 72%;
     overflow: hidden;
-    border: 1px solid rgba(226,232,240,0.92);
-    border-radius: 34px;
-    background:
-      radial-gradient(circle at 15% 0%, rgba(238,242,255,0.72), transparent 34%),
-      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.9));
-    padding: 14px;
+    border: 1px solid rgba(226, 232, 240, 0.5);
+    border-radius: 15px;
+    background: #ffffff;
+    padding: 8px;
     cursor: pointer;
     text-align: left;
-    box-shadow:
-      0 30px 90px rgba(15,23,42,0.08),
-      inset 0 1px 0 rgba(255,255,255,0.96);
+    box-shadow: 0 5px 18px rgba(15, 23, 42, 0.026);
     transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
   }
 
   .t2t-workspace-main-preview:hover {
     transform: translateY(-4px);
-    border-color: rgba(165,180,252,0.95);
-    box-shadow:
-      0 40px 110px rgba(79,70,229,0.13),
-      inset 0 1px 0 rgba(255,255,255,0.98);
+    border-color: rgba(191, 219, 254, 0.72);
+    box-shadow: 0 9px 26px rgba(37, 99, 235, 0.045);
   }
 
   .t2t-workspace-main-preview:focus-visible,
   .t2t-workspace-floating-preview:focus-visible {
-    outline: 4px solid rgba(99,102,241,0.22);
+    outline: 4px solid rgba(37, 99, 235, 0.18);
     outline-offset: 4px;
   }
 
@@ -1094,24 +1148,9 @@ const styles = `
     height: 390px;
     object-fit: contain;
     object-position: center;
-    border-radius: 24px;
-    border: 1px solid rgba(203,213,225,0.9);
+    border-radius: 13px;
+    border: 1px solid rgba(203, 213, 225, 0.56);
     background: #f8fafc;
-  }
-
-  .t2t-workspace-main-preview span {
-    position: absolute;
-    right: 28px;
-    top: 28px;
-    border-radius: 999px;
-    background: rgba(79,70,229,0.08);
-    color: #4f46e5;
-    padding: 8px 12px;
-    font-size: 11px;
-    font-weight: 950;
-    letter-spacing: 0.11em;
-    text-transform: uppercase;
-    box-shadow: 0 10px 24px rgba(79,70,229,0.06);
   }
 
   .t2t-workspace-floating-preview {
@@ -1121,28 +1160,20 @@ const styles = `
     z-index: 4;
     width: 45%;
     overflow: hidden;
-    border: 1px solid rgba(226,232,240,0.95);
-    border-radius: 30px;
-    background:
-      radial-gradient(circle at 85% 0%, rgba(219,234,254,0.72), transparent 34%),
-      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.92));
-    padding: 15px;
+    border: 1px solid rgba(226, 232, 240, 0.58);
+    border-radius: 15px;
+    background: #ffffff;
+    padding: 10px;
     cursor: pointer;
     text-align: left;
-    box-shadow:
-      0 32px 88px rgba(15,23,42,0.11),
-      0 18px 54px rgba(79,70,229,0.08),
-      inset 0 1px 0 rgba(255,255,255,0.96);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.042);
     transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
   }
 
   .t2t-workspace-floating-preview:hover {
     transform: translateY(-4px);
-    border-color: rgba(165,180,252,0.95);
-    box-shadow:
-      0 42px 110px rgba(79,70,229,0.14),
-      0 18px 54px rgba(15,23,42,0.08),
-      inset 0 1px 0 rgba(255,255,255,0.98);
+    border-color: rgba(191, 219, 254, 0.74);
+    box-shadow: 0 11px 30px rgba(37, 99, 235, 0.052);
   }
 
   .t2t-workspace-floating-preview div {
@@ -1173,45 +1204,9 @@ const styles = `
     height: 210px;
     object-fit: contain;
     object-position: center;
-    border-radius: 20px;
-    border: 1px solid rgba(203,213,225,0.9);
+    border-radius: 12px;
+    border: 1px solid rgba(203, 213, 225, 0.56);
     background: #f8fafc;
-  }
-
-  .t2t-workspace-floating-preview span {
-    position: absolute;
-    right: 20px;
-    top: 20px;
-    border-radius: 999px;
-    background: rgba(79,70,229,0.08);
-    color: #4f46e5;
-    padding: 7px 10px;
-    font-size: 10px;
-    font-weight: 950;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  .t2t-workspace-badge {
-    position: absolute;
-    left: 52%;
-    top: 10px;
-    z-index: 5;
-    transform: translateX(-50%);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 40px;
-    padding: 0 17px;
-    border-radius: 999px;
-    border: 1px solid rgba(199,210,254,0.9);
-    background: rgba(255,255,255,0.9);
-    color: #4338ca;
-    font-size: 12px;
-    font-weight: 950;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    box-shadow: 0 18px 42px rgba(79,70,229,0.10);
   }
 
   .t2t-lightbox-overlay {
@@ -1298,63 +1293,122 @@ const styles = `
     height: 44px;
     padding: 0 22px;
     border-radius: 14px;
-    background: linear-gradient(135deg, #4f46e5, #6d28d9);
+    background: #2563eb;
     color: white;
     text-decoration: none;
     font-size: 14px;
     font-weight: 900;
   }
 
+  .t2t-customer-stories-wrap {
+    padding: 34px 0 36px;
+  }
+
+  .t2t-customer-stories-wrap:not(:has(.t2t-customer-stories)) {
+    display: none;
+  }
+
+  .t2t-customer-stories-intro {
+    max-width: none;
+    margin: 0 0 56px;
+    text-align: left;
+  }
+
+  .t2t-customer-stories-intro h2 {
+    margin: 0;
+    color: #0f172a;
+    font-size: clamp(28px, 2.7vw, 38px);
+    line-height: 1.16;
+    letter-spacing: -0.055em;
+    font-weight: 700;
+  }
+
+  .t2t-customer-stories-intro p {
+    max-width: 650px;
+    margin: 14px 0 0;
+    color: #64748b;
+    font-size: 15px;
+    line-height: 1.72;
+    font-weight: 620;
+  }
+
+  .t2t-customer-stories-wrap .t2t-customer-stories {
+    padding: 0;
+  }
+
+  .t2t-customer-stories-wrap .t2t-customer-stories-shell {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .t2t-customer-stories-wrap .t2t-customer-stories-header {
+    display: none;
+  }
+
+  .t2t-customer-stories-wrap .t2t-customer-stories-grid {
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  .t2t-customer-stories-wrap .t2t-customer-story-card {
+    border-color: rgba(226, 232, 240, 0.68);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 5px 18px rgba(15, 23, 42, 0.028);
+  }
+
+  .t2t-customer-stories-wrap .t2t-customer-story-card:hover {
+    border-color: rgba(203, 213, 225, 0.82);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.045);
+  }
+
+  .t2t-customer-stories-wrap .t2t-customer-story-quote {
+    color: rgba(59, 130, 246, 0.58);
+  }
+
   .t2t-pricing-grid {
     max-width: 760px;
-    margin: 24px auto 0;
+    margin: 56px auto 0;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 22px;
+    gap: 20px;
   }
 
   .t2t-price-card {
     position: relative;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.92));
-    border: 1px solid rgba(226, 232, 240, 0.96);
-    border-radius: 28px;
-    padding: 28px;
-    box-shadow:
-      0 20px 58px rgba(15, 23, 42, 0.07),
-      inset 0 1px 0 rgba(255,255,255,0.94);
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(226, 232, 240, 0.58);
+    border-radius: 22px;
+    padding: 26px;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.028);
     transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease, background 170ms ease;
   }
 
   .t2t-price-card:hover {
-    transform: translateY(-4px);
-    border-color: #c7d2fe;
-    background:
-      linear-gradient(180deg, #ffffff, #f8f7ff);
-    box-shadow:
-      0 34px 82px rgba(79, 70, 229, 0.12),
-      inset 0 1px 0 rgba(255,255,255,0.96);
+    transform: translateY(-2px);
+    border-color: rgba(203, 213, 225, 0.78);
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.045);
   }
 
   .t2t-price-card.popular {
-    border-color: rgba(129, 140, 248, 0.84);
-    background:
-      radial-gradient(circle at 85% 0%, rgba(129, 140, 248, 0.12), transparent 34%),
-      linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.94));
+    border-color: rgba(191, 219, 254, 0.62);
+    background: linear-gradient(180deg, #ffffff, rgba(248, 251, 255, 0.58));
+    box-shadow: 0 7px 22px rgba(37, 99, 235, 0.036);
   }
 
   .t2t-popular {
     position: absolute;
-    top: -14px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: linear-gradient(135deg, #4f46e5, #6d28d9);
-    color: white;
+    top: 12px;
+    right: 14px;
+    border: 1px solid rgba(191, 219, 254, 0.56);
+    background: rgba(239, 246, 255, 0.62);
+    color: #2563eb;
     border-radius: 999px;
-    padding: 7px 18px;
-    font-size: 11px;
-    font-weight: 950;
-    box-shadow: 0 14px 30px rgba(79, 70, 229, 0.20);
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 750;
+    box-shadow: none;
   }
 
   .t2t-price-card h3 {
@@ -1388,7 +1442,7 @@ const styles = `
     margin: 22px 0 0;
     padding: 0;
     display: grid;
-    gap: 11px;
+    gap: 10px;
   }
 
   .t2t-price-card li {
@@ -1401,68 +1455,113 @@ const styles = `
     margin-top: 24px;
     width: 100%;
     height: 44px;
-    border-radius: 15px;
-    background: linear-gradient(135deg, #4f46e5, #6d28d9);
+    border-radius: 14px;
+    border: 1px solid #2563eb;
+    background: #2563eb;
     color: white;
     text-decoration: none;
     font-size: 13px;
-    font-weight: 950;
+    font-weight: 850;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 14px 34px rgba(79, 70, 229, 0.16);
-    transition: transform 160ms ease, box-shadow 160ms ease;
+    box-shadow: 0 5px 15px rgba(37, 99, 235, 0.11);
+    transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
   }
 
   .t2t-price-card a:hover {
     transform: translateY(-1px);
-    box-shadow: 0 20px 44px rgba(79, 70, 229, 0.24);
+    background: #1e40af;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15);
   }
 
-  .t2t-bottom-cta {
-    margin: 32px auto 0;
-    max-width: 930px;
-    border-radius: 28px;
-    background:
-      radial-gradient(circle at top left, rgba(199,210,254,0.5), transparent 34%),
-      linear-gradient(135deg, #f8fafc, #eef2ff);
-    border: 1px solid #dbe4f0;
-    padding: 26px 30px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    box-shadow: 0 18px 54px rgba(79, 70, 229, 0.07);
+  main .t2t-footer {
+    margin-top: 68px;
+    border-top-color: rgba(226, 232, 240, 0.58);
+    background: rgba(255, 255, 255, 0.92);
   }
 
-  .t2t-bottom-cta h2 {
-    margin: 0;
-    font-size: 28px;
-    line-height: 1.15;
-    letter-spacing: -0.045em;
-    font-weight: 950;
+  main .t2t-footer .t2t-footer-inner {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.95fr);
+    gap: 64px;
+    padding: 42px 4px 36px;
   }
 
-  .t2t-bottom-cta p {
-    margin: 6px 0 0;
+  main .t2t-footer .t2t-footer-brand {
+    max-width: 370px;
+  }
+
+  main .t2t-footer .t2t-footer-brand p {
+    margin-top: 17px;
     color: #64748b;
-    font-size: 14px;
+    font-weight: 560;
+  }
+
+  main .t2t-footer .t2t-footer-support {
+    margin-top: 21px;
+  }
+
+  main .t2t-footer .t2t-footer-support span {
+    color: #94a3b8;
+    font-weight: 800;
+  }
+
+  main .t2t-footer .t2t-footer-support strong {
+    color: #2563eb;
+    font-weight: 750;
+    transition: color 160ms ease;
+  }
+
+  main .t2t-footer .t2t-footer-support:hover strong {
+    color: #1d4ed8;
+  }
+
+  main .t2t-footer .t2t-footer-nav {
+    gap: 36px;
+    padding-top: 5px;
+  }
+
+  main .t2t-footer .t2t-footer-column h3 {
+    margin-bottom: 16px;
+    color: #334155;
+    font-weight: 750;
+  }
+
+  main .t2t-footer .t2t-footer-column div {
+    gap: 11px;
+  }
+
+  main .t2t-footer .t2t-footer-column a {
+    color: #64748b;
+    font-weight: 560;
+  }
+
+  main .t2t-footer .t2t-footer-column a:hover {
+    color: #1d4ed8;
+  }
+
+  main .t2t-footer .t2t-footer-bottom {
+    border-top-color: rgba(226, 232, 240, 0.58);
+    padding: 20px 4px;
+    color: #94a3b8;
+    font-weight: 560;
+  }
+
+  main .t2t-footer .t2t-footer-bottom div {
+    gap: 11px;
+  }
+
+  main .t2t-footer .t2t-footer-bottom a {
+    color: #64748b;
     font-weight: 650;
   }
 
-  .t2t-bottom-cta a {
-    height: 44px;
-    min-width: 170px;
-    border-radius: 15px;
-    background: linear-gradient(135deg, #4f46e5, #6d28d9);
-    color: white;
-    text-decoration: none;
-    font-weight: 950;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 14px 34px rgba(79, 70, 229, 0.18);
+  main .t2t-footer .t2t-footer-bottom a:hover {
+    color: #1d4ed8;
+  }
+
+  main .t2t-footer .t2t-footer-bottom div span {
+    color: #cbd5e1;
   }
 
   @media (max-width: 980px) {
@@ -1471,11 +1570,153 @@ const styles = `
     }
 
     .t2t-hero {
-      padding-top: 44px;
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "copy"
+        "visual"
+        "actions";
+      gap: 0;
+      padding: 52px 0 38px;
+      text-align: center;
     }
 
     .t2t-hero-copy {
-      max-width: 720px;
+      max-width: 760px;
+      margin: 0 auto;
+      align-items: center;
+    }
+
+    .t2t-hero-copy p {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .t2t-hero-visual {
+      width: min(720px, 100%);
+      margin: 34px auto 0;
+      justify-self: center;
+      transform: none;
+    }
+
+    .t2t-hero-visual:hover {
+      transform: translateY(-2px);
+    }
+
+    .t2t-actions {
+      margin-top: 24px;
+      justify-content: center;
+      align-self: auto;
+    }
+
+    .t2t-hero-line {
+      white-space: normal;
+    }
+
+    .t2t-transform-section .t2t-section-heading {
+      max-width: 760px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+
+    .t2t-transform-section .t2t-section-heading h2,
+    .t2t-transform-section .t2t-section-heading p {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .t2t-demo-section .t2t-section-heading {
+      max-width: 760px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+
+    .t2t-demo-section .t2t-section-heading h2,
+    .t2t-demo-section .t2t-section-heading p {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .t2t-workspace .t2t-section-heading {
+      max-width: 760px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+
+    .t2t-workspace .t2t-section-heading h2,
+    .t2t-workspace .t2t-section-heading p {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .t2t-pricing .t2t-section-heading {
+      max-width: 760px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+
+    .t2t-pricing .t2t-section-heading h2 {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .t2t-workspace {
+      padding-top: 52px;
+    }
+
+    .t2t-workspace-heading-break {
+      display: none;
+    }
+
+    .t2t-customer-stories-intro {
+      max-width: 760px;
+      margin-left: auto;
+      margin-right: auto;
+      margin-bottom: 48px;
+      text-align: center;
+    }
+
+    .t2t-customer-stories-intro p {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .t2t-customer-stories-wrap .t2t-customer-stories-grid {
+      gap: 20px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .t2t-demo-grid {
+      margin-top: 36px;
+      margin-left: auto;
+      margin-right: auto;
+      gap: 30px;
+    }
+
+    .t2t-demo-section {
+      padding-top: 52px;
+    }
+
+    .t2t-pricing {
+      padding-top: 72px;
+    }
+
+    .t2t-pricing-grid {
+      margin-top: 48px;
+    }
+
+    main .t2t-footer .t2t-footer-inner {
+      grid-template-columns: 1fr;
+      gap: 42px;
+    }
+
+    main .t2t-footer .t2t-footer-nav {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 34px 28px;
     }
 
     .t2t-proof-flow,
@@ -1485,13 +1726,17 @@ const styles = `
     }
 
     .t2t-proof-flow {
-      padding: 18px;
+      gap: 36px;
+      margin-top: 18px;
+      padding: 8px 0;
+    }
+
+    .t2t-transform-cta-row {
+      margin-top: 28px;
     }
 
     .t2t-proof-connector {
-      left: 50%;
-      top: -28px;
-      transform: translateX(-50%) rotate(90deg);
+      display: none;
     }
 
     .t2t-proof-image img {
@@ -1501,7 +1746,8 @@ const styles = `
     .t2t-workspace-premium {
       min-height: auto;
       display: grid;
-      gap: 18px;
+      gap: 20px;
+      margin-top: 34px;
     }
 
     .t2t-workspace-main-preview,
@@ -1522,59 +1768,6 @@ const styles = `
       height: 260px;
     }
 
-    .t2t-workspace-badge {
-      position: relative;
-      left: auto;
-      top: auto;
-      transform: none;
-      justify-self: center;
-      order: -1;
-    }
-
-    .t2t-workflow-track {
-      max-width: 620px;
-      grid-template-columns: 1fr;
-      gap: 26px;
-      margin-top: 30px;
-    }
-
-    .t2t-workflow-line {
-      top: 26px;
-      bottom: 26px;
-      left: 26px;
-      right: auto;
-      width: 2px;
-      height: auto;
-      background: linear-gradient(
-        180deg,
-        rgba(79, 70, 229, 0.12),
-        rgba(79, 70, 229, 0.34),
-        rgba(79, 70, 229, 0.12)
-      );
-    }
-
-    .t2t-workflow-step {
-      display: grid;
-      grid-template-columns: 52px 1fr;
-      gap: 18px;
-      padding: 0;
-      text-align: left;
-      align-items: flex-start;
-    }
-
-    .t2t-workflow-number {
-      margin: 0;
-    }
-
-    .t2t-workflow-content {
-      margin-top: 2px;
-    }
-
-    .t2t-workflow-content p {
-      margin-left: 0;
-      margin-right: 0;
-      max-width: 460px;
-    }
   }
 
   @media (max-width: 640px) {
@@ -1585,6 +1778,7 @@ const styles = `
 
     .t2t-header {
       padding-top: 14px;
+      gap: 12px;
     }
 
     .t2t-logo img {
@@ -1602,12 +1796,32 @@ const styles = `
     }
 
     .t2t-hero h1 {
-      font-size: 42px;
-      line-height: 1.08;
+      font-size: clamp(29px, 8.4vw, 34px);
+      line-height: 1.12;
+      letter-spacing: -0.045em;
     }
 
     .t2t-hero-copy p {
-      font-size: 17px;
+      margin-top: 22px;
+      font-size: 16px;
+      line-height: 1.55;
+    }
+
+    .t2t-actions {
+      width: 100%;
+      margin-top: 20px;
+      gap: 10px;
+    }
+
+    .t2t-hero-visual {
+      margin-top: 26px;
+      border-radius: 13px;
+      box-shadow: 0 7px 22px rgba(15, 23, 42, 0.05);
+    }
+
+    .t2t-primary,
+    .t2t-secondary {
+      width: 100%;
     }
 
     .t2t-section-heading h2 {
@@ -1616,10 +1830,43 @@ const styles = `
 
     .t2t-transform-section,
     .t2t-demo-section,
-    .t2t-workflow,
     .t2t-workspace,
     .t2t-pricing {
-      padding: 34px 0;
+      padding: 30px 0;
+    }
+
+    .t2t-demo-section {
+      padding-top: 42px;
+    }
+
+    .t2t-workspace {
+      padding-top: 44px;
+    }
+
+    .t2t-pricing {
+      padding-top: 54px;
+    }
+
+    .t2t-pricing-grid {
+      margin-top: 44px;
+    }
+
+    main .t2t-footer {
+      margin-top: 50px;
+    }
+
+    main .t2t-footer .t2t-footer-inner {
+      padding: 32px 0;
+      gap: 34px;
+    }
+
+    main .t2t-footer .t2t-footer-nav {
+      gap: 30px 20px;
+    }
+
+    main .t2t-footer .t2t-footer-bottom {
+      padding: 22px 0;
+      gap: 16px;
     }
 
     .t2t-proof-image img,
@@ -1632,18 +1879,25 @@ const styles = `
       padding-right: 0;
     }
 
-    .t2t-workspace-main-preview span,
-    .t2t-workspace-floating-preview span {
-      position: static;
-      width: fit-content;
-      margin-top: 12px;
-      display: inline-flex;
+    .t2t-demo-grid {
+      margin-top: 32px;
+      gap: 26px;
+      padding: 0;
     }
 
-    .t2t-proof-flow,
-    .t2t-demo-grid {
-      padding: 14px;
-      border-radius: 26px;
+    .t2t-proof-flow {
+      gap: 32px;
+      margin-top: 16px;
+      padding: 6px 0;
+    }
+
+    .t2t-transform-cta-row {
+      margin-top: 26px;
+    }
+
+    .t2t-workspace-premium {
+      gap: 18px;
+      margin-top: 30px;
     }
 
     .t2t-lightbox-panel {
@@ -1661,14 +1915,20 @@ const styles = `
       grid-template-columns: 1fr;
     }
 
-    .t2t-bottom-cta {
-      flex-direction: column;
-      align-items: stretch;
-      padding: 24px;
+    .t2t-customer-stories-wrap {
+      padding: 28px 0 30px;
     }
 
-    .t2t-bottom-cta a {
-      width: 100%;
+    .t2t-customer-stories-intro {
+      margin-bottom: 44px;
+    }
+
+    .t2t-customer-stories-wrap .t2t-customer-stories-grid {
+      gap: 20px;
+    }
+
+    .t2t-customer-stories-intro h2 {
+      font-size: 28px;
     }
   }
 `;

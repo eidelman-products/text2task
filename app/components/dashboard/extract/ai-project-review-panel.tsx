@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import type { HybridPreviewMeta } from "@/lib/preview/hybrid-preview";
+import { formatDeadline } from "@/lib/tasks/format-deadline";
 import type { PreviewProjectGroup } from "../editable-preview-list";
 
 type PreviewFieldName =
@@ -28,26 +29,19 @@ type AiProjectReviewPanelProps = {
   group: PreviewProjectGroup;
   aiMetaByPreviewId: Record<string, HybridPreviewMeta>;
   onChange: (index: number, field: PreviewFieldName, value: string) => void;
+  onRemovePreviewItem: (previewId: string) => void;
 };
 
 export default function AiProjectReviewPanel({
   group,
-  aiMetaByPreviewId,
   onChange,
+  onRemovePreviewItem,
 }: AiProjectReviewPanelProps) {
-  const cleanupCount = group.items.reduce((total, item) => {
-    const meta = aiMetaByPreviewId[item.preview.previewId];
-    return total + (meta?.changes?.length || 0);
-  }, 0);
-
   const visibleTasks = group.items.slice(0, 7);
   const hiddenTasks = Math.max(group.items.length - visibleTasks.length, 0);
-
-  const hasContext =
-    Boolean(group.contactName?.trim()) ||
-    Boolean(group.client_phone?.trim()) ||
-    Boolean(group.client_email?.trim()) ||
-    Boolean(group.client_notes?.trim());
+  const normalizedDeadlineDisplay = group.deadlineDate
+    ? formatDeadline(undefined, group.deadlineDate)
+    : "";
 
   function updateGroupField(field: PreviewFieldName, value: string) {
     group.items.forEach((item) => {
@@ -79,8 +73,6 @@ export default function AiProjectReviewPanel({
             </div>
 
             <div style={clientTextStyle}>
-              <div style={eyebrowStyle}>Project draft</div>
-
               <input
                 value={group.clientName}
                 onChange={(event) =>
@@ -89,24 +81,8 @@ export default function AiProjectReviewPanel({
                 placeholder="Client or company"
                 style={clientInputStyle}
               />
-
-              <div style={sourceStyle}>
-                <span>{group.source || "AI extraction"}</span>
-                <span style={sourceDotStyle}>•</span>
-                <span>
-                  {cleanupCount > 0
-                    ? `${cleanupCount} cleanup changes`
-                    : "Ready to review"}
-                </span>
-              </div>
             </div>
           </div>
-
-          {hasContext ? (
-            <span style={detectedPillStyle}>Client details detected</span>
-          ) : (
-            <span style={optionalPillStyle}>Details optional</span>
-          )}
         </header>
 
         <div className="ai-review-clean-layout" style={layoutStyle}>
@@ -127,7 +103,7 @@ export default function AiProjectReviewPanel({
               <div style={softDividerStyle} />
 
               <div style={metricsHeaderStyle}>
-                <span style={metricsLabelStyle}>Project metrics</span>
+                <span style={metricsLabelStyle}>Project details</span>
               </div>
 
               <div className="ai-review-clean-metrics" style={metricsStyle}>
@@ -146,6 +122,11 @@ export default function AiProjectReviewPanel({
                   placeholder="Deadline"
                   accent="#2563eb"
                   tone="blue"
+                  helperText={
+                    normalizedDeadlineDisplay
+                      ? `Date: ${normalizedDeadlineDisplay}`
+                      : undefined
+                  }
                   onChange={(value) => updateGroupField("deadline", value)}
                 />
 
@@ -170,7 +151,6 @@ export default function AiProjectReviewPanel({
             <div className="ai-review-client-details" style={contextAreaStyle}>
               <div style={contextHeaderStyle}>
                 <span style={labelStyle}>Client details</span>
-                <span style={quietTextStyle}>Edit before saving</span>
               </div>
 
               <div className="ai-review-clean-context" style={contextGridStyle}>
@@ -195,7 +175,7 @@ export default function AiProjectReviewPanel({
                   onChange={(value) => updateGroupField("client_email", value)}
                 />
 
-                <MiniInput
+                <MiniTextarea
                   label="Notes"
                   value={group.client_notes}
                   placeholder="Notes"
@@ -208,15 +188,11 @@ export default function AiProjectReviewPanel({
           <section style={tasksAreaStyle}>
             <div style={tasksHeaderStyle}>
               <div>
-                <div style={labelStyle}>Extracted work</div>
-
                 <h3 style={tasksTitleStyle}>
-                  {group.items.length} item
+                  {group.items.length} subtask
                   {group.items.length === 1 ? "" : "s"} ready
                 </h3>
               </div>
-
-              <span style={reviewFirstStyle}>Review first</span>
             </div>
 
             <div style={taskListStyle}>
@@ -237,6 +213,16 @@ export default function AiProjectReviewPanel({
                     rows={getTaskTextareaRows(item.preview.task)}
                     style={taskTextareaStyle}
                   />
+
+                  <button
+                    type="button"
+                    className="ai-review-clean-task-remove"
+                    aria-label="Remove subtask from preview"
+                    onClick={() => onRemovePreviewItem(item.preview.previewId)}
+                    style={removeTaskButtonStyle}
+                  >
+                    Remove
+                  </button>
                 </div>
               ))}
 
@@ -278,6 +264,7 @@ function MetricInput({
   placeholder,
   accent,
   tone,
+  helperText,
   onChange,
 }: {
   label: string;
@@ -285,6 +272,7 @@ function MetricInput({
   placeholder: string;
   accent: string;
   tone: "green" | "blue" | "orange";
+  helperText?: string;
   onChange: (value: string) => void;
 }) {
   return (
@@ -300,6 +288,8 @@ function MetricInput({
           color: accent,
         }}
       />
+
+      {helperText ? <span style={metricHelperTextStyle}>{helperText}</span> : null}
     </label>
   );
 }
@@ -324,6 +314,38 @@ function MiniInput({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         style={miniInputStyle}
+      />
+    </label>
+  );
+}
+
+function MiniTextarea({
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label
+      className="ai-review-client-notes"
+      style={{
+        ...miniInputShellStyle,
+        gridColumn: "1 / -1",
+      }}
+    >
+      <span style={miniLabelStyle}>{label}</span>
+
+      <textarea
+        value={value || ""}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        rows={2}
+        style={miniTextareaStyle}
       />
     </label>
   );
@@ -357,22 +379,22 @@ function getTaskTextareaRows(value: string) {
 function metricBoxStyle(tone: "green" | "blue" | "orange"): CSSProperties {
   const palette = {
     green: {
-      border: "rgba(220,252,231,0.92)",
+      border: "rgba(187,247,208,0.72)",
       background:
-        "linear-gradient(180deg, rgba(250,253,251,0.96) 0%, rgba(255,255,255,0.78) 100%)",
-      glow: "rgba(22,163,74,0.035)",
+        "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(240,253,244,0.42) 100%)",
+      glow: "rgba(22,163,74,0.025)",
     },
     blue: {
-      border: "rgba(219,234,254,0.94)",
+      border: "rgba(191,219,254,0.78)",
       background:
-        "linear-gradient(180deg, rgba(250,252,255,0.96) 0%, rgba(255,255,255,0.78) 100%)",
-      glow: "rgba(37,99,235,0.035)",
+        "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(239,246,255,0.48) 100%)",
+      glow: "rgba(37,99,235,0.025)",
     },
     orange: {
-      border: "rgba(255,237,213,0.96)",
+      border: "rgba(254,215,170,0.68)",
       background:
-        "linear-gradient(180deg, rgba(255,253,250,0.96) 0%, rgba(255,255,255,0.78) 100%)",
-      glow: "rgba(234,88,12,0.03)",
+        "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,247,237,0.42) 100%)",
+      glow: "rgba(234,88,12,0.02)",
     },
   }[tone];
 
@@ -381,11 +403,11 @@ function metricBoxStyle(tone: "green" | "blue" | "orange"): CSSProperties {
     position: "relative",
     display: "grid",
     gap: 5,
-    padding: "10px 12px 9px",
-    borderRadius: 17,
+    padding: "10px 12px",
+    borderRadius: 14,
     border: `1px solid ${palette.border}`,
     background: palette.background,
-    boxShadow: `0 8px 20px ${palette.glow}, inset 0 1px 0 rgba(255,255,255,0.92)`,
+    boxShadow: `0 6px 14px ${palette.glow}, inset 0 1px 0 rgba(255,255,255,0.9)`,
     overflow: "hidden",
     transition:
       "border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background 160ms ease",
@@ -394,12 +416,16 @@ function metricBoxStyle(tone: "green" | "blue" | "orange"): CSSProperties {
 
 const outerWrapStyle: CSSProperties = {
   position: "relative",
-  padding: 18,
-  borderRadius: 42,
+  width: "100%",
+  maxWidth: 980,
+  margin: "0 auto 0 0",
+  padding: "6px 0 0",
+  borderRadius: 24,
   isolation: "isolate",
 };
 
 const backdropGlowTopStyle: CSSProperties = {
+  display: "none",
   position: "absolute",
   top: -70,
   left: "18%",
@@ -407,14 +433,15 @@ const backdropGlowTopStyle: CSSProperties = {
   height: 210,
   borderRadius: 999,
   background:
-    "radial-gradient(circle, rgba(99,102,241,0.18) 0%, rgba(99,102,241,0.08) 42%, transparent 72%)",
-  filter: "blur(24px)",
-  opacity: 0.95,
+    "radial-gradient(circle, rgba(37,99,235,0.08) 0%, rgba(37,99,235,0.025) 44%, transparent 72%)",
+  filter: "blur(28px)",
+  opacity: 0.58,
   pointerEvents: "none",
   zIndex: 0,
 };
 
 const backdropGlowLeftStyle: CSSProperties = {
+  display: "none",
   position: "absolute",
   bottom: -58,
   left: "2%",
@@ -422,14 +449,15 @@ const backdropGlowLeftStyle: CSSProperties = {
   height: 190,
   borderRadius: 999,
   background:
-    "radial-gradient(circle, rgba(14,165,233,0.14) 0%, rgba(14,165,233,0.06) 44%, transparent 72%)",
-  filter: "blur(28px)",
-  opacity: 0.95,
+    "radial-gradient(circle, rgba(14,165,233,0.07) 0%, rgba(14,165,233,0.025) 44%, transparent 72%)",
+  filter: "blur(30px)",
+  opacity: 0.56,
   pointerEvents: "none",
   zIndex: 0,
 };
 
 const backdropGlowRightStyle: CSSProperties = {
+  display: "none",
   position: "absolute",
   top: "18%",
   right: -72,
@@ -437,21 +465,22 @@ const backdropGlowRightStyle: CSSProperties = {
   height: 300,
   borderRadius: 999,
   background:
-    "radial-gradient(circle, rgba(168,85,247,0.14) 0%, rgba(168,85,247,0.055) 44%, transparent 72%)",
+    "radial-gradient(circle, rgba(37,99,235,0.045) 0%, rgba(37,99,235,0.018) 44%, transparent 72%)",
   filter: "blur(30px)",
-  opacity: 0.9,
+  opacity: 0.42,
   pointerEvents: "none",
   zIndex: 0,
 };
 
 const premiumHaloStyle: CSSProperties = {
+  display: "none",
   position: "absolute",
   inset: 8,
-  borderRadius: 38,
+  borderRadius: 28,
   background:
-    "linear-gradient(135deg, rgba(79,70,229,0.13), rgba(14,165,233,0.08), rgba(168,85,247,0.1))",
-  filter: "blur(16px)",
-  opacity: 0.7,
+    "linear-gradient(135deg, rgba(37,99,235,0.055), rgba(14,165,233,0.035))",
+  filter: "blur(14px)",
+  opacity: 0.35,
   pointerEvents: "none",
   zIndex: 0,
 };
@@ -460,20 +489,21 @@ const panelStyle: CSSProperties = {
   position: "relative",
   zIndex: 1,
   overflow: "hidden",
-  borderRadius: 32,
+  borderRadius: 22,
   background:
-    "linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(248,250,252,0.86) 46%, rgba(238,242,255,0.78) 100%)",
-  border: "1px solid rgba(255,255,255,0.82)",
+    "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(248,250,252,0.74) 100%)",
+  border: "1px solid rgba(191,219,254,0.92)",
   boxShadow:
-    "0 42px 110px rgba(15,23,42,0.145), 0 22px 54px rgba(79,70,229,0.12), inset 0 1px 0 rgba(255,255,255,0.98)",
-  backdropFilter: "blur(20px)",
+    "0 18px 44px rgba(15,23,42,0.065), 0 10px 26px rgba(37,99,235,0.055), inset 0 1px 0 rgba(255,255,255,0.98)",
+  backdropFilter: "none",
 };
 
 const glassShineStyle: CSSProperties = {
+  display: "none",
   position: "absolute",
   inset: 0,
   background:
-    "linear-gradient(118deg, rgba(255,255,255,0.66) 0%, rgba(255,255,255,0.18) 26%, transparent 48%)",
+    "linear-gradient(118deg, rgba(255,255,255,0.36) 0%, rgba(255,255,255,0.10) 28%, transparent 48%)",
   pointerEvents: "none",
   zIndex: 0,
 };
@@ -485,8 +515,8 @@ const topAccentLineStyle: CSSProperties = {
   right: 0,
   height: 2,
   background:
-    "linear-gradient(90deg, rgba(79,70,229,0.9) 0%, rgba(14,165,233,0.7) 45%, rgba(168,85,247,0.8) 100%)",
-  opacity: 0.75,
+    "linear-gradient(90deg, rgba(37,99,235,0.92) 0%, rgba(96,165,250,0.72) 52%, rgba(191,219,254,0.0) 100%)",
+  opacity: 0.9,
   zIndex: 2,
 };
 
@@ -494,13 +524,13 @@ const topLineStyle: CSSProperties = {
   position: "relative",
   zIndex: 1,
   display: "flex",
-  justifyContent: "space-between",
+  justifyContent: "flex-start",
   alignItems: "center",
   gap: 16,
-  padding: "19px 22px 15px",
+  padding: "20px 24px 18px",
   background:
-    "radial-gradient(circle at 14% 0%, rgba(255,255,255,0.9) 0%, transparent 38%), linear-gradient(90deg, rgba(248,250,252,0.84) 0%, rgba(238,242,255,0.76) 100%)",
-  borderBottom: "1px solid rgba(226,232,240,0.56)",
+    "linear-gradient(180deg, rgba(239,246,255,0.62) 0%, rgba(255,255,255,0.96) 100%)",
+  borderBottom: "1px solid rgba(191,219,254,0.68)",
 };
 
 const clientClusterStyle: CSSProperties = {
@@ -513,43 +543,35 @@ const clientClusterStyle: CSSProperties = {
 const avatarOuterStyle: CSSProperties = {
   width: 52,
   height: 52,
-  borderRadius: 20,
+  borderRadius: 18,
   display: "grid",
   placeItems: "center",
   background:
-    "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(224,231,255,0.76))",
-  border: "1px solid rgba(255,255,255,0.9)",
-  boxShadow: "0 18px 36px rgba(79,70,229,0.2)",
+    "linear-gradient(135deg, rgba(239,246,255,0.96), rgba(255,255,255,0.98))",
+  border: "1px solid rgba(191,219,254,0.9)",
+  boxShadow: "0 10px 22px rgba(37,99,235,0.08)",
   flexShrink: 0,
 };
 
 const avatarStyle: CSSProperties = {
   width: 45,
   height: 45,
-  borderRadius: 16,
+  borderRadius: 15,
   display: "grid",
   placeItems: "center",
   background:
-    "linear-gradient(135deg, #2563eb 0%, #4f46e5 48%, #7c3aed 100%)",
+    "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
   color: "#ffffff",
   fontSize: 13,
   fontWeight: 950,
   boxShadow:
-    "inset 0 1px 0 rgba(255,255,255,0.24), 0 12px 24px rgba(79,70,229,0.24)",
+    "inset 0 1px 0 rgba(255,255,255,0.24), 0 8px 18px rgba(37,99,235,0.16)",
 };
 
 const clientTextStyle: CSSProperties = {
   display: "grid",
   gap: 2,
   minWidth: 0,
-};
-
-const eyebrowStyle: CSSProperties = {
-  color: "#4f46e5",
-  fontSize: 10,
-  fontWeight: 950,
-  textTransform: "uppercase",
-  letterSpacing: "0.17em",
 };
 
 const clientInputStyle: CSSProperties = {
@@ -565,81 +587,43 @@ const clientInputStyle: CSSProperties = {
   letterSpacing: "-0.045em",
 };
 
-const sourceStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 6,
-  flexWrap: "wrap",
-  color: "#64748b",
-  fontSize: 12,
-  fontWeight: 740,
-};
-
-const sourceDotStyle: CSSProperties = {
-  color: "#cbd5e1",
-};
-
-const detectedPillStyle: CSSProperties = {
-  borderRadius: 999,
-  padding: "8px 12px",
-  background:
-    "linear-gradient(135deg, rgba(236,253,245,0.95) 0%, rgba(220,252,231,0.78) 100%)",
-  border: "1px solid rgba(187,247,208,0.98)",
-  color: "#047857",
-  fontSize: 11,
-  fontWeight: 920,
-  whiteSpace: "nowrap",
-  boxShadow: "0 12px 26px rgba(22,163,74,0.09)",
-};
-
-const optionalPillStyle: CSSProperties = {
-  ...detectedPillStyle,
-  background:
-    "linear-gradient(135deg, rgba(248,250,252,0.95) 0%, rgba(241,245,249,0.82) 100%)",
-  border: "1px solid rgba(226,232,240,0.92)",
-  color: "#64748b",
-  boxShadow: "none",
-};
-
 const layoutStyle: CSSProperties = {
   position: "relative",
   zIndex: 1,
   display: "grid",
-  gridTemplateColumns: "minmax(0, 0.84fr) minmax(390px, 1.16fr)",
+  gridTemplateColumns: "minmax(0, 1fr)",
+  gap: 0,
 };
 
 const projectAreaStyle: CSSProperties = {
-  padding: 22,
+  padding: "22px 24px 18px",
   display: "grid",
   alignContent: "start",
-  gap: 13,
-  borderRight: "1px solid rgba(226,232,240,0.52)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.12) 100%)",
+  gap: 14,
+  borderRight: "none",
+  borderBottom: "1px solid rgba(226,232,240,0.78)",
+  background: "rgba(255,255,255,0.48)",
 };
 
 const projectSummaryCardStyle: CSSProperties = {
   position: "relative",
   display: "grid",
-  gap: 11,
-  padding: "13px 14px 14px",
-  borderRadius: 23,
-  background:
-    "radial-gradient(circle at top left, rgba(238,242,255,0.38) 0%, transparent 38%), linear-gradient(180deg, rgba(255,255,255,0.64) 0%, rgba(248,250,252,0.42) 100%)",
-  border: "1px solid rgba(226,232,240,0.46)",
-  boxShadow:
-    "0 14px 34px rgba(15,23,42,0.035), inset 0 1px 0 rgba(255,255,255,0.84)",
+  gap: 12,
+  padding: "0 0 2px",
+  borderRadius: 0,
+  background: "transparent",
+  border: "none",
+  boxShadow: "none",
 };
 
 const titleSurfaceStyle: CSSProperties = {
   display: "grid",
-  gap: 6,
-  padding: "9px 10px 10px",
-  borderRadius: 18,
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.38) 100%)",
-  border: "1px solid rgba(226,232,240,0.42)",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.78)",
+  gap: 7,
+  padding: "0 0 2px",
+  borderRadius: 0,
+  background: "transparent",
+  border: "none",
+  boxShadow: "none",
 };
 
 const softDividerStyle: CSSProperties = {
@@ -654,24 +638,23 @@ const metricsHeaderStyle: CSSProperties = {
   justifyContent: "flex-start",
   alignItems: "center",
   gap: 12,
-  paddingTop: 0,
+  paddingTop: 2,
 };
 
 const metricsLabelStyle: CSSProperties = {
-  color: "#7c8798",
-  fontSize: 9,
+  color: "#2563eb",
+  fontSize: 10,
   fontWeight: 900,
-  textTransform: "uppercase",
-  letterSpacing: "0.12em",
+  letterSpacing: "0.01em",
 };
 
 const tasksAreaStyle: CSSProperties = {
-  padding: 22,
+  padding: "20px 24px 24px",
   display: "grid",
   alignContent: "start",
   gap: 14,
   background:
-    "radial-gradient(circle at top right, rgba(224,231,255,0.48) 0%, transparent 42%), linear-gradient(180deg, rgba(248,250,252,0.5) 0%, rgba(255,255,255,0.3) 100%)",
+    "linear-gradient(180deg, rgba(248,250,252,0.58) 0%, rgba(255,255,255,0.72) 100%)",
 };
 
 const labelStyle: CSSProperties = {
@@ -688,7 +671,7 @@ const projectTitleStyle: CSSProperties = {
   outline: "none",
   background: "transparent",
   color: "#0f172a",
-  fontSize: 22,
+  fontSize: 24,
   lineHeight: 1.12,
   fontWeight: 920,
   letterSpacing: "-0.048em",
@@ -705,7 +688,7 @@ const summaryStyle: CSSProperties = {
 
 const metricsStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "1fr 1fr 1fr",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
   gap: 8,
 };
 
@@ -729,6 +712,13 @@ const metricInputStyle: CSSProperties = {
   padding: 0,
 };
 
+const metricHelperTextStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 10.5,
+  lineHeight: 1.2,
+  fontWeight: 760,
+};
+
 const prioritySelectStyle: CSSProperties = {
   ...metricInputStyle,
   color: "#c2410c",
@@ -747,25 +737,19 @@ const prioritySelectStyle: CSSProperties = {
 const contextAreaStyle: CSSProperties = {
   display: "grid",
   gap: 10,
-  padding: "13px 14px 14px",
-  borderRadius: 22,
+  padding: "14px",
+  borderRadius: 16,
   background:
-    "linear-gradient(180deg, rgba(255,255,255,0.38) 0%, rgba(248,250,252,0.24) 100%)",
-  border: "1px solid rgba(226,232,240,0.42)",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.66)",
+    "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(248,250,252,0.58) 100%)",
+  border: "1px solid rgba(226,232,240,0.78)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.76)",
 };
 
 const contextHeaderStyle: CSSProperties = {
   display: "flex",
-  justifyContent: "space-between",
+  justifyContent: "flex-start",
   alignItems: "center",
   gap: 12,
-};
-
-const quietTextStyle: CSSProperties = {
-  color: "#a1adbd",
-  fontSize: 11,
-  fontWeight: 820,
 };
 
 const contextGridStyle: CSSProperties = {
@@ -779,10 +763,10 @@ const miniInputShellStyle: CSSProperties = {
   display: "grid",
   gap: 4,
   padding: "8px 10px 9px",
-  borderRadius: 14,
-  background: "rgba(255,255,255,0.34)",
-  border: "1px solid rgba(226,232,240,0.44)",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.66)",
+  borderRadius: 13,
+  background: "rgba(255,255,255,0.74)",
+  border: "1px solid rgba(226,232,240,0.76)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.76)",
 };
 
 const miniLabelStyle: CSSProperties = {
@@ -806,15 +790,27 @@ const miniInputStyle: CSSProperties = {
   fontWeight: 780,
 };
 
+const miniTextareaStyle: CSSProperties = {
+  ...miniInputStyle,
+  minHeight: 44,
+  maxHeight: 110,
+  lineHeight: 1.45,
+  resize: "vertical",
+  overflowY: "auto",
+  whiteSpace: "pre-wrap",
+  overflowWrap: "anywhere",
+  fontFamily: "inherit",
+};
+
 const tasksHeaderStyle: CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
-  alignItems: "flex-start",
+  alignItems: "center",
   gap: 12,
 };
 
 const tasksTitleStyle: CSSProperties = {
-  margin: "4px 0 0",
+  margin: 0,
   color: "#0f172a",
   fontSize: 24,
   lineHeight: 1.08,
@@ -822,37 +818,24 @@ const tasksTitleStyle: CSSProperties = {
   letterSpacing: "-0.055em",
 };
 
-const reviewFirstStyle: CSSProperties = {
-  borderRadius: 999,
-  padding: "8px 11px",
-  background:
-    "linear-gradient(135deg, rgba(236,253,245,0.94) 0%, rgba(220,252,231,0.78) 100%)",
-  color: "#047857",
-  border: "1px solid rgba(187,247,208,0.98)",
-  fontSize: 11,
-  fontWeight: 920,
-  whiteSpace: "nowrap",
-  boxShadow: "0 12px 24px rgba(22,163,74,0.08)",
-};
-
 const taskListStyle: CSSProperties = {
   display: "grid",
-  gap: 8,
+  gap: 9,
 };
 
 const taskRowStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "22px minmax(0, 1fr)",
+  gridTemplateColumns: "22px minmax(0, 1fr) auto",
   alignItems: "start",
   gap: 10,
   minHeight: 44,
   padding: "9px 11px",
-  borderRadius: 15,
-  border: "1px solid rgba(226,232,240,0.55)",
+  borderRadius: 14,
+  border: "1px solid rgba(226,232,240,0.82)",
   background:
-    "linear-gradient(180deg, rgba(255,255,255,0.68) 0%, rgba(255,255,255,0.42) 100%)",
+    "linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(248,250,252,0.62) 100%)",
   boxShadow:
-    "0 8px 20px rgba(15,23,42,0.03), inset 0 1px 0 rgba(255,255,255,0.78)",
+    "0 6px 14px rgba(15,23,42,0.026), inset 0 1px 0 rgba(255,255,255,0.78)",
 };
 
 const checkStyle: CSSProperties = {
@@ -862,12 +845,12 @@ const checkStyle: CSSProperties = {
   display: "grid",
   placeItems: "center",
   background:
-    "linear-gradient(135deg, rgba(238,242,255,0.98) 0%, rgba(224,231,255,0.84) 100%)",
-  border: "1px solid #c7d2fe",
-  color: "#4f46e5",
+    "linear-gradient(135deg, rgba(239,246,255,0.98) 0%, rgba(219,234,254,0.84) 100%)",
+  border: "1px solid #bfdbfe",
+  color: "#2563eb",
   fontSize: 10,
   fontWeight: 950,
-  boxShadow: "0 6px 12px rgba(79,70,229,0.09)",
+  boxShadow: "0 6px 12px rgba(37,99,235,0.07)",
   marginTop: 2,
 };
 
@@ -891,6 +874,21 @@ const taskTextareaStyle: CSSProperties = {
   wordBreak: "break-word",
 };
 
+const removeTaskButtonStyle: CSSProperties = {
+  alignSelf: "start",
+  border: "1px solid rgba(203,213,225,0.72)",
+  background: "rgba(255,255,255,0.78)",
+  color: "#64748b",
+  borderRadius: 999,
+  padding: "6px 9px",
+  fontSize: 11,
+  lineHeight: 1,
+  fontWeight: 850,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.78)",
+};
+
 const moreTasksStyle: CSSProperties = {
   paddingTop: 10,
   color: "#64748b",
@@ -903,18 +901,18 @@ const resourcesLineStyle: CSSProperties = {
   gridTemplateColumns: "34px minmax(0, 1fr) auto",
   alignItems: "center",
   gap: 12,
-  marginTop: 2,
+  marginTop: 4,
   padding: "14px",
-  borderRadius: 20,
-  border: "1px solid rgba(199,210,254,0.7)",
+  borderRadius: 18,
+  border: "1px solid rgba(191,219,254,0.76)",
   background:
-    "radial-gradient(circle at top right, rgba(224,231,255,0.48) 0%, transparent 38%), linear-gradient(135deg, rgba(255,255,255,0.68) 0%, rgba(238,242,255,0.56) 100%)",
+    "linear-gradient(135deg, rgba(255,255,255,0.88) 0%, rgba(239,246,255,0.58) 100%)",
   color: "#64748b",
   fontSize: 12,
   lineHeight: 1.45,
   fontWeight: 650,
   boxShadow:
-    "0 14px 28px rgba(79,70,229,0.055), inset 0 1px 0 rgba(255,255,255,0.78)",
+    "0 8px 18px rgba(37,99,235,0.035), inset 0 1px 0 rgba(255,255,255,0.78)",
 };
 
 const resourcesIconStyle: CSSProperties = {
@@ -924,12 +922,12 @@ const resourcesIconStyle: CSSProperties = {
   display: "grid",
   placeItems: "center",
   background:
-    "linear-gradient(135deg, rgba(238,242,255,0.96) 0%, rgba(224,231,255,0.82) 100%)",
-  border: "1px solid rgba(199,210,254,0.88)",
-  color: "#4f46e5",
+    "linear-gradient(135deg, rgba(239,246,255,0.96) 0%, rgba(219,234,254,0.82) 100%)",
+  border: "1px solid rgba(191,219,254,0.88)",
+  color: "#2563eb",
   fontSize: 15,
   fontWeight: 950,
-  boxShadow: "0 10px 20px rgba(79,70,229,0.08)",
+  boxShadow: "0 8px 16px rgba(37,99,235,0.06)",
 };
 
 const resourcesContentStyle: CSSProperties = {
@@ -955,12 +953,12 @@ const resourcesBadgeStyle: CSSProperties = {
   borderRadius: 999,
   padding: "7px 10px",
   background: "rgba(255,255,255,0.78)",
-  border: "1px solid rgba(199,210,254,0.9)",
-  color: "#4338ca",
+  border: "1px solid rgba(191,219,254,0.9)",
+  color: "#1d4ed8",
   fontSize: 11,
   fontWeight: 900,
   whiteSpace: "nowrap",
-  boxShadow: "0 10px 20px rgba(79,70,229,0.06)",
+  boxShadow: "0 8px 16px rgba(37,99,235,0.045)",
 };
 
 const responsiveCss = `
@@ -972,7 +970,7 @@ const responsiveCss = `
 
   .ai-project-review-clean input::selection,
   .ai-project-review-clean textarea::selection {
-    background: rgba(99,102,241,0.16);
+    background: rgba(37,99,235,0.14);
   }
 
   .ai-review-clean-task {
@@ -985,18 +983,18 @@ const responsiveCss = `
 
   .ai-review-clean-task:hover {
     transform: translateY(-1px);
-    border-color: rgba(129,140,248,0.66) !important;
-    background: rgba(255,255,255,0.8) !important;
+    border-color: rgba(191,219,254,0.95) !important;
+    background: rgba(255,255,255,0.92) !important;
     box-shadow:
-      0 16px 30px rgba(15,23,42,0.065),
+      0 12px 24px rgba(15,23,42,0.045),
       inset 0 1px 0 rgba(255,255,255,0.86) !important;
   }
 
   .ai-review-clean-metrics label:hover {
     transform: translateY(-1px);
-    border-color: rgba(129,140,248,0.3) !important;
+    border-color: rgba(191,219,254,0.86) !important;
     box-shadow:
-      0 14px 26px rgba(15,23,42,0.045),
+      0 10px 20px rgba(15,23,42,0.035),
       inset 0 1px 0 rgba(255,255,255,0.9) !important;
   }
 
@@ -1007,7 +1005,7 @@ const responsiveCss = `
 
     .ai-review-clean-layout > section:first-child {
       border-right: none !important;
-      border-bottom: 1px solid rgba(226,232,240,0.52);
+      border-bottom: 1px solid rgba(226,232,240,0.78);
     }
   }
 
@@ -1087,14 +1085,22 @@ const responsiveCss = `
     }
 
     .ai-review-clean-task {
-      padding: 10px 11px !important;
+      gap: 7px !important;
+      padding: 8px 10px !important;
       min-height: auto !important;
       align-items: start !important;
     }
 
     .ai-review-clean-task textarea {
-      min-height: 38px !important;
+      min-height: 34px !important;
       line-height: 1.38 !important;
+    }
+
+    .ai-review-client-notes textarea {
+      min-height: 72px !important;
+      max-height: 144px !important;
+      line-height: 1.45 !important;
+      padding-bottom: 3px !important;
     }
 
     .ai-review-resources-line {
@@ -1129,6 +1135,13 @@ const responsiveCss = `
     .ai-review-clean-task {
       grid-template-columns: 22px minmax(0, 1fr) !important;
       align-items: start !important;
+    }
+
+    .ai-review-clean-task-remove {
+      grid-column: 2;
+      justify-self: end;
+      margin-top: 0;
+      padding: 5px 8px !important;
     }
 
     .ai-project-review-premium-wrap {

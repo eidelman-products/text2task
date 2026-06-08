@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useState, type MouseEvent } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+} from "react";
 import { createPortal } from "react-dom";
 
 import type { TaskProjectGroup } from "../task-types";
@@ -53,7 +58,6 @@ export default function ProjectUpdateModalV2({
 
   const clientName = getModalClientName(project);
   const projectTitle = getModalProjectTitle(project);
-  const contextParts = [clientName, projectTitle].filter(Boolean);
 
   const canAnalyze =
     !isBusy &&
@@ -142,11 +146,16 @@ export default function ProjectUpdateModalV2({
       role="dialog"
       aria-modal="true"
       aria-label="Add client update"
+      className={ui.responsiveClassNames.overlay}
       style={ui.overlay}
       onMouseDown={handleOverlayMouseDown}
     >
-      <section style={ui.modal} onMouseDown={(event) => event.stopPropagation()}>
-        <header style={ui.header}>
+      <section
+        className={ui.responsiveClassNames.modal}
+        style={ui.modal}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className={ui.responsiveClassNames.header} style={ui.header}>
           <div style={ui.headerMain}>
             <div style={ui.headerCopy}>
               <h2 style={ui.title}>Add client update</h2>
@@ -155,16 +164,7 @@ export default function ProjectUpdateModalV2({
                 Review a client message or screenshot before saving changes.
               </p>
 
-              {contextParts.length > 0 ? (
-                <div style={ui.headerContextLine}>
-                  {contextParts.map((part, index) => (
-                    <span key={`${part}-${index}`}>
-                      {index > 0 ? "· " : ""}
-                      {part}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
+              <ProjectContext clientName={clientName} projectTitle={projectTitle} />
             </div>
           </div>
 
@@ -183,8 +183,8 @@ export default function ProjectUpdateModalV2({
           </button>
         </header>
 
-        <main style={ui.body}>
-          <div style={ui.mainGrid}>
+        <main className={ui.responsiveClassNames.body} style={ui.body}>
+          <div className={ui.responsiveClassNames.mainGrid} style={ui.mainGrid}>
             <div style={ui.leftColumn}>
               <ProjectUpdateInputCard
                 form={form}
@@ -206,7 +206,7 @@ export default function ProjectUpdateModalV2({
           </div>
         </main>
 
-        <footer style={ui.footer}>
+        <footer className={ui.responsiveClassNames.footer} style={ui.footer}>
           <button
             type="button"
             className="project-update-secondary-button"
@@ -245,13 +245,33 @@ export default function ProjectUpdateModalV2({
             }
           }
 
+          ${ui.responsiveCss}
+
+          .project-update-modal-grid {
+            grid-template-columns: minmax(320px, 0.68fr) minmax(0, 1.32fr);
+            gap: 18px;
+          }
+
+          .project-update-modal-grid > * {
+            min-width: 0;
+            width: 100%;
+            max-width: 100%;
+          }
+
           @media (max-width: 760px) {
-            [aria-label="Add client update"] {
-              padding: 0 !important;
-              align-items: stretch !important;
-              justify-content: stretch !important;
-              background: rgba(248, 250, 252, 1) !important;
-              backdrop-filter: none !important;
+            .project-update-modal-grid {
+              grid-template-columns: 1fr;
+              gap: 14px;
+              width: 100% !important;
+              max-width: 100% !important;
+              min-width: 0 !important;
+            }
+
+            .project-update-modal-grid > * {
+              min-width: 0 !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              box-sizing: border-box !important;
             }
           }
         `}</style>
@@ -260,6 +280,33 @@ export default function ProjectUpdateModalV2({
   );
 
   return createPortal(modalContent, document.body);
+}
+
+function ProjectContext({
+  clientName,
+  projectTitle,
+}: {
+  clientName: string;
+  projectTitle: string;
+}) {
+  if (!clientName && !projectTitle) {
+    return null;
+  }
+
+  const displayClientName = clientName || "Client project";
+  const displayProjectTitle = projectTitle || "Untitled project";
+
+  return (
+    <div style={projectContextStyle}>
+      <div style={projectContextEyebrowStyle}>Project update for</div>
+
+      <div style={projectContextMainLineStyle}>
+        <span style={projectClientNameStyle}>{displayClientName}</span>
+        <span style={projectDividerStyle}>/</span>
+        <span style={projectTitleStyle}>{displayProjectTitle}</span>
+      </div>
+    </div>
+  );
 }
 
 function getPrimaryButtonState({
@@ -402,3 +449,51 @@ function getProjectString(project: TaskProjectGroup | null, keys: string[]) {
 
   return "";
 }
+
+const projectContextStyle: CSSProperties = {
+  marginTop: 16,
+  paddingLeft: 12,
+  borderLeft: "3px solid #2563eb",
+  display: "grid",
+  gap: 4,
+  minWidth: 0,
+};
+
+const projectContextEyebrowStyle: CSSProperties = {
+  margin: 0,
+  color: "#2563eb",
+  fontSize: 10.5,
+  lineHeight: 1.2,
+  fontWeight: 900,
+  textTransform: "uppercase",
+  letterSpacing: "0.085em",
+};
+
+const projectContextMainLineStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "baseline",
+  gap: 8,
+  minWidth: 0,
+  flexWrap: "wrap",
+};
+
+const projectClientNameStyle: CSSProperties = {
+  color: "#0f172a",
+  fontSize: 15,
+  lineHeight: 1.25,
+  fontWeight: 950,
+  letterSpacing: "-0.025em",
+};
+
+const projectDividerStyle: CSSProperties = {
+  color: "#cbd5e1",
+  fontSize: 12,
+  fontWeight: 800,
+};
+
+const projectTitleStyle: CSSProperties = {
+  color: "#475569",
+  fontSize: 13,
+  lineHeight: 1.25,
+  fontWeight: 750,
+};

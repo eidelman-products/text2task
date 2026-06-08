@@ -23,9 +23,9 @@ const footerColumns: FooterColumn[] = [
   {
     title: "Legal",
     links: [
-      { label: "Privacy Policy", href: "/privacy" },
-      { label: "Terms of Service", href: "/terms" },
-      { label: "Contact", href: "/contact" },
+      { label: "Privacy Policy", href: "/privacy?from=dashboard" },
+      { label: "Terms of Service", href: "/terms?from=dashboard" },
+      { label: "Contact", href: "/contact?from=dashboard" },
     ],
   },
   {
@@ -39,7 +39,7 @@ const footerColumns: FooterColumn[] = [
     title: "Support",
     links: [
       { label: "support@text2task.com", href: "mailto:support@text2task.com" },
-      { label: "Contact support", href: "/contact" },
+      { label: "Contact support", href: "/contact?from=dashboard" },
     ],
   },
 ];
@@ -48,9 +48,7 @@ export default function DashboardFooter() {
   return (
     <footer className="dashboard-footer" style={styles.footer}>
       <style>{responsiveCss}</style>
-
-      <div style={styles.softGlowOne} />
-      <div style={styles.softGlowTwo} />
+      <div style={styles.topAccent} />
 
       <div style={styles.inner}>
         <div className="dashboard-footer-brand" style={styles.brandBlock}>
@@ -63,13 +61,12 @@ export default function DashboardFooter() {
           </div>
 
           <p style={styles.brandDescription}>
-            Turn messy client messages, screenshots, notes, and work requests
-            into organized projects and tasks with AI.
+            Turn messy client messages into organized projects, tasks, and next
+            steps.
           </p>
 
-          <a href="mailto:support@text2task.com" style={styles.supportBox}>
-            <span style={styles.supportLabel}>Support</span>
-            <span style={styles.supportLink}>support@text2task.com</span>
+          <a href="mailto:support@text2task.com" style={styles.supportLinkBox}>
+            support@text2task.com
           </a>
         </div>
 
@@ -100,11 +97,11 @@ export default function DashboardFooter() {
         </div>
 
         <div style={styles.bottomLinks}>
-          <a href="/privacy" style={styles.bottomLink}>
+          <a href="/privacy?from=dashboard" style={styles.bottomLink}>
             Privacy
           </a>
           <span style={styles.dotSeparator}>•</span>
-          <a href="/terms" style={styles.bottomLink}>
+          <a href="/terms?from=dashboard" style={styles.bottomLink}>
             Terms
           </a>
           <span style={styles.dotSeparator}>•</span>
@@ -112,7 +109,7 @@ export default function DashboardFooter() {
             About
           </a>
           <span style={styles.dotSeparator}>•</span>
-          <a href="/contact" style={styles.bottomLink}>
+          <a href="/contact?from=dashboard" style={styles.bottomLink}>
             Contact
           </a>
         </div>
@@ -130,15 +127,20 @@ const responsiveCss = `
   .dashboard-footer a {
     transition:
       color 160ms ease,
-      transform 160ms ease,
       opacity 160ms ease,
+      transform 160ms ease,
       border-color 160ms ease,
       background 160ms ease;
   }
 
   .dashboard-footer a:hover {
-    color: #4f46e5 !important;
-    transform: translateY(-1px);
+    color: #1d4ed8 !important;
+  }
+
+  .dashboard-footer a:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.20);
+    border-radius: 10px;
   }
 
   @media (max-width: 900px) {
@@ -146,15 +148,13 @@ const responsiveCss = `
       width: calc(100% + 28px) !important;
       margin-left: -14px !important;
       margin-right: -14px !important;
-      margin-top: 20px !important;
-      margin-bottom: 0 !important;
-      border-radius: 22px 22px 0 0 !important;
-      padding: 15px 14px 12px !important;
+      margin-top: 28px !important;
+      padding: 22px 14px 16px !important;
     }
 
-    .dashboard-footer > div:nth-child(3) {
+    .dashboard-footer > div:first-child {
       grid-template-columns: 1fr !important;
-      gap: 14px !important;
+      gap: 18px !important;
     }
 
     .dashboard-footer-brand {
@@ -163,17 +163,18 @@ const responsiveCss = `
 
     .dashboard-footer-columns {
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-      gap: 13px !important;
+      gap: 18px 16px !important;
     }
   }
 
   @media (max-width: 520px) {
-    .dashboard-footer {
-      padding: 14px 14px 12px !important;
-    }
-
     .dashboard-footer-columns {
       grid-template-columns: 1fr !important;
+    }
+
+    .dashboard-footer > div:last-child {
+      align-items: flex-start !important;
+      flex-direction: column !important;
     }
   }
 
@@ -182,10 +183,8 @@ const responsiveCss = `
       width: calc(100vw - 260px) !important;
       margin-left: -28px !important;
       margin-right: -28px !important;
-      margin-top: 24px !important;
-      margin-bottom: 0 !important;
-      border-radius: 22px 22px 0 0 !important;
-      padding: 13px 28px 10px !important;
+      margin-top: 34px !important;
+      padding: 24px 28px 16px !important;
     }
 
     .dashboard-footer-columns {
@@ -197,64 +196,48 @@ const responsiveCss = `
 const styles: Record<string, React.CSSProperties> = {
   footer: {
     width: "100%",
-    marginTop: 24,
+    marginTop: 34,
     marginBottom: 0,
-    padding: "13px 28px 10px",
-    borderRadius: "22px 22px 0 0",
-    border: "1px solid rgba(199,210,254,0.68)",
-    borderBottom: "0",
+    padding: "24px 28px 16px",
+    borderTop: "1px solid rgba(191, 219, 254, 0.95)",
     background:
-      "radial-gradient(circle at top left, rgba(255,255,255,0.9) 0%, transparent 26%), radial-gradient(circle at top right, rgba(219,234,254,0.56) 0%, transparent 28%), linear-gradient(135deg, rgba(238,242,255,0.9) 0%, rgba(248,250,252,0.92) 50%, rgba(250,245,255,0.84) 100%)",
+      "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.96) 58%, rgba(239,246,255,0.72) 100%)",
     boxShadow:
-      "0 -8px 24px rgba(79,70,229,0.04), 0 8px 20px rgba(15,23,42,0.025), inset 0 1px 0 rgba(255,255,255,0.9)",
+      "0 -1px 0 rgba(37, 99, 235, 0.045), inset 0 1px 0 rgba(255,255,255,0.92)",
     position: "relative",
     overflow: "hidden",
   },
 
-  softGlowOne: {
+  topAccent: {
     position: "absolute",
-    width: 190,
-    height: 190,
+    top: 0,
+    left: 28,
+    right: 28,
+    height: 2,
     borderRadius: 999,
-    right: -78,
-    top: -125,
     background:
-      "radial-gradient(circle, rgba(99,102,241,0.11) 0%, rgba(99,102,241,0.00) 70%)",
-    pointerEvents: "none",
-  },
-
-  softGlowTwo: {
-    position: "absolute",
-    width: 150,
-    height: 150,
-    borderRadius: 999,
-    left: -62,
-    bottom: -100,
-    background:
-      "radial-gradient(circle, rgba(14,165,233,0.08) 0%, rgba(14,165,233,0.00) 72%)",
+      "linear-gradient(90deg, rgba(37,99,235,0.0) 0%, rgba(37,99,235,0.42) 18%, rgba(37,99,235,0.24) 50%, rgba(37,99,235,0.0) 100%)",
     pointerEvents: "none",
   },
 
   inner: {
-    position: "relative",
-    zIndex: 2,
     width: "100%",
     display: "grid",
-    gridTemplateColumns: "minmax(210px, 0.62fr) minmax(0, 2fr)",
-    gap: 22,
+    gridTemplateColumns: "minmax(230px, 0.72fr) minmax(0, 2fr)",
+    gap: 34,
     alignItems: "start",
   },
 
   brandBlock: {
     minWidth: 0,
-    maxWidth: 340,
+    maxWidth: 360,
     display: "grid",
-    gap: 6,
+    gap: 9,
   },
 
   logoCrop: {
-    width: 142,
-    height: 34,
+    width: 136,
+    height: 32,
     overflow: "hidden",
     display: "flex",
     alignItems: "center",
@@ -262,8 +245,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   logoImage: {
-    width: 142,
-    height: 34,
+    width: 136,
+    height: 32,
     objectFit: "contain",
     objectPosition: "left center",
     display: "block",
@@ -271,108 +254,98 @@ const styles: Record<string, React.CSSProperties> = {
 
   brandDescription: {
     margin: 0,
+    maxWidth: 330,
     color: "#475569",
-    fontSize: 11.5,
-    lineHeight: 1.38,
-    fontWeight: 700,
-    maxWidth: 320,
+    fontSize: 12,
+    lineHeight: 1.45,
+    fontWeight: 650,
   },
 
-  supportBox: {
+  supportLinkBox: {
     width: "fit-content",
-    display: "grid",
-    gap: 1,
-    padding: "7px 10px",
-    borderRadius: 13,
-    border: "1px solid rgba(129,140,248,0.32)",
-    background:
-      "linear-gradient(135deg, rgba(255,255,255,0.76) 0%, rgba(238,242,255,0.56) 100%)",
-    boxShadow: "0 7px 15px rgba(79,70,229,0.045)",
+    color: "#1d4ed8",
+    fontSize: 11.5,
+    lineHeight: 1,
+    fontWeight: 850,
     textDecoration: "none",
-  },
-
-  supportLabel: {
-    color: "#64748b",
-    fontSize: 8.5,
-    fontWeight: 950,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-  },
-
-  supportLink: {
-    color: "#3730a3",
-    fontSize: 10.75,
-    fontWeight: 950,
+    padding: "7px 10px",
+    borderRadius: 999,
+    border: "1px solid rgba(191, 219, 254, 0.88)",
+    background: "rgba(239, 246, 255, 0.54)",
   },
 
   columns: {
     minWidth: 0,
     display: "grid",
-    gap: 18,
+    gap: 22,
   },
 
   column: {
     minWidth: 0,
     display: "grid",
-    gap: 6,
+    gap: 8,
+    alignContent: "start",
   },
 
   columnTitle: {
-    color: "#111827",
+    color: "#0f172a",
     fontSize: 11.5,
-    fontWeight: 950,
-    letterSpacing: "-0.025em",
+    lineHeight: 1,
+    fontWeight: 900,
+    letterSpacing: "0.01em",
   },
 
   linkList: {
     display: "grid",
-    gap: 4,
+    gap: 6,
   },
 
   link: {
-    color: "#475569",
-    fontSize: 11.25,
-    fontWeight: 760,
-    lineHeight: 1.18,
+    width: "fit-content",
+    color: "#64748b",
+    fontSize: 11.5,
+    fontWeight: 700,
+    lineHeight: 1.15,
     textDecoration: "none",
   },
 
   bottomBar: {
-    position: "relative",
-    zIndex: 2,
-    marginTop: 10,
-    paddingTop: 8,
-    borderTop: "1px solid rgba(165,180,252,0.30)",
+    marginTop: 22,
+    paddingTop: 13,
+    borderTop: "1px solid rgba(191, 219, 254, 0.72)",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 10,
   },
 
   copyright: {
     color: "#64748b",
-    fontSize: 10.25,
-    fontWeight: 760,
+    fontSize: 10.75,
+    lineHeight: 1,
+    fontWeight: 700,
   },
 
   bottomLinks: {
     display: "flex",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: 7,
+    gap: 8,
   },
 
   bottomLink: {
-    color: "#334155",
-    fontSize: 10.25,
-    fontWeight: 900,
+    color: "#475569",
+    fontSize: 10.75,
+    lineHeight: 1,
+    fontWeight: 800,
     textDecoration: "none",
   },
 
   dotSeparator: {
-    color: "#818cf8",
-    fontSize: 9.5,
-    fontWeight: 950,
+    color: "#cbd5e1",
+    fontSize: 10,
+    lineHeight: 1,
+    fontWeight: 900,
   },
 };

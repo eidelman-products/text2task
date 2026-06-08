@@ -85,6 +85,38 @@ function getPreviewContactName(preview: PreviewItem) {
   );
 }
 
+function isGenericContactValue(value: unknown) {
+  const normalized = normalizeOptionalText(value).toLowerCase();
+
+  return (
+    !normalized ||
+    normalized === "contact" ||
+    normalized === "client" ||
+    normalized === "name" ||
+    normalized === "unknown" ||
+    normalized === "n/a" ||
+    normalized === "na" ||
+    normalized === "-" ||
+    normalized === "none"
+  );
+}
+
+function getNormalizedExtractedContactName(task: any) {
+  const rawContact =
+    task.contact_name ||
+    task.contactName ||
+    task.contact_person ||
+    task.contactPerson ||
+    "";
+  const clientName = normalizeOptionalText(task.client_name);
+
+  if (isGenericContactValue(rawContact)) {
+    return clientName || "";
+  }
+
+  return normalizeOptionalText(rawContact);
+}
+
 function buildSaveDeadlineValue(preview: PreviewItem) {
   if (preview.deadline_original_text?.trim()) {
     return preview.deadline_original_text.trim();
@@ -306,6 +338,7 @@ export default function ExtractWorkspace({
   function mapTaskToPreview(task: any, source: string): PreviewItem {
     const originalDeadlineText = task.deadline_text || "";
     const parsedDeadline = parseDeadline(originalDeadlineText);
+    const contactName = getNormalizedExtractedContactName(task);
 
     const displayDeadline =
       formatDeadline(originalDeadlineText, parsedDeadline.deadlineDate) ||
@@ -314,30 +347,10 @@ export default function ExtractWorkspace({
     return {
       previewId: createPreviewId(),
       client: task.client_name || "",
-      contact_name:
-        task.contact_name ||
-        task.contactName ||
-        task.contact_person ||
-        task.contactPerson ||
-        "",
-      contactName:
-        task.contact_name ||
-        task.contactName ||
-        task.contact_person ||
-        task.contactPerson ||
-        "",
-      contact_person:
-        task.contact_name ||
-        task.contactName ||
-        task.contact_person ||
-        task.contactPerson ||
-        "",
-      contactPerson:
-        task.contact_name ||
-        task.contactName ||
-        task.contact_person ||
-        task.contactPerson ||
-        "",
+      contact_name: contactName,
+      contactName,
+      contact_person: contactName,
+      contactPerson: contactName,
       client_phone: task.client_phone || task.phone || "",
       client_email: task.client_email || task.email || "",
       client_notes: task.client_notes || task.notes || "",
@@ -647,6 +660,20 @@ export default function ExtractWorkspace({
     });
   }
 
+  function removePreviewItem(previewId: string) {
+    setPreviewItems((prev) =>
+      prev.filter((item) => item.previewId !== previewId)
+    );
+
+    setPreviewAiMeta((prev) => {
+      if (!prev[previewId]) return prev;
+
+      const next = { ...prev };
+      delete next[previewId];
+      return next;
+    });
+  }
+
   function handleUndoChange(previewId: string, change: HybridAppliedChange) {
     setPreviewItems((prev) =>
       prev.map((item) => {
@@ -906,6 +933,21 @@ export default function ExtractWorkspace({
   }
 
   function viewExistingDuplicateProject() {
+    const existingTaskId = duplicateSaveState?.duplicate?.existing_task_id;
+
+    if (existingTaskId) {
+      const path = `/dashboard?view=tasks&taskId=${encodeURIComponent(
+        String(existingTaskId)
+      )}`;
+      const url =
+        typeof window !== "undefined"
+          ? new URL(path, window.location.origin).toString()
+          : path;
+
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+
     setDuplicateSaveState(null);
     onGoToTasks();
   }
@@ -920,20 +962,11 @@ export default function ExtractWorkspace({
         <section className="extract-workspace-shell" style={workspaceShellStyle}>
           <div style={workspaceHeaderStyle}>
             <div>
-              <div style={workspaceEyebrowStyle}>Client request workspace</div>
-
               <h2 style={workspaceTitleStyle}>Create structured work</h2>
 
               <p style={workspaceDescriptionStyle}>
-                Paste a client work request or upload a screenshot. Text2Task
-                extracts projects, subtasks, deadlines, budget, priority,
-                contact details, and context before anything is saved.
+                Start with text or a screenshot.
               </p>
-            </div>
-
-            <div style={workspaceStatusStyle}>
-              <span style={workspaceStatusDotStyle} />
-              Review-first workflow
             </div>
           </div>
 
@@ -975,15 +1008,9 @@ export default function ExtractWorkspace({
           <section className="extract-preview-open-shell" style={previewOpenShellStyle}>
             <header className="extract-preview-open-header" style={previewOpenHeaderStyle}>
               <div>
-                <div style={previewEyebrowStyle}>AI Project Preview</div>
-
                 <h2 style={previewOpenTitleStyle}>
                   Review the project before saving
                 </h2>
-
-                <p style={previewOpenDescriptionStyle}>
-                  Edit anything now — nothing is saved until you approve.
-                </p>
               </div>
 
               <div style={previewOpenActionsStyle}>
@@ -1026,6 +1053,7 @@ export default function ExtractWorkspace({
               aiMetaByPreviewId={previewAiMeta}
               onChange={updatePreviewItem}
               onUndoChange={handleUndoChange}
+              onRemovePreviewItem={removePreviewItem}
             />
           </section>
         ) : null}
@@ -1079,13 +1107,12 @@ const extractWorkspaceStyle: CSSProperties = {
 };
 
 const workspaceShellStyle: CSSProperties = {
-  borderRadius: 30,
-  padding: 22,
-  background:
-    "radial-gradient(circle at top left, rgba(238,242,255,0.95) 0%, transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.94) 100%)",
-  border: "1px solid rgba(226,232,240,0.92)",
-  boxShadow:
-    "0 28px 70px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.95)",
+  display: "grid",
+  gap: 18,
+  padding: "4px 28px 0",
+  background: "transparent",
+  border: "none",
+  boxShadow: "none",
 };
 
 const workspaceHeaderStyle: CSSProperties = {
@@ -1093,7 +1120,6 @@ const workspaceHeaderStyle: CSSProperties = {
   alignItems: "flex-start",
   justifyContent: "space-between",
   gap: 18,
-  marginBottom: 18,
 };
 
 const workspaceEyebrowStyle: CSSProperties = {
@@ -1105,7 +1131,7 @@ const workspaceEyebrowStyle: CSSProperties = {
 };
 
 const workspaceTitleStyle: CSSProperties = {
-  margin: "5px 0 0",
+  margin: 0,
   color: "#0f172a",
   fontSize: 28,
   lineHeight: 1.12,
@@ -1119,7 +1145,7 @@ const workspaceDescriptionStyle: CSSProperties = {
   fontSize: 14,
   lineHeight: 1.65,
   fontWeight: 620,
-  maxWidth: 780,
+  maxWidth: 760,
 };
 
 const workspaceStatusStyle: CSSProperties = {
@@ -1336,11 +1362,11 @@ const extractWorkspaceResponsiveCss = `
       padding: 24px !important;
     }
 
-    .extract-premium-hero > div:nth-child(3) {
+    .extract-premium-hero-content {
       grid-template-columns: 1fr !important;
     }
 
-    .extract-premium-hero > div:nth-child(3) > div:nth-child(2) {
+    .extract-premium-workflow {
       max-width: 720px !important;
     }
   }
@@ -1362,7 +1388,39 @@ const extractWorkspaceResponsiveCss = `
       border-radius: 24px !important;
     }
 
-    .extract-premium-hero > div:nth-child(3) > div:nth-child(2) {
+    .extract-premium-hero-content {
+      grid-template-columns: minmax(0, 1fr) !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      gap: 24px !important;
+    }
+
+    .extract-premium-hero-copy {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+    }
+
+    .extract-premium-workflow {
+      grid-template-columns: minmax(0, 1fr) !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      gap: 14px !important;
+    }
+
+    .extract-premium-workflow-step {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+    }
+
+    .extract-premium-workflow-step > div:last-child {
+      min-width: 0 !important;
+    }
+
+    .extract-premium-workflow-arrow {
       display: none !important;
     }
 

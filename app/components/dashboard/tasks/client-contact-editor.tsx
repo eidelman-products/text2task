@@ -8,6 +8,11 @@ type ClientContactEditorProps = {
     e: KeyboardEvent<HTMLInputElement | HTMLSelectElement>
   ) => void;
   updateTaskField: (taskId: number, field: string, value: any) => void;
+  updateProjectField: (
+    projectId: string,
+    field: string,
+    value: any
+  ) => Promise<void> | void;
 };
 
 export default function ClientContactEditor({
@@ -15,8 +20,10 @@ export default function ClientContactEditor({
   isDeleting,
   onEnterBlur,
   updateTaskField,
+  updateProjectField,
 }: ClientContactEditorProps) {
   const primaryTaskId = project.primaryTask.id;
+  const projectId = project.project_id || project.project?.id || "";
 
   const contactName = project.contactName || project.contact_name || "";
   const email = project.client_email || project.primaryTask.client?.email || "";
@@ -36,87 +43,74 @@ export default function ClientContactEditor({
     updateTaskField(primaryTaskId, field, cleanNext);
   }
 
-  return (
-    <aside style={clientCardStyle}>
-      <div style={sectionHeaderStyle}>
-        <div>
-          <div style={sectionTitleStyle}>Client details</div>
-          <div style={sectionSubtitleStyle}>
-            Contact information and project context saved with this client.
-          </div>
-        </div>
+  function updateContactOnBlur(nextValue: string) {
+    if (!projectId) return;
 
-        <span style={editorPillStyle}>Editable</span>
+    const cleanCurrent = String(contactName || "").trim();
+    const cleanNext = String(nextValue || "").trim();
+
+    if (cleanCurrent === cleanNext) return;
+
+    updateProjectField(projectId, "contact_name", cleanNext);
+  }
+
+  return (
+    <aside style={clientDetailsStyle}>
+      <style>{clientContactCss}</style>
+
+      <div style={clientHeaderStyle}>
+        <div style={clientKickerStyle}>Client details</div>
       </div>
 
-      <div style={contactListStyle}>
-        <ReadOnlyField
-          label="Contact person"
-          value={contactName}
-          emptyText="No contact person saved"
-        />
+      <div style={clientContentStyle}>
+        <div style={clientInfoRowStyle}>
+          <EditableTextField
+            label="Contact"
+            type="text"
+            placeholder="No contact person"
+            defaultValue={contactName}
+            disabled={isDeleting || !projectId}
+            onEnterBlur={onEnterBlur}
+            onCommit={updateContactOnBlur}
+          />
 
-        <EditableTextField
-          label="Email"
-          type="email"
-          placeholder="client@email.com"
-          defaultValue={email}
-          disabled={isDeleting}
-          onEnterBlur={onEnterBlur}
-          onCommit={(nextValue) => updateOnBlur("email", email, nextValue)}
-        />
+          <EditableTextField
+            label="Email"
+            type="email"
+            placeholder="client@email.com"
+            defaultValue={email}
+            disabled={isDeleting}
+            onEnterBlur={onEnterBlur}
+            onCommit={(nextValue) => updateOnBlur("email", email, nextValue)}
+          />
 
-        <EditableTextField
-          label="Phone"
-          type="tel"
-          placeholder="Client phone number"
-          defaultValue={phone}
-          disabled={isDeleting}
-          onEnterBlur={onEnterBlur}
-          onCommit={(nextValue) => updateOnBlur("phone", phone, nextValue)}
-        />
+          <EditableTextField
+            label="Phone"
+            type="tel"
+            placeholder="Client phone"
+            defaultValue={phone}
+            disabled={isDeleting}
+            onEnterBlur={onEnterBlur}
+            onCommit={(nextValue) => updateOnBlur("phone", phone, nextValue)}
+          />
+        </div>
 
         <EditableTextareaField
           label="Notes"
-          placeholder="Add project notes, client preferences, or context..."
+          placeholder="Add project notes, client preferences, tone, links, or important context."
           defaultValue={notes}
           disabled={isDeleting}
           onCommit={(nextValue) => updateOnBlur("notes", notes, nextValue)}
         />
-
-        {!contactName && !email && !phone && !notes ? (
-          <div style={emptyDetailsStyle}>
-            No client details saved yet. Add email, phone, or notes to keep the
-            project context in one place.
-          </div>
-        ) : null}
       </div>
+
+      {!contactName && !email && !phone && !notes ? (
+        <div style={emptyDetailsStyle}>
+          No client details saved yet. Add email, phone, or notes to keep the
+          project context in one place.
+        </div>
+      ) : null}
     </aside>
-  );
-}
-
-function ReadOnlyField({
-  label,
-  value,
-  emptyText,
-}: {
-  label: string;
-  value?: string | null;
-  emptyText: string;
-}) {
-  return (
-    <div style={fieldShellStyle}>
-      <label style={fieldLabelStyle}>{label}</label>
-
-      <div
-        style={{
-          ...readOnlyValueStyle,
-          color: value ? "#344054" : "#98a2b3",
-        }}
-      >
-        {value || emptyText}
-      </div>
-    </div>
   );
 }
 
@@ -140,8 +134,8 @@ function EditableTextField({
   onCommit: (value: string) => void;
 }) {
   return (
-    <div style={fieldShellStyle}>
-      <label style={fieldLabelStyle}>{label}</label>
+    <label style={fieldLineStyle}>
+      <span style={fieldLabelStyle}>{label}</span>
 
       <input
         type={type}
@@ -150,10 +144,10 @@ function EditableTextField({
         disabled={disabled}
         onBlur={(e) => onCommit(e.currentTarget.value)}
         onKeyDown={onEnterBlur}
-        className="client-contact-editor-input"
+        className="client-contact-editor-input-v6"
         style={inputStyle}
       />
-    </div>
+    </label>
   );
 }
 
@@ -171,138 +165,160 @@ function EditableTextareaField({
   onCommit: (value: string) => void;
 }) {
   return (
-    <div style={fieldShellStyle}>
-      <label style={fieldLabelStyle}>{label}</label>
+    <label style={notesLineStyle}>
+      <span style={fieldLabelStyle}>{label}</span>
 
       <textarea
         defaultValue={defaultValue}
         placeholder={placeholder}
         disabled={disabled}
-        rows={4}
+        rows={2}
         onBlur={(e) => onCommit(e.currentTarget.value)}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
             e.currentTarget.blur();
           }
         }}
-        className="client-contact-editor-input"
+        className="client-contact-editor-input-v6"
         style={textareaStyle}
       />
-    </div>
+    </label>
   );
 }
 
-const clientCardStyle: CSSProperties = {
-  borderRadius: 22,
-  background: "rgba(255,255,255,0.66)",
-  padding: 13,
+const clientDetailsStyle: CSSProperties = {
   minWidth: 0,
-  boxShadow: "0 10px 28px rgba(15,23,42,0.026)",
-};
-
-const sectionHeaderStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: 12,
-  marginBottom: 11,
-};
-
-const sectionTitleStyle: CSSProperties = {
-  fontSize: 13,
-  fontWeight: 950,
-  color: "#344054",
-};
-
-const sectionSubtitleStyle: CSSProperties = {
-  marginTop: 3,
-  fontSize: 11,
-  fontWeight: 750,
-  color: "#98a2b3",
-  lineHeight: 1.45,
-};
-
-const editorPillStyle: CSSProperties = {
-  padding: "5px 8px",
-  borderRadius: 999,
-  background: "rgba(240,253,244,0.72)",
-  color: "#15803d",
-  border: "1px solid rgba(187,247,208,0.7)",
-  fontSize: 10,
-  fontWeight: 950,
-  whiteSpace: "nowrap",
-};
-
-const contactListStyle: CSSProperties = {
   display: "grid",
-  gap: 8,
+  gridTemplateColumns: "160px minmax(0, 1fr)",
+  gap: 16,
+  padding: "10px 0 11px",
+  background:
+    "linear-gradient(90deg, rgba(239,246,255,0.36), rgba(255,255,255,0) 50%)",
+  border: "none",
+  boxShadow: "none",
+  borderRadius: 18,
 };
 
-const fieldShellStyle: CSSProperties = {
+const clientHeaderStyle: CSSProperties = {
+  minWidth: 0,
+  display: "grid",
+  alignContent: "start",
+  gap: 3,
+  paddingLeft: 13,
+  borderLeft: "2px solid rgba(37,99,235,0.42)",
+};
+
+const clientKickerStyle: CSSProperties = {
+  fontSize: 13.8,
+  fontWeight: 950,
+  color: "#101828",
+  letterSpacing: "-0.025em",
+};
+
+const clientContentStyle: CSSProperties = {
+  minWidth: 0,
   display: "grid",
   gap: 5,
-  padding: "10px 11px",
-  borderRadius: 15,
-  background: "rgba(248,250,252,0.66)",
-  border: "1px solid rgba(226,232,240,0.42)",
+  maxWidth: 820,
+};
+
+const clientInfoRowStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns:
+    "minmax(150px, 0.9fr) minmax(240px, 1.2fr) minmax(150px, 0.9fr)",
+  alignItems: "baseline",
+  columnGap: 22,
+  rowGap: 5,
+};
+
+const fieldLineStyle: CSSProperties = {
   minWidth: 0,
+  display: "inline-flex",
+  alignItems: "baseline",
+  gap: 7,
+};
+
+const notesLineStyle: CSSProperties = {
+  minWidth: 0,
+  display: "grid",
+  gridTemplateColumns: "50px minmax(0, 1fr)",
+  alignItems: "start",
+  gap: 8,
+  paddingTop: 2,
+  maxWidth: 820,
 };
 
 const fieldLabelStyle: CSSProperties = {
+  flexShrink: 0,
   fontSize: 10,
   color: "#98a2b3",
   fontWeight: 950,
-  textTransform: "uppercase",
   letterSpacing: "0.08em",
-};
-
-const readOnlyValueStyle: CSSProperties = {
-  minHeight: 28,
-  display: "flex",
-  alignItems: "center",
-  fontSize: 13,
-  fontWeight: 760,
-  lineHeight: 1.45,
-  wordBreak: "break-word",
+  textTransform: "uppercase",
 };
 
 const inputStyle: CSSProperties = {
   width: "100%",
-  minHeight: 34,
-  borderRadius: 12,
-  border: "1px solid rgba(226,232,240,0.72)",
-  background: "rgba(255,255,255,0.78)",
-  color: "#344054",
-  fontSize: 13,
-  fontWeight: 760,
-  padding: "0 10px",
+  minWidth: 0,
+  minHeight: 23,
+  borderRadius: 8,
+  border: "1px solid transparent",
+  background: "transparent",
+  color: "#101828",
+  fontSize: 13.2,
+  fontWeight: 880,
+  padding: "0 2px",
   outline: "none",
-  boxShadow: "0 1px 2px rgba(15,23,42,0.025)",
+  boxShadow: "none",
 };
 
 const textareaStyle: CSSProperties = {
   width: "100%",
-  minHeight: 92,
-  resize: "vertical",
-  borderRadius: 12,
-  border: "1px solid rgba(226,232,240,0.72)",
-  background: "rgba(255,255,255,0.78)",
+  minHeight: 42,
+  maxHeight: 78,
+  resize: "none",
+  borderRadius: 8,
+  border: "1px solid transparent",
+  background: "transparent",
   color: "#344054",
   fontSize: 13,
-  fontWeight: 720,
-  lineHeight: 1.45,
-  padding: "9px 10px",
+  fontWeight: 760,
+  lineHeight: 1.5,
+  padding: "0 2px",
   outline: "none",
-  boxShadow: "0 1px 2px rgba(15,23,42,0.025)",
+  boxShadow: "none",
+  overflow: "hidden",
 };
 
 const emptyDetailsStyle: CSSProperties = {
-  padding: "12px",
-  borderRadius: 15,
-  background: "rgba(255,255,255,0.62)",
-  border: "1px dashed rgba(203,213,225,0.75)",
+  gridColumn: "1 / -1",
+  padding: "2px 0 0 14px",
   color: "#667085",
-  fontSize: 13,
-  fontWeight: 750,
-  lineHeight: 1.45,
+  fontSize: 12,
+  fontWeight: 720,
+  lineHeight: 1.35,
 };
+
+const clientContactCss = `
+  .client-contact-editor-input-v6::placeholder {
+    color: #98a2b3;
+  }
+
+  .client-contact-editor-input-v6:hover:not(:disabled) {
+    background: rgba(248,250,252,0.70) !important;
+  }
+
+  .client-contact-editor-input-v6:focus {
+    background: rgba(255,255,255,0.98) !important;
+    border-color: rgba(147,197,253,0.72) !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.045) !important;
+    padding-left: 7px !important;
+    padding-right: 7px !important;
+  }
+
+  @media (max-width: 1100px) {
+    .client-contact-editor-input-v6 {
+      font-size: 12.4px !important;
+    }
+  }
+`;

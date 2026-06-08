@@ -14,7 +14,11 @@ type CreemWebhookPayload = {
   object?: JsonRecord;
   metadata?: JsonRecord;
   customer?: JsonRecord;
+  customer_id?: string;
+  customerId?: string;
   subscription?: JsonRecord;
+  subscription_id?: string;
+  subscriptionId?: string;
 };
 
 function verifyCreemSignature(payload: string, signature: string, secret: string) {
@@ -39,6 +43,55 @@ function getEventType(payload: CreemWebhookPayload) {
 
 function getPayloadData(payload: CreemWebhookPayload): JsonRecord {
   return payload.data || payload.object || {};
+}
+
+function asRecord(value: any): JsonRecord | null {
+  if (!value || typeof value !== "object") return null;
+
+  return value;
+}
+
+function firstString(...values: any[]) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
+function getObjectId(value: any) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  const record = asRecord(value);
+
+  return firstString(record?.id, record?.customer_id, record?.customerId);
+}
+
+function parseOptionalBoolean(value: any): boolean | null {
+  if (typeof value === "boolean") return value;
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+  }
+
+  return null;
+}
+
+function firstBoolean(...values: any[]) {
+  for (const value of values) {
+    const parsed = parseOptionalBoolean(value);
+
+    if (parsed !== null) return parsed;
+  }
+
+  return null;
 }
 
 function getMetadata(payload: CreemWebhookPayload): JsonRecord {
@@ -95,6 +148,110 @@ function getCurrentPeriodEnd(payload: CreemWebhookPayload) {
   );
 }
 
+function getCustomerId(payload: CreemWebhookPayload) {
+  const data = getPayloadData(payload);
+  const object = asRecord(payload.object);
+
+  return firstString(
+    getObjectId(data.customer),
+    data.customer_id,
+    data.customerId,
+    getObjectId(data.checkout?.customer),
+    getObjectId(data.subscription?.customer),
+    getObjectId(payload.customer),
+    payload.customer_id,
+    payload.customerId,
+    getObjectId(object?.customer),
+    object?.customer_id,
+    object?.customerId
+  );
+}
+
+function looksLikeSubscriptionObject(value: JsonRecord) {
+  return Boolean(
+    firstString(value.id) &&
+      (value.object === "subscription" ||
+        value.type === "subscription" ||
+        value.entity === "subscription" ||
+        value.status ||
+        value.current_period_end ||
+        value.currentPeriodEnd ||
+        typeof value.cancel_at_period_end === "boolean" ||
+        typeof value.cancelAtPeriodEnd === "boolean" ||
+        value.customer ||
+        value.customer_id ||
+        value.customerId)
+  );
+}
+
+function getSubscriptionId(
+  payload: CreemWebhookPayload,
+  eventType: string
+) {
+  const data = getPayloadData(payload);
+  const object = asRecord(payload.object);
+  const directSubscriptionId =
+    eventType.startsWith("subscription.") && looksLikeSubscriptionObject(data)
+    ? firstString(data.id)
+    : null;
+
+  return firstString(
+    getObjectId(data.subscription),
+    data.subscription_id,
+    data.subscriptionId,
+    getObjectId(payload.subscription),
+    payload.subscription_id,
+    payload.subscriptionId,
+    getObjectId(object?.subscription),
+    object?.subscription_id,
+    object?.subscriptionId,
+    directSubscriptionId
+  );
+}
+
+function getCancelAtPeriodEnd(payload: CreemWebhookPayload) {
+  const data = getPayloadData(payload);
+
+  return firstBoolean(
+    data.cancel_at_period_end,
+    data.cancelAtPeriodEnd,
+    data.subscription?.cancel_at_period_end,
+    data.subscription?.cancelAtPeriodEnd,
+    payload.subscription?.cancel_at_period_end,
+    payload.subscription?.cancelAtPeriodEnd
+  );
+}
+
+function getBillingProviderUpdate(
+  payload: CreemWebhookPayload,
+  eventType: string,
+  fallbackCancelAtPeriodEnd?: boolean
+) {
+  const updatePayload: JsonRecord = {
+    billing_updated_at: new Date().toISOString(),
+  };
+
+  const customerId = getCustomerId(payload);
+  const subscriptionId = getSubscriptionId(payload, eventType);
+  const cancelAtPeriodEnd = getCancelAtPeriodEnd(payload);
+
+  if (customerId) {
+    updatePayload.creem_customer_id = customerId;
+  }
+
+  if (subscriptionId) {
+    updatePayload.creem_subscription_id = subscriptionId;
+  }
+
+  if (cancelAtPeriodEnd !== null) {
+    updatePayload.cancel_at_period_end = cancelAtPeriodEnd;
+  } else if (typeof fallbackCancelAtPeriodEnd === "boolean") {
+    updatePayload.cancel_at_period_end = fallbackCancelAtPeriodEnd;
+  }
+
+  return updatePayload;
+}
+
 function normalizePeriodEnd(value: string | null) {
   if (!value) return null;
 
@@ -107,16 +264,20 @@ function normalizePeriodEnd(value: string | null) {
   return date.toISOString();
 }
 
-async function updateUserToPro(payload: CreemWebhookPayload) {
+async function updateUserToPro(
+  payload: CreemWebhookPayload,
+  eventType: string
+) {
   const userId = getUserId(payload);
   const email = getCustomerEmail(payload);
   const currentPeriodEnd = normalizePeriodEnd(getCurrentPeriodEnd(payload));
 
-  const updatePayload = {
+  const updatePayload: JsonRecord = {
     plan: "pro",
     subscription_status: "active",
     pro_started_at: new Date().toISOString(),
     pro_current_period_end: currentPeriodEnd,
+    ...getBillingProviderUpdate(payload, eventType, false),
   };
 
   if (userId) {
@@ -152,14 +313,16 @@ async function updateUserToPro(payload: CreemWebhookPayload) {
 
 async function downgradeUserToFree(
   payload: CreemWebhookPayload,
+  eventType: string,
   status: string
 ) {
   const userId = getUserId(payload);
   const email = getCustomerEmail(payload);
 
-  const updatePayload = {
+  const updatePayload: JsonRecord = {
     plan: "free",
     subscription_status: status,
+    ...getBillingProviderUpdate(payload, eventType, false),
   };
 
   if (userId) {
@@ -193,14 +356,18 @@ async function downgradeUserToFree(
   throw new Error("Creem webhook missing user identifier");
 }
 
-async function markScheduledCancel(payload: CreemWebhookPayload) {
+async function markScheduledCancel(
+  payload: CreemWebhookPayload,
+  eventType: string
+) {
   const userId = getUserId(payload);
   const email = getCustomerEmail(payload);
   const currentPeriodEnd = normalizePeriodEnd(getCurrentPeriodEnd(payload));
 
-  const updatePayload = {
+  const updatePayload: JsonRecord = {
     subscription_status: "scheduled_cancel",
     pro_current_period_end: currentPeriodEnd,
+    ...getBillingProviderUpdate(payload, eventType, true),
   };
 
   if (userId) {
@@ -283,12 +450,12 @@ export async function POST(req: NextRequest) {
       case "subscription.active":
       case "subscription.paid":
       case "subscription.trialing": {
-        await updateUserToPro(payload);
+        await updateUserToPro(payload, eventType);
         break;
       }
 
       case "subscription.scheduled_cancel": {
-        await markScheduledCancel(payload);
+        await markScheduledCancel(payload, eventType);
         break;
       }
 
@@ -296,13 +463,13 @@ export async function POST(req: NextRequest) {
       case "subscription.expired":
       case "subscription.past_due":
       case "subscription.paused": {
-        await downgradeUserToFree(payload, eventType);
+        await downgradeUserToFree(payload, eventType, eventType);
         break;
       }
 
       case "refund.created":
       case "dispute.created": {
-        await downgradeUserToFree(payload, eventType);
+        await downgradeUserToFree(payload, eventType, eventType);
         break;
       }
 

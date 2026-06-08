@@ -152,7 +152,7 @@ function getInitials(displayName: string) {
 
 const customerStoriesCss = `
   .t2t-customer-stories {
-    padding: 24px 0 28px;
+    padding: 34px 0 36px;
   }
 
   .t2t-customer-stories-shell {
@@ -162,7 +162,7 @@ const customerStoriesCss = `
 
   .t2t-customer-stories-header {
     max-width: 620px;
-    margin: 0 auto 16px;
+    margin: 0 auto 22px;
     text-align: center;
   }
 
@@ -186,7 +186,7 @@ const customerStoriesCss = `
 
   .t2t-customer-stories-grid {
     display: grid;
-    gap: 12px;
+    gap: 16px;
     align-items: stretch;
     margin: 0 auto;
   }
@@ -205,17 +205,13 @@ const customerStoriesCss = `
     position: relative;
     min-width: 0;
     overflow: hidden;
-    border-radius: 18px;
-    border: 1px solid rgba(226,232,240,0.78);
+    border-radius: 16px;
+    border: 1px solid rgba(226, 232, 240, 0.92);
     background:
-      linear-gradient(90deg, rgba(99,102,241,0.38), rgba(139,92,246,0)) 0 0 / 100% 2px no-repeat,
-      radial-gradient(circle at top left, rgba(238,242,255,0.48), transparent 42%),
-      linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.74) 100%);
-    box-shadow:
-      0 12px 30px rgba(15,23,42,0.045),
-      0 8px 18px rgba(79,70,229,0.035),
-      inset 0 1px 0 rgba(255,255,255,0.92);
-    padding: 13px 13px 11px;
+      linear-gradient(90deg, rgba(96, 165, 250, 0.72), rgba(191, 219, 254, 0.18)) 0 0 / 100% 2px no-repeat,
+      #ffffff;
+    box-shadow: 0 7px 24px rgba(15, 23, 42, 0.04);
+    padding: 16px 16px 14px;
     transition:
       transform 180ms ease,
       border-color 180ms ease,
@@ -224,27 +220,22 @@ const customerStoriesCss = `
 
   .t2t-customer-story-card:hover {
     transform: translateY(-2px);
-    border-color: rgba(165,180,252,0.82);
-    box-shadow:
-      0 18px 42px rgba(79,70,229,0.09),
-      0 10px 22px rgba(15,23,42,0.05),
-      inset 0 1px 0 rgba(255,255,255,0.94);
+    border-color: rgba(147, 197, 253, 0.88);
+    box-shadow: 0 12px 32px rgba(37, 99, 235, 0.07);
   }
 
   .t2t-customer-story-quote {
-    width: 24px;
-    height: 24px;
-    margin-bottom: 8px;
-    border-radius: 999px;
+    width: auto;
+    height: 20px;
+    margin-bottom: 9px;
     display: grid;
-    place-items: center;
-    color: #6366f1;
-    background: rgba(238,242,255,0.78);
-    border: 1px solid rgba(199,210,254,0.62);
-    font-size: 18px;
+    justify-content: start;
+    color: #60a5fa;
+    background: transparent;
+    border: 0;
+    font-size: 24px;
     line-height: 1;
     font-weight: 950;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.88);
   }
 
   .t2t-customer-story-text {
@@ -273,15 +264,14 @@ const customerStoriesCss = `
   .t2t-customer-story-avatar {
     width: 30px;
     height: 30px;
-    border-radius: 10px;
+    border-radius: 9px;
     display: grid;
     place-items: center;
     color: #ffffff;
-    background:
-      linear-gradient(135deg, rgba(99,102,241,0.95), rgba(124,58,237,0.9));
+    background: #2563eb;
     font-size: 10px;
     font-weight: 950;
-    box-shadow: 0 8px 18px rgba(99,102,241,0.14);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.14);
   }
 
   .t2t-customer-story-person {
@@ -317,8 +307,8 @@ const customerStoriesCss = `
     align-items: center;
     justify-content: center;
     color: #475569;
-    background: rgba(255,255,255,0.76);
-    border: 1px solid rgba(203,213,225,0.76);
+    background: #f8fafc;
+    border: 1px solid rgba(203, 213, 225, 0.82);
     font-size: 10px;
     font-weight: 900;
   }
@@ -334,7 +324,7 @@ const customerStoriesCss = `
 
   @media (max-width: 560px) {
     .t2t-customer-stories {
-      padding: 22px 0 24px;
+      padding: 28px 0 30px;
     }
 
     .t2t-customer-stories-header h2 {
@@ -342,8 +332,8 @@ const customerStoriesCss = `
     }
 
     .t2t-customer-story-card {
-      padding: 12px;
-      border-radius: 17px;
+      padding: 15px;
+      border-radius: 15px;
     }
   }
 `;

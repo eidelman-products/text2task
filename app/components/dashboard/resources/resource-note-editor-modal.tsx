@@ -90,7 +90,6 @@ export default function ResourceNoteEditorModal({
             <div className="t2t-note-editor-icon">✍</div>
 
             <div>
-              <div className="t2t-note-editor-eyebrow">Project note</div>
               <h2>View / edit note</h2>
               <p>Update the saved client instruction or internal context.</p>
             </div>
@@ -168,8 +167,8 @@ export default function ResourceNoteEditorModal({
           align-items: center;
           justify-content: center;
           padding: 18px;
-          background: rgba(15, 23, 42, 0.38);
-          backdrop-filter: blur(8px);
+          background: rgba(15, 23, 42, 0.42);
+          backdrop-filter: blur(4px);
           box-sizing: border-box;
         }
 
@@ -178,14 +177,12 @@ export default function ResourceNoteEditorModal({
           max-height: calc(100dvh - 36px);
           display: flex;
           flex-direction: column;
-          border-radius: 28px;
-          border: 1px solid rgba(226, 232, 240, 0.95);
-          background:
-            radial-gradient(circle at 100% 0%, rgba(224, 231, 255, 0.8), transparent 34%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.98));
+          border-radius: 22px;
+          border: 1px solid rgba(203, 213, 225, 0.72);
+          background: #f8fafc;
           box-shadow:
-            0 30px 90px rgba(15, 23, 42, 0.28),
-            0 0 0 1px rgba(255, 255, 255, 0.72);
+            0 24px 64px rgba(15, 23, 42, 0.16),
+            0 4px 14px rgba(15, 23, 42, 0.05);
           overflow: hidden;
           box-sizing: border-box;
         }
@@ -196,8 +193,9 @@ export default function ResourceNoteEditorModal({
           align-items: flex-start;
           justify-content: space-between;
           gap: 14px;
-          padding: 18px 18px 14px;
-          border-bottom: 1px solid rgba(226, 232, 240, 0.78);
+          padding: 17px 18px 14px;
+          border-bottom: 1px solid rgba(226, 232, 240, 0.72);
+          background: rgba(255, 255, 255, 0.98);
         }
 
         .t2t-note-editor-header-main {
@@ -208,35 +206,25 @@ export default function ResourceNoteEditorModal({
         }
 
         .t2t-note-editor-icon {
-          width: 42px;
-          height: 42px;
-          border-radius: 17px;
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
           display: grid;
           place-items: center;
           flex-shrink: 0;
-          background: rgba(238, 242, 255, 0.98);
-          border: 1px solid rgba(199, 210, 254, 0.96);
-          color: #4f46e5;
-          box-shadow:
-            0 14px 28px rgba(79, 70, 229, 0.11),
-            inset 0 1px 0 rgba(255, 255, 255, 0.84);
-        }
-
-        .t2t-note-editor-eyebrow {
-          color: #4f46e5;
-          font-size: 10px;
-          font-weight: 950;
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
+          background: rgba(239, 246, 255, 0.92);
+          border: 1px solid rgba(191, 219, 254, 0.74);
+          color: #2563eb;
+          box-shadow: none;
         }
 
         .t2t-note-editor-header h2 {
-          margin: 4px 0 0;
+          margin: 0;
           color: #0f172a;
           font-size: 22px;
           line-height: 1.1;
-          font-weight: 950;
-          letter-spacing: -0.045em;
+          font-weight: 900;
+          letter-spacing: 0;
         }
 
         .t2t-note-editor-header p {
@@ -244,15 +232,15 @@ export default function ResourceNoteEditorModal({
           color: #64748b;
           font-size: 13px;
           line-height: 1.45;
-          font-weight: 720;
+          font-weight: 650;
         }
 
         .t2t-note-editor-close {
           width: 38px;
           height: 38px;
-          border-radius: 14px;
-          border: 1px solid rgba(226, 232, 240, 0.95);
-          background: rgba(255, 255, 255, 0.94);
+          border-radius: 999px;
+          border: 1px solid rgba(226, 232, 240, 0.82);
+          background: #ffffff;
           color: #64748b;
           font-size: 23px;
           line-height: 1;
@@ -271,17 +259,18 @@ export default function ResourceNoteEditorModal({
           display: grid;
           gap: 12px;
           padding: 16px 18px;
+          background: #f8fafc;
           box-sizing: border-box;
         }
 
         .t2t-note-editor-error {
-          border-radius: 16px;
-          border: 1px solid rgba(253, 164, 175, 0.95);
-          background: rgba(255, 241, 242, 0.95);
-          color: #be123c;
+          border-radius: 10px;
+          border: 1px solid rgba(254, 202, 202, 0.78);
+          background: rgba(254, 242, 242, 0.74);
+          color: #b91c1c;
           padding: 11px 12px;
           font-size: 13px;
-          font-weight: 850;
+          font-weight: 750;
           line-height: 1.45;
         }
 
@@ -294,23 +283,30 @@ export default function ResourceNoteEditorModal({
         .t2t-note-editor-field span {
           color: #64748b;
           font-size: 10px;
-          font-weight: 950;
+          font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 0.08em;
+          letter-spacing: 0.06em;
         }
 
         .t2t-note-editor-field input,
         .t2t-note-editor-field textarea {
           width: 100%;
           min-width: 0;
-          border-radius: 16px;
-          border: 1px solid rgba(203, 213, 225, 0.95);
-          background: rgba(255, 255, 255, 0.98);
+          border-radius: 10px;
+          border: 1px solid rgba(203, 213, 225, 0.76);
+          background: #ffffff;
           color: #0f172a;
           font-size: 13px;
-          font-weight: 760;
+          font-weight: 650;
           outline: none;
           box-sizing: border-box;
+          transition: border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .t2t-note-editor-field input:focus,
+        .t2t-note-editor-field textarea:focus {
+          border-color: rgba(37, 99, 235, 0.42);
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.07);
         }
 
         .t2t-note-editor-field input {
@@ -328,7 +324,7 @@ export default function ResourceNoteEditorModal({
         .t2t-note-editor-count {
           color: #94a3b8;
           font-size: 11px;
-          font-weight: 800;
+          font-weight: 650;
           text-align: right;
         }
 
@@ -340,29 +336,30 @@ export default function ResourceNoteEditorModal({
           gap: 10px;
           padding: 14px 18px 18px;
           border-top: 1px solid rgba(226, 232, 240, 0.72);
+          background: rgba(255, 255, 255, 0.98);
         }
 
         .t2t-note-editor-secondary,
         .t2t-note-editor-primary {
           min-height: 40px;
-          border-radius: 14px;
+          border-radius: 10px;
           padding: 0 15px;
           font-size: 12px;
-          font-weight: 950;
+          font-weight: 800;
           cursor: pointer;
         }
 
         .t2t-note-editor-secondary {
-          border: 1px solid rgba(226, 232, 240, 0.95);
-          background: rgba(255, 255, 255, 0.95);
+          border: 1px solid rgba(203, 213, 225, 0.72);
+          background: #ffffff;
           color: #475569;
         }
 
         .t2t-note-editor-primary {
-          border: none;
-          background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+          border: 1px solid #2563eb;
+          background: #2563eb;
           color: #ffffff;
-          box-shadow: 0 14px 26px rgba(79, 70, 229, 0.22);
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.14);
         }
 
         .t2t-note-editor-secondary:disabled,
@@ -394,10 +391,8 @@ export default function ResourceNoteEditorModal({
             top: 0;
             z-index: 2;
             padding: 13px 14px;
-            background:
-              radial-gradient(circle at 100% 0%, rgba(224, 231, 255, 0.78), transparent 34%),
-              rgba(255, 255, 255, 0.97);
-            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(8px);
           }
 
           .t2t-note-editor-icon {

@@ -1,6 +1,13 @@
 "use client";
 
 import type React from "react";
+import {
+  dashboardColors,
+  dashboardRadii,
+  dashboardShadows,
+  dashboardSpacing,
+  dashboardTypography,
+} from "../ui/tokens";
 import type { ProjectSnapshotItem } from "./dashboard-overview-types";
 import { openTaskInNewWindow } from "./dashboard-overview-utils";
 
@@ -15,32 +22,32 @@ function getStatusPillStyle(status: string): React.CSSProperties {
 
   if (normalized.includes("done")) {
     return {
-      color: "#15803d",
-      background: "rgba(34,197,94,0.1)",
-      border: "1px solid rgba(34,197,94,0.18)",
+      color: dashboardColors.status.green,
+      background: dashboardColors.status.greenSoft,
+      border: "1px solid rgba(34, 197, 94, 0.16)",
     };
   }
 
   if (normalized.includes("progress")) {
     return {
       color: "#047857",
-      background: "rgba(16,185,129,0.1)",
-      border: "1px solid rgba(16,185,129,0.18)",
+      background: "rgba(236, 253, 245, 0.82)",
+      border: "1px solid rgba(16, 185, 129, 0.16)",
     };
   }
 
   if (normalized.includes("review")) {
     return {
-      color: "#92400e",
-      background: "rgba(245,158,11,0.1)",
-      border: "1px solid rgba(245,158,11,0.18)",
+      color: dashboardColors.status.amber,
+      background: dashboardColors.status.amberSoft,
+      border: "1px solid rgba(245, 158, 11, 0.16)",
     };
   }
 
   return {
-    color: "#475569",
-    background: "rgba(148,163,184,0.1)",
-    border: "1px solid rgba(148,163,184,0.16)",
+    color: dashboardColors.text.secondary,
+    background: dashboardColors.background.surfaceSoft,
+    border: `1px solid ${dashboardColors.border.subtle}`,
   };
 }
 
@@ -49,32 +56,32 @@ function getPriorityPillStyle(priority: string): React.CSSProperties {
 
   if (normalized === "high") {
     return {
-      color: "#b91c1c",
-      background: "rgba(239,68,68,0.08)",
-      border: "1px solid rgba(239,68,68,0.14)",
+      color: dashboardColors.status.red,
+      background: dashboardColors.status.redSoft,
+      border: "1px solid rgba(239, 68, 68, 0.14)",
     };
   }
 
   if (normalized === "medium") {
     return {
-      color: "#92400e",
-      background: "rgba(245,158,11,0.08)",
-      border: "1px solid rgba(245,158,11,0.14)",
+      color: dashboardColors.status.amber,
+      background: dashboardColors.status.amberSoft,
+      border: "1px solid rgba(245, 158, 11, 0.14)",
     };
   }
 
   if (normalized === "low") {
     return {
-      color: "#15803d",
-      background: "rgba(34,197,94,0.08)",
-      border: "1px solid rgba(34,197,94,0.14)",
+      color: dashboardColors.status.green,
+      background: dashboardColors.status.greenSoft,
+      border: "1px solid rgba(34, 197, 94, 0.14)",
     };
   }
 
   return {
-    color: "#475569",
-    background: "rgba(148,163,184,0.08)",
-    border: "1px solid rgba(148,163,184,0.14)",
+    color: dashboardColors.text.muted,
+    background: dashboardColors.background.surfaceSoft,
+    border: `1px solid ${dashboardColors.border.subtle}`,
   };
 }
 
@@ -83,20 +90,23 @@ function getSafeValue(value: string, fallback: string) {
   return trimmed || fallback;
 }
 
-function getInitials(value: string) {
-  const clean = value.trim();
+function formatDashboardDate(value: string | null) {
+  if (!value) return "";
 
-  if (!clean) return "P";
+  const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = dateOnlyMatch
+    ? new Date(
+        Number(dateOnlyMatch[1]),
+        Number(dateOnlyMatch[2]) - 1,
+        Number(dateOnlyMatch[3])
+      )
+    : new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
 
-  const parts = clean.split(/\s+/).filter(Boolean);
-
-  if (parts.length >= 2) {
-    return `${parts[0]?.charAt(0) || ""}${parts[1]?.charAt(0) || ""}`
-      .toUpperCase()
-      .slice(0, 2);
-  }
-
-  return clean.charAt(0).toUpperCase();
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(date);
 }
 
 function WorkRow({
@@ -116,6 +126,17 @@ function WorkRow({
   const deadline = getSafeValue(project.deadline, "No deadline");
   const priority = getSafeValue(project.priority, "Normal");
   const status = getSafeValue(project.status, "New");
+  const createdDate = formatDashboardDate(project.createdAt);
+  const hasDeadline = deadline.toLowerCase() !== "no deadline";
+  const dueDate = hasDeadline ? formatDashboardDate(deadline) : "";
+  const showPriority = ["high", "urgent"].includes(priority.toLowerCase());
+  const progressLabel = `${project.completedTaskCount}/${project.taskCount} done`;
+  const metadataItems = [
+    createdDate ? `Created ${createdDate}` : "",
+    dueDate ? `Due ${dueDate}` : "",
+    progressLabel,
+    amount,
+  ].filter(Boolean);
 
   return (
     <button
@@ -125,15 +146,12 @@ function WorkRow({
       style={rowStyle}
       aria-label={`Open ${title}`}
     >
-      <div aria-hidden="true" style={rowAccentStyle} />
-
-      <div style={rowIndexWrapStyle}>
-        <span style={rowAvatarStyle}>{getInitials(clientName)}</span>
+      <div style={rowNumberWrapStyle}>
         <span style={rowNumberStyle}>{String(index + 1).padStart(2, "0")}</span>
       </div>
 
       <div style={rowMainStyle}>
-        <div style={rowTopLineStyle}>
+        <div className="recent-work-row-top" style={rowTopLineStyle}>
           <div style={rowTitleWrapStyle}>
             <div style={rowTitleStyle}>{title}</div>
             <div style={rowSubtitleStyle}>{clientName}</div>
@@ -143,8 +161,9 @@ function WorkRow({
             <span style={{ ...pillStyle, ...getStatusPillStyle(status) }}>
               {status}
             </span>
+
             <span className="recent-work-arrow" style={rowArrowStyle}>
-              ↗
+              Open →
             </span>
           </div>
         </div>
@@ -152,11 +171,19 @@ function WorkRow({
         <div style={rowSummaryStyle}>{summary}</div>
 
         <div style={rowMetaStyle}>
-          <span style={metaChipStyle}>{amount}</span>
-          <span style={metaChipStyle}>{deadline}</span>
-          <span style={{ ...metaChipStyle, ...getPriorityPillStyle(priority) }}>
-            {priority}
-          </span>
+          {metadataItems.map((item, itemIndex) => (
+            <span key={`${item}-${itemIndex}`} style={metaItemStyle}>
+              {itemIndex > 0 ? (
+                <span style={metaSeparatorStyle}>{"\u00b7"}</span>
+              ) : null}
+              <span style={metaTextStyle}>{item}</span>
+            </span>
+          ))}
+          {showPriority ? (
+            <span style={{ ...pillStyle, ...getPriorityPillStyle(priority) }}>
+              {priority}
+            </span>
+          ) : null}
         </div>
       </div>
     </button>
@@ -186,9 +213,7 @@ export default function DashboardProjectsSnapshot({
 
         <div style={headerActionsStyle}>
           {hasProjects ? (
-            <span style={countPillStyle}>
-              {visibleProjects.length} latest
-            </span>
+            <span style={countTextStyle}>{visibleProjects.length} latest</span>
           ) : null}
 
           <button type="button" onClick={onGoToTasks} style={viewAllButtonStyle}>
@@ -205,8 +230,6 @@ export default function DashboardProjectsSnapshot({
         </div>
       ) : (
         <div style={emptyStyle}>
-          <div style={emptyIconStyle}>+</div>
-
           <div style={emptyContentStyle}>
             <div style={emptyTitleStyle}>No recent work yet</div>
             <div style={emptyTextStyle}>
@@ -235,8 +258,6 @@ const responsiveCss = `
   }
 
   .recent-work-row {
-    position: relative;
-    overflow: hidden;
     transition:
       transform 170ms ease,
       box-shadow 170ms ease,
@@ -245,39 +266,32 @@ const responsiveCss = `
   }
 
   .recent-work-row:hover {
-    transform: translateY(-2px);
-    border-color: rgba(99,102,241,0.22) !important;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,255,0.98)) !important;
-    box-shadow:
-      0 20px 40px rgba(15,23,42,0.08),
-      0 0 0 1px rgba(99,102,241,0.05),
-      inset 0 1px 0 rgba(255,255,255,0.98) !important;
+    transform: translateY(-1px);
+    border-color: rgba(37, 99, 235, 0.18) !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.055) !important;
   }
 
   .recent-work-row:hover .recent-work-arrow {
-    transform: translate(2px, -2px);
-  }
-
-  @media (max-width: 1180px) {
-    .recent-work-list {
-      gap: 10px !important;
-    }
+    color: #1d4ed8 !important;
   }
 
   @media (max-width: 720px) {
     .projects-snapshot-root {
-      border-radius: 24px !important;
-      padding: 16px !important;
+      padding: 0 !important;
     }
 
     .recent-work-row {
-      grid-template-columns: 1fr !important;
-      gap: 10px !important;
+      grid-template-columns: minmax(0, 1fr) !important;
     }
 
-    .recent-work-index {
+    .recent-work-row > div:first-child {
       display: none !important;
+    }
+
+    .recent-work-row-top {
+      align-items: stretch !important;
+      flex-direction: column !important;
     }
   }
 `;
@@ -285,155 +299,129 @@ const responsiveCss = `
 const shellStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 0,
-  borderRadius: 28,
-  padding: 16,
-  border: "1px solid rgba(226,232,240,0.82)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,255,0.94) 100%)",
-  boxShadow:
-    "0 22px 48px rgba(15,23,42,0.055), inset 0 1px 0 rgba(255,255,255,0.98)",
   display: "grid",
-  gap: 14,
+  gap: dashboardSpacing[3],
 };
 
 const sectionHeaderStyle: React.CSSProperties = {
+  width: "100%",
   display: "flex",
   justifyContent: "space-between",
   alignItems: "flex-start",
-  gap: 12,
+  gap: dashboardSpacing[3],
   flexWrap: "wrap",
 };
 
 const headerTextStyle: React.CSSProperties = {
   display: "grid",
-  gap: 4,
+  gap: 5,
   minWidth: 0,
 };
 
 const sectionKickerStyle: React.CSSProperties = {
-  fontSize: 11,
-  color: "#4f46e5",
-  fontWeight: 950,
+  fontSize: 10.5,
+  color: dashboardColors.primary[600],
+  fontWeight: dashboardTypography.weight.black,
   textTransform: "uppercase",
   letterSpacing: "0.12em",
 };
 
 const titleStyle: React.CSSProperties = {
-  color: "#0f172a",
+  color: dashboardColors.text.primary,
   fontSize: 19,
-  lineHeight: 1.1,
-  fontWeight: 950,
-  letterSpacing: "-0.045em",
+  lineHeight: 1.12,
+  fontWeight: dashboardTypography.weight.black,
+  letterSpacing: "-0.04em",
 };
 
 const subtitleStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 12,
-  lineHeight: 1.45,
-  fontWeight: 700,
+  color: dashboardColors.text.muted,
+  fontSize: 12.5,
+  lineHeight: dashboardTypography.lineHeight.normal,
+  fontWeight: dashboardTypography.weight.medium,
 };
 
 const headerActionsStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  gap: 8,
+  gap: dashboardSpacing[2],
   flexWrap: "wrap",
 };
 
-const countPillStyle: React.CSSProperties = {
-  borderRadius: 999,
-  border: "1px solid rgba(99,102,241,0.16)",
-  background: "rgba(99,102,241,0.07)",
-  color: "#4338ca",
-  padding: "7px 10px",
+const countTextStyle: React.CSSProperties = {
+  color: dashboardColors.primary[700],
   fontSize: 11,
   lineHeight: 1,
-  fontWeight: 950,
+  fontWeight: dashboardTypography.weight.black,
   whiteSpace: "nowrap",
 };
 
 const viewAllButtonStyle: React.CSSProperties = {
-  border: "1px solid rgba(99,102,241,0.16)",
-  background: "rgba(255,255,255,0.88)",
-  color: "#4338ca",
-  borderRadius: 999,
+  border: `1px solid ${dashboardColors.border.default}`,
+  background: "rgba(255, 255, 255, 0.92)",
+  color: dashboardColors.primary[700],
+  borderRadius: dashboardRadii.full,
   padding: "8px 11px",
   fontSize: 12,
-  fontWeight: 950,
+  fontWeight: dashboardTypography.weight.black,
   cursor: "pointer",
-  boxShadow: "0 10px 22px rgba(15,23,42,0.045)",
+  boxShadow: dashboardShadows.xs,
   whiteSpace: "nowrap",
 };
 
 const listStyle: React.CSSProperties = {
   display: "grid",
-  gap: 9,
+  gap: dashboardSpacing[2],
 };
 
 const rowStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 0,
-  borderRadius: 20,
-  padding: 12,
-  border: "1px solid rgba(226,232,240,0.8)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(248,250,255,0.84) 100%)",
-  boxShadow:
-    "0 12px 26px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.98)",
+  minHeight: 70,
+  borderRadius: dashboardRadii.lg,
+  padding: "11px 12px",
+  border: `1px solid ${dashboardColors.border.subtle}`,
+  background: "rgba(255, 255, 255, 0.78)",
+  boxShadow: "none",
   cursor: "pointer",
   textAlign: "left",
   display: "grid",
-  gridTemplateColumns: "auto minmax(0, 1fr)",
-  gap: 12,
-  alignItems: "flex-start",
+  gridTemplateColumns: "32px minmax(0, 1fr)",
+  gap: dashboardSpacing[3],
+  alignItems: "start",
 };
 
-const rowAccentStyle: React.CSSProperties = {
-  position: "absolute",
-  inset: "0 auto 0 0",
-  width: 4,
-  background:
-    "linear-gradient(180deg, rgba(99,102,241,0.9), rgba(168,85,247,0.55), rgba(14,165,233,0.38))",
-};
-
-const rowIndexWrapStyle: React.CSSProperties = {
+const rowNumberWrapStyle: React.CSSProperties = {
   display: "grid",
-  placeItems: "center",
-  gap: 5,
-  paddingLeft: 3,
-};
-
-const rowAvatarStyle: React.CSSProperties = {
-  width: 30,
-  height: 30,
-  borderRadius: 999,
-  display: "grid",
-  placeItems: "center",
-  background:
-    "linear-gradient(135deg, rgba(79,70,229,1), rgba(124,58,237,0.92))",
-  color: "#ffffff",
-  fontSize: 10,
-  fontWeight: 950,
-  boxShadow: "0 12px 22px rgba(79,70,229,0.22)",
+  justifyItems: "center",
+  gap: 6,
+  paddingTop: 2,
 };
 
 const rowNumberStyle: React.CSSProperties = {
-  color: "#94a3b8",
-  fontSize: 9,
-  fontWeight: 950,
-  letterSpacing: "0.08em",
+  width: 26,
+  height: 26,
+  borderRadius: dashboardRadii.full,
+  display: "grid",
+  placeItems: "center",
+  color: dashboardColors.primary[700],
+  background: dashboardColors.primary[50],
+  border: `1px solid ${dashboardColors.primary[100]}`,
+  fontSize: 10,
+  lineHeight: 1,
+  fontWeight: dashboardTypography.weight.black,
 };
 
 const rowMainStyle: React.CSSProperties = {
   display: "grid",
-  gap: 7,
+  gap: 6,
   minWidth: 0,
 };
 
 const rowTopLineStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
-  gap: 10,
+  gap: dashboardSpacing[3],
   alignItems: "flex-start",
   minWidth: 0,
 };
@@ -441,14 +429,14 @@ const rowTopLineStyle: React.CSSProperties = {
 const rowTitleWrapStyle: React.CSSProperties = {
   minWidth: 0,
   display: "grid",
-  gap: 2,
+  gap: 3,
 };
 
 const rowTitleStyle: React.CSSProperties = {
-  color: "#0f172a",
+  color: dashboardColors.text.primary,
   fontSize: 14,
-  lineHeight: 1.22,
-  fontWeight: 950,
+  lineHeight: dashboardTypography.lineHeight.snug,
+  fontWeight: dashboardTypography.weight.black,
   letterSpacing: "-0.03em",
   display: "-webkit-box",
   WebkitLineClamp: 1,
@@ -457,10 +445,10 @@ const rowTitleStyle: React.CSSProperties = {
 };
 
 const rowSubtitleStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 11,
-  lineHeight: 1.25,
-  fontWeight: 800,
+  color: dashboardColors.text.muted,
+  fontSize: 11.5,
+  lineHeight: dashboardTypography.lineHeight.snug,
+  fontWeight: dashboardTypography.weight.bold,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
@@ -469,31 +457,33 @@ const rowSubtitleStyle: React.CSSProperties = {
 const rowRightStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  gap: 8,
+  gap: dashboardSpacing[2],
   flexShrink: 0,
 };
 
 const pillStyle: React.CSSProperties = {
-  borderRadius: 999,
+  borderRadius: dashboardRadii.full,
   padding: "5px 8px",
   fontSize: 10,
   lineHeight: 1,
-  fontWeight: 950,
+  fontWeight: dashboardTypography.weight.black,
   whiteSpace: "nowrap",
 };
 
 const rowArrowStyle: React.CSSProperties = {
-  color: "#4338ca",
-  fontSize: 12,
-  fontWeight: 950,
-  transition: "transform 170ms ease",
+  color: dashboardColors.primary[700],
+  fontSize: 11.5,
+  lineHeight: 1,
+  fontWeight: dashboardTypography.weight.black,
+  transition: "color 170ms ease",
+  whiteSpace: "nowrap",
 };
 
 const rowSummaryStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 12,
-  lineHeight: 1.42,
-  fontWeight: 650,
+  color: dashboardColors.text.muted,
+  fontSize: 11.75,
+  lineHeight: dashboardTypography.lineHeight.normal,
+  fontWeight: dashboardTypography.weight.medium,
   display: "-webkit-box",
   WebkitLineClamp: 1,
   WebkitBoxOrient: "vertical",
@@ -503,48 +493,42 @@ const rowSummaryStyle: React.CSSProperties = {
 const rowMetaStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  columnGap: 9,
+  rowGap: 7,
   flexWrap: "wrap",
+  paddingTop: 1,
 };
 
-const metaChipStyle: React.CSSProperties = {
-  borderRadius: 999,
-  padding: "5px 8px",
-  color: "#475569",
-  background: "rgba(248,250,252,0.9)",
-  border: "1px solid rgba(226,232,240,0.84)",
-  fontSize: 10,
-  lineHeight: 1,
-  fontWeight: 900,
-  maxWidth: 140,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
+const metaItemStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 9,
+};
+
+const metaTextStyle: React.CSSProperties = {
+  color: dashboardColors.text.secondary,
+  fontSize: 11,
+  lineHeight: 1.2,
+  fontWeight: dashboardTypography.weight.bold,
   whiteSpace: "nowrap",
 };
 
-const emptyStyle: React.CSSProperties = {
-  borderRadius: 20,
-  border: "1px dashed rgba(148,163,184,0.3)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.78), rgba(248,250,255,0.68))",
-  padding: 16,
-  display: "flex",
-  alignItems: "center",
-  gap: 14,
-  flexWrap: "wrap",
+const metaSeparatorStyle: React.CSSProperties = {
+  color: dashboardColors.text.subtle,
+  fontSize: 10,
+  lineHeight: 1,
+  fontWeight: dashboardTypography.weight.bold,
 };
 
-const emptyIconStyle: React.CSSProperties = {
-  width: 40,
-  height: 40,
-  borderRadius: 999,
-  display: "grid",
-  placeItems: "center",
-  background: "rgba(99,102,241,0.08)",
-  color: "#4338ca",
-  fontSize: 22,
-  fontWeight: 850,
-  flexShrink: 0,
+const emptyStyle: React.CSSProperties = {
+  borderRadius: dashboardRadii.xl,
+  border: `1px dashed ${dashboardColors.border.default}`,
+  background: "rgba(255, 255, 255, 0.66)",
+  padding: dashboardSpacing[4],
+  display: "flex",
+  alignItems: "center",
+  gap: dashboardSpacing[3],
+  flexWrap: "wrap",
 };
 
 const emptyContentStyle: React.CSSProperties = {
@@ -554,27 +538,27 @@ const emptyContentStyle: React.CSSProperties = {
 };
 
 const emptyTitleStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 15,
-  fontWeight: 950,
+  color: dashboardColors.text.primary,
+  fontSize: 14.5,
+  fontWeight: dashboardTypography.weight.black,
 };
 
 const emptyTextStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 13,
-  lineHeight: 1.5,
-  fontWeight: 650,
+  color: dashboardColors.text.muted,
+  fontSize: 12.5,
+  lineHeight: dashboardTypography.lineHeight.normal,
+  fontWeight: dashboardTypography.weight.medium,
 };
 
 const emptyButtonStyle: React.CSSProperties = {
-  border: "1px solid rgba(99,102,241,0.18)",
-  background: "#4f46e5",
-  color: "#ffffff",
-  borderRadius: 999,
+  border: `1px solid ${dashboardColors.primary[600]}`,
+  background: dashboardColors.primary[600],
+  color: dashboardColors.text.inverse,
+  borderRadius: dashboardRadii.full,
   padding: "10px 12px",
   fontSize: 12,
-  fontWeight: 950,
+  fontWeight: dashboardTypography.weight.black,
   cursor: "pointer",
-  boxShadow: "0 14px 28px rgba(79,70,229,0.22)",
+  boxShadow: dashboardShadows.primary,
   whiteSpace: "nowrap",
 };

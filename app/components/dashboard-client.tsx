@@ -39,6 +39,32 @@ type DashboardClientProps = {
 type DashboardNav = "dashboard" | "extract" | "tasks";
 type TasksApiView = TaskArchiveView | "stats";
 
+type ProjectUpdateAppliedResult = {
+  focusTaskId?: number | null;
+  projectId?: string | null;
+  project?: AppliedProjectEntity | null;
+  projectTasks?: unknown[];
+  dashboardTasks?: unknown[];
+};
+
+type AppliedProjectEntity = NonNullable<TaskRow["project"]> & {
+  client?: TaskRow["client"] | null;
+};
+
+type ProjectRefreshPatch = {
+  projectId?: string | null;
+  project?: AppliedProjectEntity | null;
+};
+
+type ProjectTaskSnapshotPatch = {
+  projectId: string;
+  tasks: TaskRow[];
+};
+
+type DashboardTaskSnapshotPatch = {
+  tasks: TaskRow[];
+};
+
 function getActiveNavLabel(activeNav: DashboardNav) {
   if (activeNav === "extract") return "Extract";
   if (activeNav === "tasks") return "Tasks";
@@ -61,6 +87,24 @@ function replaceTaskInList(list: TaskRow[], updatedTask: TaskRow) {
   return list.map((task) => (task.id === updatedTask.id ? updatedTask : task));
 }
 
+function syncProjectAcrossTaskList(list: TaskRow[], updatedTask: TaskRow) {
+  if (!updatedTask?.project || !updatedTask?.project_id) {
+    return replaceTaskInList(list, updatedTask);
+  }
+
+  return replaceTaskInList(list, updatedTask).map((task) => {
+    const taskProjectId = task.project_id || task.project?.id || "";
+
+    if (taskProjectId !== updatedTask.project_id) return task;
+
+    return {
+      ...task,
+      project: updatedTask.project,
+      project_id: updatedTask.project_id,
+    };
+  });
+}
+
 function upsertTaskInList(list: TaskRow[], updatedTask: TaskRow) {
   const exists = list.some((task) => task.id === updatedTask.id);
 
@@ -74,17 +118,101 @@ function upsertTaskInList(list: TaskRow[], updatedTask: TaskRow) {
 function replaceProjectInTaskList(
   list: TaskRow[],
   projectId: string,
-  updatedProject: NonNullable<TaskRow["project"]>
+  updatedProject: AppliedProjectEntity
 ) {
+  const { client: updatedClient, ...updatedProjectFields } = updatedProject;
+
   return list.map((task) =>
     task.project_id === projectId || task.project?.id === projectId
       ? {
           ...task,
           project_id: projectId,
-          project: updatedProject,
+          ...(updatedClient
+            ? {
+                client: {
+                  ...(task.client || {
+                    id: updatedClient.id || "",
+                    name:
+                      updatedClient.name ||
+                      updatedProjectFields.client_name ||
+                      "Unassigned",
+                  }),
+                  ...updatedClient,
+                  name:
+                    updatedClient.name ||
+                    updatedProjectFields.client_name ||
+                    task.client?.name ||
+                    "Unassigned",
+                },
+                client_phone: updatedClient.phone ?? null,
+                client_email: updatedClient.email ?? null,
+                client_notes: updatedClient.notes ?? null,
+                contact_name:
+                  updatedProjectFields.contact_name ??
+                  updatedClient.contact_name ??
+                  null,
+              }
+            : {}),
+          project: {
+            ...(task.project || { id: projectId }),
+            ...updatedProjectFields,
+            id: updatedProjectFields.id || projectId,
+          },
         }
       : task
   );
+}
+
+function getTaskProjectId(task: TaskRow) {
+  return task.project_id || task.project?.id || "";
+}
+
+function replaceProjectTaskRowsInList(
+  list: TaskRow[],
+  projectId: string,
+  projectTasks: TaskRow[]
+) {
+  const snapshotTasks = projectTasks.filter(
+    (task) => getTaskProjectId(task) === projectId
+  );
+
+  if (snapshotTasks.length === 0) return list;
+
+  const unrelatedTasks = list.filter(
+    (task) => getTaskProjectId(task) !== projectId
+  );
+  const seenTaskIds = new Set<number>();
+  const uniqueSnapshotTasks = snapshotTasks.filter((task) => {
+    if (seenTaskIds.has(task.id)) return false;
+    seenTaskIds.add(task.id);
+    return true;
+  });
+
+  return [...uniqueSnapshotTasks, ...unrelatedTasks];
+}
+
+function replaceActiveTaskRowsInStatsList(
+  list: TaskRow[],
+  activeTasks: TaskRow[]
+) {
+  const nonActiveTasks = list.filter((task) => !isActiveTask(task));
+  const map = new Map<number, TaskRow>();
+
+  for (const task of activeTasks) {
+    map.set(task.id, normalizeStatsTask(task, false));
+  }
+
+  for (const task of nonActiveTasks) {
+    if (!map.has(task.id)) {
+      map.set(task.id, normalizeStatsTask(task));
+    }
+  }
+
+  return Array.from(map.values()).sort((a, b) => {
+    const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return bTime - aTime;
+  });
 }
 
 function removeTaskFromList(list: TaskRow[], taskId: number) {
@@ -215,6 +343,10 @@ export default function DashboardClient({
   const archiveTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>(
     {}
   );
+  const dashboardTaskSnapshotRef = useRef<DashboardTaskSnapshotPatch | null>(
+    null
+  );
+  const projectTaskSnapshotRef = useRef<ProjectTaskSnapshotPatch | null>(null);
 
   const visibleStatsTasks = useMemo(
     () => allTasksForStats.filter((task) => !isDeletedTask(task)),
@@ -329,28 +461,136 @@ export default function DashboardClient({
     return (data.tasks || []).map(normalizeTaskFromApi);
   }
 
-  async function refreshTasks() {
+  async function refreshTasks(
+    viewOverride: TaskArchiveView = archiveView,
+    patch?: ProjectRefreshPatch
+  ) {
     const [
       mappedTasks,
       mappedStatsTasks,
       mappedActiveTasks,
       mappedArchivedTasks,
     ] = await Promise.all([
-      fetchTasksFromServer(archiveView),
+      fetchTasksFromServer(viewOverride),
       fetchTasksFromServer("stats"),
       fetchTasksFromServer("active"),
       fetchTasksFromServer("archived"),
     ]);
 
-    setTasks(mappedTasks);
+    const pendingDashboardSnapshot = dashboardTaskSnapshotRef.current;
+    const pendingSnapshot = projectTaskSnapshotRef.current;
+    const patchProjectId = patch?.projectId || null;
+    const patchProject = patch?.project || null;
+    const nextAllTasksForStats = mergeTaskStatsSources({
+      statsTasks: mappedStatsTasks,
+      activeTasks: mappedActiveTasks,
+      archivedTasks: mappedArchivedTasks,
+    });
+    const nextTasks = pendingDashboardSnapshot
+      ? pendingDashboardSnapshot.tasks
+      : pendingSnapshot
+      ? replaceProjectTaskRowsInList(
+          mappedTasks,
+          pendingSnapshot.projectId,
+          pendingSnapshot.tasks
+        )
+      : patchProjectId && patchProject
+        ? replaceProjectInTaskList(mappedTasks, patchProjectId, patchProject)
+        : mappedTasks;
+    const nextStatsTasks = pendingDashboardSnapshot
+      ? replaceActiveTaskRowsInStatsList(
+          nextAllTasksForStats,
+          pendingDashboardSnapshot.tasks
+        )
+      : pendingSnapshot
+      ? replaceProjectTaskRowsInList(
+          nextAllTasksForStats,
+          pendingSnapshot.projectId,
+          pendingSnapshot.tasks
+        )
+      : patchProjectId && patchProject
+        ? replaceProjectInTaskList(
+            nextAllTasksForStats,
+            patchProjectId,
+            patchProject
+          )
+        : nextAllTasksForStats;
 
-    setAllTasksForStats(
-      mergeTaskStatsSources({
-        statsTasks: mappedStatsTasks,
-        activeTasks: mappedActiveTasks,
-        archivedTasks: mappedArchivedTasks,
-      })
-    );
+    setTasks(nextTasks);
+    setAllTasksForStats(nextStatsTasks);
+
+    if (pendingDashboardSnapshot) {
+      dashboardTaskSnapshotRef.current = null;
+    }
+
+    if (pendingSnapshot) {
+      projectTaskSnapshotRef.current = null;
+    }
+  }
+
+  async function handleProjectUpdateApplied(result: ProjectUpdateAppliedResult) {
+    const focusTaskId =
+      typeof result.focusTaskId === "number" && Number.isFinite(result.focusTaskId)
+        ? result.focusTaskId
+        : null;
+    const dashboardTaskSnapshot = Array.isArray(result.dashboardTasks)
+      ? result.dashboardTasks
+          .filter((task) => task && typeof task === "object")
+          .map(normalizeTaskFromApi)
+      : [];
+    const projectTaskSnapshot = Array.isArray(result.projectTasks)
+      ? result.projectTasks
+          .filter((task) => task && typeof task === "object")
+          .map(normalizeTaskFromApi)
+      : [];
+    const projectId =
+      typeof result.projectId === "string" && result.projectId.trim()
+        ? result.projectId.trim()
+        : result.project?.id ||
+          projectTaskSnapshot.map(getTaskProjectId).find(Boolean) ||
+          null;
+    const updatedProject = result.project || null;
+
+    setActiveNav("tasks");
+    setArchiveView("active");
+    setSearchTerm("");
+    setStatusFilter("all");
+    setPriorityFilter("all");
+    setSortOption("created-desc");
+
+    if (dashboardTaskSnapshot.length > 0) {
+      dashboardTaskSnapshotRef.current = {
+        tasks: dashboardTaskSnapshot,
+      };
+      setTasks(dashboardTaskSnapshot);
+      setAllTasksForStats((prev) =>
+        replaceActiveTaskRowsInStatsList(prev, dashboardTaskSnapshot)
+      );
+    } else if (projectId && projectTaskSnapshot.length > 0) {
+      projectTaskSnapshotRef.current = {
+        projectId,
+        tasks: projectTaskSnapshot,
+      };
+      setTasks((prev) =>
+        replaceProjectTaskRowsInList(prev, projectId, projectTaskSnapshot)
+      );
+      setAllTasksForStats((prev) =>
+        replaceProjectTaskRowsInList(prev, projectId, projectTaskSnapshot)
+      );
+    } else {
+      await refreshTasks("active", {
+        projectId,
+        project: updatedProject,
+      });
+    }
+
+    if (focusTaskId) {
+      setHighlightedTaskId(null);
+
+      window.setTimeout(() => {
+        setHighlightedTaskId(focusTaskId);
+      }, 0);
+    }
   }
 
   async function refreshStatsOnly() {
@@ -719,8 +959,10 @@ export default function DashboardClient({
       const updatedTask = data.task ? normalizeTaskFromApi(data.task) : null;
 
       if (updatedTask) {
-        setTasks((prev) => replaceTaskInList(prev, updatedTask));
-        setAllTasksForStats((prev) => upsertTaskInList(prev, updatedTask));
+        setTasks((prev) => syncProjectAcrossTaskList(prev, updatedTask));
+        setAllTasksForStats((prev) =>
+          syncProjectAcrossTaskList(prev, updatedTask)
+        );
       }
 
       markTaskSaved(taskId);
@@ -1463,6 +1705,7 @@ export default function DashboardClient({
             restoreTask={restoreTask}
             permanentlyDeleteTask={permanentlyDeleteTask}
             onRefreshTasks={refreshTasks}
+            onProjectUpdateApplied={handleProjectUpdateApplied}
           />
         );
 

@@ -7,12 +7,14 @@ import { trackBeginCheckout } from "@/lib/analytics/events";
 type AccountInfo = {
   email: string;
   plan: "free" | "pro";
+  hasBillingPortal: boolean;
 };
 
 export default function BillingPage() {
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const [isPortalLoading, setIsPortalLoading] = useState(false);
 
   useEffect(() => {
     async function loadAccount() {
@@ -33,6 +35,7 @@ export default function BillingPage() {
           setAccount({
             email: data.email,
             plan: data.plan === "pro" ? "pro" : "free",
+            hasBillingPortal: Boolean(data.has_billing_portal),
           });
         }
       } catch (error) {
@@ -75,7 +78,37 @@ export default function BillingPage() {
     }
   }
 
+  async function openBillingPortal() {
+    if (isPortalLoading) return;
+
+    try {
+      setIsPortalLoading(true);
+
+      const res = await fetch("/api/billing/portal", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to open billing portal");
+      }
+
+      if (data?.url) {
+        window.open(data.url, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      throw new Error("Billing portal URL missing");
+    } catch (error) {
+      console.error(error);
+      alert("Could not open billing portal. Please contact support.");
+      setIsPortalLoading(false);
+    }
+  }
+
   const isPro = account?.plan === "pro";
+  const hasBillingPortal = Boolean(account?.hasBillingPortal);
 
   return (
     <main style={styles.page}>
@@ -142,16 +175,39 @@ export default function BillingPage() {
 
         <div style={styles.actions}>
           {isPro ? (
-            <>
-              <a href="/contact" style={styles.secondaryButton}>
-                Contact billing support
-              </a>
+            hasBillingPortal ? (
+              <>
+                <button
+                  type="button"
+                  onClick={openBillingPortal}
+                  disabled={isPortalLoading}
+                  style={{
+                    ...styles.primaryButton,
+                    opacity: isPortalLoading ? 0.7 : 1,
+                    cursor: isPortalLoading ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {isPortalLoading ? "Opening portal..." : "Manage subscription"}
+                </button>
 
-              <div style={styles.note}>
-                Customer portal management will be connected after Creem live review is
-                fully approved.
-              </div>
-            </>
+                <div style={styles.note}>
+                  Opens Creem&apos;s secure billing portal in a new tab so you can
+                  manage your subscription, payment method, invoices, and
+                  cancellation.
+                </div>
+              </>
+            ) : (
+              <>
+                <a href="/contact?from=dashboard" style={styles.secondaryButton}>
+                  Contact billing support
+                </a>
+
+                <div style={styles.note}>
+                  Need to update or cancel your subscription? Contact billing support and
+                  we&apos;ll help with your Creem billing account.
+                </div>
+              </>
+            )
           ) : (
             <button
               type="button"
@@ -194,7 +250,7 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: "100vh",
     padding: "32px",
     background:
-      "radial-gradient(circle at top left, #eef4ff 0%, #f8fafc 46%, #ffffff 100%)",
+      "linear-gradient(180deg, #ffffff 0%, #f8fafc 56%, #ffffff 100%)",
     color: "#0f172a",
   },
 
@@ -208,11 +264,13 @@ const styles: Record<string, React.CSSProperties> = {
   card: {
     width: "100%",
     maxWidth: 960,
-    margin: "70px auto 0",
-    borderRadius: 30,
-    border: "1px solid rgba(226,232,240,0.95)",
-    background: "rgba(255,255,255,0.96)",
-    boxShadow: "0 24px 70px rgba(15,23,42,0.08)",
+    margin: "58px auto 0",
+    borderRadius: 28,
+    border: "1px solid rgba(226,232,240,0.92)",
+    background:
+      "linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.78))",
+    boxShadow:
+      "0 18px 44px rgba(15,23,42,0.055), inset 0 1px 0 rgba(255,255,255,0.96)",
     padding: 30,
   },
 
@@ -225,9 +283,16 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   backLink: {
-    color: "#4f46e5",
+    minHeight: 34,
+    padding: "0 12px",
+    borderRadius: 999,
+    display: "inline-flex",
+    alignItems: "center",
+    color: "#1d4ed8",
+    background: "rgba(239,246,255,0.72)",
+    border: "1px solid rgba(191,219,254,0.86)",
     textDecoration: "none",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 900,
   },
 
@@ -263,20 +328,23 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   iconBox: {
-    width: 68,
-    height: 68,
-    borderRadius: 24,
+    width: 58,
+    height: 58,
+    borderRadius: 20,
     display: "grid",
     placeItems: "center",
-    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
-    color: "#ffffff",
-    fontSize: 26,
+    color: "#1d4ed8",
+    background:
+      "linear-gradient(135deg, rgba(239,246,255,0.98), rgba(255,255,255,0.98))",
+    border: "1px solid rgba(191,219,254,0.92)",
+    fontSize: 23,
     fontWeight: 950,
-    boxShadow: "0 18px 38px rgba(79,70,229,0.24)",
+    boxShadow:
+      "0 12px 24px rgba(37,99,235,0.075), inset 0 1px 0 rgba(255,255,255,0.96)",
   },
 
   kicker: {
-    color: "#6366f1",
+    color: "#2563eb",
     fontSize: 12,
     fontWeight: 950,
     textTransform: "uppercase",
@@ -304,9 +372,9 @@ const styles: Record<string, React.CSSProperties> = {
 
   planCard: {
     borderRadius: 24,
-    border: "1px solid rgba(199,210,254,0.72)",
+    border: "1px solid rgba(191,219,254,0.76)",
     background:
-      "linear-gradient(135deg, rgba(238,242,255,0.85), rgba(255,255,255,0.95))",
+      "linear-gradient(135deg, rgba(239,246,255,0.72), rgba(255,255,255,0.96))",
     padding: 22,
     display: "flex",
     justifyContent: "space-between",
@@ -337,7 +405,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   price: {
-    color: "#4f46e5",
+    color: "#2563eb",
     fontSize: 32,
     fontWeight: 950,
     letterSpacing: "-0.05em",
@@ -387,7 +455,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   lockedText: {
-    color: "#4f46e5",
+    color: "#1d4ed8",
     fontSize: 11,
     fontWeight: 950,
   },
@@ -405,11 +473,11 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "0 20px",
     borderRadius: 15,
     border: "none",
-    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
     color: "#ffffff",
     fontSize: 14,
     fontWeight: 950,
-    boxShadow: "0 14px 28px rgba(79,70,229,0.22)",
+    boxShadow: "0 14px 28px rgba(37,99,235,0.20)",
   },
 
   secondaryButton: {
@@ -428,9 +496,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   note: {
-    color: "#64748b",
+    color: "#475569",
     fontSize: 13,
     lineHeight: 1.5,
     fontWeight: 700,
+    maxWidth: 560,
   },
 };

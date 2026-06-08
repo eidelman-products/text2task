@@ -154,7 +154,7 @@ export function buildRawInputFromImageExtraction(
   }
 
   if (clientNotes.length > 0) {
-    lines.push("Client notes:");
+    lines.push("Additional visible context:");
     clientNotes.forEach((note) => lines.push(`- ${note}`));
   }
 
@@ -202,7 +202,8 @@ export async function extractProjectUpdateImageInstructions(file: File) {
     "- deadlineMentions: deadline changes or deadline text only.",
     "- priorityMentions: urgency/priority clues only.",
     "- budgetMentions: budget/scope money mentions only.",
-    "- clientNotes: useful visible context, names, company names, contact details, or notes that are not tasks.",
+    "- clientNotes: explicit client/contact record details only, such as client name, contact person, phone, email, or clearly labeled client/customer notes.",
+    "- Do not put general project instructions, tone, goals, or plain Note: lines into clientNotes.",
     "- If there are no requested tasks but there are deadline/priority/budget/client detail changes, still return those fields.",
     "- If no useful client update text is visible, return empty strings/arrays.",
     "",

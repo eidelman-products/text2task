@@ -98,11 +98,12 @@ export default function ProjectUpdateHistoryModal({
         </header>
 
         <main style={styles.historyContentStyle}>
-          <ProjectContextStrip project={state.project} />
-
-          {!state.isLoading && !state.error && state.updates.length > 0 && (
-            <HistorySummaryStrip updates={state.updates} />
-          )}
+          <ProjectActivitySummary
+            project={state.project}
+            updates={
+              !state.isLoading && !state.error ? state.updates : []
+            }
+          />
 
           <div style={styles.historyToolbarStyle}>
             <div style={styles.historyCountStyle}>
@@ -171,40 +172,60 @@ export default function ProjectUpdateHistoryModal({
   return typeof document !== "undefined" ? createPortal(modal, document.body) : null;
 }
 
-function HistorySummaryStrip({ updates }: { updates: ProjectUpdateHistoryEntry[] }) {
+function ProjectActivitySummary({
+  project,
+  updates,
+}: {
+  project: TaskProjectGroup;
+  updates: ProjectUpdateHistoryEntry[];
+}) {
   const metrics = getHistoryMetrics(updates);
-
-  return (
-    <section style={styles.summaryStripStyle} aria-label="Project update summary">
-      {metrics.map((metric) => (
-        <div key={metric.label} style={styles.summaryMetricStyle}>
-          <div style={styles.summaryMetricValueStyle}>{metric.value}</div>
-          <div style={styles.summaryMetricLabelStyle}>{metric.label}</div>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-function ProjectContextStrip({ project }: { project: TaskProjectGroup }) {
-  const stats = [
-    ["Project", project.projectTitle || "Unnamed project"],
-    ["Client", project.clientName || "Unknown client"],
-    ["Current deadline", project.deadline_original_text || project.deadline || "Not set"],
-    ["Budget", project.amount || "Not set"],
-    ["Status", project.status || "Not set"],
-    ["Subtasks", String(project.subtaskCount || 0)],
+  const metadata = [
+    `Current deadline: ${project.deadline_original_text || project.deadline || "Not set"}`,
+    `Budget: ${project.amount || "Not set"}`,
+    `Status: ${project.status || "Not set"}`,
+    `${project.subtaskCount || 0} subtasks`,
   ];
 
   return (
-    <div style={styles.projectContextStripStyle}>
-      {stats.map(([label, value]) => (
-        <div key={label} style={styles.projectContextStatStyle}>
-          <div style={styles.projectContextLabelStyle}>{label}</div>
-          <div style={styles.projectContextValueStyle}>{value}</div>
+    <section style={styles.projectContextStripStyle}>
+      <div style={styles.projectSummaryTitleStyle}>
+        <span>{project.projectTitle || "Unnamed project"}</span>
+        <span style={styles.summarySeparatorStyle}>·</span>
+        <span style={styles.projectSummaryClientStyle}>
+          {project.clientName || "Unknown client"}
+        </span>
+      </div>
+
+      <div style={styles.projectSummaryMetaStyle}>
+        {metadata.map((item, index) => (
+          <span key={item} style={styles.projectContextStatStyle}>
+            {index > 0 && (
+              <span style={styles.summarySeparatorStyle}>·</span>
+            )}
+            <span>{item}</span>
+          </span>
+        ))}
+      </div>
+
+      {updates.length > 0 && (
+        <div style={styles.summaryStripStyle} aria-label="Project update summary">
+          {metrics.map((metric, index) => (
+            <span key={metric.label} style={styles.summaryMetricStyle}>
+              {index > 0 && (
+                <span style={styles.summarySeparatorStyle}>·</span>
+              )}
+              <strong style={styles.summaryMetricValueStyle}>
+                {metric.value}
+              </strong>
+              <span style={styles.summaryMetricLabelStyle}>
+                {metric.label}
+              </span>
+            </span>
+          ))}
         </div>
-      ))}
-    </div>
+      )}
+    </section>
   );
 }
 
@@ -235,7 +256,7 @@ function UpdateHistoryCard({
         <div style={styles.updateCardHeaderStyle}>
           <div style={styles.updateMetaStyle}>
             <span style={styles.sourceBadgeStyle}>
-              {formatSourceTypeLabel(entry.update.source_type)}
+              {getFriendlySourceLabel(entry.update.source_type)}
             </span>
             <span style={{ ...styles.statusBadgeStyle, ...accent.badge }}>
               {formatUpdateStatusLabel(status)}
@@ -247,16 +268,18 @@ function UpdateHistoryCard({
         </div>
 
         <p style={styles.rawInputStyle}>
-          {truncateText(entry.update.raw_input || "No client message saved.", 260)}
+          {getVisibleUpdateText(entry)}
         </p>
 
-        <div style={styles.summaryRowStyle}>
-          {summary.map((label) => (
-            <span key={label} style={styles.summaryPillStyle}>
-              {label}
-            </span>
-          ))}
-        </div>
+        {summary.length > 0 && (
+          <div style={styles.summaryRowStyle}>
+            {summary.map((label) => (
+              <span key={label} style={styles.summaryPillStyle}>
+                {label}
+              </span>
+            ))}
+          </div>
+        )}
 
         {isExpanded && entry.items.length > 0 && (
           <div style={styles.itemListStyle}>
@@ -362,53 +385,53 @@ function getStatusAccent(status: ProjectUpdateHistoryStatus) {
   switch (status) {
     case "applied":
       return {
-        dot: { background: "#16a34a", boxShadow: "0 0 0 4px rgba(22, 163, 74, 0.12)" },
+        dot: { background: "#22c55e", boxShadow: "0 0 0 3px rgba(34, 197, 94, 0.1)" },
         badge: {
           color: "#166534",
-          borderColor: "rgba(187, 247, 208, 0.78)",
-          background: "rgba(240, 253, 244, 0.82)",
+          borderColor: "rgba(187, 247, 208, 0.62)",
+          background: "rgba(240, 253, 244, 0.68)",
         },
-        card: { borderLeft: "3px solid rgba(34, 197, 94, 0.42)" },
+        card: { borderLeft: "2px solid rgba(34, 197, 94, 0.3)" },
       };
 
     case "partial":
       return {
-        dot: { background: "#4f46e5", boxShadow: "0 0 0 4px rgba(79, 70, 229, 0.12)" },
+        dot: { background: "#3b82f6", boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)" },
         badge: {
-          color: "#4338ca",
-          borderColor: "rgba(199, 210, 254, 0.78)",
-          background: "rgba(238, 242, 255, 0.82)",
+          color: "#1d4ed8",
+          borderColor: "rgba(191, 219, 254, 0.68)",
+          background: "rgba(239, 246, 255, 0.72)",
         },
-        card: { borderLeft: "3px solid rgba(79, 70, 229, 0.38)" },
+        card: { borderLeft: "2px solid rgba(59, 130, 246, 0.3)" },
       };
 
     case "duplicate":
       return {
-        dot: { background: "#d97706", boxShadow: "0 0 0 4px rgba(217, 119, 6, 0.12)" },
+        dot: { background: "#f59e0b", boxShadow: "0 0 0 3px rgba(245, 158, 11, 0.1)" },
         badge: {
           color: "#92400e",
-          borderColor: "rgba(245, 158, 11, 0.45)",
-          background: "rgba(255, 251, 235, 0.86)",
+          borderColor: "rgba(253, 230, 138, 0.72)",
+          background: "rgba(255, 251, 235, 0.7)",
         },
-        card: { borderLeft: "3px solid rgba(245, 158, 11, 0.42)" },
+        card: { borderLeft: "2px solid rgba(245, 158, 11, 0.3)" },
       };
 
     case "failed":
       return {
-        dot: { background: "#dc2626", boxShadow: "0 0 0 4px rgba(220, 38, 38, 0.1)" },
+        dot: { background: "#ef4444", boxShadow: "0 0 0 3px rgba(239, 68, 68, 0.08)" },
         badge: {
           color: "#991b1b",
-          borderColor: "rgba(248, 113, 113, 0.42)",
-          background: "rgba(254, 242, 242, 0.84)",
+          borderColor: "rgba(254, 202, 202, 0.72)",
+          background: "rgba(254, 242, 242, 0.7)",
         },
-        card: { borderLeft: "3px solid rgba(248, 113, 113, 0.42)" },
+        card: { borderLeft: "2px solid rgba(248, 113, 113, 0.3)" },
       };
 
     default:
       return {
-        dot: { background: "#94a3b8", boxShadow: "0 0 0 4px rgba(148, 163, 184, 0.12)" },
+        dot: { background: "#94a3b8", boxShadow: "0 0 0 3px rgba(148, 163, 184, 0.1)" },
         badge: {},
-        card: { borderLeft: "3px solid rgba(148, 163, 184, 0.34)" },
+        card: { borderLeft: "2px solid rgba(148, 163, 184, 0.26)" },
       };
   }
 }
@@ -440,6 +463,10 @@ function getUpdateSummary(entry: ProjectUpdateHistoryEntry) {
   const suggested = entry.items.filter((item) => item.status === "suggested").length;
   const summary: string[] = [];
 
+  if (applied === 0 && rejected === 0 && noAction > 0) {
+    return [];
+  }
+
   if (applied > 0) {
     summary.push(`${applied} ${applied === 1 ? "change" : "changes"} applied`);
   }
@@ -450,10 +477,6 @@ function getUpdateSummary(entry: ProjectUpdateHistoryEntry) {
 
   if (duplicate > 0) {
     summary.push(duplicate === 1 ? "Duplicate avoided" : `${duplicate} duplicates avoided`);
-  }
-
-  if (noAction > 0 && applied === 0 && rejected === 0) {
-    summary.push("Nothing to apply");
   }
 
   if (suggested > 0 && applied === 0 && rejected === 0) {
@@ -477,26 +500,33 @@ function getItemDisplayTitle(item: SuggestedProjectUpdateItem) {
   }
 
   if (item.type === "new_subtask") {
-    const title = getStringValue(item.new_value, ["task_title", "title", "name"]) || item.title;
     return item.status === "applied"
-      ? `Added subtask: ${title}`
-      : `Suggested subtask: ${title}`;
+      ? "New task added"
+      : "New task suggested";
+  }
+
+  if (item.type === "update_subtask") {
+    return item.status === "applied" ? "Task updated" : "Task update suggested";
   }
 
   if (item.type === "deadline_change") {
-    return item.status === "applied" ? "Deadline changed" : "Deadline suggestion";
+    return item.status === "applied" ? "Deadline updated" : "Deadline update suggested";
   }
 
   if (item.type === "budget_change") {
-    return item.status === "applied" ? "Budget changed" : "Budget suggestion";
+    return item.status === "applied" ? "Budget updated" : "Budget update suggested";
   }
 
   if (item.type === "priority_change") {
-    return item.status === "applied" ? "Priority changed" : "Priority suggestion";
+    return item.status === "applied" ? "Priority updated" : "Priority update suggested";
   }
 
   if (item.type === "status_change") {
-    return item.status === "applied" ? "Status changed" : "Status suggestion";
+    return item.status === "applied" ? "Status updated" : "Status update suggested";
+  }
+
+  if (item.type === "client_detail_change") {
+    return "Client details updated";
   }
 
   return item.title;
@@ -511,6 +541,23 @@ function getItemHelperText(item: SuggestedProjectUpdateItem) {
     return "Text2Task did not find a new change to add.";
   }
 
+  if (item.type === "new_subtask" || item.type === "update_subtask") {
+    return (
+      getStringValue(item.new_value, ["task_title", "title", "name"]) ||
+      item.description
+    );
+  }
+
+  if (
+    item.type === "deadline_change" ||
+    item.type === "budget_change" ||
+    item.type === "priority_change" ||
+    item.type === "status_change" ||
+    item.type === "client_detail_change"
+  ) {
+    return null;
+  }
+
   return item.description;
 }
 
@@ -521,6 +568,10 @@ function getItemValueRows(item: SuggestedProjectUpdateItem): ProjectUpdateHistor
   switch (item.type) {
     case "new_subtask":
       return compactRows([
+        {
+          label: "Details",
+          value: getDistinctTaskDescription(item),
+        },
         {
           label: "Status",
           value: getStringValue(newValue, ["status"]),
@@ -542,48 +593,44 @@ function getItemValueRows(item: SuggestedProjectUpdateItem): ProjectUpdateHistor
     case "deadline_change":
       return compactRows([
         {
-          label: "From",
-          value: getStringValue(oldValue, ["deadline_text", "deadline", "value"]) || "Not set",
-        },
-        {
-          label: "To",
-          value: getStringValue(newValue, ["deadline_text", "deadline", "value"]),
+          label: "Change",
+          value: formatBeforeAfterValue(
+            getStringValue(oldValue, ["deadline_text", "deadline", "value"]),
+            getStringValue(newValue, ["deadline_text", "deadline", "value"])
+          ),
         },
       ]);
 
     case "budget_change":
       return compactRows([
         {
-          label: "From",
-          value: getStringValue(oldValue, ["amount", "budget", "price", "value"]) || "Not set",
-        },
-        {
-          label: "To",
-          value: getStringValue(newValue, ["amount", "budget", "price", "value"]),
+          label: "Change",
+          value: formatBeforeAfterValue(
+            getStringValue(oldValue, ["amount", "budget", "price", "value"]),
+            getStringValue(newValue, ["amount", "budget", "price", "value"])
+          ),
         },
       ]);
 
     case "priority_change":
       return compactRows([
         {
-          label: "From",
-          value: getStringValue(oldValue, ["priority", "value"]) || "Not set",
-        },
-        {
-          label: "To",
-          value: getStringValue(newValue, ["priority", "value"]),
+          label: "Change",
+          value: formatBeforeAfterValue(
+            getStringValue(oldValue, ["priority", "value"]),
+            getStringValue(newValue, ["priority", "value"])
+          ),
         },
       ]);
 
     case "status_change":
       return compactRows([
         {
-          label: "From",
-          value: getStringValue(oldValue, ["status", "value"]) || "Not set",
-        },
-        {
-          label: "To",
-          value: getStringValue(newValue, ["status", "value"]),
+          label: "Change",
+          value: formatBeforeAfterValue(
+            getStringValue(oldValue, ["status", "value"]),
+            getStringValue(newValue, ["status", "value"])
+          ),
         },
       ]);
 
@@ -628,6 +675,53 @@ function getItemValueRows(item: SuggestedProjectUpdateItem): ProjectUpdateHistor
   }
 }
 
+function getDistinctTaskDescription(item: SuggestedProjectUpdateItem) {
+  const title =
+    getStringValue(item.new_value, ["task_title", "title", "name"]) || "";
+  const description = item.description?.trim() || "";
+
+  if (!description || !title) return description || null;
+
+  const titleTokens = getMeaningfulTextTokens(title);
+  const descriptionTokens = new Set(getMeaningfulTextTokens(description));
+  const overlap = titleTokens.filter((token) => descriptionTokens.has(token)).length;
+
+  if (titleTokens.length > 0 && overlap / titleTokens.length >= 0.75) {
+    return null;
+  }
+
+  return description;
+}
+
+function getMeaningfulTextTokens(value: string) {
+  const ignored = new Set([
+    "a",
+    "an",
+    "and",
+    "asked",
+    "client",
+    "for",
+    "the",
+    "to",
+  ]);
+
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token && !ignored.has(token));
+}
+
+function formatBeforeAfterValue(
+  oldValue: string | null | undefined,
+  newValue: string | null | undefined
+) {
+  if (!newValue?.trim()) return null;
+
+  return `${oldValue?.trim() || "Not set"} → ${newValue.trim()}`;
+}
+
 function compactRows(rows: Array<{ label: string; value: string | null | undefined }>) {
   return rows.filter(
     (row): row is ProjectUpdateHistoryValueRow =>
@@ -635,7 +729,7 @@ function compactRows(rows: Array<{ label: string; value: string | null | undefin
   );
 }
 
-function formatSourceTypeLabel(sourceType: string) {
+function getFriendlySourceLabel(sourceType: string) {
   switch (sourceType) {
     case "text":
       return "Text message";
@@ -650,6 +744,84 @@ function formatSourceTypeLabel(sourceType: string) {
   }
 }
 
+function cleanVisibleHistoryText(value: string | null | undefined) {
+  return String(value || "")
+    .replace(/^\s*\[image update transcription\]\s*/i, "")
+    .replace(/^\s*image update transcription\s*:\s*/i, "")
+    .trim();
+}
+
+function getFriendlyActionSummary(entry: ProjectUpdateHistoryEntry) {
+  const actions = new Set<string>();
+  let requestedTaskCount = 0;
+
+  entry.items.forEach((item) => {
+    switch (item.type) {
+      case "new_subtask":
+      case "update_subtask":
+        requestedTaskCount += 1;
+        break;
+      case "deadline_change":
+        actions.add("a deadline change");
+        break;
+      case "priority_change":
+        actions.add("a priority update");
+        break;
+      case "status_change":
+        actions.add("a status update");
+        break;
+      case "budget_change":
+        actions.add("a budget change");
+        break;
+      case "client_detail_change":
+        actions.add("a client details update");
+        break;
+      case "project_note":
+      case "client_note":
+        actions.add("additional project context");
+        break;
+    }
+  });
+
+  if (requestedTaskCount > 0) {
+    actions.add(requestedTaskCount === 1 ? "a new task" : "new tasks");
+  }
+
+  const actionList = Array.from(actions);
+
+  if (actionList.length === 0) {
+    return getUpdateHistoryStatus(entry) === "no_changes"
+      ? "The requested update already matched this project."
+      : "The client shared an update about this project.";
+  }
+
+  if (actionList.length === 1) {
+    return `The client requested ${actionList[0]}.`;
+  }
+
+  const finalAction = actionList.pop();
+
+  return `The client requested ${actionList.join(", ")}, and ${finalAction}.`;
+}
+
+function getVisibleUpdateText(entry: ProjectUpdateHistoryEntry) {
+  const cleanedText = cleanVisibleHistoryText(entry.update.raw_input);
+
+  if (cleanedText) {
+    if (/^client update for\b/i.test(cleanedText)) {
+      return getFriendlyActionSummary(entry);
+    }
+
+    return truncateText(cleanedText, 260);
+  }
+
+  if (getUpdateHistoryStatus(entry) === "no_changes") {
+    return "This update did not require changes to the project.";
+  }
+
+  return "No client message saved.";
+}
+
 function formatUpdateStatusLabel(status: ProjectUpdateHistoryStatus) {
   switch (status) {
     case "applied":
@@ -659,7 +831,7 @@ function formatUpdateStatusLabel(status: ProjectUpdateHistoryStatus) {
     case "duplicate":
       return "Duplicate";
     case "no_changes":
-      return "No project changes";
+      return "No changes needed";
     case "failed":
       return "Failed";
     default:

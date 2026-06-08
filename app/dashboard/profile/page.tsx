@@ -315,7 +315,7 @@ export default function ProfilePage() {
                   Open billing
                 </a>
 
-                <a href="/contact" style={styles.secondaryButton}>
+                <a href="/contact?from=dashboard" style={styles.secondaryButton}>
                   Contact support
                 </a>
               </div>
@@ -570,7 +570,7 @@ const styles: Record<string, CSSProperties> = {
     minHeight: "100vh",
     padding: "32px",
     background:
-      "radial-gradient(circle at 7% 4%, rgba(99,102,241,0.16), transparent 32%), radial-gradient(circle at 92% 6%, rgba(14,165,233,0.11), transparent 30%), linear-gradient(180deg, #f8fafc 0%, #ffffff 52%, #f8fafc 100%)",
+      "linear-gradient(180deg, #ffffff 0%, #f8fafc 56%, #ffffff 100%)",
     color: "#0f172a",
     boxSizing: "border-box",
   },
@@ -584,20 +584,18 @@ const styles: Record<string, CSSProperties> = {
 
   shell: {
     width: "100%",
-    maxWidth: 1080,
-    margin: "70px auto 0",
+    maxWidth: 1060,
+    margin: "58px auto 0",
   },
 
   heroCard: {
     position: "relative",
-    overflow: "hidden",
-    borderRadius: 34,
-    border: "1px solid rgba(255,255,255,0.78)",
-    background:
-      "radial-gradient(circle at 84% -10%, rgba(199,210,254,0.82), transparent 34%), linear-gradient(135deg, rgba(255,255,255,0.99), rgba(248,250,252,0.92))",
-    boxShadow:
-      "0 34px 90px rgba(15,23,42,0.10), 0 16px 48px rgba(79,70,229,0.10), inset 0 1px 0 rgba(255,255,255,0.96)",
-    padding: 30,
+    overflow: "visible",
+    borderRadius: 0,
+    border: "none",
+    background: "transparent",
+    boxShadow: "none",
+    padding: "0 0 18px",
   },
 
   heroTopRow: {
@@ -615,25 +613,29 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 999,
     display: "inline-flex",
     alignItems: "center",
-    color: "#4f46e5",
-    background: "rgba(238,242,255,0.72)",
-    border: "1px solid rgba(199,210,254,0.72)",
+    color: "#1d4ed8",
+    background: "rgba(239,246,255,0.72)",
+    border: "1px solid rgba(191,219,254,0.86)",
     textDecoration: "none",
     fontSize: 12,
-    fontWeight: 950,
+    fontWeight: 900,
   },
 
   planBadge: {
-    minHeight: 32,
+    minHeight: 28,
     padding: "0 12px",
     borderRadius: 999,
     display: "inline-flex",
     alignItems: "center",
-    gap: 7,
+    justifyContent: "center",
+    gap: 6,
+    color: "#047857",
+    background: "rgba(236,253,245,0.84)",
+    border: "1px solid rgba(34,197,94,0.20)",
     fontSize: 11,
     fontWeight: 950,
     textTransform: "uppercase",
-    letterSpacing: "0.06em",
+    letterSpacing: "0.045em",
   },
 
   proBadge: {
@@ -656,23 +658,26 @@ const styles: Record<string, CSSProperties> = {
   },
 
   heroMain: {
+    marginTop: 26,
     display: "flex",
     alignItems: "center",
-    gap: 20,
+    gap: 16,
   },
 
   avatar: {
-    width: 76,
-    height: 76,
-    borderRadius: 28,
+    width: 58,
+    height: 58,
+    borderRadius: 20,
     display: "grid",
     placeItems: "center",
-    color: "#ffffff",
-    background: "linear-gradient(135deg, #f97316, #f59e0b)",
-    fontSize: 23,
+    color: "#1d4ed8",
+    background:
+      "linear-gradient(135deg, rgba(239,246,255,0.98), rgba(255,255,255,0.98))",
+    border: "1px solid rgba(191,219,254,0.92)",
+    fontSize: 20,
     fontWeight: 950,
     boxShadow:
-      "0 22px 44px rgba(249,115,22,0.22), inset 0 1px 0 rgba(255,255,255,0.28)",
+      "0 12px 24px rgba(37,99,235,0.075), inset 0 1px 0 rgba(255,255,255,0.96)",
     flexShrink: 0,
   },
 
@@ -692,10 +697,10 @@ const styles: Record<string, CSSProperties> = {
   title: {
     margin: 0,
     color: "#0f172a",
-    fontSize: 42,
+    fontSize: 34,
     lineHeight: 1,
     fontWeight: 950,
-    letterSpacing: "-0.06em",
+    letterSpacing: "-0.052em",
   },
 
   accountIdentity: {
@@ -725,12 +730,12 @@ const styles: Record<string, CSSProperties> = {
   },
 
   mainCard: {
-    borderRadius: 30,
-    border: "1px solid rgba(226,232,240,0.78)",
+    borderRadius: 26,
+    border: "1px solid rgba(226,232,240,0.92)",
     background:
-      "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.86))",
+      "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.72))",
     boxShadow:
-      "0 22px 60px rgba(15,23,42,0.065), inset 0 1px 0 rgba(255,255,255,0.92)",
+      "0 16px 38px rgba(15,23,42,0.045), inset 0 1px 0 rgba(255,255,255,0.94)",
     padding: 24,
   },
 
@@ -740,12 +745,12 @@ const styles: Record<string, CSSProperties> = {
   },
 
   sideCard: {
-    borderRadius: 30,
-    border: "1px solid rgba(199,210,254,0.72)",
+    borderRadius: 26,
+    border: "1px solid rgba(226,232,240,0.92)",
     background:
-      "radial-gradient(circle at 90% 0%, rgba(199,210,254,0.42), transparent 35%), linear-gradient(180deg, rgba(255,255,255,0.98), rgba(238,242,255,0.58))",
+      "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(239,246,255,0.46))",
     boxShadow:
-      "0 24px 68px rgba(79,70,229,0.10), inset 0 1px 0 rgba(255,255,255,0.92)",
+      "0 16px 38px rgba(15,23,42,0.045), inset 0 1px 0 rgba(255,255,255,0.94)",
     padding: 24,
     display: "grid",
     gap: 18,
@@ -760,11 +765,11 @@ const styles: Record<string, CSSProperties> = {
   },
 
   cardEyebrow: {
-    color: "#6366f1",
+    color: "#2563eb",
     fontSize: 11,
     fontWeight: 950,
     textTransform: "uppercase",
-    letterSpacing: "0.10em",
+    letterSpacing: "0.11em",
     marginBottom: 7,
   },
 
@@ -846,12 +851,12 @@ const styles: Record<string, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
     color: "#ffffff",
     fontSize: 14,
     fontWeight: 950,
     textDecoration: "none",
-    boxShadow: "0 16px 34px rgba(79,70,229,0.24)",
+    boxShadow: "0 14px 30px rgba(37,99,235,0.20)",
   },
 
   secondaryButton: {
@@ -918,9 +923,9 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 999,
     display: "inline-flex",
     alignItems: "center",
-    background: "rgba(238,242,255,0.78)",
-    border: "1px solid rgba(199,210,254,0.72)",
-    color: "#4f46e5",
+    background: "rgba(239,246,255,0.72)",
+    border: "1px solid rgba(191,219,254,0.82)",
+    color: "#1d4ed8",
     fontSize: 11,
     fontWeight: 900,
     whiteSpace: "nowrap",
@@ -934,12 +939,12 @@ const styles: Record<string, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
     color: "#ffffff",
     fontSize: 13,
     fontWeight: 950,
     cursor: "pointer",
-    boxShadow: "0 14px 30px rgba(79,70,229,0.20)",
+    boxShadow: "0 14px 30px rgba(37,99,235,0.18)",
     whiteSpace: "nowrap",
   },
 
@@ -951,9 +956,8 @@ const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     padding: 18,
-    background:
-      "radial-gradient(circle at 50% 18%, rgba(79,70,229,0.18), transparent 32%), rgba(15,23,42,0.58)",
-    backdropFilter: "blur(16px) saturate(126%)",
+    background: "rgba(15,23,42,0.54)",
+    backdropFilter: "blur(14px) saturate(118%)",
     boxSizing: "border-box",
   },
 
@@ -961,12 +965,12 @@ const styles: Record<string, CSSProperties> = {
     width: "min(720px, calc(100vw - 36px))",
     maxHeight: "calc(100dvh - 36px)",
     overflowY: "auto",
-    borderRadius: 30,
-    border: "1px solid rgba(255,255,255,0.78)",
+    borderRadius: 28,
+    border: "1px solid rgba(226,232,240,0.92)",
     background:
-      "radial-gradient(circle at 86% -8%, rgba(199,210,254,0.62), transparent 34%), linear-gradient(135deg, rgba(255,255,255,0.99), rgba(248,250,252,0.96))",
+      "linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.96))",
     boxShadow:
-      "0 50px 130px rgba(15,23,42,0.34), 0 26px 70px rgba(79,70,229,0.18), inset 0 1px 0 rgba(255,255,255,0.96)",
+      "0 42px 110px rgba(15,23,42,0.30), inset 0 1px 0 rgba(255,255,255,0.96)",
     padding: 26,
     boxSizing: "border-box",
   },
@@ -1153,12 +1157,12 @@ const styles: Record<string, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
     color: "#ffffff",
     fontSize: 14,
     fontWeight: 950,
     cursor: "pointer",
-    boxShadow: "0 14px 28px rgba(79,70,229,0.22)",
+    boxShadow: "0 14px 28px rgba(37,99,235,0.20)",
   },
 
   disabledButton: {

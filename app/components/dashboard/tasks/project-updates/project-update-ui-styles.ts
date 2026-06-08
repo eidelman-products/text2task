@@ -1,12 +1,163 @@
 import type { CSSProperties } from "react";
 
-const indigo = "#4f46e5";
-const indigoDark = "#4338ca";
+const indigo = "#2563eb";
+const indigoDark = "#1d4ed8";
 const slate900 = "#0f172a";
 const slate700 = "#334155";
 const slate600 = "#475569";
 const slate500 = "#64748b";
 const border = "rgba(226, 232, 240, 0.9)";
+
+export const responsiveClassNames = {
+  overlay: "project-update-modal-overlay",
+  modal: "project-update-modal-shell",
+  header: "project-update-modal-header",
+  body: "project-update-modal-body",
+  mainGrid: "project-update-modal-grid",
+  inputCard: "project-update-input-card",
+  inputTabs: "project-update-input-tabs",
+  imagePreview: "project-update-image-preview",
+  reviewCard: "project-update-review-card",
+  reviewSummary: "project-update-review-summary",
+  reviewItemHeader: "project-update-review-item-header",
+  reviewFields: "project-update-review-fields",
+  footer: "project-update-modal-footer",
+} as const;
+
+export const responsiveCss = `
+  @media (max-width: 760px) {
+    .${responsiveClassNames.overlay} {
+      padding: 12px !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: rgba(15, 23, 42, 0.42) !important;
+      backdrop-filter: none !important;
+    }
+
+    .${responsiveClassNames.modal} {
+      width: calc(100vw - 24px) !important;
+      max-width: calc(100vw - 24px) !important;
+      max-height: calc(100dvh - 24px) !important;
+      min-width: 0 !important;
+      border-radius: 20px !important;
+    }
+
+    .${responsiveClassNames.header} {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      padding: 15px 16px 12px !important;
+      box-sizing: border-box !important;
+    }
+
+    .${responsiveClassNames.header} > * {
+      min-width: 0 !important;
+    }
+
+    .${responsiveClassNames.body} {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      padding: 14px !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    .${responsiveClassNames.mainGrid} {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    .${responsiveClassNames.mainGrid} > * {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    .${responsiveClassNames.inputCard},
+    .${responsiveClassNames.reviewCard} {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    .${responsiveClassNames.inputCard} {
+      padding: 14px !important;
+    }
+
+    .${responsiveClassNames.reviewCard} {
+      padding: 15px !important;
+    }
+
+    .${responsiveClassNames.inputTabs} {
+      width: 100% !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      overflow: visible !important;
+    }
+
+    .${responsiveClassNames.inputTabs} > button {
+      width: 100% !important;
+      min-width: 0 !important;
+      padding-left: 9px !important;
+      padding-right: 9px !important;
+    }
+
+    .${responsiveClassNames.imagePreview} {
+      --project-update-image-preview-columns: minmax(0, 1fr);
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    .${responsiveClassNames.imagePreview} > * {
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .${responsiveClassNames.reviewSummary} {
+      align-items: flex-start !important;
+      flex-wrap: wrap !important;
+    }
+
+    .${responsiveClassNames.reviewItemHeader} {
+      --project-update-review-item-header-columns: minmax(0, 1fr);
+    }
+
+    .${responsiveClassNames.reviewFields} {
+      --project-update-review-field-columns: minmax(0, 1fr);
+    }
+
+    .${responsiveClassNames.footer} {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 10px !important;
+      padding: 12px 14px 14px !important;
+      box-sizing: border-box !important;
+    }
+
+    .${responsiveClassNames.footer} > button {
+      width: 100% !important;
+      min-width: 0 !important;
+      padding-left: 12px !important;
+      padding-right: 12px !important;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .${responsiveClassNames.inputTabs},
+    .${responsiveClassNames.footer} {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
+  }
+`;
 
 export const overlay: CSSProperties = {
   position: "fixed",
@@ -16,9 +167,8 @@ export const overlay: CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   padding: 18,
-  background:
-    "radial-gradient(circle at 50% 18%, rgba(79, 70, 229, 0.18), transparent 32%), rgba(15, 23, 42, 0.62)",
-  backdropFilter: "blur(18px) saturate(130%)",
+  background: "rgba(15, 23, 42, 0.42)",
+  backdropFilter: "blur(8px)",
   overflow: "hidden",
   boxSizing: "border-box",
 };
@@ -28,12 +178,12 @@ export const modal: CSSProperties = {
   maxHeight: "calc(100dvh - 36px)",
   display: "flex",
   flexDirection: "column",
-  borderRadius: 36,
-  border: "1px solid rgba(255,255,255,0.78)",
+  borderRadius: 28,
+  border: "1px solid rgba(191,219,254,0.78)",
   background:
-    "radial-gradient(circle at 86% -8%, rgba(199, 210, 254, 0.82), transparent 34%), radial-gradient(circle at 5% 105%, rgba(240, 253, 250, 0.42), transparent 32%), linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.992) 48%, rgba(246, 248, 255, 0.96) 100%)",
+    "linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)",
   boxShadow:
-    "0 92px 220px rgba(15, 23, 42, 0.48), 0 42px 100px rgba(79, 70, 229, 0.22), 0 0 0 1px rgba(148,163,184,0.14), inset 0 1px 0 rgba(255, 255, 255, 0.98), inset 0 -1px 0 rgba(226,232,240,0.48)",
+    "0 30px 90px rgba(15,23,42,0.18), inset 0 1px 0 rgba(255,255,255,0.96)",
   overflow: "hidden",
   boxSizing: "border-box",
 };
@@ -45,9 +195,8 @@ export const header: CSSProperties = {
   justifyContent: "space-between",
   gap: 14,
   padding: "17px 24px 13px",
-  borderBottom: "1px solid rgba(226, 232, 240, 0.44)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.68), rgba(255,255,255,0.28))",
+  borderBottom: "1px solid rgba(226,232,240,0.84)",
+  background: "#ffffff",
 };
 
 export const headerMain: CSSProperties = {
@@ -64,11 +213,12 @@ export const headerIcon: CSSProperties = {
   display: "grid",
   placeItems: "center",
   flexShrink: 0,
-  background: "rgba(238, 242, 255, 0.98)",
-  border: "1px solid rgba(199, 210, 254, 0.96)",
+  background:
+    "linear-gradient(135deg, rgba(239,246,255,0.98), rgba(255,255,255,0.98))",
+  border: "1px solid rgba(191,219,254,0.9)",
   color: indigo,
   boxShadow:
-    "0 14px 28px rgba(79, 70, 229, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.82)",
+    "0 10px 22px rgba(37,99,235,0.07), inset 0 1px 0 rgba(255,255,255,0.92)",
   fontSize: 20,
   fontWeight: 950,
 };
@@ -110,31 +260,27 @@ export const headerContextLine: CSSProperties = {
   maxWidth: "100%",
   padding: "7px 11px",
   borderRadius: 999,
-  border: "1px solid rgba(199, 210, 254, 0.68)",
-  background:
-    "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,250,252,0.86))",
+  border: "1px solid rgba(191,219,254,0.72)",
+  background: "rgba(239,246,255,0.48)",
   color: "#475569",
   fontSize: 12,
   lineHeight: 1.2,
   fontWeight: 850,
-  boxShadow:
-    "0 14px 30px rgba(79, 70, 229, 0.09), inset 0 1px 0 rgba(255,255,255,0.95)",
+  boxShadow: "none",
 };
 
 export const closeButton: CSSProperties = {
   width: 38,
   height: 38,
   borderRadius: 14,
-  border: "1px solid rgba(255, 255, 255, 0.9)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,1), rgba(248,250,252,0.92))",
+  border: "1px solid rgba(226,232,240,0.9)",
+  background: "#ffffff",
   color: slate500,
   fontSize: 23,
   lineHeight: 1,
   cursor: "pointer",
   flexShrink: 0,
-  boxShadow:
-    "0 16px 34px rgba(15, 23, 42, 0.12), 0 8px 18px rgba(79,70,229,0.05), inset 0 1px 0 rgba(255,255,255,0.98)",
+  boxShadow: "0 8px 18px rgba(15,23,42,0.055)",
 };
 
 export const body: CSSProperties = {
@@ -142,6 +288,7 @@ export const body: CSSProperties = {
   overflowY: "auto",
   overflowX: "hidden",
   padding: "18px 24px 22px",
+  background: "#f8fafc",
   boxSizing: "border-box",
 };
 
@@ -218,8 +365,9 @@ export const originalText: CSSProperties = {
 
 export const mainGrid: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "minmax(320px, 0.68fr) minmax(0, 1.32fr)",
-  gap: 15,
+  width: "100%",
+  maxWidth: "100%",
+  boxSizing: "border-box",
   minWidth: 0,
   alignItems: "start",
 };
@@ -248,13 +396,12 @@ export const rightColumn: CSSProperties = {
 export const card: CSSProperties = {
   display: "grid",
   gap: 12,
-  borderRadius: 30,
-  border: "1px solid rgba(255,255,255,0.82)",
-  background:
-    "radial-gradient(circle at 0% -8%, rgba(224,231,255,0.42), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.985), rgba(248,250,252,0.84))",
+  borderRadius: 22,
+  border: "1px solid rgba(226,232,240,0.88)",
+  background: "#ffffff",
   padding: 17,
   boxShadow:
-    "0 30px 68px rgba(15, 23, 42, 0.11), 0 16px 38px rgba(79,70,229,0.085), 0 0 0 1px rgba(199,210,254,0.16), inset 0 1px 0 rgba(255, 255, 255, 0.98)",
+    "0 12px 28px rgba(15,23,42,0.055), inset 0 1px 0 rgba(255,255,255,0.9)",
   minWidth: 0,
   boxSizing: "border-box",
 };
@@ -273,13 +420,12 @@ export const cardIcon: CSSProperties = {
   display: "grid",
   placeItems: "center",
   background:
-    "linear-gradient(135deg, rgba(238,242,255,0.98), rgba(224,231,255,0.88))",
-  border: "1px solid rgba(165, 180, 252, 0.9)",
+    "linear-gradient(135deg, rgba(239,246,255,0.98), rgba(255,255,255,0.98))",
+  border: "1px solid rgba(191,219,254,0.86)",
   color: indigoDark,
   flexShrink: 0,
   fontWeight: 950,
-  boxShadow:
-    "0 12px 24px rgba(79,70,229,0.11), inset 0 1px 0 rgba(255,255,255,0.9)",
+  boxShadow: "0 8px 16px rgba(37,99,235,0.06)",
 };
 
 export const cardTitle: CSSProperties = {
@@ -317,7 +463,7 @@ export const tab: CSSProperties = {
   flex: "0 0 auto",
   minHeight: 36,
   borderRadius: 999,
-  border: "1px solid rgba(203,213,225,0.72)",
+  border: "1px solid rgba(203,213,225,0.78)",
   padding: "9px 15px",
   display: "inline-flex",
   alignItems: "center",
@@ -327,20 +473,18 @@ export const tab: CSSProperties = {
   fontWeight: 850,
   cursor: "pointer",
   whiteSpace: "nowrap",
-  background: "rgba(255,255,255,0.54)",
+  background: "#ffffff",
   color: "#64748b",
-  boxShadow: "0 8px 18px rgba(15,23,42,0.035)",
+  boxShadow: "none",
   transition:
     "transform 160ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease",
 };
 
 export const tabActive: CSSProperties = {
-  color: "#4f46e5",
-  background:
-    "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(238,242,255,0.98))",
-  border: "1px solid rgba(99,102,241,0.82)",
-  boxShadow:
-    "0 12px 26px rgba(79,70,229,0.18), inset 0 1px 0 rgba(255,255,255,0.95)",
+  color: "#1d4ed8",
+  background: "rgba(239,246,255,0.82)",
+  border: "1px solid rgba(147,197,253,0.9)",
+  boxShadow: "0 8px 18px rgba(37,99,235,0.08)",
 };
 
 export const field: CSSProperties = {
@@ -361,10 +505,9 @@ export const textarea: CSSProperties = {
   width: "100%",
   minWidth: 0,
   minHeight: 134,
-  borderRadius: 20,
-  border: "1px solid rgba(199,210,254,0.68)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,1), rgba(255,255,255,0.96))",
+  borderRadius: 16,
+  border: "1px solid rgba(203,213,225,0.92)",
+  background: "#ffffff",
   color: slate900,
   fontSize: 13,
   fontWeight: 650,
@@ -374,8 +517,7 @@ export const textarea: CSSProperties = {
   padding: "15px 16px",
   resize: "vertical",
   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif",
-  boxShadow:
-    "inset 0 1px 0 rgba(255,255,255,0.95), 0 18px 34px rgba(15,23,42,0.055), 0 0 0 4px rgba(238,242,255,0.28)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.9)",
 };
 
 export const helperRow: CSSProperties = {
@@ -393,17 +535,15 @@ export const uploadBox: CSSProperties = {
   display: "grid",
   justifyItems: "center",
   gap: 8,
-  borderRadius: 24,
-  border: "1.5px dashed rgba(129, 140, 248, 0.68)",
-  background:
-    "radial-gradient(circle at top, rgba(224,231,255,0.8), transparent 45%), linear-gradient(135deg, rgba(255,255,255,0.99) 0%, rgba(245,243,255,0.88) 100%)",
+  borderRadius: 18,
+  border: "1.5px dashed rgba(147,197,253,0.72)",
+  background: "rgba(239,246,255,0.44)",
   padding: "22px 14px",
   textAlign: "center",
   minWidth: 0,
   boxSizing: "border-box",
   cursor: "default",
-  boxShadow:
-    "0 22px 46px rgba(79,70,229,0.1), inset 0 1px 0 rgba(255,255,255,0.92)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.78)",
 };
 
 export const uploadIcon: CSSProperties = {
@@ -413,12 +553,12 @@ export const uploadIcon: CSSProperties = {
   display: "grid",
   placeItems: "center",
   background:
-    "linear-gradient(135deg, rgba(238,242,255,1), rgba(224,231,255,0.88))",
-  border: "1px solid rgba(165,180,252,0.92)",
+    "linear-gradient(135deg, rgba(239,246,255,1), rgba(219,234,254,0.86))",
+  border: "1px solid rgba(191,219,254,0.9)",
   color: indigo,
   fontSize: 15,
   fontWeight: 950,
-  boxShadow: "0 12px 24px rgba(79,70,229,0.12)",
+  boxShadow: "0 8px 16px rgba(37,99,235,0.07)",
 };
 
 export const uploadTitle: CSSProperties = {
@@ -442,30 +582,27 @@ export const uploadHelp: CSSProperties = {
 export const smallButton: CSSProperties = {
   minHeight: 40,
   borderRadius: 14,
-  border: "1px solid rgba(129, 140, 248, 0.74)",
-  background:
-    "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(238,242,255,0.9))",
+  border: "1px solid rgba(191,219,254,0.86)",
+  background: "#ffffff",
   color: indigoDark,
   fontSize: 12,
   fontWeight: 930,
   padding: "0 13px",
   cursor: "pointer",
-  boxShadow:
-    "0 12px 26px rgba(79,70,229,0.13), inset 0 1px 0 rgba(255,255,255,0.9)",
+  boxShadow: "0 8px 18px rgba(37,99,235,0.065)",
 };
 
 export const imagePreview: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "160px minmax(0, 1fr)",
+  gridTemplateColumns:
+    "var(--project-update-image-preview-columns, 160px minmax(0, 1fr))",
   gap: 14,
   alignItems: "stretch",
-  borderRadius: 24,
-  border: "1px solid rgba(199, 210, 254, 0.64)",
-  background:
-    "radial-gradient(circle at 0% 0%, rgba(224,231,255,0.92), transparent 32%), linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.92))",
+  borderRadius: 18,
+  border: "1px solid rgba(226,232,240,0.86)",
+  background: "#ffffff",
   padding: 13,
-  boxShadow:
-    "0 24px 52px rgba(15, 23, 42, 0.105), 0 12px 28px rgba(79,70,229,0.08), inset 0 1px 0 rgba(255,255,255,0.92)",
+  boxShadow: "0 10px 24px rgba(15,23,42,0.055)",
 };
 
 export const imageFrame: CSSProperties = {
@@ -858,39 +995,34 @@ export const selectDisabled: CSSProperties = {
 export const footer: CSSProperties = {
   flex: "0 0 auto",
   padding: "16px 22px 18px",
-  borderTop: "1px solid rgba(203, 213, 225, 0.6)",
+  borderTop: "1px solid rgba(226,232,240,0.88)",
   display: "flex",
   gap: 12,
   justifyContent: "flex-end",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.54), rgba(248,250,252,0.86))",
-  backdropFilter: "blur(18px) saturate(135%)",
-  boxShadow:
-    "0 -26px 54px rgba(15, 23, 42, 0.095), 0 -10px 24px rgba(79,70,229,0.045), inset 0 1px 0 rgba(255,255,255,0.86)",
+  background: "#ffffff",
+  backdropFilter: "none",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.9)",
 };
 
 export const secondaryButton: CSSProperties = {
   minHeight: 48,
   borderRadius: 16,
-  border: "1px solid rgba(226,232,240,0.84)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.9))",
+  border: "1px solid rgba(226,232,240,0.9)",
+  background: "#ffffff",
   color: slate600,
   fontSize: 13,
   fontWeight: 850,
   padding: "0 18px",
   cursor: "pointer",
-  boxShadow:
-    "0 16px 34px rgba(15,23,42,0.095), 0 8px 18px rgba(79,70,229,0.035), inset 0 1px 0 rgba(255,255,255,0.96)",
+  boxShadow: "0 8px 18px rgba(15,23,42,0.045)",
   transition: "transform 160ms ease, box-shadow 160ms ease, background 160ms ease",
 };
 
 export const primaryButton: CSSProperties = {
   minHeight: 48,
   borderRadius: 18,
-  border: "1px solid rgba(67, 56, 202, 0.95)",
-  background:
-    "linear-gradient(135deg, #8b92ff 0%, #6366f1 18%, #4f46e5 52%, #2e278b 100%)",
+  border: "1px solid rgba(29,78,216,0.9)",
+  background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
   color: "#ffffff",
   fontSize: 14,
   fontWeight: 950,
@@ -900,7 +1032,7 @@ export const primaryButton: CSSProperties = {
   alignItems: "center",
   gap: 10,
   boxShadow:
-    "0 18px 42px rgba(79,70,229,0.36), 0 12px 28px rgba(55,48,163,0.26), inset 0 1px 0 rgba(255,255,255,0.34)",
+    "0 14px 30px rgba(37,99,235,0.18), inset 0 1px 0 rgba(255,255,255,0.24)",
   transition: "transform 160ms ease, box-shadow 160ms ease, filter 160ms ease, background 160ms ease",
 };
 

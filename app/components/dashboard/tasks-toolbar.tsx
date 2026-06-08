@@ -148,20 +148,19 @@ const toolbarShellStyle: CSSProperties = {
   position: "relative",
   display: "grid",
   gap: 11,
-  padding: "14px 14px 12px",
-  borderRadius: 22,
-  border: "1px solid rgba(199,210,254,0.72)",
-  background:
-    "linear-gradient(135deg, rgba(248,250,252,0.98) 0%, rgba(238,242,255,0.72) 44%, rgba(255,255,255,0.98) 100%)",
-  boxShadow:
-    "0 18px 42px rgba(79,70,229,0.075), inset 0 1px 0 rgba(255,255,255,0.94)",
-  overflow: "hidden",
+  padding: "4px 2px 2px",
+  borderRadius: 0,
+  border: "none",
+  background: "transparent",
+  boxShadow: "none",
+  overflow: "visible",
   width: "100%",
   maxWidth: "100%",
   boxSizing: "border-box",
 };
 
 const toolbarGlowStyle: CSSProperties = {
+  display: "none",
   position: "absolute",
   right: -80,
   top: -92,
@@ -169,19 +168,20 @@ const toolbarGlowStyle: CSSProperties = {
   height: 160,
   borderRadius: 999,
   background:
-    "radial-gradient(circle, rgba(99,102,241,0.16) 0%, rgba(99,102,241,0.06) 44%, transparent 72%)",
-  filter: "blur(16px)",
+    "radial-gradient(circle, rgba(37,99,235,0.055) 0%, rgba(37,99,235,0.024) 42%, transparent 72%)",
+  filter: "blur(18px)",
   pointerEvents: "none",
 };
 
 const toolbarAccentStyle: CSSProperties = {
+  display: "none",
   position: "absolute",
   left: 0,
   top: 0,
   bottom: 0,
-  width: 4,
+  width: 3,
   background:
-    "linear-gradient(180deg, rgba(79,70,229,0.92) 0%, rgba(14,165,233,0.66) 100%)",
+    "linear-gradient(180deg, rgba(37,99,235,0.74) 0%, rgba(147,197,253,0.42) 100%)",
 };
 
 const toolbarGridStyle: CSSProperties = {
@@ -200,14 +200,12 @@ const searchWrapStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 10,
-  border: "1px solid rgba(199,210,254,0.8)",
-  borderRadius: 15,
+  border: "1px solid rgba(203,213,225,0.78)",
+  borderRadius: 14,
   padding: "0 13px",
   minHeight: 44,
-  background:
-    "linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.96) 100%)",
-  boxShadow:
-    "0 1px 2px rgba(15,23,42,0.025), inset 0 1px 0 rgba(255,255,255,0.9)",
+  background: "rgba(255,255,255,0.94)",
+  boxShadow: "0 1px 2px rgba(15,23,42,0.018)",
   minWidth: 0,
   width: "100%",
   boxSizing: "border-box",
@@ -221,9 +219,9 @@ const searchIconStyle: CSSProperties = {
   placeItems: "center",
   fontSize: 14,
   lineHeight: 1,
-  color: "#4f46e5",
-  background: "rgba(238,242,255,0.96)",
-  border: "1px solid rgba(199,210,254,0.78)",
+  color: "#2563eb",
+  background: "rgba(239,246,255,0.92)",
+  border: "1px solid rgba(191,219,254,0.72)",
   fontWeight: 950,
   flexShrink: 0,
 };
@@ -243,17 +241,15 @@ const selectStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
   minHeight: 44,
-  border: "1px solid rgba(203,213,225,0.92)",
-  borderRadius: 15,
+  border: "1px solid rgba(203,213,225,0.78)",
+  borderRadius: 14,
   padding: "0 12px",
   color: "#334155",
-  background:
-    "linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.96) 100%)",
+  background: "rgba(255,255,255,0.94)",
   fontWeight: 760,
   fontSize: 13,
   outline: "none",
-  boxShadow:
-    "0 1px 2px rgba(15,23,42,0.025), inset 0 1px 0 rgba(255,255,255,0.9)",
+  boxShadow: "0 1px 2px rgba(15,23,42,0.018)",
   cursor: "pointer",
   boxSizing: "border-box",
 };
@@ -264,18 +260,16 @@ const exportButtonStyle: CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   gap: 8,
-  border: "1px solid rgba(22,163,74,0.18)",
-  borderRadius: 15,
+  border: "1px solid rgba(191,219,254,0.82)",
+  borderRadius: 14,
   padding: "0 16px",
-  background:
-    "linear-gradient(135deg, rgba(22,163,74,1) 0%, rgba(34,197,94,1) 100%)",
-  color: "#ffffff",
+  background: "rgba(239,246,255,0.82)",
+  color: "#1d4ed8",
   fontSize: 13,
   fontWeight: 950,
   cursor: "pointer",
   whiteSpace: "nowrap",
-  boxShadow:
-    "0 14px 28px rgba(22,163,74,0.18), inset 0 1px 0 rgba(255,255,255,0.22)",
+  boxShadow: "0 1px 2px rgba(15,23,42,0.018)",
   boxSizing: "border-box",
 };
 
@@ -285,7 +279,7 @@ const exportIconStyle: CSSProperties = {
   borderRadius: 7,
   display: "grid",
   placeItems: "center",
-  background: "rgba(255,255,255,0.18)",
+  background: "rgba(255,255,255,0.78)",
   fontSize: 13,
   lineHeight: 1,
   fontWeight: 950,
@@ -296,7 +290,7 @@ const toolbarMetaRowStyle: CSSProperties = {
   zIndex: 1,
   display: "flex",
   alignItems: "center",
-  justifyContent: "space-between",
+  justifyContent: "flex-start",
   gap: 12,
   padding: "0 2px 0 1px",
   flexWrap: "wrap",
@@ -314,9 +308,10 @@ const resultStrongStyle: CSSProperties = {
 };
 
 const hintTextStyle: CSSProperties = {
+  display: "none",
   fontSize: 12,
   fontWeight: 900,
-  color: "#6d28d9",
+  color: "#2563eb",
 };
 
 const responsiveToolbarCss = `
@@ -336,17 +331,17 @@ const responsiveToolbarCss = `
 
   .tasks-toolbar-search:focus-within,
   .tasks-toolbar-select:focus {
-    border-color: rgba(99,102,241,0.72) !important;
+    border-color: rgba(37,99,235,0.56) !important;
     box-shadow:
-      0 0 0 4px rgba(99,102,241,0.08),
+      0 0 0 4px rgba(37,99,235,0.07),
       inset 0 1px 0 rgba(255,255,255,0.92) !important;
   }
 
   .tasks-toolbar-export:hover {
     transform: translateY(-1px);
     box-shadow:
-      0 18px 34px rgba(22,163,74,0.22),
-      inset 0 1px 0 rgba(255,255,255,0.24) !important;
+      0 8px 18px rgba(37,99,235,0.07),
+      inset 0 1px 0 rgba(255,255,255,0.94) !important;
   }
 
   @media (max-width: 900px) {

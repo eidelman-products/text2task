@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, KeyboardEvent, MutableRefObject } from "react";
 import TaskRowActions from "../task-row-actions";
-import ResourceManagerModal from "../resources/resource-manager-modal";
-import {
-  fetchTaskResources,
-  type TaskResource,
-} from "../resources/resource-api";
 import type {
   TaskArchiveView,
   TaskProjectGroup,
@@ -16,10 +11,6 @@ import ClientContactEditor from "./client-contact-editor";
 import ProjectMetaEditor from "./project-meta-editor";
 import ProjectHeaderEditor from "./project-header-editor";
 import ProjectUpdateButton from "./project-updates/project-update-button";
-import ProjectUpdateHistoryModal from "./project-updates/project-update-history-modal";
-import ProjectUpdateModal from "./project-updates/project-update-modal";
-import { useProjectUpdate } from "./project-updates/use-project-update";
-import { useProjectUpdateHistory } from "./project-updates/use-project-update-history";
 import * as historyStyles from "./project-updates/project-update-history-styles";
 
 type DesktopTasksTableProps = {
@@ -53,6 +44,10 @@ type DesktopTasksTableProps = {
   permanentlyDeleteTask: (taskId: number) => Promise<void> | void;
   formatCreatedDate: (value?: string | null) => string;
   onRefreshTasks: () => Promise<void> | void;
+  projectResourceCounts: Record<string, number>;
+  onOpenProjectResources: (project: TaskProjectGroup) => void;
+  onOpenProjectUpdate: (project: TaskProjectGroup) => void;
+  onOpenProjectHistory: (project: TaskProjectGroup) => void;
 };
 
 export default function DesktopTasksTable({
@@ -79,7 +74,10 @@ export default function DesktopTasksTable({
   restoreTask,
   permanentlyDeleteTask,
   formatCreatedDate,
-  onRefreshTasks,
+  projectResourceCounts,
+  onOpenProjectResources,
+  onOpenProjectUpdate,
+  onOpenProjectHistory,
 }: DesktopTasksTableProps) {
   const projectGroups = useMemo(() => buildTaskProjectGroups(tasks), [tasks]);
 
@@ -89,52 +87,8 @@ export default function DesktopTasksTable({
   const [hoveredProjectKey, setHoveredProjectKey] = useState<string | null>(
     null
   );
-  const [resourcesProject, setResourcesProject] =
-    useState<TaskProjectGroup | null>(null);
   const [hoveredHistoryProjectKey, setHoveredHistoryProjectKey] =
     useState<string | null>(null);
-  const [projectResourceCounts, setProjectResourceCounts] = useState<
-    Record<string, number>
-  >({});
-
-  const projectUpdateState = useProjectUpdate();
-  const projectUpdateHistoryState = useProjectUpdateHistory();
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadResourceCounts() {
-      try {
-        const allResources = await fetchTaskResources({});
-
-        if (!isMounted) return;
-
-        const nextCounts: Record<string, number> = {};
-
-        allResources.forEach((resource) => {
-          const projectKey = resource.project_id
-            ? `project:${resource.project_id}`
-            : resource.task_id
-              ? `task:${resource.task_id}`
-              : "";
-
-          if (!projectKey) return;
-
-          nextCounts[projectKey] = (nextCounts[projectKey] || 0) + 1;
-        });
-
-        setProjectResourceCounts(nextCounts);
-      } catch (error) {
-        console.error("Failed to load resource counts:", error);
-      }
-    }
-
-    void loadResourceCounts();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [tasks]);
 
   useEffect(() => {
     if (!highlightedTaskId) return;
@@ -162,18 +116,6 @@ export default function DesktopTasksTable({
       ...current,
       [projectKey]: !current[projectKey],
     }));
-  }
-
-  function openProjectResources(project: TaskProjectGroup) {
-    const projectId = getResolvedProjectId(project);
-
-    if (!projectId) return;
-
-    setResourcesProject(project);
-  }
-
-  function closeProjectResources() {
-    setResourcesProject(null);
   }
 
   function getResolvedProjectId(project: TaskProjectGroup) {
@@ -220,19 +162,6 @@ export default function DesktopTasksTable({
     return projectResourceCounts[key] || 0;
   }
 
-  function syncOpenProjectResourceCount(resources: TaskResource[]) {
-    if (!resourcesProject) return;
-
-    const key = getProjectResourceKey(resourcesProject);
-
-    if (!key) return;
-
-    setProjectResourceCounts((current) => ({
-      ...current,
-      [key]: resources.length,
-    }));
-  }
-
   function toggleProjectSelection(project: TaskProjectGroup) {
     const allSelected = project.taskIds.every((id) =>
       selectedTaskIds.includes(id)
@@ -272,7 +201,6 @@ export default function DesktopTasksTable({
 
         <div style={workspaceHeaderStyle}>
           <div>
-            <div style={eyebrowStyle}>Client workspace</div>
             <div style={summaryTitleStyle}>
               {projectGroups.length}{" "}
               {projectGroups.length === 1 ? "project" : "projects"}
@@ -311,6 +239,7 @@ export default function DesktopTasksTable({
               archiveView === "archived" || project.is_archived
                 ? "archived"
                 : "active";
+            const archivedDate = formatArchivedDate(project.archived_at);
 
             const visual = getProjectVisualState(project);
             const resolvedProjectId = getResolvedProjectId(project);
@@ -328,7 +257,7 @@ export default function DesktopTasksTable({
             return (
               <div
                 key={project.key}
-                className="crm-project-card-v3"
+                className="crm-project-card-v6"
                 ref={(node) => {
                   if (node && !isOpen) {
                     taskRefs.current[project.primaryTask.id] = node;
@@ -342,13 +271,13 @@ export default function DesktopTasksTable({
                   ...projectCardStyle,
                   background: visual.cardBackground,
                   borderColor: isHighlighted
-                    ? "rgba(99,102,241,0.36)"
+                    ? "rgba(37,99,235,0.32)"
                     : isHovered
-                      ? "rgba(129,140,248,0.48)"
+                      ? "rgba(147,197,253,0.78)"
                       : visual.cardBorder,
                   boxShadow: isHovered ? visual.hoverShadow : visual.cardShadow,
                   opacity: isDeleting ? 0.62 : 1,
-                  transform: isHovered ? "translateY(-2px)" : "translateY(0)",
+                  transform: isHovered ? "translateY(-1px)" : "translateY(0)",
                 }}
               >
                 <div
@@ -382,7 +311,6 @@ export default function DesktopTasksTable({
                   <div style={projectIdentityStyle}>
                     <ProjectHeaderEditor
                       project={project}
-                      visual={visual}
                       isDeleting={isDeleting}
                       createdLabel={formatCreatedDate(project.created_at)}
                       onEnterBlur={onEnterBlur}
@@ -393,7 +321,7 @@ export default function DesktopTasksTable({
                       <button
                         type="button"
                         onClick={() => toggleProject(project.key)}
-                        className="crm-soft-button-v3"
+                        className="crm-soft-button-v6"
                         style={{
                           ...detailsButtonStyle,
                           ...(isOpen ? detailsButtonActiveStyle : {}),
@@ -410,9 +338,9 @@ export default function DesktopTasksTable({
 
                       <button
                         type="button"
-                        onClick={() => openProjectResources(project)}
+                        onClick={() => onOpenProjectResources(project)}
                         disabled={!canManageResources || isDeleting}
-                        className="crm-soft-button-v3"
+                        className="crm-soft-button-v6"
                         title={
                           hasProjectResources
                             ? `${projectResourceCount} resource${
@@ -443,19 +371,23 @@ export default function DesktopTasksTable({
                         ) : null}
                       </button>
 
-                      <ProjectUpdateButton
-                        project={project}
-                        isDeleting={isDeleting}
-                        onOpenModal={projectUpdateState.openModal}
-                      />
+                      {actionMode !== "archived" ? (
+                        <ProjectUpdateButton
+                          project={project}
+                          isDeleting={isDeleting}
+                          onOpenModal={onOpenProjectUpdate}
+                        />
+                      ) : null}
 
                       <button
                         type="button"
-                        onClick={() => projectUpdateHistoryState.openHistory(project)}
+                        onClick={() => onOpenProjectHistory(project)}
                         disabled={!canManageResources || isDeleting}
-                        onMouseEnter={() => setHoveredHistoryProjectKey(project.key)}
+                        onMouseEnter={() =>
+                          setHoveredHistoryProjectKey(project.key)
+                        }
                         onMouseLeave={() => setHoveredHistoryProjectKey(null)}
-                        className="crm-soft-button-v3"
+                        className="crm-soft-button-v6"
                         title={
                           canManageResources
                             ? "Review previous client updates for this project"
@@ -471,6 +403,28 @@ export default function DesktopTasksTable({
                       >
                         History
                       </button>
+
+                      {actionMode !== "archived" ? (
+                        <TaskRowActions
+                          taskId={project.primaryTask.id}
+                          isDeleting={isDeleting}
+                          isCopied={isCopied}
+                          actionMode={actionMode}
+                          onCopy={copyTask}
+                          onArchive={() => archiveProject(project)}
+                          onRestore={() => restoreProject(project)}
+                          onPermanentDelete={() =>
+                            permanentlyDeleteProject(project)
+                          }
+                        />
+                      ) : null}
+
+                      {actionMode === "archived" ? (
+                        <span style={archivedProjectIndicatorStyle}>
+                          Archived project
+                          {archivedDate ? ` · Archived ${archivedDate}` : ""}
+                        </span>
+                      ) : null}
 
                       {(isSaving || isSaved || isDeleting) && (
                         <span
@@ -495,25 +449,16 @@ export default function DesktopTasksTable({
                     </div>
                   </div>
 
-                  <ProjectMetaEditor
-                    project={project}
-                    isDeleting={isDeleting}
-                    onEnterBlur={onEnterBlur}
-                    updateProjectField={updateProjectField}
-                  />
-
-                  <div style={projectActionPanelStyle}>
-                    <TaskRowActions
-                      taskId={project.primaryTask.id}
+                  <div
+                    className="project-meta-compact-v6"
+                    style={projectMetaWrapStyle}
+                  >
+                    <ProjectMetaEditor
+                      project={project}
                       isDeleting={isDeleting}
-                      isCopied={isCopied}
-                      actionMode={actionMode}
-                      onCopy={copyTask}
-                      onArchive={() => archiveProject(project)}
-                      onRestore={() => restoreProject(project)}
-                      onPermanentDelete={() =>
-                        permanentlyDeleteProject(project)
-                      }
+                      readOnlyStatusPriority={actionMode === "archived"}
+                      onEnterBlur={onEnterBlur}
+                      updateProjectField={updateProjectField}
                     />
                   </div>
                 </div>
@@ -525,48 +470,34 @@ export default function DesktopTasksTable({
                       background: visual.detailsBackground,
                     }}
                   >
-                    <div style={detailsTopBarStyle}>
-                      <div>
-                        <div style={detailsHeroLabelStyle}>
-                          Project workspace
-                        </div>
-                        <div style={detailsHeroTitleStyle}>
-                          Structured work plan
-                        </div>
-                      </div>
-
-                      <div style={progressBlockStyle}>
-                        <span style={progressTextStyle}>
-                          {project.completedSubtaskCount}/{project.subtaskCount}{" "}
-                          done
-                        </span>
-                        <div style={progressTrackStyle}>
-                          <div
-                            style={{
-                              ...progressFillStyle,
-                              width: `${completedPercent}%`,
-                              background: visual.accent,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
                     <div style={detailsGridStyle}>
-                      <section style={workPlanCardStyle}>
+                      <ClientContactEditor
+                        project={project}
+                        isDeleting={isDeleting}
+                        onEnterBlur={onEnterBlur}
+                        updateTaskField={updateTaskField}
+                        updateProjectField={updateProjectField}
+                      />
+
+                      <section style={workPlanSectionStyle}>
                         <div style={sectionHeaderStyle}>
-                          <div>
-                            <div style={sectionTitleStyle}>Subtasks</div>
-                            <div style={sectionSubtitleStyle}>
-                              Editable work list generated from the client
-                              request.
+                          <div style={sectionTitleStyle}>Subtasks</div>
+
+                          <div style={progressBlockStyle}>
+                            <span style={progressTextStyle}>
+                              {project.completedSubtaskCount}/
+                              {project.subtaskCount} done
+                            </span>
+                            <div style={progressTrackStyle}>
+                              <div
+                                style={{
+                                  ...progressFillStyle,
+                                  width: `${completedPercent}%`,
+                                  background: visual.accent,
+                                }}
+                              />
                             </div>
                           </div>
-
-                          <span style={miniProgressPillStyle}>
-                            {project.subtaskCount}{" "}
-                            {project.subtaskCount === 1 ? "item" : "items"}
-                          </span>
                         </div>
 
                         <div style={subtaskListStyle}>
@@ -582,7 +513,7 @@ export default function DesktopTasksTable({
                             return (
                               <div
                                 key={subtask.id}
-                                className="crm-subtask-row-v3"
+                                className="crm-subtask-row-v6"
                                 ref={(node) => {
                                   if (node) {
                                     taskRefs.current[subtask.id] = node;
@@ -592,22 +523,11 @@ export default function DesktopTasksTable({
                                 }}
                                 style={{
                                   ...subtaskRowStyle,
-                                  borderColor: isSubtaskHighlighted
-                                    ? "rgba(99,102,241,0.55)"
-                                    : subtaskRowStyle.borderColor,
-                                  boxShadow: isSubtaskHighlighted
-                                    ? "0 0 0 4px rgba(99,102,241,0.10), 0 12px 26px rgba(15,23,42,0.08)"
-                                    : subtaskRowStyle.boxShadow,
-                                  transform: isSubtaskHighlighted
-                                    ? "translateY(-1px)"
-                                    : subtaskRowStyle.transform,
                                   background: isSubtaskHighlighted
-                                    ? subtaskDone
-                                      ? "linear-gradient(135deg, rgba(240,253,244,0.74), rgba(238,242,255,0.62))"
-                                      : "rgba(238,242,255,0.72)"
+                                    ? "rgba(239,246,255,0.46)"
                                     : subtaskDone
-                                      ? "rgba(240,253,244,0.62)"
-                                      : "rgba(255,255,255,0.72)",
+                                      ? "rgba(240,253,244,0.24)"
+                                      : subtaskRowStyle.background,
                                 }}
                               >
                                 <span
@@ -615,76 +535,99 @@ export default function DesktopTasksTable({
                                     ...subtaskIndexStyle,
                                     color: subtaskDone
                                       ? "#067647"
-                                      : "#475467",
+                                      : "#64748b",
                                     background: subtaskDone
-                                      ? "rgba(220,252,231,0.85)"
-                                      : "rgba(248,250,252,0.95)",
+                                      ? "rgba(220,252,231,0.68)"
+                                      : "rgba(248,250,252,0.64)",
+                                    borderColor: subtaskDone
+                                      ? "rgba(187,247,208,0.70)"
+                                      : "rgba(226,232,240,0.58)",
                                   }}
                                 >
                                   {subtaskDone ? "✓" : index + 1}
                                 </span>
 
-                                <input
-                                  defaultValue={subtask.title}
-                                  onBlur={(e) => {
-                                    const next = e.currentTarget.value.trim();
+                                {actionMode === "archived" ? (
+                                  <span
+                                    style={{
+                                      ...subtaskReadOnlyTitleStyle,
+                                      textDecoration: subtaskDone
+                                        ? "line-through"
+                                        : "none",
+                                      color: subtaskDone
+                                        ? "#64748b"
+                                        : "#334155",
+                                    }}
+                                  >
+                                    {subtask.title}
+                                  </span>
+                                ) : (
+                                  <input
+                                    defaultValue={subtask.title}
+                                    onBlur={(e) => {
+                                      const next = e.currentTarget.value.trim();
 
-                                    if (next && next !== subtask.title) {
-                                      updateTaskField(
+                                      if (next && next !== subtask.title) {
+                                        updateTaskField(
+                                          subtask.id,
+                                          "task",
+                                          next
+                                        );
+                                      }
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    className="crm-subtask-input-v6"
+                                    style={{
+                                      ...subtaskInputStyle,
+                                      textDecoration: subtaskDone
+                                        ? "line-through"
+                                        : "none",
+                                      color: subtaskDone
+                                        ? "#475467"
+                                        : "#101828",
+                                    }}
+                                    disabled={isDeleting}
+                                  />
+                                )}
+
+                                {actionMode === "archived" ? (
+                                  <span style={subtaskReadOnlyStatusStyle}>
+                                    {subtask.status || "New"}
+                                  </span>
+                                ) : (
+                                  <select
+                                    value={subtask.status || "New"}
+                                    onChange={(e) =>
+                                      updateTaskStatus(
                                         subtask.id,
-                                        "task",
-                                        next
-                                      );
+                                        e.target.value
+                                      )
                                     }
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      e.currentTarget.blur();
-                                    }
-                                  }}
-                                  className="crm-subtask-input-v3"
-                                  style={{
-                                    ...subtaskInputStyle,
-                                    textDecoration: subtaskDone
-                                      ? "line-through"
-                                      : "none",
-                                    color: subtaskDone ? "#475467" : "#101828",
-                                  }}
-                                  disabled={isDeleting}
-                                />
-
-                                <select
-                                  value={subtask.status || "New"}
-                                  onChange={(e) =>
-                                    updateTaskStatus(subtask.id, e.target.value)
-                                  }
-                                  onKeyDown={onEnterBlur}
-                                  disabled={isDeleting}
-                                  style={{
-                                    ...subtaskStatusSelectStyle,
-                                    ...getSubtaskStatusStyle(subtask.status),
-                                  }}
-                                >
-                                  <option value="New">New</option>
-                                  <option value="In Progress">
-                                    In Progress
-                                  </option>
-                                  <option value="Review">Review</option>
-                                  <option value="Urgent">Urgent</option>
-                                  <option value="Done">Done</option>
-                                </select>
+                                    onKeyDown={onEnterBlur}
+                                    disabled={isDeleting}
+                                    style={{
+                                      ...subtaskStatusSelectStyle,
+                                      ...getSubtaskStatusStyle(subtask.status),
+                                    }}
+                                  >
+                                    <option value="New">New</option>
+                                    <option value="In Progress">
+                                      In Progress
+                                    </option>
+                                    <option value="Review">Review</option>
+                                    <option value="Urgent">Urgent</option>
+                                    <option value="Done">Done</option>
+                                  </select>
+                                )}
                               </div>
                             );
                           })}
                         </div>
                       </section>
-
-                      <ClientContactEditor
-                        project={project}
-                        isDeleting={isDeleting}
-                        onEnterBlur={onEnterBlur}
-                        updateTaskField={updateTaskField}
-                      />
                     </div>
                   </div>
                 )}
@@ -694,45 +637,6 @@ export default function DesktopTasksTable({
         </div>
       </div>
 
-      <ResourceManagerModal
-        isOpen={Boolean(resourcesProject)}
-        projectId={
-          resourcesProject ? getResolvedProjectId(resourcesProject) : null
-        }
-        taskId={null}
-        title={
-          resourcesProject
-            ? `${resourcesProject.clientName} resources`
-            : "Project resources"
-        }
-        subtitle={
-          resourcesProject
-            ? `Attach links, files, logos, banners, documents, and notes to ${resourcesProject.projectTitle}.`
-            : "Attach project context in one place."
-        }
-        onClose={closeProjectResources}
-        onResourcesChanged={syncOpenProjectResourceCount}
-      />
-
-      <ProjectUpdateModal
-        uiState={projectUpdateState.uiState}
-        onClose={projectUpdateState.closeModal}
-        onRawInputChange={projectUpdateState.setRawInput}
-        onInputMethodChange={projectUpdateState.setInputMethod}
-        onAnalyze={projectUpdateState.analyzeCurrentUpdate}
-        onImageSelected={projectUpdateState.setSelectedImage}
-        onRemoveImage={projectUpdateState.removeSelectedImage}
-        onImageError={projectUpdateState.setImageError}
-        onToggleSuggestedItem={projectUpdateState.toggleSuggestedItem}
-        onUpdateSuggestedItemValue={projectUpdateState.updateSuggestedItemValue}
-        onApply={() => projectUpdateState.applySelectedChanges(onRefreshTasks)}
-      />
-
-      <ProjectUpdateHistoryModal
-        state={projectUpdateHistoryState.state}
-        onClose={projectUpdateHistoryState.closeHistory}
-        onRefresh={projectUpdateHistoryState.refreshHistory}
-      />
     </>
   );
 }
@@ -753,88 +657,68 @@ function getProjectVisualState(project: TaskProjectGroup) {
 
   if (status === "done") {
     return {
-      accent: "linear-gradient(180deg, #16a34a 0%, #22c55e 100%)",
-      cardBackground:
-        "linear-gradient(180deg, rgba(240,253,244,0.82) 0%, rgba(247,254,231,0.44) 44%, rgba(255,255,255,0.9) 100%)",
+      accent:
+        "linear-gradient(180deg, rgba(22,163,74,0.58) 0%, rgba(134,239,172,0.42) 100%)",
+      cardBackground: "#ffffff",
       surfaceBackground:
-        "linear-gradient(135deg, rgba(240,253,244,0.7) 0%, rgba(255,255,255,0.34) 100%)",
+        "linear-gradient(180deg, rgba(240,253,244,0.08) 0%, rgba(255,255,255,0) 40%)",
       detailsBackground:
-        "linear-gradient(180deg, rgba(240,253,244,0.36) 0%, rgba(248,250,252,0.3) 100%)",
-      cardBorder: "rgba(187,247,208,0.84)",
+        "linear-gradient(180deg, rgba(248,250,252,0.40), rgba(255,255,255,0.98))",
+      cardBorder: "rgba(203,213,225,0.68)",
       cardShadow:
-        "0 14px 34px rgba(22,163,74,0.06), 0 6px 16px rgba(15,23,42,0.024)",
+        "0 10px 26px rgba(15,23,42,0.030), inset 0 1px 0 rgba(255,255,255,0.96)",
       hoverShadow:
-        "0 22px 48px rgba(22,163,74,0.105), 0 9px 22px rgba(15,23,42,0.032)",
-      avatarBackground: "rgba(220,252,231,0.92)",
-      avatarText: "#15803d",
-      label: "Done",
-      labelColor: "#15803d",
-      labelBackground: "rgba(240,253,244,0.78)",
-      dataTone: "green" as const,
+        "0 16px 34px rgba(15,23,42,0.054), inset 0 1px 0 rgba(255,255,255,0.98)",
     };
   }
 
   if (deadlineState === "overdue") {
     return {
-      accent: "linear-gradient(180deg, #e11d48 0%, #fb7185 100%)",
-      cardBackground:
-        "linear-gradient(180deg, rgba(255,241,242,0.54) 0%, rgba(255,255,255,0.92) 84%)",
+      accent:
+        "linear-gradient(180deg, rgba(185,28,28,0.58) 0%, rgba(248,113,113,0.42) 100%)",
+      cardBackground: "#ffffff",
       surfaceBackground:
-        "linear-gradient(135deg, rgba(255,241,242,0.42) 0%, rgba(255,255,255,0.4) 100%)",
+        "linear-gradient(180deg, rgba(254,242,242,0.08) 0%, rgba(255,255,255,0) 40%)",
       detailsBackground:
-        "linear-gradient(180deg, rgba(255,241,242,0.24) 0%, rgba(248,250,252,0.32) 100%)",
-      cardBorder: "rgba(253,164,175,0.68)",
+        "linear-gradient(180deg, rgba(248,250,252,0.40), rgba(255,255,255,0.98))",
+      cardBorder: "rgba(203,213,225,0.68)",
       cardShadow:
-        "0 14px 32px rgba(225,29,72,0.048), 0 6px 16px rgba(15,23,42,0.026)",
+        "0 10px 26px rgba(15,23,42,0.030), inset 0 1px 0 rgba(255,255,255,0.96)",
       hoverShadow:
-        "0 22px 48px rgba(225,29,72,0.082), 0 9px 22px rgba(15,23,42,0.032)",
-      avatarBackground: "rgba(255,241,242,0.9)",
-      avatarText: "#be123c",
-      label: "Overdue",
-      labelColor: "#be123c",
-      labelBackground: "rgba(255,241,242,0.72)",
-      dataTone: "gray" as const,
+        "0 16px 34px rgba(15,23,42,0.054), inset 0 1px 0 rgba(255,255,255,0.98)",
     };
   }
 
   if (priority === "high" || status === "urgent") {
     return {
-      accent: "linear-gradient(180deg, #f43f5e 0%, #fda4af 100%)",
-      cardBackground:
-        "linear-gradient(180deg, rgba(255,241,242,0.34) 0%, rgba(255,255,255,0.94) 86%)",
+      accent:
+        "linear-gradient(180deg, rgba(217,119,6,0.58) 0%, rgba(251,191,36,0.42) 100%)",
+      cardBackground: "#ffffff",
       surfaceBackground:
-        "linear-gradient(135deg, rgba(255,241,242,0.28) 0%, rgba(255,255,255,0.44) 100%)",
+        "linear-gradient(180deg, rgba(255,251,235,0.08) 0%, rgba(255,255,255,0) 40%)",
       detailsBackground:
-        "linear-gradient(180deg, rgba(255,241,242,0.18) 0%, rgba(248,250,252,0.32) 100%)",
-      cardBorder: "rgba(253,164,175,0.6)",
+        "linear-gradient(180deg, rgba(248,250,252,0.40), rgba(255,255,255,0.98))",
+      cardBorder: "rgba(203,213,225,0.68)",
       cardShadow:
-        "0 14px 32px rgba(225,29,72,0.04), 0 6px 16px rgba(15,23,42,0.024)",
+        "0 10px 26px rgba(15,23,42,0.030), inset 0 1px 0 rgba(255,255,255,0.96)",
       hoverShadow:
-        "0 22px 48px rgba(225,29,72,0.068), 0 9px 22px rgba(15,23,42,0.032)",
-      avatarBackground: "rgba(255,241,242,0.78)",
-      avatarText: "#be123c",
-      label: "High priority",
-      labelColor: "#be123c",
-      labelBackground: "rgba(255,241,242,0.68)",
-      dataTone: "gray" as const,
+        "0 16px 34px rgba(15,23,42,0.054), inset 0 1px 0 rgba(255,255,255,0.98)",
     };
   }
 
   return {
-    accent: "linear-gradient(180deg, #6366f1 0%, #a5b4fc 100%)",
-    cardBackground: "rgba(255,255,255,0.88)",
+    accent:
+      "linear-gradient(180deg, rgba(37,99,235,0.60) 0%, rgba(147,197,253,0.44) 100%)",
+    cardBackground: "#ffffff",
     surfaceBackground:
-      "linear-gradient(135deg, rgba(255,255,255,0.78) 0%, rgba(248,250,252,0.36) 100%)",
-    detailsBackground: "rgba(248,250,252,0.38)",
-    cardBorder: "rgba(226,232,240,0.72)",
-    cardShadow: "0 10px 28px rgba(15,23,42,0.038)",
-    hoverShadow: "0 20px 46px rgba(15,23,42,0.07)",
-    avatarBackground: "rgba(238,242,255,0.82)",
-    avatarText: "#4338ca",
-    label: "",
-    labelColor: "#475467",
-    labelBackground: "rgba(248,250,252,0.86)",
-    dataTone: "gray" as const,
+      "linear-gradient(180deg, rgba(239,246,255,0.10) 0%, rgba(255,255,255,0) 40%)",
+    detailsBackground:
+      "linear-gradient(180deg, rgba(248,250,252,0.40), rgba(255,255,255,0.98))",
+    cardBorder: "rgba(203,213,225,0.68)",
+    cardShadow:
+      "0 10px 26px rgba(15,23,42,0.030), inset 0 1px 0 rgba(255,255,255,0.96)",
+    hoverShadow:
+      "0 16px 34px rgba(15,23,42,0.054), inset 0 1px 0 rgba(255,255,255,0.98)",
   };
 }
 
@@ -844,39 +728,39 @@ function getSubtaskStatusStyle(statusValue: string) {
   if (status === "done") {
     return {
       color: "#067647",
-      background: "rgba(240,253,244,0.72)",
-      borderColor: "rgba(187,247,208,0.7)",
+      background: "rgba(240,253,244,0.70)",
+      borderColor: "rgba(187,247,208,0.62)",
     };
   }
 
   if (status === "urgent") {
     return {
       color: "#be123c",
-      background: "rgba(255,241,242,0.72)",
-      borderColor: "rgba(253,164,175,0.68)",
+      background: "rgba(255,241,242,0.70)",
+      borderColor: "rgba(254,202,202,0.62)",
     };
   }
 
   if (status === "review") {
     return {
-      color: "#6d28d9",
-      background: "rgba(245,243,255,0.72)",
-      borderColor: "rgba(221,214,254,0.68)",
+      color: "#2563eb",
+      background: "rgba(239,246,255,0.70)",
+      borderColor: "rgba(191,219,254,0.64)",
     };
   }
 
   if (status === "in progress" || status === "in-progress") {
     return {
       color: "#1d4ed8",
-      background: "rgba(239,246,255,0.72)",
-      borderColor: "rgba(191,219,254,0.68)",
+      background: "rgba(239,246,255,0.70)",
+      borderColor: "rgba(191,219,254,0.64)",
     };
   }
 
   return {
-    color: "#344054",
-    background: "rgba(248,250,252,0.72)",
-    borderColor: "rgba(226,232,240,0.72)",
+    color: "#475467",
+    background: "rgba(248,250,252,0.70)",
+    borderColor: "rgba(226,232,240,0.64)",
   };
 }
 
@@ -908,36 +792,45 @@ function getDeadlineState(project: TaskProjectGroup) {
   return "scheduled";
 }
 
+function formatArchivedDate(value?: string | null) {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "2-digit",
+  }).format(date);
+}
+
 const desktopShellStyle: CSSProperties = {
   display: "grid",
   gap: 12,
   width: "100%",
+  maxWidth: 1230,
   minWidth: 0,
+  justifyItems: "stretch",
+  margin: "0",
 };
 
 const workspaceHeaderStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 14,
-  padding: "12px 15px",
-  borderRadius: 20,
-  border: "1px solid rgba(226,232,240,0.58)",
-  background: "rgba(255,255,255,0.72)",
-  boxShadow: "0 8px 22px rgba(15,23,42,0.026)",
-};
-
-const eyebrowStyle: CSSProperties = {
-  fontSize: 10,
-  fontWeight: 950,
-  letterSpacing: "0.11em",
-  textTransform: "uppercase",
-  color: "#667085",
+  gap: 16,
+  padding: "0 0 6px",
+  borderRadius: 0,
+  border: "none",
+  background: "transparent",
+  boxShadow: "none",
 };
 
 const summaryTitleStyle: CSSProperties = {
   marginTop: 3,
-  fontSize: 19,
+  fontSize: 18,
   fontWeight: 950,
   color: "#101828",
   letterSpacing: "-0.045em",
@@ -955,19 +848,21 @@ const selectAllStyle: CSSProperties = {
 
 const projectListStyle: CSSProperties = {
   display: "grid",
-  gap: 10,
+  gap: 12,
   width: "100%",
+  maxWidth: 1230,
   minWidth: 0,
+  margin: "0",
 };
 
 const projectCardStyle: CSSProperties = {
   position: "relative",
-  borderRadius: 24,
-  border: "1px solid rgba(226,232,240,0.72)",
-  background: "rgba(255,255,255,0.88)",
+  borderRadius: 22,
+  border: "1px solid rgba(203,213,225,0.68)",
+  background: "#ffffff",
   overflow: "hidden",
   transition:
-    "border-color 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease, transform 0.22s ease, background 0.22s ease",
+    "border-color 0.20s ease, box-shadow 0.20s ease, opacity 0.20s ease, transform 0.20s ease",
 };
 
 const projectSurfaceStyle: CSSProperties = {
@@ -982,10 +877,10 @@ const projectAccentStyle: CSSProperties = {
   left: 0,
   top: 18,
   bottom: 18,
-  width: 3,
+  width: 2,
   borderRadius: "0 999px 999px 0",
   zIndex: 2,
-  opacity: 0.92,
+  opacity: 0.46,
 };
 
 const projectHeroStyle: CSSProperties = {
@@ -993,10 +888,10 @@ const projectHeroStyle: CSSProperties = {
   zIndex: 1,
   display: "grid",
   gridTemplateColumns:
-    "28px minmax(320px, 1.65fr) minmax(420px, 1.1fr) minmax(126px, auto)",
+    "24px minmax(610px, 1.18fr) minmax(520px, 0.82fr)",
   gap: 14,
   alignItems: "center",
-  padding: "13px 16px 12px 18px",
+  padding: "14px 14px 13px 18px",
 };
 
 const selectionColumnStyle: CSSProperties = {
@@ -1012,14 +907,33 @@ const cardCheckboxStyle: CSSProperties = {
 const projectIdentityStyle: CSSProperties = {
   minWidth: 0,
   display: "grid",
-  gap: 5,
+  gap: 8,
 };
 
 const projectQuickActionsStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 6,
-  flexWrap: "wrap",
+  gap: 5,
+  flexWrap: "nowrap",
+  minWidth: 0,
+};
+
+const archivedProjectIndicatorStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  minHeight: 30,
+  padding: "0 4px",
+  color: "#64748b",
+  fontSize: 11,
+  fontWeight: 750,
+  whiteSpace: "nowrap",
+};
+
+const projectMetaWrapStyle: CSSProperties = {
+  minWidth: 0,
+  width: "100%",
+  maxWidth: 610,
+  justifySelf: "end",
 };
 
 const detailsButtonStyle: CSSProperties = {
@@ -1027,13 +941,13 @@ const detailsButtonStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
-  minHeight: 26,
-  padding: "0 9px",
+  minHeight: 31,
+  padding: "0 10px",
   borderRadius: 999,
-  border: "1px solid rgba(226,232,240,0.68)",
-  background: "rgba(255,255,255,0.72)",
-  color: "#344054",
-  fontSize: 11,
+  border: "1px solid rgba(191,219,254,0.68)",
+  background: "rgba(239,246,255,0.70)",
+  color: "#1d4ed8",
+  fontSize: 11.5,
   fontWeight: 900,
   cursor: "pointer",
   transition:
@@ -1041,19 +955,19 @@ const detailsButtonStyle: CSSProperties = {
 };
 
 const detailsButtonActiveStyle: CSSProperties = {
-  borderColor: "rgba(199,210,254,0.72)",
-  background: "rgba(238,242,255,0.58)",
-  color: "#4338ca",
+  borderColor: "rgba(37,99,235,0.28)",
+  background: "rgba(219,234,254,0.74)",
+  color: "#1d4ed8",
 };
 
 const detailsButtonIconStyle: CSSProperties = {
-  width: 15,
-  height: 15,
+  width: 17,
+  height: 17,
   borderRadius: 999,
   display: "inline-grid",
   placeItems: "center",
-  background: "rgba(248,250,252,0.92)",
-  color: "#4f46e5",
+  background: "rgba(255,255,255,0.88)",
+  color: "#2563eb",
   fontWeight: 950,
 };
 
@@ -1064,8 +978,9 @@ const detailsCountStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  color: "#667085",
-  background: "rgba(248,250,252,0.86)",
+  color: "#475569",
+  background: "rgba(255,255,255,0.86)",
+  border: "1px solid rgba(226,232,240,0.72)",
   fontWeight: 950,
   fontSize: 10,
 };
@@ -1075,22 +990,22 @@ const resourcesButtonStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
-  minHeight: 26,
-  padding: "0 9px",
+  minHeight: 31,
+  padding: "0 10px",
   borderRadius: 999,
-  border: "1px solid rgba(226,232,240,0.68)",
+  border: "1px solid rgba(203,213,225,0.64)",
   background: "rgba(255,255,255,0.72)",
-  color: "#4338ca",
-  fontSize: 11,
+  color: "#1d4ed8",
+  fontSize: 11.5,
   fontWeight: 900,
   transition:
     "background 0.18s ease, border-color 0.18s ease, color 0.18s ease, opacity 0.18s ease, transform 0.18s ease",
 };
 
 const resourcesButtonActiveStyle: CSSProperties = {
-  background: "rgba(240,253,244,0.66)",
-  color: "#15803d",
-  borderColor: "rgba(187,247,208,0.7)",
+  background: "rgba(239,246,255,0.72)",
+  color: "#1d4ed8",
+  borderColor: "rgba(37,99,235,0.24)",
 };
 
 const resourcesCountPillStyle: CSSProperties = {
@@ -1101,8 +1016,9 @@ const resourcesCountPillStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  background: "rgba(22,163,74,0.1)",
-  color: "#15803d",
+  background: "rgba(239,246,255,0.80)",
+  color: "#1d4ed8",
+  border: "1px solid rgba(191,219,254,0.64)",
   fontSize: 10,
   fontWeight: 950,
 };
@@ -1118,200 +1034,259 @@ const saveStateStyle: CSSProperties = {
   fontWeight: 900,
 };
 
-const projectActionPanelStyle: CSSProperties = {
-  display: "grid",
-  justifyItems: "end",
-  gap: 7,
-  minWidth: 0,
-};
-
 const detailsPanelStyle: CSSProperties = {
   position: "relative",
   zIndex: 1,
-  borderTop: "1px solid rgba(226,232,240,0.5)",
-  padding: "0 15px 15px 18px",
-};
-
-const detailsTopBarStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: 16,
-  padding: "13px 0 11px",
-};
-
-const detailsHeroLabelStyle: CSSProperties = {
-  fontSize: 10,
-  fontWeight: 950,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  color: "#667085",
-};
-
-const detailsHeroTitleStyle: CSSProperties = {
-  marginTop: 3,
-  fontSize: 16,
-  fontWeight: 950,
-  color: "#101828",
-  letterSpacing: "-0.035em",
+  borderTop: "1px solid rgba(226,232,240,0.38)",
+  background:
+    "linear-gradient(180deg, rgba(248,250,252,0.40), rgba(255,255,255,0.98))",
+  padding: "14px 20px 17px",
 };
 
 const progressBlockStyle: CSSProperties = {
-  minWidth: 200,
+  width: 142,
   display: "grid",
-  gap: 6,
+  gap: 4,
 };
 
 const progressTextStyle: CSSProperties = {
   textAlign: "right",
   fontSize: 11,
-  fontWeight: 900,
-  color: "#667085",
+  fontWeight: 850,
+  color: "#64748b",
 };
 
 const progressTrackStyle: CSSProperties = {
-  height: 5,
+  height: 4,
   borderRadius: 999,
-  background: "rgba(226,232,240,0.78)",
+  background: "rgba(226,232,240,0.66)",
   overflow: "hidden",
 };
 
 const progressFillStyle: CSSProperties = {
   height: "100%",
   borderRadius: 999,
+  opacity: 0.76,
   transition: "width 0.24s ease",
 };
 
 const detailsGridStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1.32fr) minmax(300px, 0.68fr)",
-  gap: 12,
+  gridTemplateColumns: "minmax(0, 1fr)",
+  gap: 11,
+  width: "100%",
+  maxWidth: 1090,
+  margin: "0 auto 0 0",
 };
 
-const workPlanCardStyle: CSSProperties = {
-  borderRadius: 20,
-  background: "rgba(255,255,255,0.7)",
-  padding: 12,
+const workPlanSectionStyle: CSSProperties = {
+  display: "grid",
+  gap: 7,
   minWidth: 0,
-  boxShadow: "0 8px 22px rgba(15,23,42,0.024)",
+  paddingTop: 5,
+  borderTop: "1px solid rgba(226,232,240,0.32)",
 };
 
 const sectionHeaderStyle: CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
-  alignItems: "flex-start",
+  alignItems: "center",
   gap: 10,
-  marginBottom: 9,
 };
 
 const sectionTitleStyle: CSSProperties = {
-  fontSize: 13,
+  fontSize: 13.5,
   fontWeight: 950,
-  color: "#344054",
-};
-
-const sectionSubtitleStyle: CSSProperties = {
-  marginTop: 3,
-  fontSize: 11,
-  fontWeight: 750,
-  color: "#98a2b3",
-};
-
-const miniProgressPillStyle: CSSProperties = {
-  padding: "4px 8px",
-  borderRadius: 999,
-  background: "rgba(248,250,252,0.76)",
-  color: "#667085",
-  fontSize: 10,
-  fontWeight: 950,
-  whiteSpace: "nowrap",
+  color: "#101828",
 };
 
 const subtaskListStyle: CSSProperties = {
   display: "grid",
-  gap: 6,
+  gap: 4,
+  paddingTop: 4,
+  paddingBottom: 14,
 };
 
 const subtaskRowStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "28px minmax(0, 1fr) 120px",
+  gridTemplateColumns: "28px minmax(0, 1fr) 118px",
   alignItems: "center",
-  gap: 8,
-  padding: "6px 7px",
-  borderRadius: 15,
-  border: "1px solid rgba(226,232,240,0.42)",
-  transition:
-    "background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease",
+  gap: 10,
+  minHeight: 38,
+  padding: "5px 0",
+  borderRadius: 10,
+  border: "none",
+  background: "transparent",
+  boxShadow: "none",
+  outline: "none",
+  transition: "background 0.16s ease",
 };
 
 const subtaskIndexStyle: CSSProperties = {
-  width: 24,
-  height: 24,
-  borderRadius: 9,
+  width: 22,
+  height: 22,
+  borderRadius: 999,
+  border: "1px solid rgba(226,232,240,0.46)",
   display: "grid",
   placeItems: "center",
-  fontSize: 10,
-  fontWeight: 950,
+  fontSize: 9.5,
+  fontWeight: 900,
   flexShrink: 0,
 };
 
 const subtaskInputStyle: CSSProperties = {
   width: "100%",
   minHeight: 30,
-  borderRadius: 11,
+  borderRadius: 8,
   border: "1px solid transparent",
-  fontSize: 12,
-  fontWeight: 820,
-  padding: "0 8px",
+  fontSize: 13.2,
+  fontWeight: 780,
+  padding: "0 2px",
   outline: "none",
   background: "transparent",
   boxShadow: "none",
+};
+
+const subtaskReadOnlyTitleStyle: CSSProperties = {
+  width: "100%",
+  minHeight: 30,
+  display: "flex",
+  alignItems: "center",
+  padding: "0 2px",
+  fontSize: 13.2,
+  fontWeight: 780,
+  lineHeight: 1.35,
+  cursor: "default",
 };
 
 const subtaskStatusSelectStyle: CSSProperties = {
   width: "100%",
   minHeight: 30,
   borderRadius: 999,
-  border: "1px solid rgba(226,232,240,0.64)",
-  fontSize: 11,
-  fontWeight: 900,
-  padding: "0 9px",
+  border: "1px solid rgba(226,232,240,0.46)",
+  background: "rgba(255,255,255,0.72)",
+  color: "#334155",
+  fontSize: 10.8,
+  fontWeight: 840,
+  padding: "0 8px",
   outline: "none",
   cursor: "pointer",
 };
 
+const subtaskReadOnlyStatusStyle: CSSProperties = {
+  width: "100%",
+  minHeight: 30,
+  borderRadius: 999,
+  border: "1px solid rgba(226,232,240,0.46)",
+  background: "rgba(248,250,252,0.62)",
+  color: "#64748b",
+  fontSize: 10.8,
+  fontWeight: 840,
+  padding: "0 8px",
+  display: "flex",
+  alignItems: "center",
+  boxSizing: "border-box",
+  cursor: "default",
+};
+
 const desktopTasksCss = `
-  .crm-project-card-v3:hover {
-    background: rgba(255,255,255,0.96) !important;
+  .crm-project-card-v6 .project-header-edit-shell-summary {
+    display: none !important;
   }
 
-  .crm-project-card-v3:focus-within {
-    border-color: rgba(129,140,248,0.58) !important;
+  .crm-project-card-v6:hover {
+    background: #ffffff !important;
+  }
+
+  .crm-project-card-v6:focus-within {
+    border-color: rgba(147,197,253,0.78) !important;
     box-shadow:
-      0 0 0 4px rgba(99,102,241,0.08),
-      0 20px 46px rgba(15,23,42,0.072) !important;
+      0 0 0 3px rgba(37,99,235,0.04),
+      0 18px 38px rgba(15,23,42,0.058) !important;
   }
 
-  .crm-soft-button-v3:hover:not(:disabled) {
-    background: rgba(248,250,252,0.95) !important;
+  .crm-soft-button-v6:hover:not(:disabled) {
+    background: rgba(239,246,255,0.86) !important;
+    border-color: rgba(147,197,253,0.72) !important;
     transform: translateY(-1px);
   }
 
-  .crm-subtask-row-v3:hover {
-    background: rgba(255,255,255,0.94) !important;
-    border-color: rgba(199,210,254,0.64) !important;
-    box-shadow: 0 7px 16px rgba(15,23,42,0.032);
+  .crm-project-card-v6 .task-row-actions {
+    gap: 5px !important;
+    flex-wrap: nowrap !important;
   }
 
-  .crm-subtask-input-v3:focus {
-    background: rgba(255,255,255,0.92) !important;
-    border-color: rgba(129,140,248,0.56) !important;
-    box-shadow: 0 0 0 3px rgba(99,102,241,0.055) !important;
+  .crm-project-card-v6 .task-row-action-button {
+    height: 31px !important;
+    min-height: 31px !important;
+    padding: 0 10px !important;
+    border-color: rgba(203,213,225,0.64) !important;
+    background: rgba(255,255,255,0.72) !important;
+    color: #1d4ed8 !important;
+    font-size: 11.5px !important;
+    box-shadow: none !important;
+  }
+
+  .crm-project-card-v6 .task-row-action-button span {
+    background: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.12) !important;
+  }
+
+  .project-meta-compact-v6 input:focus,
+  .project-meta-compact-v6 select:focus {
+    border-color: rgba(37,99,235,0.30) !important;
+    background: rgba(255,255,255,0.96) !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.04) !important;
+  }
+
+  .crm-subtask-row-v6 {
+    border: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  .crm-subtask-row-v6:hover {
+    background: rgba(248,250,252,0.48) !important;
+    border: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  .crm-subtask-row-v6:last-child {
+    padding-bottom: 10px !important;
+    border: none !important;
+    border-bottom: none !important;
+  }
+
+  .crm-subtask-input-v6 {
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  .crm-subtask-input-v6:focus {
+    background: rgba(255,255,255,0.96) !important;
+    border-color: rgba(37,99,235,0.22) !important;
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.035) !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
   }
 
   @media (max-width: 1420px) {
-    .crm-project-card-v3 {
+    .crm-project-card-v6 {
       overflow-x: auto !important;
+    }
+  }
+
+  @media (max-width: 1180px) {
+    .crm-project-card-v6 {
+      overflow-x: auto !important;
+    }
+
+    .project-meta-compact-v6 {
+      min-width: 560px !important;
     }
   }
 `;

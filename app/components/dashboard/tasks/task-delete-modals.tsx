@@ -3,7 +3,6 @@ import type { TaskRow } from "./task-types";
 
 type TaskDeleteModalsProps = {
   singleDeleteTask: TaskRow | null;
-  selectedCount: number;
   showBulkDeleteConfirm: boolean;
   isSingleDeleting: boolean;
   isBulkDeleting: boolean;
@@ -15,7 +14,6 @@ type TaskDeleteModalsProps = {
 
 export default function TaskDeleteModals({
   singleDeleteTask,
-  selectedCount,
   showBulkDeleteConfirm,
   isSingleDeleting,
   isBulkDeleting,
@@ -75,16 +73,15 @@ export default function TaskDeleteModals({
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            aria-label="Delete selected tasks confirmation"
+            aria-label="Delete selected projects confirmation"
           >
             <div style={modalIconDangerStyle}>!</div>
 
             <div style={{ display: "grid", gap: 8 }}>
-              <div style={modalTitleStyle}>Delete selected tasks forever?</div>
+              <div style={modalTitleStyle}>Delete selected projects?</div>
               <div style={modalTextStyle}>
-                You are about to permanently delete{" "}
-                <strong>{selectedCount} selected task(s)</strong> from Archive.
-                This cannot be undone.
+                This will permanently delete the selected projects and their
+                subtasks. This cannot be undone.
               </div>
             </div>
 

@@ -1,5 +1,9 @@
 import { useState, useCallback } from "react";
-import type { TaskProjectGroup } from "../task-types";
+import type {
+  ClientEntity,
+  ProjectEntity,
+  TaskProjectGroup,
+} from "../task-types";
 import type {
   AnalyzeProjectUpdateResult,
   ApplyProjectUpdateResult,
@@ -21,7 +25,11 @@ type AnalyzeProjectUpdateApiResponse =
 type ApplyProjectUpdateApiResponse =
   | ({
       ok: true;
-    } & ApplyProjectUpdateResult)
+    } & ApplyProjectUpdateResult & {
+      project?: AppliedProjectEntity | null;
+      projectTasks?: unknown[];
+      dashboardTasks?: unknown[];
+    })
   | {
       ok: false;
       code?: string;
@@ -36,6 +44,18 @@ type ApplyProjectUpdateApiResponse =
       };
       details?: unknown;
     };
+
+type ProjectUpdateApplyCallbackResult = {
+  focusTaskId?: number | null;
+  projectId?: string | null;
+  project?: AppliedProjectEntity | null;
+  projectTasks?: unknown[];
+  dashboardTasks?: unknown[];
+};
+
+type AppliedProjectEntity = ProjectEntity & {
+  client?: ClientEntity | null;
+};
 
 const MAX_PROJECT_UPDATE_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_PROJECT_UPDATE_IMAGE_TYPES = new Set([
@@ -174,6 +194,31 @@ function revokePreviewUrl(previewUrl?: string | null) {
   if (previewUrl && typeof URL !== "undefined") {
     URL.revokeObjectURL(previewUrl);
   }
+}
+
+function getApplyFocusTaskId(payload: ApplyProjectUpdateResult) {
+  const timelineEvents = Array.isArray(payload.timelineEvents)
+    ? payload.timelineEvents
+    : [];
+
+  for (let index = timelineEvents.length - 1; index >= 0; index -= 1) {
+    const event = timelineEvents[index] as Record<string, unknown>;
+    const rawTargetTaskId = event.target_task_id ?? event.targetTaskId;
+
+    if (typeof rawTargetTaskId === "number" && Number.isFinite(rawTargetTaskId)) {
+      return rawTargetTaskId;
+    }
+
+    if (typeof rawTargetTaskId === "string") {
+      const parsed = Number(rawTargetTaskId);
+
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
 }
 
 export function useProjectUpdate() {
@@ -503,7 +548,9 @@ export function useProjectUpdate() {
     }));
   }, []);
 
-  const applySelectedChanges = useCallback(async (onApplied?: () => Promise<void> | void) => {
+  const applySelectedChanges = useCallback(async (
+    onApplied?: (result: ProjectUpdateApplyCallbackResult) => Promise<void> | void
+  ) => {
     const { form } = uiState;
     const result = form.analysisResult;
 
@@ -581,8 +628,23 @@ export function useProjectUpdate() {
         throw error;
       }
 
+      const focusTaskId = getApplyFocusTaskId(payload);
+      const projectId =
+        payload.project?.id || result.update.project_id || getProjectId(uiState.modal.project);
+      const payloadDashboardTasks = Array.isArray(payload.dashboardTasks)
+        ? payload.dashboardTasks
+        : [];
+
       if (onApplied) {
-        await onApplied();
+        await onApplied({
+          focusTaskId,
+          projectId,
+          project: payload.project ?? null,
+          projectTasks: Array.isArray(payload.projectTasks)
+            ? payload.projectTasks
+            : [],
+          dashboardTasks: payloadDashboardTasks,
+        });
       }
 
       setUIState((prev) => ({

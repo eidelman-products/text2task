@@ -3,9 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { parseDeadline } from "@/lib/tasks/parse-deadline";
 import { parseAmount } from "@/lib/tasks/parse-amount";
 import {
+  dashboardTasksNoStoreHeaders,
+  loadDashboardTasksForUser,
+} from "@/lib/tasks/load-dashboard-tasks.server";
+import {
   buildDuplicateCandidateFromProjectPayload,
   findDuplicateProject,
 } from "@/lib/tasks/project-duplicate-detection";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type TasksView = "active" | "archived" | "all" | "stats";
 
@@ -93,21 +100,6 @@ function normalizeTasksView(value: string | null): TasksView {
 
 function isDoneStatus(status: string | null | undefined) {
   return String(status || "").trim().toLowerCase() === "done";
-}
-
-function cleanTaskWithJoinedClient(task: any) {
-  const cleanTask = {
-    ...task,
-    client: Array.isArray(task.clients)
-      ? task.clients[0] ?? null
-      : task.clients ?? null,
-    project: Array.isArray(task.projects)
-      ? task.projects[0] ?? null
-      : task.projects ?? null,
-  };
-
-  const { clients, projects, ...result } = cleanTask;
-  return result;
 }
 
 function cleanTaskWithClientFallback(task: any, clientData: any = null) {
@@ -800,90 +792,36 @@ export async function GET(req: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: dashboardTasksNoStoreHeaders }
+      );
     }
 
     const url = new URL(req.url);
     const view = normalizeTasksView(url.searchParams.get("view"));
 
-    let query = supabase
-      .from("tasks")
-      .select(
-        `
-        *,
-        clients (
-          id,
-          name,
-          contact_name,
-          phone,
-          email,
-          notes,
-          created_at
-        ),
-        projects (
-          id,
-          client_id,
-          client_name,
-          contact_name,
-          title,
-          summary,
-          amount,
-          amount_value,
-          currency_code,
-          deadline_text,
-          deadline_date,
-          priority,
-          status,
-          source,
-          raw_input,
-          created_at,
-          updated_at,
-          completed_at,
-          is_archived,
-          archived_at,
-          deleted_at
-        )
-      `
-      )
-      .eq("user_id", user.id);
-
-    if (view !== "stats") {
-      query = query.is("deleted_at", null);
-    }
-
-    if (view === "active") {
-      query = query.eq("is_archived", false);
-    }
-
-    if (view === "archived") {
-      query = query.eq("is_archived", true);
-    }
-
-    const { data, error } = await query.order("created_at", {
-      ascending: false,
-    });
-
-    if (error) {
-      console.error("tasks GET error:", error);
-
-      return NextResponse.json(
-        { error: error.message || "Failed to load tasks" },
-        { status: 500 }
-      );
-    }
-
-    const tasks = (data ?? []).map(cleanTaskWithJoinedClient);
-
-    return NextResponse.json({
+    const tasks = await loadDashboardTasksForUser({
+      supabase,
+      userId: user.id,
       view,
-      tasks,
     });
+
+    return NextResponse.json(
+      {
+        view,
+        tasks,
+      },
+      {
+        headers: dashboardTasksNoStoreHeaders,
+      }
+    );
   } catch (error: any) {
     console.error("tasks GET unexpected error:", error);
 
     return NextResponse.json(
       { error: error.message || "Unexpected server error" },
-      { status: 500 }
+      { status: 500, headers: dashboardTasksNoStoreHeaders }
     );
   }
 }

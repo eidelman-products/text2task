@@ -2,6 +2,7 @@ import type {
   ExistingProjectUpdateContext,
   JsonRecord,
 } from "@/lib/project-updates/project-update-types";
+import { parseDeadline } from "@/lib/tasks/parse-deadline";
 import { compareSubtaskTitles } from "@/lib/tasks/task-title-similarity";
 
 import type {
@@ -229,6 +230,61 @@ function judgeProjectDeadlineChange({
   context: ExistingProjectUpdateContext;
 }): ProjectUpdateJudgeDecision | null {
   if (!deadlineText) return null;
+
+  const requestedDeadlineDate = parseDeadline(deadlineText).deadlineDate;
+  const currentDeadlineDate = context.project.deadline_date?.trim() || null;
+
+  if (requestedDeadlineDate) {
+    if (
+      currentDeadlineDate &&
+      areSameDeadlineDate(currentDeadlineDate, requestedDeadlineDate)
+    ) {
+      return {
+        id: "project-deadline",
+        kind: "no_change",
+        itemType: "no_action",
+        title: "Deadline already matches this project",
+        description:
+          "The client mentioned the deadline, but it already matches the current project deadline.",
+        targetTaskId: null,
+        targetField: "deadline_text",
+        oldValue: {
+          deadline_text: context.project.deadline_text,
+          deadline_date: context.project.deadline_date,
+        },
+        newValue: {
+          deadline_text: deadlineText,
+          deadline_date: requestedDeadlineDate,
+        },
+        confidence: 0.95,
+        reason:
+          "The requested deadline normalizes to the same date as the current project deadline.",
+        reviewLabel: "No change",
+      };
+    }
+
+    return {
+      id: "project-deadline",
+      kind: "apply",
+      itemType: "deadline_change",
+      title: `Update project deadline to ${deadlineText}`,
+      description: "Client requested a project-wide deadline change.",
+      targetTaskId: null,
+      targetField: "deadline_text",
+      oldValue: {
+        deadline_text: context.project.deadline_text,
+        deadline_date: context.project.deadline_date,
+      },
+      newValue: {
+        deadline_text: deadlineText,
+        deadline_date: requestedDeadlineDate,
+      },
+      confidence: 0.9,
+      reason:
+        "The client update includes a project-wide deadline date that differs from the current project deadline date.",
+      reviewLabel: "Apply",
+    };
+  }
 
   const currentDeadline =
     context.project.deadline_text || context.project.deadline_date || null;
@@ -785,6 +841,15 @@ function areSameDeadlineValue(a: unknown, b: unknown) {
   return normalizedA === normalizedB;
 }
 
+function areSameDeadlineDate(a: unknown, b: unknown) {
+  const normalizedA = normalizeDeadlineDateKey(a);
+  const normalizedB = normalizeDeadlineDateKey(b);
+
+  if (!normalizedA || !normalizedB) return false;
+
+  return normalizedA === normalizedB;
+}
+
 function areSameMoneyValue(a: unknown, b: unknown) {
   const normalizedA = normalizeMoneyishValue(a);
   const normalizedB = normalizeMoneyishValue(b);
@@ -833,6 +898,22 @@ function normalizeComparableDeadline(value: unknown) {
     .replace(/\bto\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function normalizeDeadlineDateKey(value: unknown) {
+  const raw = String(value || "").trim();
+
+  if (!raw) return "";
+
+  const dateOnly = raw.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+
+  if (dateOnly) return dateOnly;
+
+  const parsed = new Date(raw);
+
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  return parsed.toISOString().slice(0, 10);
 }
 
 function normalizeMoneyishValue(value: unknown) {

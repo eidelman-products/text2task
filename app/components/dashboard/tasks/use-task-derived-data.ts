@@ -86,10 +86,10 @@ export function useTaskDerivedData({
   ).length;
 
   /**
-   * Archived Tasks is current archive state.
+   * Archived Projects is current archive state, grouped by project.
    */
-  const archivedTasksCount = normalizedStatsTasks.filter(
-    isArchivedCurrentTask
+  const archivedProjectsCount = buildTaskProjectGroups(
+    normalizedStatsTasks.filter(isArchivedCurrentTask)
   ).length;
 
   return {
@@ -115,7 +115,7 @@ export function useTaskDerivedData({
     activeProjectsCount,
     totalTasksCount,
     completedProjectsCount,
-    archivedTasksCount,
+    archivedProjectsCount,
     highPriorityTasksCount,
 
     /**
@@ -123,7 +123,7 @@ export function useTaskDerivedData({
      */
     activeCount: activeProjectsCount,
     doneCount: completedProjectsCount,
-    archivedCount: archivedTasksCount,
+    archivedCount: archivedProjectsCount,
     highCount: highPriorityTasksCount,
   };
 }

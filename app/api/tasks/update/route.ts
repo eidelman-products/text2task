@@ -147,6 +147,73 @@ async function touchTaskForActivity({
   }
 }
 
+function getJoinedProject(data: any) {
+  return Array.isArray(data?.projects)
+    ? data.projects[0] ?? null
+    : data?.projects ?? null;
+}
+
+async function completeProjectIfEveryTaskDone({
+  supabase,
+  projectId,
+  userId,
+  nowIso,
+  currentProject,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  projectId: string;
+  userId: string;
+  nowIso: string;
+  currentProject?: any;
+}) {
+  const { data: projectTasks, error: projectTasksError } = await supabase
+    .from("tasks")
+    .select("id,status")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .or("is_archived.eq.false,is_archived.is.null")
+    .is("deleted_at", null);
+
+  if (projectTasksError) {
+    throw new Error(
+      projectTasksError.message || "Failed to check project subtasks"
+    );
+  }
+
+  if (!projectTasks?.length) return false;
+
+  const everyTaskDone = projectTasks.every((task) =>
+    isDoneStatus((task as any).status)
+  );
+
+  if (!everyTaskDone) return false;
+
+  const projectUpdateData: Record<string, unknown> = {
+    status: "Done",
+    priority: "Low",
+    updated_at: nowIso,
+  };
+
+  if (!currentProject?.completed_at) {
+    projectUpdateData.completed_at = nowIso;
+  }
+
+  const { error: projectUpdateError } = await supabase
+    .from("projects")
+    .update(projectUpdateData)
+    .eq("id", projectId)
+    .eq("user_id", userId)
+    .is("deleted_at", null);
+
+  if (projectUpdateError) {
+    throw new Error(
+      projectUpdateError.message || "Failed to complete project"
+    );
+  }
+
+  return true;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -359,10 +426,10 @@ export async function POST(req: NextRequest) {
         updateData.status = nextStatus;
 
         /*
-          Lifetime Completed:
-          ברגע שמשימה סומנה Done פעם אחת — completed_at נשמר.
-          גם אם המשתמש אחר כך מעביר לארכיון או מוחק לצמיתות,
-          הספירה ההיסטורית של Done לא תיעלם.
+          Lifetime completion:
+          Once a task is marked Done for the first time, completed_at is preserved.
+          Even if the user later archives, restores, or changes status, the historical
+          completed timestamp remains available for reporting.
         */
         if (isDoneStatus(nextStatus) && !existingTask.completed_at) {
           updateData.completed_at = nowIso;
@@ -408,7 +475,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cleanTask = cleanJoinedTask(data, currentClient);
+    const shouldCheckProjectCompletion =
+      field === "status" &&
+      isDoneStatus(value) &&
+      typeof (data as any)?.project_id === "string" &&
+      Boolean((data as any).project_id);
+
+    const projectWasCompleted = shouldCheckProjectCompletion
+      ? await completeProjectIfEveryTaskDone({
+          supabase,
+          projectId: (data as any).project_id,
+          userId: user.id,
+          nowIso,
+          currentProject: getJoinedProject(data),
+        })
+      : false;
+
+    const cleanTask = projectWasCompleted
+      ? await reloadTask({
+          supabase,
+          taskId,
+          userId: user.id,
+          fallbackClient: currentClient,
+        })
+      : cleanJoinedTask(data, currentClient);
 
     return NextResponse.json({
       success: true,

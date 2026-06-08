@@ -3,6 +3,7 @@
 import type React from "react";
 import DashboardFooter from "./dashboard-footer";
 import DashboardUserMenu from "./dashboard-user-menu";
+import "./ui/dashboard-theme.css";
 
 type Props = {
   sidebar: React.ReactNode;
@@ -22,7 +23,7 @@ export default function DashboardShell({
   onCloseMobileSidebar,
 }: Props) {
   return (
-    <div style={styles.wrapper}>
+    <div className="dashboard-theme" style={styles.wrapper}>
       <style>{responsiveCss}</style>
 
       <aside className="dashboard-desktop-sidebar" style={styles.desktopSidebar}>
@@ -84,7 +85,9 @@ export default function DashboardShell({
 
         <div className="dashboard-content-outer" style={styles.contentOuter}>
           <div className="dashboard-content-inner" style={styles.contentInner}>
-            <div style={styles.pageContent}>{children}</div>
+            <div className="dashboard-page-content" style={styles.pageContent}>
+              {children}
+            </div>
 
             <DashboardFooter />
           </div>
@@ -118,8 +121,18 @@ const responsiveCss = `
     }
 
     .dashboard-content-inner {
-      max-width: 430px !important;
+      max-width: 760px !important;
       padding: 18px 14px 0 !important;
+    }
+
+    .dashboard-page-content {
+      padding-bottom: 96px !important;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .dashboard-content-inner {
+      max-width: 430px !important;
     }
   }
 
@@ -157,7 +170,11 @@ const responsiveCss = `
     .dashboard-content-inner {
       width: 100% !important;
       max-width: none !important;
-      padding: 28px 28px 0 !important;
+      padding: 26px 28px 0 !important;
+    }
+
+    .dashboard-page-content {
+      padding-bottom: 84px !important;
     }
   }
 `;
@@ -166,17 +183,15 @@ const styles: Record<string, React.CSSProperties> = {
   wrapper: {
     width: "100%",
     minHeight: "100vh",
-    background:
-      "radial-gradient(circle at top left, rgba(238,242,255,0.88) 0%, transparent 30%), radial-gradient(circle at top right, rgba(224,242,254,0.58) 0%, transparent 28%), linear-gradient(180deg, #f8fafc 0%, #ffffff 58%, #f8fafc 100%)",
+    background: "#ffffff",
     overflowX: "hidden",
   },
 
   desktopSidebar: {
     background:
-      "radial-gradient(circle at top left, rgba(238,242,255,0.92) 0%, transparent 32%), linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.94) 100%)",
+      "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.96) 100%)",
     borderRight: "1px solid rgba(226,232,240,0.92)",
-    boxShadow:
-      "18px 0 52px rgba(15,23,42,0.04), inset -1px 0 0 rgba(255,255,255,0.72)",
+    boxShadow: "inset -1px 0 0 rgba(255,255,255,0.72)",
     zIndex: 200,
   },
 
@@ -254,6 +269,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   main: {
     minWidth: 0,
+    minHeight: "100vh",
     overflowX: "hidden",
     position: "relative",
   },
@@ -312,19 +328,25 @@ const styles: Record<string, React.CSSProperties> = {
 
   contentOuter: {
     width: "100%",
+    minHeight: "100vh",
     display: "flex",
     overflowX: "hidden",
   },
 
   contentInner: {
     width: "100%",
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
     boxSizing: "border-box",
     overflowX: "hidden",
   },
 
   pageContent: {
     width: "100%",
+    flex: "1 0 auto",
     minWidth: 0,
     maxWidth: 1440,
+    boxSizing: "border-box",
   },
 };

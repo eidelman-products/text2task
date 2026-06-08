@@ -11,7 +11,6 @@ import {
   buildProjectUpdateReviewModel,
   getProjectUpdateItemLabel,
   getStringValue,
-  truncateProjectUpdateText,
   type ProjectUpdateReviewV2Props,
 } from "./project-update-ui-types";
 
@@ -27,10 +26,13 @@ export default function ProjectUpdateReviewCard({
   const reviewModel = buildProjectUpdateReviewModel(form);
   const selectedItemIds = new Set(form.selectedItemIds);
 
+  const handledCount =
+    reviewModel.alreadyExistsItems.length + reviewModel.alreadyMatchesItems.length;
+
   return (
-    <aside style={cleanReviewPanelStyle}>
+    <aside className={ui.responsiveClassNames.reviewCard} style={reviewPanelStyle}>
       <Header
-        title="Update review"
+        title="Suggested update plan"
         text={
           form.analysisResult
             ? null
@@ -59,25 +61,26 @@ export default function ProjectUpdateReviewCard({
       ) : null}
 
       {!form.isAnalyzing && !form.analysisError && form.analysisResult ? (
-        <div style={cleanReviewBodyStyle}>
+        <div style={reviewBodyStyle}>
           <CompactSummary
             readyItems={reviewModel.readyItems}
             selectedItemIds={selectedItemIds}
+            handledCount={handledCount}
           />
 
           {reviewModel.readyItems.length > 0 ? (
-            <section style={primaryApplySectionStyle}>
-              <div style={sectionTopStyle}>
+            <section style={readySectionStyle}>
+              <div style={sectionHeaderStyle}>
                 <div>
-                  <h4 style={sectionMainTitleStyle}>
+                  <h4 style={sectionTitleStyle}>
                     {getReadySectionTitle(reviewModel.readyItems)}
                   </h4>
                 </div>
 
-                <span style={smallCountStyle}>{reviewModel.readyItems.length}</span>
+                <span style={countPillStyle}>{reviewModel.readyItems.length}</span>
               </div>
 
-              <div style={simpleListStyle}>
+              <div style={readyListStyle}>
                 {reviewModel.readyItems.map((item) => (
                   <ReadyUpdateRow
                     key={item.id}
@@ -124,10 +127,10 @@ export default function ProjectUpdateReviewCard({
 
 function Header({ title, text }: { title: string; text?: string | null }) {
   return (
-    <div style={compactHeaderStyle}>
+    <div style={headerStyle}>
       <div>
-        <h3 style={ui.reviewTitle}>{title}</h3>
-        {text ? <p style={ui.reviewText}>{text}</p> : null}
+        <h3 style={reviewTitleStyle}>{title}</h3>
+        {text ? <p style={reviewTextStyle}>{text}</p> : null}
       </div>
     </div>
   );
@@ -143,10 +146,10 @@ function EmptyState({
   text: string;
 }) {
   return (
-    <div style={cleanEmptyStateStyle}>
-      <div style={ui.emptyIcon}>{icon}</div>
-      <h4 style={ui.emptyTitle}>{title}</h4>
-      <p style={ui.emptyText}>{text}</p>
+    <div style={emptyStateStyle}>
+      <div style={emptyIconStyle}>{icon}</div>
+      <h4 style={emptyTitleStyle}>{title}</h4>
+      <p style={emptyTextStyle}>{text}</p>
     </div>
   );
 }
@@ -154,34 +157,44 @@ function EmptyState({
 function CompactSummary({
   readyItems,
   selectedItemIds,
+  handledCount,
 }: {
   readyItems: SuggestedProjectUpdateItem[];
   selectedItemIds: Set<string>;
+  handledCount: number;
 }) {
   const readyCount = readyItems.length;
+  const selectedReady = readyItems.filter((item) => selectedItemIds.has(item.id)).length;
   const noReady = readyCount === 0;
+
+  const title = noReady ? "Everything is already handled" : "Ready to save";
+
   const subtitle = noReady
-    ? "No new changes need to be saved."
+    ? handledCount > 0
+      ? `${handledCount} existing item${handledCount === 1 ? "" : "s"} detected. No duplicates will be created.`
+      : "No new changes need to be saved."
     : getReadyHeroSubtitle(readyItems, selectedItemIds);
 
   return (
-    <section style={noReady ? handledSummaryStyle : cleanSummaryStyle}>
-      <div style={summaryHeaderStyle}>
-        <div style={summaryTitleGroupStyle}>
-          <span style={noReady ? summaryIconHandledStyle : summaryIconReadyStyle}>
-            {noReady ? "✓" : "→"}
-          </span>
+    <section className={ui.responsiveClassNames.reviewSummary} style={summaryRowStyle}>
+      <div style={summaryLeftStyle}>
+        <span style={noReady ? summaryIconDoneStyle : summaryIconReadyStyle}>
+          {noReady ? "✓" : "→"}
+        </span>
 
-          <div style={{ minWidth: 0 }}>
-          <h4 style={summaryTitleStyle}>
-            {noReady ? "Everything is already handled" : "Ready to save"}
-          </h4>
-          <p style={summarySubtextStyle}>{subtitle}</p>
-          </div>
+        <div style={{ minWidth: 0 }}>
+          <h4 style={summaryTitleStyle}>{title}</h4>
+          <p style={summaryTextStyle}>{subtitle}</p>
         </div>
-
-        {noReady ? <span style={doneBadgeStyle}>Done ✓</span> : null}
       </div>
+
+      {!noReady ? (
+        <span style={summaryMetaPillStyle}>
+          {selectedReady}/{readyCount} selected
+        </span>
+      ) : (
+        <span style={summaryDonePillStyle}>Protected</span>
+      )}
     </section>
   );
 }
@@ -209,11 +222,23 @@ function ReadyUpdateRow({
   const itemTypeLabel = getReadyItemTypeLabel(item);
 
   return (
-    <article style={{ ...readyRowStyle, opacity: isSelected ? 1 : 0.62 }}>
-      <div style={readyRowTopStyle}>
-        <span style={readyTypeChipStyle}>{itemTypeLabel}</span>
+    <article style={{ ...readyItemStyle, opacity: isSelected ? 1 : 0.58 }}>
+      <div
+        className={ui.responsiveClassNames.reviewItemHeader}
+        style={readyItemHeaderStyle}
+      >
+        <div style={readyItemMainStyle}>
+          <span style={typeChipStyle}>{itemTypeLabel}</span>
 
-        <label style={simpleCheckboxLabelStyle}>
+          <h5 style={readyItemTitleStyle}>{item.title}</h5>
+        </div>
+
+        <label
+          style={{
+            ...selectedControlStyle,
+            ...(isSelected ? selectedControlActiveStyle : selectedControlInactiveStyle),
+          }}
+        >
           <input
             type="checkbox"
             checked={isSelected}
@@ -221,26 +246,22 @@ function ReadyUpdateRow({
             onChange={() => onToggleSuggestedItem(item.id)}
             style={ui.checkbox}
           />
-          <span>Save this</span>
+          <span>{isSelected ? "Will be saved" : "Not saved"}</span>
         </label>
       </div>
 
-      <h5 style={readyTitleStyle}>{item.title}</h5>
+      <details style={detailsWrapStyle}>
+        <summary style={detailsSummaryStyle}>Edit saved details</summary>
 
-      {item.description ? (
-        <p style={readyDescriptionStyle}>
-          {truncateProjectUpdateText(item.description, 110)}
-        </p>
-      ) : null}
-
-      <EditableFields
-        item={item}
-        editedValue={editedValue}
-        disabled={disabled}
-        onUpdate={(field, value) =>
-          onUpdateSuggestedItemValue(item.id, field, value)
-        }
-      />
+        <EditableFields
+          item={item}
+          editedValue={editedValue}
+          disabled={disabled}
+          onUpdate={(field, value) =>
+            onUpdateSuggestedItemValue(item.id, field, value)
+          }
+        />
+      </details>
     </article>
   );
 }
@@ -264,17 +285,15 @@ function EditableFields({
     const priority = getStringValue(editedValue, ["priority"]) || "Medium";
 
     return (
-      <div style={simpleEditBoxStyle}>
-        <div style={editHelperStyle}>Edit details before saving.</div>
-
+      <div style={inlineEditStyle}>
         <TextField
-          label="Task title"
+          label="Saved title"
           value={title}
           disabled={disabled}
           onChange={(value) => onUpdate("task_title", value)}
         />
 
-        <div style={compactTwoColumnStyle}>
+        <div className={ui.responsiveClassNames.reviewFields} style={twoColumnStyle}>
           <SelectField
             label="Status"
             value={status}
@@ -304,17 +323,17 @@ function EditableFields({
       getStringValue(editedValue, ["deadline_text", "deadline", "value"]) || "";
 
     return (
-      <div style={simpleEditBoxStyle}>
-        <div style={editHelperStyle}>Edit details before saving.</div>
+      <div style={inlineEditStyle}>
+        <div className={ui.responsiveClassNames.reviewFields} style={twoColumnStyle}>
+          <ReadOnlyField label="Current deadline" value={current} />
 
-        <ReadOnlyField label="Current deadline" value={current} />
-
-        <TextField
-          label="Suggested deadline"
-          value={next.replace(/^by\s+/i, "")}
-          disabled={disabled}
-          onChange={(value) => onUpdate("deadline_text", value)}
-        />
+          <TextField
+            label="Suggested deadline"
+            value={next.replace(/^by\s+/i, "")}
+            disabled={disabled}
+            onChange={(value) => onUpdate("deadline_text", value)}
+          />
+        </div>
       </div>
     );
   }
@@ -327,18 +346,18 @@ function EditableFields({
       getStringValue(editedValue, ["priority", "value"]) || "Medium";
 
     return (
-      <div style={simpleEditBoxStyle}>
-        <div style={editHelperStyle}>Edit details before saving.</div>
+      <div style={inlineEditStyle}>
+        <div className={ui.responsiveClassNames.reviewFields} style={twoColumnStyle}>
+          <ReadOnlyField label="Current priority" value={current} />
 
-        <ReadOnlyField label="Current priority" value={current} />
-
-        <SelectField
-          label="Suggested priority"
-          value={next}
-          options={PRIORITY_OPTIONS}
-          disabled={disabled}
-          onChange={(value) => onUpdate("priority", value)}
-        />
+          <SelectField
+            label="Suggested priority"
+            value={next}
+            options={PRIORITY_OPTIONS}
+            disabled={disabled}
+            onChange={(value) => onUpdate("priority", value)}
+          />
+        </div>
       </div>
     );
   }
@@ -350,18 +369,18 @@ function EditableFields({
     const next = getStringValue(editedValue, ["status", "value"]) || "New";
 
     return (
-      <div style={simpleEditBoxStyle}>
-        <div style={editHelperStyle}>Edit details before saving.</div>
+      <div style={inlineEditStyle}>
+        <div className={ui.responsiveClassNames.reviewFields} style={twoColumnStyle}>
+          <ReadOnlyField label="Current status" value={current} />
 
-        <ReadOnlyField label="Current status" value={current} />
-
-        <SelectField
-          label="Suggested status"
-          value={next}
-          options={STATUS_OPTIONS}
-          disabled={disabled}
-          onChange={(value) => onUpdate("status", value)}
-        />
+          <SelectField
+            label="Suggested status"
+            value={next}
+            options={STATUS_OPTIONS}
+            disabled={disabled}
+            onChange={(value) => onUpdate("status", value)}
+          />
+        </div>
       </div>
     );
   }
@@ -375,17 +394,17 @@ function EditableFields({
       getStringValue(editedValue, ["amount", "budget", "price", "value"]) || "";
 
     return (
-      <div style={simpleEditBoxStyle}>
-        <div style={editHelperStyle}>Edit details before saving.</div>
+      <div style={inlineEditStyle}>
+        <div className={ui.responsiveClassNames.reviewFields} style={twoColumnStyle}>
+          <ReadOnlyField label="Current budget" value={current} />
 
-        <ReadOnlyField label="Current budget" value={current} />
-
-        <TextField
-          label="Suggested budget"
-          value={next}
-          disabled={disabled}
-          onChange={(value) => onUpdate("amount", value)}
-        />
+          <TextField
+            label="Suggested budget"
+            value={next}
+            disabled={disabled}
+            onChange={(value) => onUpdate("amount", value)}
+          />
+        </div>
       </div>
     );
   }
@@ -418,31 +437,27 @@ function SecondaryFindings({
   }
 
   return (
-    <section
-      style={hasReadyItems ? secondaryFindingsQuietStyle : secondaryFindingsStyle}
-    >
-      <div style={sectionTopStyle}>
-        <div>
-          <h4
-            style={
-              hasReadyItems ? secondarySectionTitleStyle : sectionMainTitleStyle
-            }
-          >
-            Already saved in project
-          </h4>
+    <section style={hasReadyItems ? handledSectionCompactStyle : handledSectionStyle}>
+      <div style={handledHeaderStyle}>
+        <div style={handledTitleGroupStyle}>
+          <span style={handledIconStyle}>✓</span>
+
+          <div>
+            <h4 style={handledTitleStyle}>Already handled</h4>
+            <p style={handledTextStyle}>
+              {findings.length} existing item{findings.length === 1 ? "" : "s"}{" "}
+              detected. These will not be duplicated.
+            </p>
+          </div>
         </div>
 
-        <span style={hasReadyItems ? subtleCountStyle : smallCountStyle}>
-          {findings.length}
-        </span>
+        <span style={handledCountStyle}>{findings.length}</span>
       </div>
 
       <div style={findingsListStyle}>
         {findings.map((finding) => (
           <div key={finding.id} style={findingRowStyle}>
-            <span style={findingDotStyle}>
-              ✓
-            </span>
+            <span style={findingDotStyle}>✓</span>
 
             <div style={{ minWidth: 0 }}>
               <div style={findingTitleStyle}>{finding.title}</div>
@@ -466,13 +481,13 @@ function TextField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label style={compactFieldStyle}>
-      <span style={compactLabelStyle}>{label}</span>
+    <label style={fieldStyle}>
+      <span style={fieldLabelStyle}>{label}</span>
       <input
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        style={disabled ? compactInputDisabledStyle : compactInputStyle}
+        style={disabled ? inputDisabledStyle : inputStyle}
       />
     </label>
   );
@@ -492,13 +507,13 @@ function SelectField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label style={compactFieldStyle}>
-      <span style={compactLabelStyle}>{label}</span>
+    <label style={fieldStyle}>
+      <span style={fieldLabelStyle}>{label}</span>
       <select
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        style={disabled ? compactInputDisabledStyle : compactInputStyle}
+        style={disabled ? inputDisabledStyle : inputStyle}
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -512,8 +527,8 @@ function SelectField({
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
-    <div style={compactFieldStyle}>
-      <span style={compactLabelStyle}>{label}</span>
+    <div style={fieldStyle}>
+      <span style={fieldLabelStyle}>{label}</span>
       <span style={readOnlyValueStyle}>{value}</span>
     </div>
   );
@@ -553,19 +568,19 @@ function formatSecondaryFindingTitle(title: string) {
 }
 
 function getReadySectionTitle(items: SuggestedProjectUpdateItem[]) {
-  if (items.length !== 1) return "Changes to save";
+  if (items.length !== 1) return "Suggested changes";
 
   const item = items[0];
-  if (!item) return "Change to save";
+  if (!item) return "Suggested change";
 
-  if (item.type === "new_subtask") return "New task to add";
-  if (item.type === "update_subtask") return "Task to update";
-  if (item.type === "deadline_change") return "Deadline to update";
-  if (item.type === "priority_change") return "Priority to update";
-  if (item.type === "status_change") return "Status to update";
-  if (item.type === "budget_change") return "Budget to update";
+  if (item.type === "new_subtask") return "New task suggested";
+  if (item.type === "update_subtask") return "Task update suggested";
+  if (item.type === "deadline_change") return "Deadline update suggested";
+  if (item.type === "priority_change") return "Priority update suggested";
+  if (item.type === "status_change") return "Status update suggested";
+  if (item.type === "budget_change") return "Budget update suggested";
 
-  return "Change to save";
+  return "Suggested change";
 }
 
 function getReadyHeroSubtitle(
@@ -577,15 +592,15 @@ function getReadyHeroSubtitle(
 
   if (totalReady === 1) {
     return selectedReady === 1
-      ? "1 change selected"
-      : "1 change found · none selected";
+      ? "1 change selected and ready to apply."
+      : "1 change found, but it is not selected.";
   }
 
   if (selectedReady === totalReady) {
-    return `${totalReady} changes selected`;
+    return `${totalReady} changes selected and ready to apply.`;
   }
 
-  return `${selectedReady} of ${totalReady} selected`;
+  return `${selectedReady} of ${totalReady} changes selected.`;
 }
 
 function getReadyItemTypeLabel(item: SuggestedProjectUpdateItem) {
@@ -595,369 +610,446 @@ function getReadyItemTypeLabel(item: SuggestedProjectUpdateItem) {
   return getProjectUpdateItemLabel(item);
 }
 
-const cleanReviewPanelStyle: CSSProperties = {
+const reviewPanelStyle: CSSProperties = {
   minWidth: 0,
-  borderRadius: 34,
-  border: "1px solid rgba(199, 210, 254, 0.64)",
-  background:
-    "radial-gradient(circle at 100% -8%, rgba(165,180,252,0.82), transparent 38%), radial-gradient(circle at 0% 108%, rgba(240,253,244,0.34), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.998), rgba(248,250,252,0.91))",
-  padding: 22,
+  borderRadius: 22,
+  border: "1px solid rgba(191, 219, 254, 0.72)",
+  background: "#ffffff",
+  padding: 20,
   display: "grid",
   alignContent: "start",
   gap: 16,
-  boxShadow:
-    "0 52px 118px rgba(15, 23, 42, 0.16), 0 30px 72px rgba(79, 70, 229, 0.17), 0 0 0 1px rgba(255,255,255,0.58), inset 0 1px 0 rgba(255, 255, 255, 0.98)",
+  boxShadow: "0 18px 44px rgba(15, 23, 42, 0.06)",
   boxSizing: "border-box",
 };
 
-const compactHeaderStyle: CSSProperties = {
+const headerStyle: CSSProperties = {
   display: "flex",
   alignItems: "flex-start",
   justifyContent: "space-between",
   gap: 10,
 };
 
-const cleanReviewBodyStyle: CSSProperties = {
+const reviewTitleStyle: CSSProperties = {
+  margin: 0,
+  color: "#0f172a",
+  fontSize: 17,
+  lineHeight: 1.2,
+  fontWeight: 950,
+  letterSpacing: "-0.035em",
+};
+
+const reviewTextStyle: CSSProperties = {
+  margin: "5px 0 0",
+  color: "#64748b",
+  fontSize: 12,
+  lineHeight: 1.45,
+  fontWeight: 700,
+};
+
+const reviewBodyStyle: CSSProperties = {
   display: "grid",
-  gap: 13,
+  gap: 16,
   minWidth: 0,
 };
 
-const cleanEmptyStateStyle: CSSProperties = {
-  borderRadius: 22,
-  border: "1px solid rgba(226, 232, 240, 0.86)",
-  background: "rgba(248, 250, 252, 0.72)",
-  padding: "30px 16px",
+const emptyStateStyle: CSSProperties = {
+  borderRadius: 18,
+  border: "1px solid rgba(226, 232, 240, 0.9)",
+  background: "#f8fafc",
+  padding: "32px 18px",
   display: "grid",
   justifyItems: "center",
-  gap: 7,
+  gap: 8,
   textAlign: "center",
 };
 
-const cleanSummaryStyle: CSSProperties = {
+const emptyIconStyle: CSSProperties = {
+  width: 42,
+  height: 42,
+  borderRadius: 14,
   display: "grid",
-  gap: 8,
-  padding: "17px 18px",
-  borderRadius: 24,
-  border: "1px solid rgba(165,180,252,0.46)",
-  borderLeft: "4px solid rgba(99,102,241,0.56)",
-  background:
-    "radial-gradient(circle at 100% 0%, rgba(199,210,254,0.44), transparent 38%), linear-gradient(135deg, rgba(255,255,255,0.998), rgba(239,246,255,0.9) 52%, rgba(238,242,255,0.58))",
-  boxShadow:
-    "0 20px 42px rgba(67, 56, 202, 0.105), 0 10px 22px rgba(15,23,42,0.045), inset 0 1px 0 rgba(255,255,255,0.96)",
+  placeItems: "center",
+  background: "#eff6ff",
+  border: "1px solid #bfdbfe",
+  color: "#2563eb",
+  fontSize: 18,
+  fontWeight: 900,
 };
 
-const handledSummaryStyle: CSSProperties = {
-  ...cleanSummaryStyle,
-  border: "1px solid rgba(187,247,208,0.82)",
-  borderLeft: "4px solid rgba(22,163,74,0.68)",
-  background:
-    "radial-gradient(circle at 100% 0%, rgba(187,247,208,0.58), transparent 34%), linear-gradient(135deg, rgba(255,255,255,0.998), rgba(240,253,244,0.92))",
-  boxShadow:
-    "0 22px 46px rgba(22, 163, 74, 0.11), 0 10px 24px rgba(15,23,42,0.045), inset 0 1px 0 rgba(255,255,255,0.96)",
+const emptyTitleStyle: CSSProperties = {
+  margin: "6px 0 0",
+  color: "#0f172a",
+  fontSize: 14,
+  lineHeight: 1.25,
+  fontWeight: 900,
 };
 
-const summaryHeaderStyle: CSSProperties = {
+const emptyTextStyle: CSSProperties = {
+  margin: 0,
+  maxWidth: 340,
+  color: "#64748b",
+  fontSize: 12,
+  lineHeight: 1.45,
+  fontWeight: 650,
+};
+
+const summaryRowStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 12,
+  gap: 14,
+  padding: "0 0 14px",
+  borderBottom: "1px solid rgba(226, 232, 240, 0.92)",
 };
 
-const summaryTitleGroupStyle: CSSProperties = {
+const summaryLeftStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: 11,
   minWidth: 0,
 };
 
 const summaryIconReadyStyle: CSSProperties = {
-  width: 37,
-  height: 37,
-  borderRadius: 15,
+  width: 30,
+  height: 30,
+  borderRadius: 12,
   display: "grid",
   placeItems: "center",
   flexShrink: 0,
   color: "#ffffff",
-  background: "linear-gradient(135deg, #6366f1, #4f46e5)",
-  border: "1px solid rgba(255,255,255,0.72)",
-  boxShadow:
-    "0 12px 24px rgba(79,70,229,0.22), inset 0 1px 0 rgba(255,255,255,0.3)",
-  fontSize: 17,
+  background: "#2563eb",
+  border: "1px solid rgba(37, 99, 235, 0.3)",
+  boxShadow: "0 8px 18px rgba(37, 99, 235, 0.18)",
+  fontSize: 13,
   fontWeight: 950,
 };
 
-const summaryIconHandledStyle: CSSProperties = {
+const summaryIconDoneStyle: CSSProperties = {
   ...summaryIconReadyStyle,
-  background: "linear-gradient(135deg, #22c55e, #15803d)",
-  boxShadow:
-    "0 14px 28px rgba(22,163,74,0.2), inset 0 1px 0 rgba(255,255,255,0.28)",
+  background: "#16a34a",
+  border: "1px solid rgba(22, 163, 74, 0.28)",
+  boxShadow: "0 8px 18px rgba(22, 163, 74, 0.14)",
 };
 
 const summaryTitleStyle: CSSProperties = {
   margin: 0,
   color: "#0f172a",
-  fontSize: 18,
-  lineHeight: 1.16,
+  fontSize: 16,
+  lineHeight: 1.15,
   fontWeight: 950,
-  letterSpacing: "-0.04em",
+  letterSpacing: "-0.03em",
 };
 
-const summarySubtextStyle: CSSProperties = {
+const summaryTextStyle: CSSProperties = {
   margin: "4px 0 0",
   color: "#475569",
   fontSize: 12,
-  lineHeight: 1.35,
-  fontWeight: 760,
+  lineHeight: 1.4,
+  fontWeight: 700,
 };
 
-const doneBadgeStyle: CSSProperties = {
-  flexShrink: 0,
-  padding: "6px 10px",
+const summaryMetaPillStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  minHeight: 24,
+  padding: "0 9px",
   borderRadius: 999,
-  background:
-    "linear-gradient(135deg, rgba(240,253,244,0.98), rgba(220,252,231,0.9))",
-  border: "1px solid rgba(187,247,208,0.95)",
-  color: "#15803d",
-  fontSize: 11,
-  fontWeight: 950,
-  boxShadow: "0 10px 20px rgba(22,163,74,0.1)",
+  border: "1px solid #dbeafe",
+  background: "#eff6ff",
+  color: "#1d4ed8",
+  fontSize: 10.5,
+  fontWeight: 850,
+  whiteSpace: "nowrap",
 };
 
-const primaryApplySectionStyle: CSSProperties = {
+const summaryDonePillStyle: CSSProperties = {
+  ...summaryMetaPillStyle,
+  border: "1px solid #bbf7d0",
+  background: "#f0fdf4",
+  color: "#15803d",
+};
+
+const readySectionStyle: CSSProperties = {
   display: "grid",
   gap: 10,
-  borderRadius: 18,
-  border: "none",
-  background: "transparent",
-  padding: 0,
-  boxShadow: "none",
 };
 
-const sectionTopStyle: CSSProperties = {
+const sectionHeaderStyle: CSSProperties = {
   display: "flex",
   alignItems: "flex-start",
   justifyContent: "space-between",
-  gap: 10,
+  gap: 12,
 };
 
-const sectionMainTitleStyle: CSSProperties = {
-  margin: "1px 0 0",
+const sectionTitleStyle: CSSProperties = {
+  margin: 0,
   color: "#0f172a",
-  fontSize: 14,
+  fontSize: 13.5,
   lineHeight: 1.25,
   fontWeight: 950,
-  letterSpacing: "-0.025em",
+  letterSpacing: "-0.02em",
 };
 
-const smallCountStyle: CSSProperties = {
-  width: 22,
-  height: 22,
+const countPillStyle: CSSProperties = {
+  minWidth: 20,
+  height: 20,
+  padding: "0 6px",
   display: "grid",
   placeItems: "center",
   flexShrink: 0,
   borderRadius: 999,
-  border: "1px solid rgba(226, 232, 240, 0.84)",
-  background: "rgba(255, 255, 255, 0.72)",
-  color: "#64748b",
-  fontSize: 10,
-  fontWeight: 950,
-};
-
-const subtleCountStyle: CSSProperties = {
-  ...smallCountStyle,
-  width: 20,
-  height: 20,
-  background: "rgba(248,250,252,0.54)",
-  borderColor: "rgba(226,232,240,0.62)",
+  border: "1px solid #e2e8f0",
+  background: "#ffffff",
   color: "#94a3b8",
   fontSize: 10,
+  fontWeight: 850,
 };
 
-const simpleListStyle: CSSProperties = {
+const readyListStyle: CSSProperties = {
   display: "grid",
-  gap: 9,
+  gap: 12,
 };
 
-const readyRowStyle: CSSProperties = {
+const readyItemStyle: CSSProperties = {
   display: "grid",
-  gap: 13,
-  padding: 23,
-  borderRadius: 27,
-  border: "1px solid rgba(199,210,254,0.58)",
-  borderLeft: "4px solid rgba(99,102,241,0.58)",
-  background:
-    "radial-gradient(circle at 100% -8%, rgba(224,231,255,0.54), transparent 36%), radial-gradient(circle at 0% 100%, rgba(240,253,250,0.24), transparent 28%), linear-gradient(180deg, rgba(255,255,255,1), rgba(255,255,255,0.965))",
-  boxShadow:
-    "0 34px 78px rgba(15, 23, 42, 0.145), 0 18px 44px rgba(79,70,229,0.135), 0 0 0 1px rgba(255,255,255,0.68), inset 0 1px 0 rgba(255,255,255,0.98)",
+  gap: 10,
+  padding: "0 0 15px",
+  borderBottom: "1px solid rgba(226, 232, 240, 0.92)",
+  background: "transparent",
+  boxShadow: "none",
 };
 
-const readyRowTopStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 8,
-  alignItems: "center",
+const readyItemHeaderStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns:
+    "var(--project-update-review-item-header-columns, minmax(0, 1fr) auto)",
+  alignItems: "start",
+  gap: 14,
 };
 
-const simpleCheckboxLabelStyle: CSSProperties = {
+const readyItemMainStyle: CSSProperties = {
+  display: "grid",
+  gap: 7,
+  minWidth: 0,
+};
+
+const typeChipStyle: CSSProperties = {
+  display: "none",
+  width: "fit-content",
+  flexShrink: 0,
+  borderRadius: 999,
+  padding: "4px 8px",
+  background: "#eff6ff",
+  border: "1px solid #bfdbfe",
+  color: "#1d4ed8",
+  fontSize: 10,
+  lineHeight: 1,
+  fontWeight: 850,
+};
+
+const selectedControlStyle: CSSProperties = {
   width: "fit-content",
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
-  padding: "4px 8px",
-  borderRadius: 999,
-  border: "1px solid rgba(226,232,240,0.9)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.86))",
-  color: "#64748b",
-  fontSize: 10,
-  fontWeight: 800,
-  cursor: "pointer",
-  boxShadow: "0 6px 14px rgba(15,23,42,0.032)",
-};
-
-const readyTypeChipStyle: CSSProperties = {
-  flexShrink: 0,
-  borderRadius: 999,
   padding: "5px 9px",
-  background:
-    "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(238,242,255,0.9) 48%, rgba(224,231,255,0.72))",
-  border: "1px solid rgba(165,180,252,0.68)",
-  color: "#4338ca",
-  fontSize: 10,
-  fontWeight: 950,
-  boxShadow:
-    "0 8px 18px rgba(79,70,229,0.09), inset 0 1px 0 rgba(255,255,255,0.9)",
+  borderRadius: 999,
+  border: "1px solid #bfdbfe",
+  background: "#eff6ff",
+  color: "#1d4ed8",
+  fontSize: 10.5,
+  fontWeight: 850,
+  cursor: "pointer",
+  boxShadow: "none",
 };
 
-const readyTitleStyle: CSSProperties = {
+const selectedControlActiveStyle: CSSProperties = {
+  border: "1px solid #bfdbfe",
+  background: "#eff6ff",
+  color: "#1d4ed8",
+};
+
+const selectedControlInactiveStyle: CSSProperties = {
+  border: "1px solid rgba(226, 232, 240, 0.86)",
+  background: "#ffffff",
+  color: "#64748b",
+};
+
+const readyItemTitleStyle: CSSProperties = {
   margin: 0,
   color: "#0f172a",
-  fontSize: 19,
-  lineHeight: 1.28,
+  fontSize: 20,
+  lineHeight: 1.22,
   fontWeight: 950,
-  letterSpacing: "-0.035em",
+  letterSpacing: "-0.04em",
 };
 
-const readyDescriptionStyle: CSSProperties = {
-  margin: 0,
-  color: "#64748b",
-  fontSize: 11,
-  lineHeight: 1.45,
-  fontWeight: 620,
+const detailsWrapStyle: CSSProperties = {
+  marginTop: 2,
 };
 
-const simpleEditBoxStyle: CSSProperties = {
+const detailsSummaryStyle: CSSProperties = {
+  width: "fit-content",
+  cursor: "pointer",
+  color: "#2563eb",
+  fontSize: 11.5,
+  lineHeight: 1.3,
+  fontWeight: 850,
+  listStyle: "none",
+  padding: "4px 0",
+};
+
+const inlineEditStyle: CSSProperties = {
   display: "grid",
   gap: 9,
-  padding: 13,
-  borderRadius: 17,
-  border: "1px solid rgba(226,232,240,0.44)",
-  background:
-    "linear-gradient(180deg, rgba(248,250,252,0.44), rgba(255,255,255,0.34))",
-  boxShadow:
-    "inset 0 1px 0 rgba(255,255,255,0.68)",
+  marginTop: 8,
+  padding: "12px 0 0",
+  borderTop: "1px solid rgba(226, 232, 240, 0.9)",
+  background: "transparent",
 };
 
-const editHelperStyle: CSSProperties = {
-  color: "#64748b",
-  fontSize: 11,
-  lineHeight: 1.35,
-  fontWeight: 900,
-};
-
-const compactTwoColumnStyle: CSSProperties = {
+const twoColumnStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: 8,
+  gridTemplateColumns:
+    "var(--project-update-review-field-columns, repeat(2, minmax(0, 1fr)))",
+  gap: 10,
 };
 
-const compactFieldStyle: CSSProperties = {
+const fieldStyle: CSSProperties = {
   display: "grid",
   gap: 5,
   minWidth: 0,
 };
 
-const compactLabelStyle: CSSProperties = {
+const fieldLabelStyle: CSSProperties = {
   color: "#64748b",
-  fontSize: 10,
-  fontWeight: 950,
+  fontSize: 9.5,
+  fontWeight: 850,
   textTransform: "uppercase",
   letterSpacing: "0.07em",
 };
 
-const compactInputStyle: CSSProperties = {
+const inputStyle: CSSProperties = {
   width: "100%",
-  minHeight: 44,
+  minHeight: 36,
   minWidth: 0,
   boxSizing: "border-box",
-  border: "1px solid rgba(199,210,254,0.72)",
-  borderRadius: 15,
+  border: "1px solid #cbd5e1",
+  borderRadius: 10,
   background: "#ffffff",
   color: "#0f172a",
-  fontSize: 13,
-  fontWeight: 800,
-  padding: "10px 12px",
+  fontSize: 12.5,
+  fontWeight: 680,
+  padding: "8px 10px",
   outline: "none",
-  boxShadow:
-    "inset 0 1px 0 rgba(255,255,255,0.94), 0 10px 22px rgba(15,23,42,0.036), 0 0 0 3px rgba(238,242,255,0.2)",
-};
-
-const compactInputDisabledStyle: CSSProperties = {
-  ...compactInputStyle,
-  cursor: "not-allowed",
-  background: "rgba(248,250,252,0.86)",
-  borderColor: "rgba(226,232,240,0.9)",
-};
-
-const readOnlyValueStyle: CSSProperties = {
-  color: "#334155",
-  fontSize: 12,
-  fontWeight: 850,
-  lineHeight: 1.35,
-  padding: "8px 0",
-};
-
-const secondaryFindingsStyle: CSSProperties = {
-  display: "grid",
-  gap: 7,
-  borderRadius: 22,
-  border: "1px solid rgba(226,232,240,0.56)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.62), rgba(248,250,252,0.48))",
-  padding: 10,
-  boxShadow: "0 10px 24px rgba(15,23,42,0.032)",
-};
-
-const secondaryFindingsQuietStyle: CSSProperties = {
-  display: "grid",
-  gap: 4,
-  borderRadius: 15,
-  border: "1px solid rgba(226,232,240,0.28)",
-  background: "rgba(248,250,252,0.2)",
-  padding: "6px 7px",
   boxShadow: "none",
 };
 
-const secondarySectionTitleStyle: CSSProperties = {
-  ...sectionMainTitleStyle,
-  margin: 0,
+const inputDisabledStyle: CSSProperties = {
+  ...inputStyle,
+  cursor: "not-allowed",
+  background: "#f8fafc",
+  borderColor: "#e2e8f0",
   color: "#64748b",
+};
+
+const readOnlyValueStyle: CSSProperties = {
+  minHeight: 36,
+  display: "flex",
+  alignItems: "center",
+  color: "#334155",
+  fontSize: 12.5,
+  fontWeight: 780,
+  lineHeight: 1.35,
+};
+
+const handledSectionStyle: CSSProperties = {
+  display: "grid",
+  gap: 12,
+  borderRadius: 18,
+  border: "1px solid rgba(134, 239, 172, 0.8)",
+  background: "linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%)",
+  padding: 14,
+  boxShadow: "0 12px 28px rgba(22, 163, 74, 0.06)",
+};
+
+const handledSectionCompactStyle: CSSProperties = {
+  ...handledSectionStyle,
+  marginTop: 0,
+};
+
+const handledHeaderStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
+const handledTitleGroupStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 10,
+  minWidth: 0,
+};
+
+const handledIconStyle: CSSProperties = {
+  width: 30,
+  height: 30,
+  borderRadius: 12,
+  display: "grid",
+  placeItems: "center",
+  flexShrink: 0,
+  border: "1px solid rgba(134, 239, 172, 0.9)",
+  background: "#dcfce7",
+  color: "#15803d",
+  fontSize: 13,
+  fontWeight: 950,
+};
+
+const handledTitleStyle: CSSProperties = {
+  margin: 0,
+  color: "#166534",
+  fontSize: 15,
+  lineHeight: 1.2,
+  fontWeight: 950,
+  letterSpacing: "-0.02em",
+};
+
+const handledTextStyle: CSSProperties = {
+  margin: "4px 0 0",
+  color: "#334155",
   fontSize: 12,
-  letterSpacing: "-0.01em",
+  lineHeight: 1.4,
+  fontWeight: 720,
+};
+
+const handledCountStyle: CSSProperties = {
+  minWidth: 24,
+  height: 24,
+  padding: "0 7px",
+  display: "grid",
+  placeItems: "center",
+  flexShrink: 0,
+  borderRadius: 999,
+  border: "1px solid rgba(134, 239, 172, 0.9)",
+  background: "#ffffff",
+  color: "#15803d",
+  fontSize: 11,
+  fontWeight: 900,
 };
 
 const findingsListStyle: CSSProperties = {
   display: "grid",
-  gap: 4,
+  gap: 6,
 };
 
 const findingRowStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "20px minmax(0, 1fr)",
+  gridTemplateColumns: "22px minmax(0, 1fr)",
   alignItems: "start",
-  gap: 7,
-  padding: "5px 0",
+  gap: 8,
+  padding: "4px 0",
 };
 
 const findingDotStyle: CSSProperties = {
@@ -968,14 +1060,14 @@ const findingDotStyle: CSSProperties = {
   placeItems: "center",
   fontSize: 10,
   fontWeight: 950,
-  border: "1px solid rgba(187,247,208,0.95)",
-  background: "rgba(240,253,244,0.94)",
+  border: "1px solid rgba(134, 239, 172, 0.9)",
+  background: "#ffffff",
   color: "#15803d",
 };
 
 const findingTitleStyle: CSSProperties = {
   color: "#0f172a",
-  fontSize: 11,
+  fontSize: 12,
   lineHeight: 1.35,
   fontWeight: 780,
 };

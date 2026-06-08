@@ -1,6 +1,13 @@
 "use client";
 
 import type React from "react";
+import {
+  dashboardColors,
+  dashboardRadii,
+  dashboardShadows,
+  dashboardSpacing,
+  dashboardTypography,
+} from "../ui/tokens";
 import type { UrgentBoardNote } from "./dashboard-overview-types";
 import { openTaskInNewWindow } from "./dashboard-overview-utils";
 
@@ -14,191 +21,135 @@ type Props = {
 };
 
 function getBoardTitle({
+  notes,
   overdueCount,
   dueTodayCount,
   dueTomorrowCount,
   dueSoonCount,
 }: {
+  notes: UrgentBoardNote[];
   overdueCount: number;
   dueTodayCount: number;
   dueTomorrowCount: number;
   dueSoonCount: number;
 }) {
+  const itemLabel = getUrgentItemLabel(notes);
+
   if (overdueCount > 0) {
-    return `${overdueCount} overdue task${overdueCount === 1 ? "" : "s"} need attention now`;
+    return `${overdueCount} overdue ${itemLabel(overdueCount)} need attention`;
   }
 
   if (dueTodayCount > 0) {
-    return `${dueTodayCount} task${dueTodayCount === 1 ? "" : "s"} need your attention today`;
+    return `${dueTodayCount} ${itemLabel(dueTodayCount)} due today`;
   }
 
   if (dueTomorrowCount > 0) {
-    return `${dueTomorrowCount} task${dueTomorrowCount === 1 ? "" : "s"} should be reviewed before tomorrow`;
+    return `${dueTomorrowCount} ${itemLabel(dueTomorrowCount)} due tomorrow`;
   }
 
   if (dueSoonCount > 0) {
-    return `${dueSoonCount} upcoming task${dueSoonCount === 1 ? "" : "s"} need a quick review`;
+    return `${dueSoonCount} upcoming ${itemLabel(dueSoonCount)}`;
   }
 
   return "No urgent tasks right now";
 }
 
-function getNoteToneStyles(tone: UrgentBoardNote["tone"]) {
+function getUrgentItemLabel(notes: UrgentBoardNote[]) {
+  const allProjectLevel =
+    notes.length > 0 && notes.every((note) => note.usesProjectDeadline);
+  const allTaskLevel =
+    notes.length > 0 && notes.every((note) => !note.usesProjectDeadline);
+  const noun = allProjectLevel ? "project" : allTaskLevel ? "task" : "item";
+
+  return (count: number) => `${noun}${count === 1 ? "" : "s"}`;
+}
+
+function getToneStyles(tone: UrgentBoardNote["tone"]) {
   if (tone === "overdue") {
     return {
-      pin: "#ef4444",
-      pinShadow: "0 9px 18px rgba(185,28,28,0.30)",
-      badgeText: "#991b1b",
-      badgeBg: "rgba(254,226,226,0.92)",
-      paper:
-        "linear-gradient(180deg, rgba(255,244,244,0.99) 0%, rgba(255,250,250,0.96) 100%)",
-      border: "1px solid rgba(248,113,113,0.24)",
-      shadow:
-        "0 20px 40px rgba(127,29,29,0.13), 0 8px 18px rgba(15,23,42,0.05)",
-      rotate: "-1.1deg",
+      text: dashboardColors.status.red,
+      background: dashboardColors.status.redSoft,
+      border: "rgba(248, 113, 113, 0.22)",
+      dot: dashboardColors.status.red,
+      label: "Overdue",
     };
   }
 
   if (tone === "today") {
     return {
-      pin: "#f97316",
-      pinShadow: "0 9px 18px rgba(194,65,12,0.26)",
-      badgeText: "#9a3412",
-      badgeBg: "rgba(255,237,213,0.94)",
-      paper:
-        "linear-gradient(180deg, rgba(255,249,240,1) 0%, rgba(255,253,247,0.97) 100%)",
-      border: "1px solid rgba(251,146,60,0.23)",
-      shadow:
-        "0 20px 40px rgba(154,52,18,0.11), 0 8px 18px rgba(15,23,42,0.05)",
-      rotate: "0.7deg",
+      text: dashboardColors.status.amber,
+      background: dashboardColors.status.amberSoft,
+      border: "rgba(251, 191, 36, 0.24)",
+      dot: dashboardColors.status.amber,
+      label: "Due today",
     };
   }
 
   if (tone === "tomorrow") {
     return {
-      pin: "#eab308",
-      pinShadow: "0 9px 18px rgba(161,98,7,0.24)",
-      badgeText: "#854d0e",
-      badgeBg: "rgba(254,243,199,0.95)",
-      paper:
-        "linear-gradient(180deg, rgba(255,252,232,1) 0%, rgba(255,254,247,0.97) 100%)",
-      border: "1px solid rgba(234,179,8,0.22)",
-      shadow:
-        "0 20px 40px rgba(133,77,14,0.10), 0 8px 18px rgba(15,23,42,0.05)",
-      rotate: "-0.45deg",
+      text: "#92400e",
+      background: "#fffbeb",
+      border: "rgba(251, 191, 36, 0.20)",
+      dot: "#f59e0b",
+      label: "Tomorrow",
     };
   }
 
   return {
-    pin: "#6366f1",
-    pinShadow: "0 9px 18px rgba(79,70,229,0.24)",
-    badgeText: "#3730a3",
-    badgeBg: "rgba(224,231,255,0.94)",
-    paper:
-      "linear-gradient(180deg, rgba(246,248,255,1) 0%, rgba(255,255,255,0.97) 100%)",
-    border: "1px solid rgba(99,102,241,0.2)",
-    shadow:
-      "0 20px 40px rgba(79,70,229,0.10), 0 8px 18px rgba(15,23,42,0.05)",
-    rotate: "0.5deg",
+    text: dashboardColors.primary[700],
+    background: dashboardColors.primary[50],
+    border: dashboardColors.primary[100],
+    dot: dashboardColors.primary[500],
+    label: "Soon",
   };
 }
 
-function getToneLabel(tone: UrgentBoardNote["tone"]) {
-  if (tone === "overdue") return "Overdue";
-  if (tone === "today") return "Due today";
-  if (tone === "tomorrow") return "Due tomorrow";
-  return "Due soon";
-}
-
-function BoardMetric({
-  label,
-  value,
-  active,
-}: {
-  label: string;
-  value: number;
-  active?: boolean;
-}) {
-  return (
-    <div
-      style={{
-        ...metricPillStyle,
-        ...(active ? metricPillActiveStyle : null),
-      }}
-    >
-      <span style={metricValueStyle}>{value}</span>
-      <span style={metricLabelStyle}>{label}</span>
-    </div>
-  );
-}
-
-function NoteInfo({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div style={noteInfoRowStyle}>
-      <span style={noteInfoLabelStyle}>{label}</span>
-      <span style={noteInfoValueStyle}>{value}</span>
-    </div>
-  );
-}
-
-function UrgentNoteCard({ note }: { note: UrgentBoardNote }) {
-  const tone = getNoteToneStyles(note.tone);
+function UrgentTaskRow({ note }: { note: UrgentBoardNote }) {
+  const tone = getToneStyles(note.tone);
 
   return (
     <button
       type="button"
       onClick={() => openTaskInNewWindow(note.id)}
-      className="urgent-note-card"
-      style={{
-        ...noteCardStyle,
-        background: tone.paper,
-        border: tone.border,
-        boxShadow: tone.shadow,
-        transform: `rotate(${tone.rotate})`,
-      }}
+      className="urgent-task-row"
+      style={taskRowStyle}
     >
       <span
         aria-hidden="true"
         style={{
-          ...pinStyle,
-          background: tone.pin,
-          boxShadow: tone.pinShadow,
+          ...taskToneDotStyle,
+          background: tone.dot,
         }}
       />
 
-      <div style={noteTopRowStyle}>
-        <span
-          style={{
-            ...noteBadgeStyle,
-            color: tone.badgeText,
-            background: tone.badgeBg,
-          }}
-        >
-          {note.deadlineLabel}
-        </span>
+      <div style={taskMainStyle}>
+        <div style={taskTitleRowStyle}>
+          <div style={taskTitleStyle}>{note.title}</div>
 
-        <span style={noteToneStyle}>{getToneLabel(note.tone)}</span>
+          <span
+            style={{
+              ...taskBadgeStyle,
+              color: tone.text,
+              background: tone.background,
+              border: `1px solid ${tone.border}`,
+            }}
+          >
+            {tone.label}
+          </span>
+        </div>
+
+        <div style={taskMetaRowStyle}>
+          <span style={taskClientStyle}>{note.clientName}</span>
+          <span style={taskMetaSeparatorStyle}>•</span>
+          <span style={taskMetaStyle}>
+            {note.usesProjectDeadline ? "Client delivery" : `Task #${note.id}`}
+          </span>
+          <span style={taskMetaSeparatorStyle}>•</span>
+          <span style={taskMetaStyle}>{note.deadlineLabel}</span>
+        </div>
       </div>
 
-      <div style={noteTitleStyle}>{note.title}</div>
-
-      <div style={noteClientStyle}>{note.clientName}</div>
-
-      <div style={noteInfoBoxStyle}>
-        <NoteInfo label="Task" value={`#${note.id}`} />
-        <NoteInfo label="Deadline" value={note.deadlineLabel} />
-      </div>
-
-      <div style={noteFooterStyle}>
-        <span>Open task</span>
-        <span aria-hidden="true">↗</span>
-      </div>
+      <span style={openTaskStyle}>Open →</span>
     </button>
   );
 }
@@ -211,76 +162,66 @@ export default function DashboardUrgentBoard({
   dueSoonCount,
   onGoToTasks,
 }: Props) {
+  const visibleNotes = notes.slice(0, 4);
   const boardTitle = getBoardTitle({
+    notes: visibleNotes,
     overdueCount,
     dueTodayCount,
     dueTomorrowCount,
     dueSoonCount,
   });
 
+  const hasOverdue = overdueCount > 0;
+  const overdueItemLabel = getUrgentItemLabel(visibleNotes)(overdueCount);
+
   return (
     <section className="urgent-board-root" style={boardShellStyle}>
       <style>{responsiveCss}</style>
 
-      <div aria-hidden="true" style={boardGlowLeftStyle} />
-      <div aria-hidden="true" style={boardGlowRightStyle} />
-      <div aria-hidden="true" style={boardTextureStyle} />
-
       <div style={boardHeaderStyle}>
         <div style={boardHeaderTextStyle}>
-          <div style={boardKickerStyle}>Urgent tasks board</div>
-          <div style={boardTitleStyle}>{boardTitle}</div>
-        </div>
+          <div style={boardKickerStyle}>Priority work</div>
 
-        <div className="urgent-board-header-actions" style={headerActionsStyle}>
-          <div className="urgent-board-metrics" style={metricsRowStyle}>
-            <BoardMetric
-              label="Overdue"
-              value={overdueCount}
-              active={overdueCount > 0}
-            />
-            <BoardMetric
-              label="Today"
-              value={dueTodayCount}
-              active={dueTodayCount > 0}
-            />
-            <BoardMetric
-              label="Tomorrow"
-              value={dueTomorrowCount}
-              active={dueTomorrowCount > 0}
-            />
-            <BoardMetric
-              label="Soon"
-              value={dueSoonCount}
-              active={dueSoonCount > 0}
-            />
+          <div style={boardTitleStyle}>
+            {hasOverdue ? (
+              <>
+                <span style={boardTitleAccentStyle}>
+                  {overdueCount} overdue
+                </span>{" "}
+                <span style={boardTitleMainStyle}>
+                  {overdueItemLabel} need attention
+                </span>
+              </>
+            ) : (
+              <span style={boardTitleMainStyle}>{boardTitle}</span>
+            )}
           </div>
-
-          <button type="button" onClick={onGoToTasks} style={viewAllButtonStyle}>
-            View all tasks →
-          </button>
         </div>
+
       </div>
 
-      <div style={boardSurfaceStyle}>
-        {notes.length ? (
-          <div className="urgent-notes-grid" style={notesGridStyle}>
-            {notes.map((note) => (
-              <UrgentNoteCard key={note.id} note={note} />
-            ))}
-          </div>
-        ) : (
-          <div style={emptyBoardStyle}>
-            <div style={emptyIconStyle}>✓</div>
-            <div style={{ display: "grid", gap: 4 }}>
-              <div style={emptyTitleStyle}>No urgent work right now</div>
-              <div style={emptyTextStyle}>
-                When a task becomes overdue, due today, or due soon, it will
-                appear here.
-              </div>
+      {notes.length ? (
+        <div className="urgent-task-list" style={taskListStyle}>
+          {visibleNotes.map((note) => (
+            <UrgentTaskRow key={note.id} note={note} />
+          ))}
+        </div>
+      ) : (
+        <div style={emptyBoardStyle}>
+          <div style={emptyIconStyle}>✓</div>
+          <div style={emptyCopyStyle}>
+            <div style={emptyTitleStyle}>No urgent work right now</div>
+            <div style={emptyTextStyle}>
+              Tasks that become overdue, due today, or due soon will appear here.
             </div>
           </div>
-        )}
+        </div>
+      )}
+
+      <div style={taskFooterActionStyle}>
+        <button type="button" onClick={onGoToTasks} style={viewAllButtonStyle}>
+          View all tasks
+        </button>
       </div>
     </section>
   );
@@ -296,39 +237,46 @@ const responsiveCss = `
     font-family: inherit;
   }
 
-  .urgent-note-card {
+  .urgent-task-row {
     transition:
-      transform 180ms ease,
-      box-shadow 180ms ease,
-      border-color 180ms ease,
-      background 180ms ease;
+      background 170ms ease,
+      border-color 170ms ease,
+      box-shadow 170ms ease,
+      transform 170ms ease;
   }
 
-  .urgent-note-card:hover {
-    transform: translateY(-6px) rotate(0deg) !important;
-    box-shadow: 0 32px 62px rgba(15,23,42,0.17) !important;
-    border-color: rgba(99,102,241,0.26) !important;
+  .urgent-task-row:hover {
+    transform: translateY(-1px);
+    border-color: rgba(37, 99, 235, 0.18) !important;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06) !important;
+    background: rgba(255, 255, 255, 0.98) !important;
   }
 
-  @media (max-width: 1050px) {
-    .urgent-board-header-actions {
-      width: 100% !important;
-      align-items: flex-start !important;
-    }
+  .urgent-task-row:first-child {
+    border-color: rgba(37, 99, 235, 0.16) !important;
+    background: rgba(248, 251, 255, 0.96) !important;
+    box-shadow: 0 8px 22px rgba(37, 99, 235, 0.055) !important;
+  }
 
-    .urgent-board-metrics {
-      justify-content: flex-start !important;
+  @media (max-width: 900px) {
+    .urgent-board-root {
+      gap: 14px !important;
     }
   }
 
   @media (max-width: 760px) {
-    .urgent-board-root {
-      padding: 16px !important;
-      border-radius: 28px !important;
+    .urgent-task-row {
+      grid-template-columns: auto minmax(0, 1fr) !important;
     }
 
-    .urgent-notes-grid {
-      grid-template-columns: 1fr !important;
+    .urgent-task-row > span:last-child {
+      display: none !important;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .urgent-board-root {
+      gap: 12px !important;
     }
   }
 `;
@@ -337,320 +285,217 @@ const boardShellStyle: React.CSSProperties = {
   position: "relative",
   width: "100%",
   minWidth: 0,
-  borderRadius: 34,
-  padding: 18,
-  border: "1px solid rgba(224,231,255,0.78)",
-  background:
-    "radial-gradient(circle at 0% 0%, rgba(79,70,229,0.13), transparent 32%), radial-gradient(circle at 100% 0%, rgba(245,158,11,0.13), transparent 30%), linear-gradient(135deg, rgba(255,255,255,0.99) 0%, rgba(248,250,255,0.96) 45%, rgba(255,250,240,0.95) 100%)",
-  boxShadow:
-    "0 34px 78px rgba(15,23,42,0.09), inset 0 1px 0 rgba(255,255,255,0.98)",
   display: "grid",
-  gap: 12,
-  overflow: "hidden",
-};
-
-const boardGlowLeftStyle: React.CSSProperties = {
-  position: "absolute",
-  left: -130,
-  bottom: -150,
-  width: 310,
-  height: 310,
-  borderRadius: 999,
-  background: "rgba(245,158,11,0.1)",
-  filter: "blur(58px)",
-  pointerEvents: "none",
-};
-
-const boardGlowRightStyle: React.CSSProperties = {
-  position: "absolute",
-  right: -120,
-  top: -90,
-  width: 300,
-  height: 300,
-  borderRadius: 999,
-  background: "rgba(124,58,237,0.11)",
-  filter: "blur(58px)",
-  pointerEvents: "none",
-};
-
-const boardTextureStyle: React.CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  opacity: 0.24,
-  pointerEvents: "none",
-  backgroundImage:
-    "linear-gradient(rgba(99,102,241,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(245,158,11,0.035) 1px, transparent 1px)",
-  backgroundSize: "36px 36px",
+  gap: dashboardSpacing[3],
 };
 
 const boardHeaderStyle: React.CSSProperties = {
-  position: "relative",
-  zIndex: 1,
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: 16,
-  flexWrap: "wrap",
+  width: "100%",
+  display: "grid",
+  gap: dashboardSpacing[2],
 };
 
 const boardHeaderTextStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 5,
   minWidth: 0,
+  display: "grid",
+  gap: 6,
 };
 
 const boardKickerStyle: React.CSSProperties = {
-  fontSize: 11,
-  color: "#4f46e5",
-  fontWeight: 950,
+  fontSize: 10.5,
+  color: dashboardColors.primary[600],
+  fontWeight: dashboardTypography.weight.black,
   textTransform: "uppercase",
   letterSpacing: "0.12em",
 };
 
 const boardTitleStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 26,
-  lineHeight: 1.02,
-  fontWeight: 950,
-  letterSpacing: "-0.06em",
-};
-
-const headerActionsStyle: React.CSSProperties = {
-  display: "grid",
-  justifyItems: "end",
-  gap: 10,
-  minWidth: 0,
-};
-
-const metricsRowStyle: React.CSSProperties = {
+  margin: 0,
   display: "flex",
-  justifyContent: "flex-end",
-  gap: 7,
   flexWrap: "wrap",
+  alignItems: "baseline",
+  gap: 8,
+  fontSize: 22,
+  lineHeight: 1.08,
+  letterSpacing: "-0.035em",
 };
 
-const metricPillStyle: React.CSSProperties = {
-  minWidth: 74,
-  borderRadius: 999,
-  padding: "7px 9px",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 6,
-  border: "1px solid rgba(226,232,240,0.78)",
-  background: "rgba(255,255,255,0.72)",
-  boxShadow: "0 8px 18px rgba(15,23,42,0.035)",
+const boardTitleAccentStyle: React.CSSProperties = {
+  color: dashboardColors.status.red,
+  fontWeight: dashboardTypography.weight.black,
 };
 
-const metricPillActiveStyle: React.CSSProperties = {
-  borderColor: "rgba(245,158,11,0.2)",
-  background: "rgba(255,251,235,0.86)",
-};
-
-const metricValueStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 13,
-  fontWeight: 950,
-  lineHeight: 1,
-};
-
-const metricLabelStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 10,
-  fontWeight: 850,
-  lineHeight: 1,
+const boardTitleMainStyle: React.CSSProperties = {
+  color: dashboardColors.text.primary,
+  fontWeight: dashboardTypography.weight.black,
 };
 
 const viewAllButtonStyle: React.CSSProperties = {
-  border: "1px solid rgba(99,102,241,0.16)",
-  background: "rgba(255,255,255,0.9)",
-  color: "#4338ca",
-  borderRadius: 999,
-  padding: "10px 13px",
+  border: `1px solid ${dashboardColors.border.default}`,
+  background: "rgba(255, 255, 255, 0.92)",
+  color: dashboardColors.text.secondary,
+  borderRadius: dashboardRadii.full,
+  padding: "10px 14px",
   fontSize: 12,
-  fontWeight: 950,
+  fontWeight: dashboardTypography.weight.black,
   cursor: "pointer",
-  boxShadow: "0 12px 26px rgba(15,23,42,0.055)",
+  boxShadow: dashboardShadows.xs,
   whiteSpace: "nowrap",
+  alignSelf: "end",
 };
 
-const boardSurfaceStyle: React.CSSProperties = {
-  position: "relative",
-  zIndex: 1,
-  minHeight: 220,
-  borderRadius: 28,
-  padding: "10px 18px 16px",
-  display: "grid",
-  alignContent: "start",
-  gap: 18,
-  overflow: "hidden",
-};
-
-const notesGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(205px, 246px))",
-  gap: 20,
-  alignItems: "start",
-  justifyContent: "start",
-};
-
-const noteCardStyle: React.CSSProperties = {
-  position: "relative",
+const taskFooterActionStyle: React.CSSProperties = {
   width: "100%",
-  maxWidth: 246,
+  display: "flex",
+  justifyContent: "flex-end",
+  marginTop: 2,
+};
+
+const taskListStyle: React.CSSProperties = {
+  width: "100%",
+  display: "grid",
+  gap: dashboardSpacing[2],
+};
+
+const taskRowStyle: React.CSSProperties = {
+  width: "100%",
   minWidth: 0,
-  minHeight: 156,
-  borderRadius: 5,
-  padding: "18px 16px 14px",
+  minHeight: 62,
+  display: "grid",
+  gridTemplateColumns: "auto minmax(0, 1fr) auto",
+  alignItems: "center",
+  gap: dashboardSpacing[3],
+  border: `1px solid ${dashboardColors.border.subtle}`,
+  borderRadius: dashboardRadii.lg,
+  padding: "11px 12px",
+  background: "rgba(255, 255, 255, 0.88)",
+  boxShadow: dashboardShadows.xs,
   cursor: "pointer",
   textAlign: "left",
-  display: "grid",
-  alignContent: "start",
-  gap: 8,
 };
 
-const pinStyle: React.CSSProperties = {
-  position: "absolute",
-  top: -8,
-  left: "50%",
-  width: 14,
-  height: 14,
-  borderRadius: 999,
-  transform: "translateX(-50%)",
-  border: "1px solid rgba(255,255,255,0.58)",
+const taskToneDotStyle: React.CSSProperties = {
+  width: 9,
+  height: 9,
+  borderRadius: dashboardRadii.full,
+  boxShadow: "0 0 0 4px rgba(148, 163, 184, 0.08)",
 };
 
-const noteTopRowStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: 8,
-};
-
-const noteBadgeStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  borderRadius: 999,
-  padding: "4px 8px",
-  fontSize: 10,
-  lineHeight: 1,
-  fontWeight: 950,
-};
-
-const noteToneStyle: React.CSSProperties = {
-  color: "#94a3b8",
-  fontSize: 10,
-  fontWeight: 850,
-  lineHeight: 1,
-};
-
-const noteTitleStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 14,
-  lineHeight: 1.16,
-  fontWeight: 950,
-  letterSpacing: "-0.035em",
-  display: "-webkit-box",
-  WebkitLineClamp: 2,
-  WebkitBoxOrient: "vertical",
-  overflow: "hidden",
-};
-
-const noteClientStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 11,
-  lineHeight: 1.3,
-  fontWeight: 750,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-};
-
-const noteInfoBoxStyle: React.CSSProperties = {
-  borderRadius: 10,
-  padding: "7px 8px",
-  border: "1px solid rgba(226,232,240,0.62)",
-  background: "rgba(255,255,255,0.48)",
+const taskMainStyle: React.CSSProperties = {
+  minWidth: 0,
   display: "grid",
   gap: 5,
 };
 
-const noteInfoRowStyle: React.CSSProperties = {
+const taskTitleRowStyle: React.CSSProperties = {
+  minWidth: 0,
   display: "flex",
-  justifyContent: "space-between",
-  gap: 8,
   alignItems: "center",
+  gap: dashboardSpacing[2],
 };
 
-const noteInfoLabelStyle: React.CSSProperties = {
-  color: "#94a3b8",
-  fontSize: 9,
-  lineHeight: 1,
-  fontWeight: 900,
-  textTransform: "uppercase",
-  letterSpacing: "0.06em",
-};
-
-const noteInfoValueStyle: React.CSSProperties = {
-  color: "#334155",
-  fontSize: 10,
-  lineHeight: 1.15,
-  fontWeight: 850,
+const taskTitleStyle: React.CSSProperties = {
+  minWidth: 0,
+  color: dashboardColors.text.primary,
+  fontSize: 13.5,
+  lineHeight: dashboardTypography.lineHeight.snug,
+  fontWeight: dashboardTypography.weight.black,
+  letterSpacing: "-0.025em",
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-  textAlign: "right",
 };
 
-const noteFooterStyle: React.CSSProperties = {
-  marginTop: 1,
+const taskBadgeStyle: React.CSSProperties = {
+  flexShrink: 0,
   display: "inline-flex",
   alignItems: "center",
-  justifyContent: "space-between",
-  gap: 8,
-  width: "100%",
-  color: "#4338ca",
-  fontSize: 11,
-  fontWeight: 950,
+  justifyContent: "center",
+  minHeight: 22,
+  padding: "0 8px",
+  borderRadius: dashboardRadii.full,
+  fontSize: 10,
+  lineHeight: 1,
+  fontWeight: dashboardTypography.weight.black,
+};
+
+const taskMetaRowStyle: React.CSSProperties = {
+  minWidth: 0,
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  color: dashboardColors.text.muted,
+  fontSize: 11.5,
+  lineHeight: dashboardTypography.lineHeight.snug,
+  fontWeight: dashboardTypography.weight.medium,
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+};
+
+const taskClientStyle: React.CSSProperties = {
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const taskMetaSeparatorStyle: React.CSSProperties = {
+  color: dashboardColors.text.subtle,
+  flexShrink: 0,
+};
+
+const taskMetaStyle: React.CSSProperties = {
+  flexShrink: 0,
+};
+
+const openTaskStyle: React.CSSProperties = {
+  color: dashboardColors.primary[700],
+  fontSize: 12,
+  lineHeight: 1,
+  fontWeight: dashboardTypography.weight.black,
 };
 
 const emptyBoardStyle: React.CSSProperties = {
-  minHeight: 160,
-  borderRadius: 22,
-  border: "1px dashed rgba(148,163,184,0.26)",
-  background: "rgba(255,255,255,0.56)",
+  minHeight: 116,
+  borderRadius: dashboardRadii.xl,
+  border: `1px dashed ${dashboardColors.border.default}`,
+  background: "rgba(255, 255, 255, 0.62)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  gap: 12,
-  padding: 22,
+  gap: dashboardSpacing[3],
+  padding: dashboardSpacing[5],
   textAlign: "left",
 };
 
 const emptyIconStyle: React.CSSProperties = {
-  width: 42,
-  height: 42,
-  borderRadius: 999,
+  width: 38,
+  height: 38,
+  borderRadius: dashboardRadii.full,
   display: "grid",
   placeItems: "center",
-  background: "rgba(34,197,94,0.1)",
-  color: "#15803d",
-  fontSize: 18,
-  fontWeight: 950,
+  background: dashboardColors.status.greenSoft,
+  color: dashboardColors.status.green,
+  fontSize: 16,
+  fontWeight: dashboardTypography.weight.black,
   flexShrink: 0,
 };
 
+const emptyCopyStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 4,
+};
+
 const emptyTitleStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 15,
-  fontWeight: 950,
+  color: dashboardColors.text.primary,
+  fontSize: 14,
+  fontWeight: dashboardTypography.weight.black,
 };
 
 const emptyTextStyle: React.CSSProperties = {
   maxWidth: 520,
-  color: "#64748b",
-  fontSize: 13,
-  lineHeight: 1.5,
-  fontWeight: 650,
+  color: dashboardColors.text.muted,
+  fontSize: 12.5,
+  lineHeight: dashboardTypography.lineHeight.normal,
+  fontWeight: dashboardTypography.weight.medium,
 };

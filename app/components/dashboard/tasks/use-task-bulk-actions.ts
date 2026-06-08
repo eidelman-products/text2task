@@ -1,22 +1,29 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import type { TaskRow } from "./task-types";
+
+type ProjectBulkActionTarget =
+  | { kind: "project"; projectId: string }
+  | { kind: "legacy_task_group"; taskIds: number[] };
 
 type UseTaskBulkActionsArgs = {
   selectedTaskIds: number[];
+  tasks: TaskRow[];
   clearSelection: () => void;
+  refreshTasks: () => Promise<void> | void;
   updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
   archiveTask: (taskId: number) => Promise<void> | void;
   restoreTask: (taskId: number) => Promise<void> | void;
-  permanentlyDeleteTask: (taskId: number) => Promise<void> | void;
 };
 
 export function useTaskBulkActions({
   selectedTaskIds,
+  tasks,
   clearSelection,
+  refreshTasks,
   updateTaskStatus,
   archiveTask,
   restoreTask,
-  permanentlyDeleteTask,
 }: UseTaskBulkActionsArgs) {
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
@@ -85,22 +92,41 @@ export function useTaskBulkActions({
   const confirmBulkPermanentDelete = useCallback(async () => {
     try {
       setIsBulkDeleting(true);
-      const ids = [...selectedTaskIds];
+      const targets = buildBulkDeleteTargets(selectedTaskIds, tasks);
 
-      for (const id of ids) {
-        await permanentlyDeleteTask(id);
+      if (targets.length === 0) {
+        throw new Error("No selected projects could be resolved");
       }
 
+      const response = await fetch("/api/projects/bulk-action", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "soft_delete",
+          targets,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error || "Bulk project delete failed");
+      }
+
+      await refreshTasks();
       clearSelection();
       setShowBulkDeleteConfirm(false);
-      toast.success(`Permanently deleted ${ids.length} selected task(s)`);
+      toast.success("Selected projects deleted successfully.");
     } catch (error) {
       console.error("Bulk permanent delete failed:", error);
-      toast.error("Could not permanently delete selected tasks");
+      toast.error(
+        "Could not delete selected projects. Please refresh and try again."
+      );
     } finally {
       setIsBulkDeleting(false);
     }
-  }, [selectedTaskIds, permanentlyDeleteTask, clearSelection]);
+  }, [selectedTaskIds, tasks, refreshTasks, clearSelection]);
 
   const resetBulkDeleteConfirm = useCallback(() => {
     if (isBulkDeleting) return;
@@ -118,4 +144,48 @@ export function useTaskBulkActions({
     confirmBulkPermanentDelete,
     resetBulkDeleteConfirm,
   };
+}
+
+function buildBulkDeleteTargets(
+  selectedTaskIds: number[],
+  tasks: TaskRow[]
+): ProjectBulkActionTarget[] {
+  const selectedIds = new Set(selectedTaskIds);
+  const resolvedTaskIds = new Set<number>();
+  const projectIds = new Set<string>();
+  const legacyTaskIds = new Set<number>();
+
+  tasks.forEach((task) => {
+    if (!selectedIds.has(task.id)) return;
+
+    resolvedTaskIds.add(task.id);
+    const projectId = task.project_id || task.project?.id || "";
+
+    if (projectId) {
+      projectIds.add(projectId);
+      return;
+    }
+
+    legacyTaskIds.add(task.id);
+  });
+
+  if (resolvedTaskIds.size !== selectedIds.size) {
+    throw new Error("One or more selected tasks could not be resolved");
+  }
+
+  const targets: ProjectBulkActionTarget[] = Array.from(projectIds).map(
+    (projectId) => ({
+      kind: "project",
+      projectId,
+    })
+  );
+
+  if (legacyTaskIds.size > 0) {
+    targets.push({
+      kind: "legacy_task_group",
+      taskIds: Array.from(legacyTaskIds),
+    });
+  }
+
+  return targets;
 }

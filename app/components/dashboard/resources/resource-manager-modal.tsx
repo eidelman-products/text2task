@@ -405,7 +405,6 @@ export default function ResourceManagerModal({
             <div className="t2t-resource-icon">📎</div>
 
             <div className="t2t-resource-header-copy">
-              <div className="t2t-resource-eyebrow">Client project context</div>
               <h2>{title}</h2>
               <p>{subtitle}</p>
             </div>
@@ -722,8 +721,8 @@ export default function ResourceManagerModal({
           align-items: center;
           justify-content: center;
           padding: 18px;
-          background: rgba(15, 23, 42, 0.44);
-          backdrop-filter: blur(10px);
+          background: rgba(15, 23, 42, 0.42);
+          backdrop-filter: blur(4px);
           overflow: hidden;
           box-sizing: border-box;
         }
@@ -733,15 +732,12 @@ export default function ResourceManagerModal({
           max-height: calc(100dvh - 36px);
           display: flex;
           flex-direction: column;
-          border-radius: 32px;
-          border: 1px solid rgba(226, 232, 240, 0.94);
-          background:
-            radial-gradient(circle at 90% 0%, rgba(224, 231, 255, 0.94), transparent 32%),
-            radial-gradient(circle at 0% 100%, rgba(220, 252, 231, 0.72), transparent 32%),
-            linear-gradient(135deg, rgba(255, 255, 255, 0.995) 0%, rgba(248, 250, 252, 0.99) 58%, rgba(238, 242, 255, 0.92) 100%);
+          border-radius: 24px;
+          border: 1px solid rgba(203, 213, 225, 0.72);
+          background: #f8fafc;
           box-shadow:
-            0 38px 100px rgba(15, 23, 42, 0.26),
-            0 0 0 1px rgba(255, 255, 255, 0.72);
+            0 24px 64px rgba(15, 23, 42, 0.16),
+            0 4px 14px rgba(15, 23, 42, 0.05);
           overflow: hidden;
           box-sizing: border-box;
         }
@@ -752,8 +748,9 @@ export default function ResourceManagerModal({
           align-items: flex-start;
           justify-content: space-between;
           gap: 14px;
-          padding: 18px 20px 14px;
+          padding: 17px 20px 14px;
           border-bottom: 1px solid rgba(226, 232, 240, 0.72);
+          background: rgba(255, 255, 255, 0.98);
         }
 
         .t2t-resource-header-main {
@@ -764,18 +761,16 @@ export default function ResourceManagerModal({
         }
 
         .t2t-resource-icon {
-          width: 46px;
-          height: 46px;
-          border-radius: 18px;
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
           display: grid;
           place-items: center;
           flex-shrink: 0;
-          background: rgba(238, 242, 255, 0.98);
-          border: 1px solid rgba(199, 210, 254, 0.96);
-          color: #4f46e5;
-          box-shadow:
-            0 14px 28px rgba(79, 70, 229, 0.11),
-            inset 0 1px 0 rgba(255, 255, 255, 0.82);
+          background: rgba(239, 246, 255, 0.92);
+          border: 1px solid rgba(191, 219, 254, 0.74);
+          color: #2563eb;
+          box-shadow: none;
         }
 
         .t2t-resource-header-copy {
@@ -783,20 +778,20 @@ export default function ResourceManagerModal({
         }
 
         .t2t-resource-eyebrow {
-          color: #4f46e5;
+          color: #2563eb;
           font-size: 10px;
-          font-weight: 950;
+          font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 0.12em;
+          letter-spacing: 0.08em;
         }
 
         .t2t-resource-header h2 {
-          margin: 4px 0 0;
+          margin: 0;
           color: #0f172a;
-          font-size: 29px;
-          line-height: 1.08;
-          font-weight: 950;
-          letter-spacing: -0.052em;
+          font-size: 26px;
+          line-height: 1.12;
+          font-weight: 900;
+          letter-spacing: 0;
         }
 
         .t2t-resource-header p {
@@ -804,15 +799,15 @@ export default function ResourceManagerModal({
           color: #64748b;
           font-size: 13px;
           line-height: 1.5;
-          font-weight: 720;
+          font-weight: 650;
         }
 
         .t2t-resource-close {
           width: 38px;
           height: 38px;
-          border-radius: 14px;
-          border: 1px solid rgba(226, 232, 240, 0.95);
-          background: rgba(255, 255, 255, 0.94);
+          border-radius: 999px;
+          border: 1px solid rgba(226, 232, 240, 0.82);
+          background: #ffffff;
           color: #64748b;
           font-size: 23px;
           line-height: 1;
@@ -825,39 +820,40 @@ export default function ResourceManagerModal({
           overflow-y: auto;
           overflow-x: hidden;
           padding: 14px 20px 20px;
+          background: #f8fafc;
           box-sizing: border-box;
         }
 
         .t2t-resource-stats {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 9px;
-          margin-bottom: 14px;
+          gap: 6px;
+          margin-bottom: 12px;
         }
 
         .t2t-resource-stat {
           min-width: 0;
-          min-height: 42px;
+          min-height: 38px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 8px;
-          border-radius: 16px;
+          border-radius: 9px;
           border: 1px solid;
-          padding: 8px 12px;
+          padding: 7px 10px;
           font-size: 12px;
-          font-weight: 850;
+          font-weight: 750;
           box-sizing: border-box;
         }
 
         .t2t-resource-warning {
-          border-radius: 16px;
-          border: 1px solid rgba(253, 230, 138, 0.95);
-          background: rgba(255, 251, 235, 0.94);
+          border-radius: 10px;
+          border: 1px solid rgba(253, 230, 138, 0.72);
+          background: rgba(255, 251, 235, 0.72);
           color: #92400e;
           padding: 11px 12px;
           font-size: 13px;
-          font-weight: 800;
+          font-weight: 700;
           margin-bottom: 12px;
         }
 
@@ -866,13 +862,13 @@ export default function ResourceManagerModal({
           align-items: center;
           justify-content: space-between;
           gap: 12px;
-          border-radius: 16px;
-          border: 1px solid rgba(253, 164, 175, 0.95);
-          background: rgba(255, 241, 242, 0.95);
+          border-radius: 10px;
+          border: 1px solid rgba(254, 202, 202, 0.78);
+          background: rgba(254, 242, 242, 0.74);
           color: #be123c;
           padding: 11px 12px;
           font-size: 13px;
-          font-weight: 850;
+          font-weight: 750;
           margin-bottom: 12px;
         }
 
@@ -903,16 +899,14 @@ export default function ResourceManagerModal({
 
         .t2t-resource-right {
           min-width: 0;
-          border-radius: 24px;
-          border: 1px solid rgba(226, 232, 240, 0.92);
-          background: rgba(255, 255, 255, 0.88);
-          padding: 13px;
+          border-radius: 12px;
+          border: 1px solid rgba(226, 232, 240, 0.72);
+          background: rgba(255, 255, 255, 0.72);
+          padding: 12px;
           display: grid;
           align-content: start;
           gap: 12px;
-          box-shadow:
-            0 14px 34px rgba(15, 23, 42, 0.045),
-            inset 0 1px 0 rgba(255, 255, 255, 0.84);
+          box-shadow: none;
           box-sizing: border-box;
         }
 
@@ -923,17 +917,17 @@ export default function ResourceManagerModal({
           gap: 5px;
           width: 100%;
           max-width: 100%;
-          border-radius: 18px;
-          border: 1px solid rgba(226, 232, 240, 0.9);
-          background: rgba(255, 255, 255, 0.78);
-          padding: 4px;
+          border-radius: 10px;
+          border: 1px solid rgba(226, 232, 240, 0.76);
+          background: rgba(255, 255, 255, 0.72);
+          padding: 3px;
           overflow: hidden;
           box-sizing: border-box;
         }
 
         .t2t-resource-tab {
           min-height: 38px;
-          border-radius: 14px;
+          border-radius: 8px;
           border: 1px solid transparent;
           padding: 0 12px;
           display: inline-flex;
@@ -941,7 +935,7 @@ export default function ResourceManagerModal({
           justify-content: center;
           gap: 7px;
           font-size: 12px;
-          font-weight: 930;
+          font-weight: 800;
           cursor: pointer;
           white-space: nowrap;
         }
@@ -953,13 +947,11 @@ export default function ResourceManagerModal({
         .t2t-resource-form-card {
           display: grid;
           gap: 12px;
-          border-radius: 24px;
-          border: 1px solid rgba(226, 232, 240, 0.92);
-          background: rgba(255, 255, 255, 0.9);
-          padding: 15px;
-          box-shadow:
-            0 14px 34px rgba(15, 23, 42, 0.055),
-            inset 0 1px 0 rgba(255, 255, 255, 0.85);
+          border-radius: 12px;
+          border: 1px solid rgba(226, 232, 240, 0.72);
+          background: rgba(255, 255, 255, 0.78);
+          padding: 14px;
+          box-shadow: none;
           min-width: 0;
           box-sizing: border-box;
         }
@@ -974,12 +966,12 @@ export default function ResourceManagerModal({
         .t2t-resource-form-icon {
           width: 34px;
           height: 34px;
-          border-radius: 14px;
+          border-radius: 10px;
           display: grid;
           place-items: center;
-          background: rgba(238, 242, 255, 0.94);
-          border: 1px solid rgba(199, 210, 254, 0.95);
-          color: #4338ca;
+          background: rgba(239, 246, 255, 0.82);
+          border: 1px solid rgba(191, 219, 254, 0.68);
+          color: #2563eb;
           flex-shrink: 0;
         }
 
@@ -987,8 +979,8 @@ export default function ResourceManagerModal({
           margin: 0;
           color: #0f172a;
           font-size: 16px;
-          font-weight: 950;
-          letter-spacing: -0.025em;
+          font-weight: 850;
+          letter-spacing: 0;
         }
 
         .t2t-resource-form-header p {
@@ -996,7 +988,7 @@ export default function ResourceManagerModal({
           color: #64748b;
           font-size: 12px;
           line-height: 1.5;
-          font-weight: 720;
+          font-weight: 650;
         }
 
         .t2t-resource-field {
@@ -1008,9 +1000,9 @@ export default function ResourceManagerModal({
         .t2t-resource-field span {
           color: #64748b;
           font-size: 10px;
-          font-weight: 950;
+          font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 0.08em;
+          letter-spacing: 0.06em;
         }
 
         .t2t-resource-field input,
@@ -1018,14 +1010,22 @@ export default function ResourceManagerModal({
         .t2t-resource-field textarea {
           width: 100%;
           min-width: 0;
-          border-radius: 15px;
-          border: 1px solid rgba(203, 213, 225, 0.95);
-          background: rgba(255, 255, 255, 0.97);
+          border-radius: 10px;
+          border: 1px solid rgba(203, 213, 225, 0.76);
+          background: #ffffff;
           color: #0f172a;
           font-size: 13px;
-          font-weight: 760;
+          font-weight: 650;
           outline: none;
           box-sizing: border-box;
+          transition: border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .t2t-resource-field input:focus,
+        .t2t-resource-field select:focus,
+        .t2t-resource-field textarea:focus {
+          border-color: rgba(37, 99, 235, 0.42);
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.07);
         }
 
         .t2t-resource-field input,
@@ -1044,15 +1044,15 @@ export default function ResourceManagerModal({
         .t2t-resource-primary {
           width: 100%;
           min-height: 44px;
-          border-radius: 16px;
-          border: none;
-          background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+          border-radius: 10px;
+          border: 1px solid #2563eb;
+          background: #2563eb;
           color: #ffffff;
           font-size: 13px;
-          font-weight: 950;
+          font-weight: 850;
           padding: 0 15px;
           cursor: pointer;
-          box-shadow: 0 14px 28px rgba(79, 70, 229, 0.22);
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.14);
         }
 
         .t2t-resource-primary:disabled {
@@ -1064,10 +1064,10 @@ export default function ResourceManagerModal({
           display: grid;
           justify-items: center;
           gap: 7px;
-          border-radius: 20px;
-          border: 1.5px dashed rgba(129, 140, 248, 0.74);
-          background: linear-gradient(135deg, rgba(250, 250, 255, 0.96) 0%, rgba(245, 243, 255, 0.84) 100%);
-          padding: 20px 12px;
+          border-radius: 12px;
+          border: 1px dashed rgba(147, 197, 253, 0.86);
+          background: rgba(248, 250, 252, 0.82);
+          padding: 18px 12px;
           text-align: center;
           min-width: 0;
           box-sizing: border-box;
@@ -1076,14 +1076,14 @@ export default function ResourceManagerModal({
         .t2t-resource-upload-icon {
           width: 38px;
           height: 38px;
-          border-radius: 15px;
+          border-radius: 10px;
           display: grid;
           place-items: center;
-          background: rgba(238, 242, 255, 0.95);
-          border: 1px solid rgba(199, 210, 254, 0.95);
-          color: #4f46e5;
+          background: rgba(239, 246, 255, 0.84);
+          border: 1px solid rgba(191, 219, 254, 0.72);
+          color: #2563eb;
           font-size: 15px;
-          font-weight: 950;
+          font-weight: 850;
         }
 
         .t2t-resource-upload strong {
@@ -1101,17 +1101,17 @@ export default function ResourceManagerModal({
           color: #64748b;
           font-size: 11px;
           line-height: 1.45;
-          font-weight: 720;
+          font-weight: 650;
         }
 
         .t2t-resource-upload button {
           min-height: 38px;
-          border-radius: 13px;
-          border: 1px solid rgba(199, 210, 254, 0.95);
-          background: rgba(238, 242, 255, 0.88);
-          color: #4338ca;
+          border-radius: 9px;
+          border: 1px solid rgba(191, 219, 254, 0.76);
+          background: #ffffff;
+          color: #1d4ed8;
           font-size: 12px;
-          font-weight: 930;
+          font-weight: 800;
           padding: 0 13px;
           cursor: pointer;
         }
@@ -1128,8 +1128,8 @@ export default function ResourceManagerModal({
           margin: 0;
           color: #0f172a;
           font-size: 15px;
-          font-weight: 950;
-          letter-spacing: -0.025em;
+          font-weight: 850;
+          letter-spacing: 0;
         }
 
         .t2t-resource-saved-header p {
@@ -1137,17 +1137,17 @@ export default function ResourceManagerModal({
           color: #64748b;
           font-size: 12px;
           line-height: 1.45;
-          font-weight: 720;
+          font-weight: 650;
         }
 
         .t2t-resource-saved-header button {
           min-height: 34px;
-          border-radius: 12px;
-          border: 1px solid rgba(226, 232, 240, 0.95);
+          border-radius: 9px;
+          border: 1px solid rgba(203, 213, 225, 0.72);
           background: #ffffff;
           color: #475569;
           font-size: 11px;
-          font-weight: 930;
+          font-weight: 800;
           padding: 0 10px;
           white-space: nowrap;
           cursor: pointer;
@@ -1159,10 +1159,10 @@ export default function ResourceManagerModal({
         }
 
         .t2t-resource-empty {
-          border-radius: 20px;
-          border: 1px solid rgba(226, 232, 240, 0.92);
-          background: rgba(248, 250, 252, 0.88);
-          padding: 28px 16px;
+          border-radius: 10px;
+          border: 1px solid rgba(226, 232, 240, 0.68);
+          background: rgba(255, 255, 255, 0.66);
+          padding: 26px 16px;
           display: grid;
           justify-items: center;
           gap: 7px;
@@ -1172,12 +1172,12 @@ export default function ResourceManagerModal({
         .t2t-resource-empty-icon {
           width: 42px;
           height: 42px;
-          border-radius: 16px;
+          border-radius: 10px;
           display: grid;
           place-items: center;
-          background: rgba(238, 242, 255, 0.92);
-          border: 1px solid rgba(199, 210, 254, 0.95);
-          color: #4f46e5;
+          background: rgba(239, 246, 255, 0.8);
+          border: 1px solid rgba(191, 219, 254, 0.68);
+          color: #2563eb;
           font-size: 17px;
         }
 
@@ -1185,7 +1185,7 @@ export default function ResourceManagerModal({
           margin: 0;
           color: #0f172a;
           font-size: 14px;
-          font-weight: 950;
+          font-weight: 850;
         }
 
         .t2t-resource-empty p {
@@ -1193,38 +1193,37 @@ export default function ResourceManagerModal({
           color: #64748b;
           font-size: 12px;
           line-height: 1.55;
-          font-weight: 720;
+          font-weight: 650;
           max-width: 310px;
         }
 
         .t2t-resource-list {
           display: grid;
-          gap: 8px;
+          gap: 0;
           min-width: 0;
         }
 
         .t2t-resource-row {
           display: grid;
-          grid-template-columns: 38px minmax(0, 1fr) auto;
+          grid-template-columns: minmax(0, 1fr) auto;
           gap: 10px;
           align-items: start;
-          border-radius: 18px;
-          border: 1px solid rgba(226, 232, 240, 0.92);
-          background: rgba(255, 255, 255, 0.9);
-          padding: 10px;
+          border-radius: 0;
+          border: none;
+          border-bottom: 1px solid rgba(226, 232, 240, 0.38);
+          background: transparent;
+          padding: 9px 2px;
           min-width: 0;
           box-sizing: border-box;
+          transition: background 0.16s ease;
+        }
+
+        .t2t-resource-row:hover {
+          background: rgba(248, 250, 252, 0.56);
         }
 
         .t2t-resource-row-icon {
-          width: 36px;
-          height: 36px;
-          border-radius: 14px;
-          display: grid;
-          place-items: center;
-          background: rgba(248, 250, 252, 0.98);
-          border: 1px solid rgba(226, 232, 240, 0.95);
-          font-size: 15px;
+          display: none;
         }
 
         .t2t-resource-row-main {
@@ -1235,8 +1234,9 @@ export default function ResourceManagerModal({
 
         .t2t-resource-row-top {
           display: flex;
-          align-items: center;
-          gap: 8px;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 2px;
           min-width: 0;
         }
 
@@ -1247,19 +1247,39 @@ export default function ResourceManagerModal({
           white-space: nowrap;
           color: #0f172a;
           font-size: 13px;
-          font-weight: 950;
+          font-weight: 780;
         }
 
         .t2t-resource-type {
           flex-shrink: 0;
-          border-radius: 999px;
-          border: 1px solid rgba(199, 210, 254, 0.88);
-          background: rgba(238, 242, 255, 0.88);
-          color: #4338ca;
-          padding: 4px 7px;
-          font-size: 10px;
-          font-weight: 930;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          border-radius: 0;
+          border: none;
+          background: transparent;
+          color: #526277;
+          padding: 0;
+          font-size: 9.5px;
+          font-weight: 800;
+          line-height: 1.25;
+          text-transform: uppercase;
+          letter-spacing: 0.075em;
           white-space: nowrap;
+          transition: color 0.16s ease;
+        }
+
+        .t2t-resource-type::before {
+          content: "";
+          width: 4px;
+          height: 4px;
+          border-radius: 999px;
+          background: rgba(59, 130, 246, 0.72);
+          flex-shrink: 0;
+        }
+
+        .t2t-resource-row:hover .t2t-resource-type {
+          color: #1d4ed8;
         }
 
         .t2t-resource-url {
@@ -1267,9 +1287,9 @@ export default function ResourceManagerModal({
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-          color: #4f46e5;
+          color: #2563eb;
           font-size: 12px;
-          font-weight: 800;
+          font-weight: 680;
           text-decoration: none;
         }
 
@@ -1279,21 +1299,25 @@ export default function ResourceManagerModal({
           white-space: nowrap;
           color: #64748b;
           font-size: 12px;
-          font-weight: 760;
+          font-weight: 650;
         }
 
         .t2t-resource-notes {
           color: #475569;
           font-size: 12px;
           line-height: 1.45;
-          font-weight: 720;
+          font-weight: 650;
           word-break: break-word;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
         .t2t-resource-file-error {
-          color: #be123c;
+          color: #b91c1c;
           font-size: 11px;
-          font-weight: 800;
+          font-weight: 700;
           line-height: 1.4;
         }
 
@@ -1301,33 +1325,48 @@ export default function ResourceManagerModal({
           display: flex;
           align-items: center;
           justify-content: flex-end;
-          gap: 6px;
+          gap: 4px;
           flex-wrap: wrap;
         }
 
         .t2t-resource-open,
         .t2t-resource-delete {
-          min-height: 30px;
+          min-height: 28px;
           display: inline-flex;
           align-items: center;
-          border-radius: 11px;
-          padding: 0 9px;
+          border-radius: 7px;
+          padding: 0 7px;
           font-size: 11px;
-          font-weight: 930;
+          font-weight: 750;
           text-decoration: none;
           cursor: pointer;
+          transition:
+            color 0.16s ease,
+            background 0.16s ease,
+            border-color 0.16s ease;
         }
 
         .t2t-resource-open {
-          border: 1px solid rgba(199, 210, 254, 0.9);
-          background: rgba(238, 242, 255, 0.88);
-          color: #4338ca;
+          border: 1px solid transparent;
+          background: transparent;
+          color: #1d4ed8;
         }
 
         .t2t-resource-delete {
-          border: 1px solid rgba(253, 164, 175, 0.76);
-          background: rgba(255, 241, 242, 0.86);
-          color: #be123c;
+          border: 1px solid transparent;
+          background: transparent;
+          color: #b91c1c;
+        }
+
+        .t2t-resource-open:hover {
+          border-color: rgba(191, 219, 254, 0.58);
+          background: rgba(239, 246, 255, 0.72);
+        }
+
+        .t2t-resource-delete:hover {
+          border-color: rgba(254, 202, 202, 0.76);
+          background: rgba(254, 242, 242, 0.82);
+          color: #991b1b;
         }
 
         .t2t-resource-open:disabled,
@@ -1352,9 +1391,7 @@ export default function ResourceManagerModal({
             border-radius: 0;
             border: none;
             box-shadow: none;
-            background:
-              radial-gradient(circle at 100% 0%, rgba(224, 231, 255, 0.7), transparent 30%),
-              linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            background: #f8fafc;
           }
 
           .t2t-resource-header {
@@ -1362,10 +1399,8 @@ export default function ResourceManagerModal({
             top: 0;
             z-index: 3;
             padding: 12px 14px;
-            background:
-              radial-gradient(circle at 100% 0%, rgba(224, 231, 255, 0.82), transparent 34%),
-              rgba(255, 255, 255, 0.96);
-            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(8px);
           }
 
           .t2t-resource-header-main {
@@ -1425,7 +1460,7 @@ export default function ResourceManagerModal({
 
           .t2t-resource-tabs {
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            border-radius: 16px;
+            border-radius: 10px;
             position: relative;
             top: auto;
             z-index: 0;
@@ -1450,14 +1485,12 @@ export default function ResourceManagerModal({
 
           .t2t-resource-form-card,
           .t2t-resource-right {
-            border-radius: 22px;
+            border-radius: 12px;
             padding: 13px;
           }
 
           .t2t-resource-form-card {
-            box-shadow:
-              0 16px 32px rgba(15, 23, 42, 0.06),
-              inset 0 1px 0 rgba(255, 255, 255, 0.86);
+            box-shadow: none;
           }
 
           .t2t-resource-form-header h3 {
@@ -1499,12 +1532,12 @@ export default function ResourceManagerModal({
           }
 
           .t2t-resource-row {
-            grid-template-columns: 36px minmax(0, 1fr);
-            border-radius: 17px;
+            grid-template-columns: minmax(0, 1fr);
+            border-radius: 0;
           }
 
           .t2t-resource-row-actions {
-            grid-column: 2;
+            grid-column: 1;
             justify-content: flex-start;
             margin-top: 6px;
           }
@@ -1540,6 +1573,16 @@ function ResourceRow({
     resource.file_name ||
     resource.url ||
     getResourceTypeLabel(resource.resource_type);
+  const cleanFileName = resource.file_name?.trim() || "";
+  const titleMatchesFileName =
+    Boolean(cleanFileName) &&
+    displayTitle.trim().toLocaleLowerCase() === cleanFileName.toLocaleLowerCase();
+  const fileMeta = [
+    cleanFileName && !titleMatchesFileName ? cleanFileName : "",
+    resource.size_bytes ? formatResourceFileSize(resource.size_bytes) : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   async function handleOpenFile() {
     if (!isFile || isOpeningFile) return;
@@ -1587,11 +1630,11 @@ function ResourceRow({
 
       <div className="t2t-resource-row-main">
         <div className="t2t-resource-row-top">
-          <div className="t2t-resource-row-title">{displayTitle}</div>
-
           <span className="t2t-resource-type">
             {getResourceTypeLabel(resource.resource_type)}
           </span>
+
+          <div className="t2t-resource-row-title">{displayTitle}</div>
         </div>
 
         {resource.url ? (
@@ -1605,13 +1648,8 @@ function ResourceRow({
           </a>
         ) : null}
 
-        {isFile ? (
-          <div className="t2t-resource-meta">
-            {resource.file_name || "Uploaded file"}
-            {resource.size_bytes
-              ? ` · ${formatResourceFileSize(resource.size_bytes)}`
-              : ""}
-          </div>
+        {isFile && fileMeta ? (
+          <div className="t2t-resource-meta">{fileMeta}</div>
         ) : null}
 
         {resource.notes ? (
@@ -1699,10 +1737,10 @@ function TabButton({
       onClick={onClick}
       className="t2t-resource-tab"
       style={{
-        color: active ? "#4338ca" : "#64748b",
-        background: active ? "rgba(238,242,255,0.98)" : "transparent",
-        borderColor: active ? "rgba(199,210,254,0.98)" : "transparent",
-        boxShadow: active ? "0 8px 18px rgba(79,70,229,0.1)" : "none",
+        color: active ? "#1d4ed8" : "#64748b",
+        background: active ? "rgba(239,246,255,0.92)" : "transparent",
+        borderColor: active ? "rgba(191,219,254,0.72)" : "transparent",
+        boxShadow: "none",
       }}
     >
       <span>{icon}</span>
@@ -1765,23 +1803,23 @@ function StatPill({
     CSSProperties
   > = {
     blue: {
-      background: "rgba(239,246,255,0.94)",
-      borderColor: "rgba(191,219,254,0.95)",
+      background: "rgba(255,255,255,0.78)",
+      borderColor: "rgba(191,219,254,0.68)",
       color: "#1d4ed8",
     },
     green: {
-      background: "rgba(240,253,244,0.94)",
-      borderColor: "rgba(187,247,208,0.95)",
-      color: "#15803d",
+      background: "rgba(255,255,255,0.78)",
+      borderColor: "rgba(226,232,240,0.68)",
+      color: "#475569",
     },
     purple: {
-      background: "rgba(245,243,255,0.94)",
-      borderColor: "rgba(221,214,254,0.95)",
-      color: "#6d28d9",
+      background: "rgba(255,255,255,0.78)",
+      borderColor: "rgba(226,232,240,0.68)",
+      color: "#475569",
     },
     slate: {
-      background: "rgba(248,250,252,0.94)",
-      borderColor: "rgba(226,232,240,0.95)",
+      background: "rgba(255,255,255,0.78)",
+      borderColor: "rgba(226,232,240,0.68)",
       color: "#475569",
     },
   };

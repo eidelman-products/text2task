@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -7,85 +8,89 @@ export const metadata: Metadata = {
     "Privacy Policy for Text2Task — how we collect, use, protect, and manage your information.",
 };
 
-export default function PrivacyPage() {
+type PrivacyPageProps = {
+  searchParams?: Promise<{
+    from?: string;
+  }>;
+};
+
+export default async function PrivacyPage({ searchParams }: PrivacyPageProps) {
+  const params = searchParams ? await searchParams : {};
+  const cameFromDashboard = params?.from === "dashboard";
+
+  const backHref = cameFromDashboard ? "/dashboard" : "/";
+  const backLabel = cameFromDashboard ? "Back to workspace" : "Back to Home";
+  const footerHomeHref = cameFromDashboard ? "/dashboard" : "/";
+  const footerHomeLabel = cameFromDashboard ? "Dashboard" : "Home";
+  const termsHref = cameFromDashboard ? "/terms?from=dashboard" : "/terms";
+  const contactHref = cameFromDashboard
+    ? "/contact?from=dashboard"
+    : "/contact";
+
   return (
     <main
       style={{
         minHeight: "100vh",
         background:
-          "radial-gradient(circle at top left, #eef4ff 0%, #f8fafc 42%, #ffffff 100%)",
-        padding: "28px 24px 56px",
+          "linear-gradient(180deg, #ffffff 0%, #f8fafc 56%, #ffffff 100%)",
+        padding: "30px 24px 56px",
         color: "#0f172a",
       }}
     >
-      <div style={{ maxWidth: 980, margin: "0 auto" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto" }}>
         <header
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             gap: 16,
-            marginBottom: 48,
+            marginBottom: 34,
             flexWrap: "wrap",
           }}
         >
           <Link
-            href="/"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 12,
-              textDecoration: "none",
-              color: "#0f172a",
-              fontSize: 22,
-              fontWeight: 900,
-              letterSpacing: "-0.04em",
-            }}
+            href={backHref}
+            style={brandStyle}
+            aria-label="Text2Task home"
           >
-            <span
-              style={{
-                width: 16,
-                height: 16,
-                borderRadius: 999,
-                background:
-                  "linear-gradient(135deg, #60a5fa, #6366f1, #8b5cf6)",
-                boxShadow: "0 0 0 8px rgba(99,102,241,0.10)",
-              }}
+            <Image
+              src="/text2task-logo.png"
+              alt="Text2Task"
+              width={170}
+              height={52}
+              priority
+              style={logoStyle}
             />
-            Text2Task
           </Link>
 
           <Link
-            href="/"
+            href={backHref}
             style={{
               minHeight: 42,
               padding: "0 16px",
-              borderRadius: 14,
-              background: "#0f172a",
-              color: "#ffffff",
+              borderRadius: 999,
+              background: "rgba(239,246,255,0.72)",
+              color: "#1d4ed8",
+              border: "1px solid rgba(191,219,254,0.86)",
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
               textDecoration: "none",
               fontSize: 14,
               fontWeight: 900,
-              boxShadow: "0 14px 28px rgba(15,23,42,0.14)",
             }}
           >
-            Back to Home
+            {backLabel}
           </Link>
         </header>
 
         <section
           style={{
-            borderRadius: 34,
-            padding: "38px",
-            background:
-              "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(239,246,255,0.55))",
-            border: "1px solid rgba(191,219,254,0.90)",
-            boxShadow:
-              "0 28px 70px rgba(37,99,235,0.10), inset 0 1px 0 rgba(255,255,255,0.94)",
-            marginBottom: 24,
+            padding: "0 0 26px",
+            background: "transparent",
+            border: "none",
+            boxShadow: "none",
+            marginBottom: 0,
           }}
         >
           <div
@@ -93,8 +98,9 @@ export default function PrivacyPage() {
               width: "fit-content",
               padding: "8px 14px",
               borderRadius: 999,
-              background: "rgba(99,102,241,0.10)",
-              color: "#4f46e5",
+              background: "rgba(239,246,255,0.72)",
+              border: "1px solid rgba(191,219,254,0.86)",
+              color: "#2563eb",
               fontSize: 13,
               fontWeight: 900,
               letterSpacing: "0.08em",
@@ -108,15 +114,15 @@ export default function PrivacyPage() {
           <h1
             style={{
               margin: 0,
-              fontSize: "clamp(42px, 6vw, 64px)",
-              lineHeight: 1.08,
-              letterSpacing: "-0.055em",
-              fontWeight: 780,
-              color: "#111827",
+              fontSize: "clamp(38px, 4.8vw, 56px)",
+              lineHeight: 1.04,
+              letterSpacing: "-0.052em",
+              fontWeight: 950,
+              color: "#0f172a",
               marginBottom: 18,
             }}
           >
-            Your data should stay private, clear, and protected.
+            Privacy, security, and your workspace data.
           </h1>
 
           <p
@@ -128,9 +134,8 @@ export default function PrivacyPage() {
               maxWidth: 760,
             }}
           >
-            This Privacy Policy explains how Text2Task collects, uses, stores,
-            and protects information when you use our website, account system,
-            AI extraction tools, dashboard, and paid subscription features.
+            Text2Task uses your information to run your workspace, process AI
+            extracts, manage subscriptions, and keep your account secure.
           </p>
 
           <div
@@ -293,11 +298,12 @@ export default function PrivacyPage() {
             <div
               style={{
                 marginTop: 12,
-                borderRadius: 18,
-                padding: 18,
-                background: "#f8fafc",
-                border: "1px solid #e2e8f0",
-                color: "#0f172a",
+                width: "fit-content",
+                borderRadius: 999,
+                padding: "9px 13px",
+                background: "rgba(239,246,255,0.72)",
+                border: "1px solid rgba(191,219,254,0.86)",
+                color: "#1d4ed8",
                 fontWeight: 850,
               }}
             >
@@ -321,14 +327,14 @@ export default function PrivacyPage() {
           <span>© 2026 Text2Task. All rights reserved.</span>
 
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-            <Link href="/terms" style={footerLinkStyle}>
+            <Link href={termsHref} style={footerLinkStyle}>
               Terms
             </Link>
-            <Link href="/contact" style={footerLinkStyle}>
+            <Link href={contactHref} style={footerLinkStyle}>
               Contact
             </Link>
-            <Link href="/" style={footerLinkStyle}>
-              Home
+            <Link href={footerHomeHref} style={footerLinkStyle}>
+              {footerHomeLabel}
             </Link>
           </div>
         </footer>
@@ -347,15 +353,15 @@ function PolicyBlock({
   return (
     <article
       style={{
-        padding: "24px 0",
-        borderBottom: "1px solid #e2e8f0",
+        padding: "23px 0",
+        borderBottom: "1px solid rgba(226,232,240,0.92)",
       }}
     >
       <h2
         style={{
           margin: "0 0 12px",
           color: "#0f172a",
-          fontSize: 24,
+          fontSize: 22,
           lineHeight: 1.2,
           letterSpacing: "-0.035em",
           fontWeight: 850,
@@ -385,17 +391,32 @@ const pillStyle: React.CSSProperties = {
   alignItems: "center",
   padding: "8px 12px",
   borderRadius: 999,
-  background: "#ffffff",
-  border: "1px solid #dbeafe",
+  background: "rgba(255,255,255,0.86)",
+  border: "1px solid rgba(191,219,254,0.72)",
   color: "#334155",
 };
 
 const contentCardStyle: React.CSSProperties = {
-  borderRadius: 30,
-  padding: "12px 34px",
-  background: "rgba(255,255,255,0.95)",
-  border: "1px solid rgba(226,232,240,0.96)",
-  boxShadow: "0 24px 60px rgba(15,23,42,0.07)",
+  borderRadius: 0,
+  padding: "8px 0",
+  background: "#ffffff",
+  borderTop: "1px solid rgba(226,232,240,0.92)",
+  boxShadow: "none",
+};
+
+const brandStyle: React.CSSProperties = {
+  width: "fit-content",
+  display: "inline-flex",
+  alignItems: "center",
+  textDecoration: "none",
+};
+
+const logoStyle: React.CSSProperties = {
+  width: 170,
+  height: "auto",
+  objectFit: "contain",
+  objectPosition: "left center",
+  display: "block",
 };
 
 const footerLinkStyle: React.CSSProperties = {

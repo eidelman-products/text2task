@@ -7,6 +7,12 @@ import {
   findDuplicateSubtaskInProject,
   type DuplicateSubtaskMatch,
 } from "@/lib/tasks/subtask-duplicate-detection";
+import { parseDeadline } from "@/lib/tasks/parse-deadline";
+import {
+  dashboardTasksNoStoreHeaders,
+  loadDashboardTasksForUser,
+  type DashboardTaskRow,
+} from "@/lib/tasks/load-dashboard-tasks.server";
 
 import type {
   JsonRecord,
@@ -38,10 +44,16 @@ const ApplyProjectUpdateRequestSchema = z
     }
   );
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type ApplyProjectUpdateResponse =
   | {
       ok: true;
       update: ProjectUpdate;
+      project: ProjectRow | null;
+      projectTasks: ProjectTaskSnapshotRow[];
+      dashboardTasks: ProjectTaskSnapshotRow[];
       appliedItems: ProjectUpdateItem[];
       rejectedItems: ProjectUpdateItem[];
       timelineEvents: ProjectTimelineEvent[];
@@ -66,6 +78,16 @@ type EditedItemOverride = {
   newValue: JsonRecord;
 };
 
+type ProjectClientRow = {
+  id: string;
+  name: string | null;
+  contact_name: string | null;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  created_at?: string | null;
+};
+
 type ProjectRow = {
   id: string;
   user_id: string;
@@ -87,8 +109,18 @@ type ProjectRow = {
   priority: string | null;
   status: string | null;
 
+  source?: string | null;
+  raw_input?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  completed_at?: string | null;
+  is_archived?: boolean | null;
+  archived_at?: string | null;
   deleted_at?: string | null;
+  client?: ProjectClientRow | null;
 };
+
+type ProjectTaskSnapshotRow = DashboardTaskRow;
 
 type ApplyMutationResult = {
   timelineEventType:
@@ -717,7 +749,9 @@ async function applyProjectFieldChange(input: {
 
   if (input.item.type === "deadline_change") {
     const deadlineText = getStringValue(nextValue, ["deadline_text", "deadline"]);
-    const deadlineDate = getStringValue(nextValue, ["deadline_date"]);
+    const deadlineDate =
+      getStringValue(nextValue, ["deadline_date"]) ||
+      (deadlineText ? parseDeadline(deadlineText).deadlineDate : null);
 
     if (deadlineText !== null) updateData.deadline_text = deadlineText;
     if (deadlineDate !== null) updateData.deadline_date = deadlineDate;
@@ -1187,6 +1221,115 @@ async function markProjectUpdateApplied(input: {
   return data as ProjectUpdate;
 }
 
+async function reloadProjectAfterApply(input: {
+  supabase: SupabaseServerClient;
+  userId: string;
+  projectId: string;
+}): Promise<ProjectRow | null> {
+  const { data, error } = await input.supabase
+    .from("projects")
+    .select(
+      `
+      id,
+      user_id,
+      client_id,
+      client_name,
+      contact_name,
+      title,
+      summary,
+      amount,
+      amount_value,
+      currency_code,
+      deadline_text,
+      deadline_date,
+      priority,
+      status,
+      source,
+      raw_input,
+      created_at,
+      updated_at,
+      completed_at,
+      is_archived,
+      archived_at,
+      deleted_at,
+      clients:clients (
+        id,
+        name,
+        contact_name,
+        phone,
+        email,
+        notes,
+        created_at
+      )
+    `
+    )
+    .eq("id", input.projectId)
+    .eq("user_id", input.userId)
+    .is("deleted_at", null)
+    .single();
+
+  if (error || !data) {
+    console.warn(
+      "Could not reload project after applying client update:",
+      error?.message || "Project not found"
+    );
+    return null;
+  }
+
+  const project = data as ProjectRow & { clients?: ProjectClientRow | ProjectClientRow[] | null };
+  const client = Array.isArray(project.clients)
+    ? project.clients[0] ?? null
+    : project.clients ?? null;
+  const { clients, ...cleanProject } = {
+    ...project,
+    client,
+  };
+
+  return cleanProject as ProjectRow;
+}
+
+async function reloadProjectTasksAfterApply(input: {
+  supabase: SupabaseServerClient;
+  userId: string;
+  projectId: string;
+}): Promise<ProjectTaskSnapshotRow[]> {
+  try {
+    return await loadDashboardTasksForUser({
+      supabase: input.supabase,
+      userId: input.userId,
+      view: "active",
+      projectId: input.projectId,
+    });
+  } catch (error) {
+    console.warn(
+      "Could not reload project task snapshot after applying client update:",
+      error instanceof Error ? error.message : "Task snapshot reload failed"
+    );
+    return [];
+  }
+}
+
+async function reloadActiveDashboardTasksAfterApply(input: {
+  supabase: SupabaseServerClient;
+  userId: string;
+}): Promise<ProjectTaskSnapshotRow[]> {
+  try {
+    return await loadDashboardTasksForUser({
+      supabase: input.supabase,
+      userId: input.userId,
+      view: "active",
+    });
+  } catch (error) {
+    console.warn(
+      "Could not reload active dashboard task snapshot after applying client update:",
+      error instanceof Error
+        ? error.message
+        : "Dashboard task snapshot reload failed"
+    );
+    return [];
+  }
+}
+
 export async function POST(request: NextRequest) {
   let body: unknown;
 
@@ -1198,7 +1341,7 @@ export async function POST(request: NextRequest) {
         ok: false,
         error: "Invalid JSON request body.",
       },
-      { status: 400 }
+      { status: 400, headers: dashboardTasksNoStoreHeaders }
     );
   }
 
@@ -1211,7 +1354,7 @@ export async function POST(request: NextRequest) {
         error: "Invalid project update apply request.",
         details: parsedBody.error.flatten(),
       },
-      { status: 400 }
+      { status: 400, headers: dashboardTasksNoStoreHeaders }
     );
   }
 
@@ -1230,7 +1373,7 @@ export async function POST(request: NextRequest) {
         ok: false,
         error: "You must be signed in to apply project updates.",
       },
-      { status: 401 }
+      { status: 401, headers: dashboardTasksNoStoreHeaders }
     );
   }
 
@@ -1245,7 +1388,7 @@ export async function POST(request: NextRequest) {
         error: "The same update item cannot be both accepted and rejected.",
         details: { duplicateIds },
       },
-      { status: 400 }
+      { status: 400, headers: dashboardTasksNoStoreHeaders }
     );
   }
 
@@ -1261,7 +1404,7 @@ export async function POST(request: NextRequest) {
         ok: false,
         error: loaded.error,
       },
-      { status: loaded.status }
+      { status: loaded.status, headers: dashboardTasksNoStoreHeaders }
     );
   }
 
@@ -1274,7 +1417,7 @@ export async function POST(request: NextRequest) {
         ok: false,
         error: "One or more accepted update items were not found.",
       },
-      { status: 404 }
+      { status: 404, headers: dashboardTasksNoStoreHeaders }
     );
   }
 
@@ -1284,7 +1427,7 @@ export async function POST(request: NextRequest) {
         ok: false,
         error: "One or more rejected update items were not found.",
       },
-      { status: 404 }
+      { status: 404, headers: dashboardTasksNoStoreHeaders }
     );
   }
 
@@ -1308,7 +1451,7 @@ export async function POST(request: NextRequest) {
         ok: false,
         error: message,
       },
-      { status: 400 }
+      { status: 400, headers: dashboardTasksNoStoreHeaders }
     );
   }
 
@@ -1338,7 +1481,7 @@ export async function POST(request: NextRequest) {
             "This suggested subtask looks similar to an existing subtask. Edit the title or unselect this change before applying.",
           duplicate: duplicateSubtask,
         },
-        { status: 409 }
+        { status: 409, headers: dashboardTasksNoStoreHeaders }
       );
     }
 
@@ -1395,12 +1538,32 @@ export async function POST(request: NextRequest) {
       updateId: loaded.update.id,
     });
 
+    const updatedProject = await reloadProjectAfterApply({
+      supabase,
+      userId: user.id,
+      projectId: loaded.project.id,
+    });
+    const projectTasks = await reloadProjectTasksAfterApply({
+      supabase,
+      userId: user.id,
+      projectId: loaded.project.id,
+    });
+    const dashboardTasks = await reloadActiveDashboardTasksAfterApply({
+      supabase,
+      userId: user.id,
+    });
+
     return NextResponse.json<ApplyProjectUpdateResponse>({
       ok: true,
       update: finalUpdate,
+      project: updatedProject,
+      projectTasks,
+      dashboardTasks,
       appliedItems,
       rejectedItems: finalRejectedItems,
       timelineEvents,
+    }, {
+      headers: dashboardTasksNoStoreHeaders,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown apply error.";
@@ -1410,7 +1573,7 @@ export async function POST(request: NextRequest) {
         ok: false,
         error: `Could not apply project update: ${message}`,
       },
-      { status: 500 }
+      { status: 500, headers: dashboardTasksNoStoreHeaders }
     );
   }
 }

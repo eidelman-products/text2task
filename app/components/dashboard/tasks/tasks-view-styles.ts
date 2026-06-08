@@ -9,15 +9,43 @@ export const responsiveCss = `
     display: block;
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 1080px) {
+    .tasks-open-header-top {
+      align-items: flex-start !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+    }
+
     .tasks-top-stats {
       justify-content: flex-start !important;
-      gap: 8px !important;
+      width: 100% !important;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .tasks-open-page {
+      padding: 14px 14px 30px !important;
+    }
+
+    .tasks-open-header {
+      gap: 12px !important;
+    }
+
+    .tasks-open-header-top {
+      align-items: flex-start !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+    }
+
+    .tasks-top-stats {
+      justify-content: flex-start !important;
+      gap: 7px !important;
+      width: 100% !important;
     }
 
     .tasks-top-stats > div {
-      font-size: 12px !important;
-      padding: 8px 10px !important;
+      font-size: 11.5px !important;
+      padding: 6px 8px !important;
     }
 
     .tasks-desktop-table {

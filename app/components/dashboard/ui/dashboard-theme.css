@@ -1,0 +1,35 @@
+.dashboard-theme {
+  --dashboard-bg: #f6f8fb;
+  --dashboard-bg-soft: #fbfcfe;
+  --dashboard-surface: #ffffff;
+  --dashboard-surface-soft: #f8fafc;
+  --dashboard-border: rgba(203, 213, 225, 0.92);
+  --dashboard-border-subtle: rgba(226, 232, 240, 0.82);
+  --dashboard-text: #0f172a;
+  --dashboard-text-secondary: #334155;
+  --dashboard-muted: #64748b;
+  --dashboard-primary: #2563eb;
+  --dashboard-primary-strong: #1d4ed8;
+  --dashboard-accent: #4f46e5;
+  --dashboard-radius-sm: 10px;
+  --dashboard-radius-md: 12px;
+  --dashboard-radius-lg: 16px;
+  --dashboard-radius-xl: 20px;
+  --dashboard-radius-2xl: 24px;
+  --dashboard-shadow-sm: 0 8px 18px rgba(15, 23, 42, 0.06);
+  --dashboard-shadow-md: 0 14px 32px rgba(15, 23, 42, 0.08);
+  --dashboard-shadow-lg: 0 24px 56px rgba(15, 23, 42, 0.12);
+  --dashboard-focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.28);
+}
+
+.dashboard-theme .dashboard-surface {
+  background: var(--dashboard-surface);
+  border: 1px solid var(--dashboard-border-subtle);
+  border-radius: var(--dashboard-radius-2xl);
+  box-shadow: var(--dashboard-shadow-sm);
+}
+
+.dashboard-theme .dashboard-focusable:focus-visible {
+  outline: none;
+  box-shadow: var(--dashboard-focus-ring);
+}

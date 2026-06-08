@@ -1,5 +1,4 @@
 import EmptyState from "./empty-state";
-import SectionCard from "./section-card";
 import TasksToolbar from "./tasks-toolbar";
 import DesktopTasksTable from "./tasks/desktop-tasks-table";
 import MobileTaskCard from "./tasks/mobile-task-card";
@@ -8,21 +7,32 @@ import TasksBulkBar from "./tasks/tasks-bulk-bar";
 import TaskDeleteModals from "./tasks/task-delete-modals";
 import TasksStatsPills from "./tasks/tasks-stats-pills";
 import TasksEmptyFilterState from "./tasks/tasks-empty-filter-state";
+import ResourceManagerModal from "./resources/resource-manager-modal";
+import {
+  fetchTaskResources,
+  type TaskResource,
+} from "./resources/resource-api";
 import { useTaskSelection } from "./tasks/use-task-selection";
 import { useTaskBulkActions } from "./tasks/use-task-bulk-actions";
 import { useTaskSingleDelete } from "./tasks/use-task-single-delete";
 import { useTaskDerivedData } from "./tasks/use-task-derived-data";
 import { useTaskHighlight } from "./tasks/use-task-highlight";
-import type { KeyboardEvent } from "react";
-import { useEffect } from "react";
+import ProjectUpdateModal from "./tasks/project-updates/project-update-modal";
+import ProjectUpdateHistoryModal from "./tasks/project-updates/project-update-history-modal";
+import { useProjectUpdate } from "./tasks/project-updates/use-project-update";
+import { useProjectUpdateHistory } from "./tasks/project-updates/use-project-update-history";
+import type { CSSProperties, KeyboardEvent } from "react";
+import { useEffect, useState } from "react";
 import type {
   TaskPriorityFilter,
   TaskSortOption,
   TaskStatusFilter,
 } from "./task-filters";
 import type {
+  ClientEntity,
   TaskArchiveView,
   TaskGroup,
+  ProjectEntity,
   TaskProjectGroup,
   TaskRow,
 } from "./tasks/task-types";
@@ -69,7 +79,7 @@ type TasksViewProps = {
   onSortOptionChange: (value: TaskSortOption) => void;
   onExportCsv: () => void;
   toggleClientGroup: (groupKey: string) => void;
-    updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
+  updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
   updateTaskField: (taskId: number, field: string, value: any) => void;
   updateProjectField: (
     projectId: string,
@@ -81,6 +91,17 @@ type TasksViewProps = {
   restoreTask: (taskId: number) => Promise<void> | void;
   permanentlyDeleteTask: (taskId: number) => Promise<void> | void;
   onRefreshTasks: () => Promise<void> | void;
+  onProjectUpdateApplied: (
+    result: ProjectUpdateAppliedResult
+  ) => Promise<void> | void;
+};
+
+type ProjectUpdateAppliedResult = {
+  focusTaskId?: number | null;
+  projectId?: string | null;
+  project?: (ProjectEntity & { client?: ClientEntity | null }) | null;
+  projectTasks?: unknown[];
+  dashboardTasks?: unknown[];
 };
 
 export default function TasksView({
@@ -114,6 +135,7 @@ export default function TasksView({
   restoreTask,
   permanentlyDeleteTask,
   onRefreshTasks,
+  onProjectUpdateApplied,
 }: TasksViewProps) {
   const {
     allNormalizedTasks,
@@ -124,7 +146,7 @@ export default function TasksView({
     activeProjectsCount,
     totalTasksCount,
     completedProjectsCount,
-    archivedTasksCount,
+    archivedProjectsCount,
     highPriorityTasksCount,
   } = useTaskDerivedData({
     tasks,
@@ -162,11 +184,12 @@ export default function TasksView({
     resetBulkDeleteConfirm,
   } = useTaskBulkActions({
     selectedTaskIds,
+    tasks: flatTasks,
     clearSelection,
+    refreshTasks: onRefreshTasks,
     updateTaskStatus,
     archiveTask,
     restoreTask,
-    permanentlyDeleteTask,
   });
 
   const {
@@ -181,6 +204,53 @@ export default function TasksView({
     normalizedStatsTasks,
     permanentlyDeleteTask,
   });
+
+  const [resourcesProject, setResourcesProject] =
+    useState<TaskProjectGroup | null>(null);
+  const [projectResourceCounts, setProjectResourceCounts] = useState<
+    Record<string, number>
+  >({});
+
+  const projectUpdateState = useProjectUpdate();
+  const projectUpdateHistoryState = useProjectUpdateHistory();
+
+  useEffect(() => {
+    if (!tasks.length) return;
+
+    let isMounted = true;
+
+    async function loadResourceCounts() {
+      try {
+        const allResources = await fetchTaskResources({});
+
+        if (!isMounted) return;
+
+        const nextCounts: Record<string, number> = {};
+
+        allResources.forEach((resource) => {
+          const projectKey = resource.project_id
+            ? `project:${resource.project_id}`
+            : resource.task_id
+              ? `task:${resource.task_id}`
+              : "";
+
+          if (!projectKey) return;
+
+          nextCounts[projectKey] = (nextCounts[projectKey] || 0) + 1;
+        });
+
+        setProjectResourceCounts(nextCounts);
+      } catch (error) {
+        console.error("Failed to load resource counts:", error);
+      }
+    }
+
+    void loadResourceCounts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [tasks]);
 
   useEffect(() => {
     resetBulkDeleteConfirm();
@@ -231,6 +301,45 @@ export default function TasksView({
     }
   }
 
+  function openProjectResources(project: TaskProjectGroup) {
+    const projectId = getResolvedProjectId(project);
+
+    if (!projectId) return;
+
+    setResourcesProject({
+      ...project,
+      project_id: projectId,
+    });
+  }
+
+  function openProjectHistory(project: TaskProjectGroup) {
+    const projectId = getResolvedProjectId(project);
+
+    if (!projectId) return;
+
+    projectUpdateHistoryState.openHistory({
+      ...project,
+      project_id: projectId,
+    });
+  }
+
+  function closeProjectResources() {
+    setResourcesProject(null);
+  }
+
+  function syncOpenProjectResourceCount(resources: TaskResource[]) {
+    if (!resourcesProject) return;
+
+    const key = getProjectResourceKey(resourcesProject);
+
+    if (!key) return;
+
+    setProjectResourceCounts((current) => ({
+      ...current,
+      [key]: resources.length,
+    }));
+  }
+
   if (isLoadingTasks) {
     return (
       <EmptyState
@@ -246,39 +355,59 @@ export default function TasksView({
 
   if (!tasks.length && archiveView === "active") {
     return (
-      <SectionCard
-        title="Task CRM"
-        description="Manage tasks, clients, deadlines, and status in one powerful workspace."
-      >
-        <TasksArchiveTabs
-          archiveView={archiveView}
-          onArchiveViewChange={onArchiveViewChange}
-        />
+      <>
+        <style>{responsiveCss}</style>
 
-        <EmptyState
-          title="No active tasks yet"
-          description="Paste your first message and extract it into structured work."
-        />
-      </SectionCard>
+        <section className="tasks-open-page" style={openPageStyle}>
+          <TaskCrmHeader
+            archiveView={archiveView}
+            activeProjectsCount={activeProjectsCount}
+            totalTasksCount={totalTasksCount}
+            completedProjectsCount={completedProjectsCount}
+            archivedProjectsCount={archivedProjectsCount}
+            highPriorityTasksCount={highPriorityTasksCount}
+          />
+
+          <TasksArchiveTabs
+            archiveView={archiveView}
+            onArchiveViewChange={onArchiveViewChange}
+          />
+
+          <EmptyState
+            title="No active tasks yet"
+            description="Paste your first message and extract it into structured work."
+          />
+        </section>
+      </>
     );
   }
 
   if (!tasks.length && archiveView === "archived") {
     return (
-      <SectionCard
-        title="Archived Tasks"
-        description="Archived tasks will appear here when you choose to move them out of your active workspace."
-      >
-        <TasksArchiveTabs
-          archiveView={archiveView}
-          onArchiveViewChange={onArchiveViewChange}
-        />
+      <>
+        <style>{responsiveCss}</style>
 
-        <EmptyState
-          title="Archive is empty"
-          description="When you archive completed or old work, it will appear here."
-        />
-      </SectionCard>
+        <section className="tasks-open-page" style={openPageStyle}>
+          <TaskCrmHeader
+            archiveView={archiveView}
+            activeProjectsCount={activeProjectsCount}
+            totalTasksCount={totalTasksCount}
+            completedProjectsCount={completedProjectsCount}
+            archivedProjectsCount={archivedProjectsCount}
+            highPriorityTasksCount={highPriorityTasksCount}
+          />
+
+          <TasksArchiveTabs
+            archiveView={archiveView}
+            onArchiveViewChange={onArchiveViewChange}
+          />
+
+          <EmptyState
+            title="Archive is empty"
+            description="When you archive completed or old work, it will appear here."
+          />
+        </section>
+      </>
     );
   }
 
@@ -286,20 +415,17 @@ export default function TasksView({
     <>
       <style>{responsiveCss}</style>
 
-      <SectionCard
-        title={getViewTitle(archiveView)}
-        description={getViewDescription(archiveView)}
-        rightSlot={
-          <TasksStatsPills
-            activeProjectsCount={activeProjectsCount}
-            totalTasksCount={totalTasksCount}
-            completedProjectsCount={completedProjectsCount}
-            archivedTasksCount={archivedTasksCount}
-            highPriorityTasksCount={highPriorityTasksCount}
-          />
-        }
-      >
-        <div style={mainContentStyle}>
+      <section className="tasks-open-page" style={openPageStyle}>
+        <TaskCrmHeader
+          archiveView={archiveView}
+          activeProjectsCount={activeProjectsCount}
+          totalTasksCount={totalTasksCount}
+          completedProjectsCount={completedProjectsCount}
+          archivedProjectsCount={archivedProjectsCount}
+          highPriorityTasksCount={highPriorityTasksCount}
+        />
+
+        <div style={{ ...mainContentStyle, ...openMainContentStyle }}>
           <TasksArchiveTabs
             archiveView={archiveView}
             onArchiveViewChange={onArchiveViewChange}
@@ -337,6 +463,7 @@ export default function TasksView({
             <>
               <div className="tasks-mobile-list" style={mobileListStyle}>
                 {projectGroups.map((project) => {
+                  const resolvedProjectId = getResolvedProjectId(project);
                   const isSaving = project.taskIds.some(
                     (id) => savingTaskIds[id]
                   );
@@ -384,6 +511,17 @@ export default function TasksView({
                         isSelected={isSelected}
                         isPartiallySelected={isPartiallySelected}
                         archiveView={archiveView}
+                        projectResourceCount={
+                          projectResourceCounts[getProjectResourceKey(project)] ||
+                          0
+                        }
+                        onOpenProjectResources={
+                          resolvedProjectId ? openProjectResources : undefined
+                        }
+                        onOpenProjectUpdate={projectUpdateState.openModal}
+                        onOpenProjectHistory={
+                          resolvedProjectId ? openProjectHistory : undefined
+                        }
                         onToggleProjectSelection={toggleProjectSelection}
                         updateTaskField={updateTaskField}
                         updateTaskStatus={updateTaskStatus}
@@ -422,15 +560,60 @@ export default function TasksView({
                 permanentlyDeleteTask={requestSinglePermanentDelete}
                 formatCreatedDate={formatCreatedDate}
                 onRefreshTasks={onRefreshTasks}
+                projectResourceCounts={projectResourceCounts}
+                onOpenProjectResources={openProjectResources}
+                onOpenProjectUpdate={projectUpdateState.openModal}
+                onOpenProjectHistory={openProjectHistory}
               />
             </>
           )}
         </div>
-      </SectionCard>
+      </section>
+
+      <ResourceManagerModal
+        isOpen={Boolean(resourcesProject)}
+        projectId={
+          resourcesProject ? getResolvedProjectId(resourcesProject) : null
+        }
+        taskId={null}
+        title={
+          resourcesProject
+            ? `${resourcesProject.clientName} resources`
+            : "Project resources"
+        }
+        subtitle={
+          resourcesProject
+            ? `Attach links, files, logos, banners, documents, and notes to ${resourcesProject.projectTitle}.`
+            : "Attach project context in one place."
+        }
+        onClose={closeProjectResources}
+        onResourcesChanged={syncOpenProjectResourceCount}
+      />
+
+      <ProjectUpdateModal
+        uiState={projectUpdateState.uiState}
+        onClose={projectUpdateState.closeModal}
+        onRawInputChange={projectUpdateState.setRawInput}
+        onInputMethodChange={projectUpdateState.setInputMethod}
+        onAnalyze={projectUpdateState.analyzeCurrentUpdate}
+        onImageSelected={projectUpdateState.setSelectedImage}
+        onRemoveImage={projectUpdateState.removeSelectedImage}
+        onImageError={projectUpdateState.setImageError}
+        onToggleSuggestedItem={projectUpdateState.toggleSuggestedItem}
+        onUpdateSuggestedItemValue={projectUpdateState.updateSuggestedItemValue}
+        onApply={() =>
+          projectUpdateState.applySelectedChanges(onProjectUpdateApplied)
+        }
+      />
+
+      <ProjectUpdateHistoryModal
+        state={projectUpdateHistoryState.state}
+        onClose={projectUpdateHistoryState.closeHistory}
+        onRefresh={projectUpdateHistoryState.refreshHistory}
+      />
 
       <TaskDeleteModals
         singleDeleteTask={singleDeleteTask}
-        selectedCount={selectedTaskIds.length}
         showBulkDeleteConfirm={showBulkDeleteConfirm}
         isSingleDeleting={isSingleDeleting}
         isBulkDeleting={isBulkDeleting}
@@ -442,3 +625,134 @@ export default function TasksView({
     </>
   );
 }
+
+function getResolvedProjectId(project: TaskProjectGroup) {
+  const directProjectId =
+    project.project_id ||
+    project.project?.id ||
+    project.primaryTask?.project_id ||
+    project.primaryTask?.project?.id ||
+    project.tasks.find((task) => task.project_id)?.project_id ||
+    project.tasks.find((task) => task.project?.id)?.project?.id ||
+    "";
+
+  if (directProjectId) return directProjectId;
+
+  return getProjectIdFromKey(project.key);
+}
+
+function getProjectIdFromKey(projectKey?: string | null) {
+  if (!projectKey) return null;
+
+  const cleaned = String(projectKey).trim();
+
+  if (cleaned.startsWith("project::")) {
+    return cleaned.replace("project::", "").trim() || null;
+  }
+
+  if (cleaned.startsWith("project:")) {
+    return cleaned.replace("project:", "").trim() || null;
+  }
+
+  return null;
+}
+
+function getProjectResourceKey(project: TaskProjectGroup) {
+  const projectId = getResolvedProjectId(project);
+
+  if (projectId) return `project:${projectId}`;
+
+  return "";
+}
+
+function TaskCrmHeader({
+  archiveView,
+  activeProjectsCount,
+  totalTasksCount,
+  completedProjectsCount,
+  archivedProjectsCount,
+  highPriorityTasksCount,
+}: {
+  archiveView: TaskArchiveView;
+  activeProjectsCount: number;
+  totalTasksCount: number;
+  completedProjectsCount: number;
+  archivedProjectsCount: number;
+  highPriorityTasksCount: number;
+}) {
+  return (
+    <header className="tasks-open-header" style={openHeaderStyle}>
+      <div className="tasks-open-header-top" style={openHeaderTopStyle}>
+        <div style={openHeaderTextStyle}>
+          <h1 style={openTitleStyle}>{getViewTitle(archiveView)}</h1>
+          <p style={openDescriptionStyle}>{getViewDescription(archiveView)}</p>
+        </div>
+
+        <TasksStatsPills
+          activeProjectsCount={activeProjectsCount}
+          totalTasksCount={totalTasksCount}
+          completedProjectsCount={completedProjectsCount}
+          archivedProjectsCount={archivedProjectsCount}
+          highPriorityTasksCount={highPriorityTasksCount}
+        />
+      </div>
+    </header>
+  );
+}
+
+const openPageStyle: CSSProperties = {
+  width: "100%",
+  maxWidth: 1320,
+  margin: "0",
+  padding: "12px 26px 36px",
+  display: "grid",
+  gap: 12,
+  minWidth: 0,
+};
+
+const openMainContentStyle: CSSProperties = {
+  background: "transparent",
+  border: "none",
+  borderRadius: 0,
+  boxShadow: "none",
+  padding: 0,
+  maxWidth: 1200,
+};
+
+const openHeaderStyle: CSSProperties = {
+  display: "grid",
+  gap: 10,
+  minWidth: 0,
+  maxWidth: 1200,
+};
+
+const openHeaderTopStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 14,
+  minWidth: 0,
+};
+
+const openHeaderTextStyle: CSSProperties = {
+  display: "grid",
+  gap: 5,
+  minWidth: 0,
+};
+
+const openTitleStyle: CSSProperties = {
+  margin: 0,
+  color: "#0f172a",
+  fontSize: 28,
+  lineHeight: 1.05,
+  fontWeight: 950,
+  letterSpacing: "-0.055em",
+};
+
+const openDescriptionStyle: CSSProperties = {
+  margin: 0,
+  color: "#64748b",
+  fontSize: 14,
+  lineHeight: 1.5,
+  fontWeight: 650,
+};

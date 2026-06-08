@@ -61,6 +61,17 @@ function normalizeRawInput(value: string) {
     .slice(0, 8000);
 }
 
+function isExplicitClientRecordNote(rawInput: string) {
+  const normalized = String(rawInput || "").toLowerCase();
+
+  return [
+    /\b(?:update|change|set|replace|add)\s+(?:the\s+)?(?:client|customer)\s+notes?\b/,
+    /\b(?:client|customer)\s+notes?\s*[:=-]/,
+    /\bnotes?\s+(?:for|on)\s+(?:the\s+)?(?:client|customer)\s+record\b/,
+    /\b(?:client|customer)\s+record\s+notes?\s*[:=-]/,
+  ].some((pattern) => pattern.test(normalized));
+}
+
 function parseJsonFromModelOutput(rawText: string): unknown {
   const trimmed = rawText.trim();
 
@@ -167,6 +178,8 @@ function buildProjectUpdateFactsPrompt(input: {
     "",
     "3. Client/contact changes",
     "- Extract client/company, contact person, phone, email, and client notes only if they are present.",
+    "- Only use clientChanges.notes for explicit client/customer record note changes, such as 'client note:', 'customer note:', 'update client notes', or 'change client notes'.",
+    "- Do not put general project instructions, goals, tone, screenshot summaries, or plain 'Note:' lines into clientChanges.notes.",
     "- Do not invent contact details.",
     "",
     "4. Notes",
@@ -229,7 +242,11 @@ function buildProjectUpdateFactsPrompt(input: {
   ].join("\n");
 }
 
-function repairFactsShape(value: ProjectUpdateExtractedFacts) {
+function repairFactsShape(value: ProjectUpdateExtractedFacts, rawInput: string) {
+  const clientNotes = value.clientChanges.notes?.trim() || null;
+  const hasExplicitClientRecordNote =
+    clientNotes !== null && isExplicitClientRecordNote(rawInput);
+
   return {
     ...value,
     requestedSubtasks: value.requestedSubtasks.map((subtask) => ({
@@ -250,7 +267,7 @@ function repairFactsShape(value: ProjectUpdateExtractedFacts) {
       contactName: value.clientChanges.contactName?.trim() || null,
       phone: value.clientChanges.phone?.trim() || null,
       email: value.clientChanges.email?.trim() || null,
-      notes: value.clientChanges.notes?.trim() || null,
+      notes: hasExplicitClientRecordNote ? clientNotes : null,
     },
     notes: value.notes
       .map((note) => ({
@@ -303,7 +320,7 @@ export async function extractProjectUpdateFacts(
 
     return {
       ok: true,
-      facts: repairFactsShape(parsedFacts.data),
+      facts: repairFactsShape(parsedFacts.data, normalizedRawInput),
       normalizedRawInput,
     };
   } catch (error) {

@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import type { TaskProjectGroup } from "./task-types";
 
 type ProjectMetaEditorProps = {
   project: TaskProjectGroup;
   isDeleting: boolean;
+  readOnlyStatusPriority?: boolean;
   onEnterBlur: (
     e: KeyboardEvent<HTMLInputElement | HTMLSelectElement>
   ) => void;
@@ -17,6 +19,7 @@ type ProjectMetaEditorProps = {
 export default function ProjectMetaEditor({
   project,
   isDeleting,
+  readOnlyStatusPriority = false,
   onEnterBlur,
   updateProjectField,
 }: ProjectMetaEditorProps) {
@@ -56,7 +59,7 @@ export default function ProjectMetaEditor({
   }
 
   return (
-    <div style={metaGridStyle}>
+    <div style={metaPanelStyle}>
       <EditableMetaTextField
         label="Amount"
         placeholder="480 USD"
@@ -80,40 +83,50 @@ export default function ProjectMetaEditor({
 
       <label style={metaFieldStyle}>
         <span style={metaLabelStyle}>Priority</span>
-        <select
-          value={project.priority || "Medium"}
-          onChange={(e) => updateProjectPriority(e.target.value)}
-          onKeyDown={onEnterBlur}
-          disabled={!canEditProject}
-          style={{
-            ...selectStyle,
-            ...getPrioritySelectStyle(project.priority),
-          }}
-        >
-          <option>Low</option>
-          <option>Medium</option>
-          <option>High</option>
-        </select>
+        {readOnlyStatusPriority ? (
+          <span style={readOnlyMetaValueStyle}>
+            {project.priority || "Medium"}
+          </span>
+        ) : (
+          <select
+            value={project.priority || "Medium"}
+            onChange={(e) => updateProjectPriority(e.target.value)}
+            onKeyDown={onEnterBlur}
+            disabled={!canEditProject}
+            style={{
+              ...selectStyle,
+              ...getPrioritySelectStyle(project.priority),
+            }}
+          >
+            <option>Low</option>
+            <option>Medium</option>
+            <option>High</option>
+          </select>
+        )}
       </label>
 
       <label style={metaFieldStyle}>
         <span style={metaLabelStyle}>Status</span>
-        <select
-          value={project.status || "New"}
-          onChange={(e) => updateProjectStatus(e.target.value)}
-          onKeyDown={onEnterBlur}
-          disabled={!canEditProject}
-          style={{
-            ...selectStyle,
-            ...getStatusSelectStyle(project.status),
-          }}
-        >
-          <option value="New">New</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Review">Review</option>
-          <option value="Urgent">Urgent</option>
-          <option value="Done">Done</option>
-        </select>
+        {readOnlyStatusPriority ? (
+          <span style={readOnlyMetaValueStyle}>{project.status || "New"}</span>
+        ) : (
+          <select
+            value={project.status || "New"}
+            onChange={(e) => updateProjectStatus(e.target.value)}
+            onKeyDown={onEnterBlur}
+            disabled={!canEditProject}
+            style={{
+              ...selectStyle,
+              ...getStatusSelectStyle(project.status),
+            }}
+          >
+            <option value="New">New</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Review">Review</option>
+            <option value="Urgent">Urgent</option>
+            <option value="Done">Done</option>
+          </select>
+        )}
       </label>
     </div>
   );
@@ -159,6 +172,11 @@ function EditableMetaTextField({
   onCommit: (value: string) => void;
 }) {
   const isDeadline = variant === "deadline";
+  const [draftValue, setDraftValue] = useState(defaultValue);
+
+  useEffect(() => {
+    setDraftValue(defaultValue);
+  }, [defaultValue]);
 
   return (
     <label
@@ -171,10 +189,11 @@ function EditableMetaTextField({
 
       <input
         type="text"
-        defaultValue={defaultValue}
+        value={draftValue}
         placeholder={placeholder}
         disabled={disabled}
-        onBlur={(e) => onCommit(e.currentTarget.value)}
+        onChange={(e) => setDraftValue(e.currentTarget.value)}
+        onBlur={() => onCommit(draftValue)}
         onKeyDown={onEnterBlur}
         className="project-meta-editor-input"
         style={{
@@ -192,15 +211,23 @@ function getPrioritySelectStyle(priorityValue: string) {
   if (priority === "high") {
     return {
       color: "#be123c",
-      background: "rgba(255,241,242,0.64)",
-      borderColor: "rgba(253,164,175,0.52)",
+      background: "rgba(255,241,242,0.58)",
+      borderColor: "rgba(253,164,175,0.42)",
+    };
+  }
+
+  if (priority === "low") {
+    return {
+      color: "#475467",
+      background: "rgba(248,250,252,0.58)",
+      borderColor: "rgba(226,232,240,0.50)",
     };
   }
 
   return {
-    color: "#344054",
-    background: "rgba(255,255,255,0.62)",
-    borderColor: "rgba(226,232,240,0.62)",
+    color: "#1d4ed8",
+    background: "rgba(239,246,255,0.58)",
+    borderColor: "rgba(191,219,254,0.54)",
   };
 }
 
@@ -210,101 +237,116 @@ function getStatusSelectStyle(statusValue: string) {
   if (status === "done") {
     return {
       color: "#067647",
-      background: "rgba(240,253,244,0.72)",
-      borderColor: "rgba(187,247,208,0.7)",
+      background: "rgba(240,253,244,0.60)",
+      borderColor: "rgba(187,247,208,0.52)",
     };
   }
 
   if (status === "urgent") {
     return {
       color: "#be123c",
-      background: "rgba(255,241,242,0.72)",
-      borderColor: "rgba(253,164,175,0.68)",
+      background: "rgba(255,241,242,0.60)",
+      borderColor: "rgba(253,164,175,0.46)",
     };
   }
 
   if (status === "review") {
     return {
-      color: "#6d28d9",
-      background: "rgba(245,243,255,0.72)",
-      borderColor: "rgba(221,214,254,0.68)",
+      color: "#2563eb",
+      background: "rgba(239,246,255,0.58)",
+      borderColor: "rgba(191,219,254,0.54)",
     };
   }
 
   if (status === "in progress" || status === "in-progress") {
     return {
       color: "#1d4ed8",
-      background: "rgba(239,246,255,0.72)",
-      borderColor: "rgba(191,219,254,0.68)",
+      background: "rgba(239,246,255,0.58)",
+      borderColor: "rgba(191,219,254,0.54)",
     };
   }
 
   return {
     color: "#344054",
-    background: "rgba(255,255,255,0.62)",
-    borderColor: "rgba(226,232,240,0.62)",
+    background: "rgba(248,250,252,0.58)",
+    borderColor: "rgba(226,232,240,0.50)",
   };
 }
 
-const metaGridStyle: CSSProperties = {
+const metaPanelStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(4, minmax(104px, 1fr))",
-  gap: 0,
+  gridTemplateColumns: "repeat(4, minmax(118px, 1fr))",
+  gap: 14,
   minWidth: 0,
-  borderRadius: 18,
-  background: "rgba(255,255,255,0.28)",
-  overflow: "hidden",
+  width: "100%",
+  alignItems: "end",
+  padding: "0",
 };
 
 const metaFieldStyle: CSSProperties = {
-  minHeight: 58,
-  display: "grid",
-  alignContent: "center",
-  gap: 5,
-  padding: "9px 10px",
   minWidth: 0,
-  borderRight: "1px solid rgba(226,232,240,0.28)",
+  display: "grid",
+  gap: 4,
 };
 
 const deadlineFieldStyle: CSSProperties = {
-  minWidth: 116,
+  minWidth: 122,
 };
 
 const metaLabelStyle: CSSProperties = {
-  fontSize: 10,
+  fontSize: 9.7,
   fontWeight: 950,
-  color: "#98a2b3",
-  letterSpacing: "0.09em",
+  color: "#94a3b8",
+  letterSpacing: "0.095em",
   textTransform: "uppercase",
 };
 
 const inputStyle: CSSProperties = {
   width: "100%",
-  minHeight: 30,
+  minHeight: 34,
   borderRadius: 999,
-  border: "1px solid rgba(226,232,240,0.56)",
-  background: "rgba(255,255,255,0.58)",
-  color: "#344054",
-  fontSize: 12,
-  fontWeight: 900,
-  padding: "0 9px",
+  border: "1px solid rgba(226,232,240,0.50)",
+  background: "rgba(248,250,252,0.58)",
+  color: "#0f172a",
+  fontSize: 13.4,
+  fontWeight: 880,
+  padding: "0 13px",
   outline: "none",
-  boxShadow: "none",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.72)",
 };
 
 const deadlineInputStyle: CSSProperties = {
-  minWidth: 100,
+  minWidth: 116,
 };
 
 const selectStyle: CSSProperties = {
   width: "100%",
-  minHeight: 30,
+  minHeight: 34,
   borderRadius: 999,
-  border: "1px solid rgba(226,232,240,0.56)",
-  background: "rgba(255,255,255,0.58)",
-  color: "#344054",
-  fontSize: 12,
-  fontWeight: 900,
-  padding: "0 9px",
+  border: "1px solid rgba(226,232,240,0.50)",
+  background: "rgba(248,250,252,0.58)",
+  color: "#0f172a",
+  fontSize: 13.4,
+  fontWeight: 880,
+  padding: "0 13px",
   outline: "none",
+  cursor: "pointer",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.72)",
+};
+
+const readOnlyMetaValueStyle: CSSProperties = {
+  width: "100%",
+  minHeight: 34,
+  borderRadius: 999,
+  border: "1px solid rgba(226,232,240,0.50)",
+  background: "rgba(248,250,252,0.58)",
+  color: "#475569",
+  fontSize: 13.4,
+  fontWeight: 880,
+  padding: "0 13px",
+  display: "flex",
+  alignItems: "center",
+  boxSizing: "border-box",
+  cursor: "default",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.72)",
 };

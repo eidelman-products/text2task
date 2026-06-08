@@ -51,13 +51,21 @@ export default function TasksBulkBar({
           >
             Move to Archive
           </button>
+
+          <button
+            type="button"
+            onClick={onOpenBulkDeleteConfirm}
+            style={bulkDeleteButtonStyle}
+          >
+            Delete
+          </button>
         </>
       ) : (
         <>
           <button
             type="button"
             onClick={onBulkRestore}
-            style={bulkActionButtonStyle}
+            style={bulkRestoreButtonStyle}
           >
             Restore selected
           </button>
@@ -86,47 +94,60 @@ export default function TasksBulkBar({
 const bulkBarStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: 9,
   flexWrap: "wrap",
-  padding: "12px 14px",
-  borderRadius: 14,
-  border: "1px solid rgba(15,23,42,0.08)",
-  background: "#0f172a",
-  color: "#ffffff",
-  boxShadow: "0 10px 24px rgba(15,23,42,0.10)",
+  padding: "10px 12px",
+  borderRadius: 15,
+  border: "1px solid rgba(147,197,253,0.64)",
+  borderLeft: "3px solid #2563eb",
+  background: "rgba(248,251,255,0.96)",
+  color: "#0f172a",
+  boxShadow: "0 10px 24px rgba(37,99,235,0.055)",
 };
 
 const bulkCountStyle: CSSProperties = {
   fontSize: 13,
-  fontWeight: 900,
-  marginRight: 4,
+  fontWeight: 950,
+  color: "#1d4ed8",
+  marginRight: 3,
 };
 
 const bulkActionButtonStyle: CSSProperties = {
-  minHeight: 34,
+  minHeight: 32,
   padding: "0 12px",
-  borderRadius: 10,
-  border: "1px solid rgba(255,255,255,0.12)",
-  background: "rgba(255,255,255,0.10)",
-  color: "#ffffff",
+  borderRadius: 999,
+  border: "1px solid rgba(203,213,225,0.78)",
+  background: "#ffffff",
+  color: "#334155",
   fontSize: 12,
-  fontWeight: 800,
+  fontWeight: 850,
   cursor: "pointer",
+  boxShadow: "0 1px 2px rgba(15,23,42,0.025)",
 };
 
 const bulkArchiveButtonStyle: CSSProperties = {
   ...bulkActionButtonStyle,
-  background: "rgba(245,158,11,0.18)",
-  border: "1px solid rgba(245,158,11,0.26)",
+  background: "rgba(255,251,235,0.86)",
+  border: "1px solid rgba(253,230,138,0.9)",
+  color: "#92400e",
+};
+
+const bulkRestoreButtonStyle: CSSProperties = {
+  ...bulkActionButtonStyle,
+  background: "rgba(240,253,244,0.9)",
+  border: "1px solid rgba(187,247,208,0.9)",
+  color: "#067647",
 };
 
 const bulkDeleteButtonStyle: CSSProperties = {
   ...bulkActionButtonStyle,
-  background: "rgba(239,68,68,0.18)",
-  border: "1px solid rgba(239,68,68,0.24)",
+  background: "rgba(254,242,242,0.9)",
+  border: "1px solid rgba(254,202,202,0.92)",
+  color: "#b91c1c",
 };
 
 const bulkSecondaryButtonStyle: CSSProperties = {
   ...bulkActionButtonStyle,
   background: "transparent",
+  color: "#64748b",
 };

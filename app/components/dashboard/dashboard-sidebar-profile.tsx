@@ -3,6 +3,14 @@
 import { useState } from "react";
 import { trackBeginCheckout } from "@/lib/analytics/events";
 import SidebarButton from "./sidebar-button";
+import {
+  dashboardColors,
+  dashboardRadii,
+  dashboardShadows,
+  dashboardSpacing,
+  dashboardTransitions,
+  dashboardTypography,
+} from "./ui/tokens";
 
 type DashboardNav = "dashboard" | "extract" | "tasks";
 
@@ -18,6 +26,7 @@ export default function DashboardSidebarProfile({
   onNavChange: (nav: DashboardNav) => void;
 }) {
   const [upgradeHovered, setUpgradeHovered] = useState(false);
+  const isPro = plan === "pro";
 
   async function handleUpgrade() {
     try {
@@ -46,6 +55,8 @@ export default function DashboardSidebarProfile({
 
   return (
     <aside style={sidebarStyle}>
+      <div style={topAccentStyle} />
+
       <div style={topAreaStyle}>
         <div style={brandBlockStyle}>
           <div style={logoFrameStyle}>
@@ -59,44 +70,6 @@ export default function DashboardSidebarProfile({
           <p style={brandDescriptionStyle}>
             Turn messy messages into structured work.
           </p>
-        </div>
-
-        <div style={accountCardStyle}>
-          <div style={accountTopStyle}>
-            <div style={avatarStyle}>{getInitials(email)}</div>
-
-            <div style={accountTextStyle}>
-              <div style={displayNameStyle}>{getDisplayName(email)}</div>
-              <div style={emailStyle}>{email}</div>
-            </div>
-          </div>
-
-          <span
-            style={{
-              ...planBadgeStyle,
-              color: plan === "pro" ? "#166534" : "#4338ca",
-              background:
-                plan === "pro"
-                  ? "linear-gradient(135deg, rgba(240,253,244,0.96), rgba(220,252,231,0.72))"
-                  : "linear-gradient(135deg, rgba(238,242,255,0.96), rgba(224,231,255,0.72))",
-              border:
-                plan === "pro"
-                  ? "1px solid rgba(187,247,208,0.9)"
-                  : "1px solid rgba(199,210,254,0.9)",
-            }}
-          >
-            <span
-              style={{
-                ...planDotStyle,
-                background: plan === "pro" ? "#22c55e" : "#6366f1",
-                boxShadow:
-                  plan === "pro"
-                    ? "0 0 0 4px rgba(34,197,94,0.12)"
-                    : "0 0 0 4px rgba(99,102,241,0.12)",
-              }}
-            />
-            {plan === "pro" ? "Pro plan" : "Free plan"}
-          </span>
         </div>
 
         <nav style={navBlockStyle} aria-label="Workspace navigation">
@@ -125,22 +98,21 @@ export default function DashboardSidebarProfile({
       </div>
 
       <div style={bottomAreaStyle}>
-        {plan === "free" ? (
-          <div style={upgradeCardStyle}>
-            <div style={upgradeHeaderStyle}>
-              <div style={upgradeIconStyle}>✦</div>
+        <div style={workspaceCardStyle}>
+          <div style={workspaceTopStyle}>
+            <div style={avatarStyle}>{getInitials(email)}</div>
 
-              <div>
-                <div style={upgradeTitleStyle}>Upgrade to Pro</div>
-                <div style={upgradeSubtitleStyle}>Unlock the full workspace</div>
+            <div style={workspaceTextStyle}>
+              <div style={workspaceNameStyle}>{getDisplayName(email)}</div>
+              <div style={workspaceMetaStyle}>
+                {isPro ? "Pro workspace" : "Free workspace"}
               </div>
             </div>
 
-            <div style={priceStyle}>
-              $12.90
-              <span style={pricePeriodStyle}>/ month</span>
-            </div>
+            {isPro ? <span style={workspacePlanBadgeStyle}>Pro</span> : null}
+          </div>
 
+          {!isPro ? (
             <button
               type="button"
               onClick={handleUpgrade}
@@ -148,31 +120,16 @@ export default function DashboardSidebarProfile({
               onMouseLeave={() => setUpgradeHovered(false)}
               style={{
                 ...upgradeButtonStyle,
-                transform: upgradeHovered ? "translateY(-2px)" : "translateY(0)",
+                transform: upgradeHovered ? "translateY(-1px)" : "translateY(0)",
                 boxShadow: upgradeHovered
-                  ? "0 18px 34px rgba(79,70,229,0.34)"
-                  : "0 12px 24px rgba(79,70,229,0.24)",
+                  ? "0 14px 28px rgba(37, 99, 235, 0.2)"
+                  : "0 8px 18px rgba(37, 99, 235, 0.13)",
               }}
             >
-              Upgrade now
+              Upgrade to Pro
             </button>
-          </div>
-        ) : (
-          <div style={proDockStyle}>
-            <div style={proDockTopStyle}>
-              <div style={proDockIconStyle}>✓</div>
-
-              <div style={proDockTextWrapStyle}>
-                <div style={proDockTitleStyle}>Pro active</div>
-                <div style={proDockTextStyle}>Unlimited workspace</div>
-              </div>
-            </div>
-
-            <div style={proDockMeterStyle}>
-              <span style={proDockMeterFillStyle} />
-            </div>
-          </div>
-        )}
+          ) : null}
+        </div>
       </div>
     </aside>
   );
@@ -205,9 +162,23 @@ const sidebarStyle: React.CSSProperties = {
   height: "100%",
   display: "flex",
   flexDirection: "column",
-  padding: "18px 14px 14px",
+  padding: `${dashboardSpacing[5]}px ${dashboardSpacing[4]}px ${dashboardSpacing[4]}px`,
   position: "relative",
   overflow: "hidden",
+  background:
+    "linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,252,0.96) 62%, rgba(239,246,255,0.44) 100%)",
+};
+
+const topAccentStyle: React.CSSProperties = {
+  position: "absolute",
+  top: 0,
+  left: 18,
+  right: 18,
+  height: 2,
+  borderRadius: 999,
+  background:
+    "linear-gradient(90deg, rgba(37,99,235,0) 0%, rgba(37,99,235,0.42) 28%, rgba(37,99,235,0.16) 68%, rgba(37,99,235,0) 100%)",
+  pointerEvents: "none",
 };
 
 const topAreaStyle: React.CSSProperties = {
@@ -215,17 +186,18 @@ const topAreaStyle: React.CSSProperties = {
   minHeight: 0,
   display: "grid",
   alignContent: "start",
-  gap: 14,
+  gap: dashboardSpacing[7],
 };
 
 const brandBlockStyle: React.CSSProperties = {
   display: "grid",
-  gap: 8,
+  gap: dashboardSpacing[2],
+  padding: `0 ${dashboardSpacing[1]}px`,
 };
 
 const logoFrameStyle: React.CSSProperties = {
-  width: 200,
-  height: 61,
+  width: 178,
+  height: 46,
   display: "flex",
   alignItems: "center",
   justifyContent: "flex-start",
@@ -233,8 +205,8 @@ const logoFrameStyle: React.CSSProperties = {
 };
 
 const logoImageStyle: React.CSSProperties = {
-  width: 200,
-  height: 61,
+  width: 178,
+  height: 46,
   objectFit: "contain",
   objectPosition: "left center",
   display: "block",
@@ -242,260 +214,125 @@ const logoImageStyle: React.CSSProperties = {
 
 const brandDescriptionStyle: React.CSSProperties = {
   margin: 0,
-  color: "#64748b",
-  fontSize: 12.5,
-  lineHeight: 1.45,
-  fontWeight: 700,
-  maxWidth: 210,
-};
-
-const accountCardStyle: React.CSSProperties = {
-  borderRadius: 18,
-  padding: 11,
-  border: "1px solid rgba(226,232,240,0.78)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(248,250,252,0.58) 100%)",
-  boxShadow:
-    "0 12px 24px rgba(15,23,42,0.032), inset 0 1px 0 rgba(255,255,255,0.86)",
-  display: "grid",
-  gap: 8,
-};
-
-const accountTopStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 9,
-  minWidth: 0,
-};
-
-const avatarStyle: React.CSSProperties = {
-  width: 34,
-  height: 34,
-  borderRadius: 13,
-  display: "grid",
-  placeItems: "center",
-  flexShrink: 0,
-  color: "#4338ca",
-  background: "linear-gradient(135deg, rgba(238,242,255,0.96), #ffffff)",
-  border: "1px solid rgba(199,210,254,0.82)",
-  fontSize: 11,
-  fontWeight: 950,
-  boxShadow: "0 8px 16px rgba(79,70,229,0.06)",
-};
-
-const accountTextStyle: React.CSSProperties = {
-  minWidth: 0,
-  display: "grid",
-  gap: 1,
-};
-
-const displayNameStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 13.25,
-  lineHeight: 1.18,
-  fontWeight: 930,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-};
-
-const emailStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 10.75,
-  lineHeight: 1.3,
-  fontWeight: 720,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-};
-
-const planBadgeStyle: React.CSSProperties = {
-  width: "fit-content",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  padding: "5px 8px",
-  borderRadius: 999,
-  fontSize: 9.75,
-  lineHeight: 1,
-  fontWeight: 950,
-  letterSpacing: "0.055em",
-  textTransform: "uppercase",
-};
-
-const planDotStyle: React.CSSProperties = {
-  width: 6,
-  height: 6,
-  borderRadius: 999,
-  flexShrink: 0,
+  color: dashboardColors.text.muted,
+  fontSize: 12.25,
+  lineHeight: dashboardTypography.lineHeight.snug,
+  fontWeight: dashboardTypography.weight.semibold,
+  maxWidth: 204,
 };
 
 const navBlockStyle: React.CSSProperties = {
   display: "grid",
-  gap: 9,
+  gap: dashboardSpacing[2],
 };
 
 const navLabelStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: dashboardColors.text.subtle,
   fontSize: 10,
-  fontWeight: 950,
-  letterSpacing: "0.16em",
+  fontWeight: dashboardTypography.weight.black,
+  letterSpacing: "0.14em",
   textTransform: "uppercase",
-  paddingLeft: 3,
+  paddingLeft: dashboardSpacing[1],
 };
 
 const navListStyle: React.CSSProperties = {
   display: "grid",
-  gap: 7,
+  gap: dashboardSpacing[2],
 };
 
 const bottomAreaStyle: React.CSSProperties = {
-  marginTop: 14,
+  marginTop: dashboardSpacing[4],
 };
 
-const upgradeCardStyle: React.CSSProperties = {
-  borderRadius: 20,
-  padding: 12,
+const workspaceCardStyle: React.CSSProperties = {
+  borderRadius: dashboardRadii.xl,
+  padding: "10px",
+  border: "1px solid rgba(226, 232, 240, 0.86)",
   background:
-    "radial-gradient(circle at top left, rgba(255,255,255,0.78), transparent 42%), linear-gradient(135deg, rgba(79,70,229,0.14) 0%, rgba(14,165,233,0.08) 100%)",
-  border: "1px solid rgba(129,140,248,0.22)",
+    "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.84) 100%)",
   boxShadow:
-    "0 16px 32px rgba(79,70,229,0.09), inset 0 1px 0 rgba(255,255,255,0.72)",
+    "0 12px 28px rgba(15, 23, 42, 0.055), inset 0 1px 0 rgba(255,255,255,0.94)",
   display: "grid",
-  gap: 10,
-};
-
-const upgradeHeaderStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
   gap: 9,
 };
 
-const upgradeIconStyle: React.CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: 13,
+const workspaceTopStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: dashboardSpacing[2],
+  minWidth: 0,
+};
+
+const avatarStyle: React.CSSProperties = {
+  width: 31,
+  height: 31,
+  borderRadius: dashboardRadii.full,
   display: "grid",
   placeItems: "center",
   flexShrink: 0,
-  color: "#ffffff",
-  background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
-  boxShadow: "0 10px 22px rgba(79,70,229,0.24)",
-  fontSize: 14,
-  fontWeight: 950,
+  color: dashboardColors.primary[700],
+  background:
+    "linear-gradient(135deg, rgba(239,246,255,0.98), rgba(255,255,255,0.98))",
+  border: "1px solid rgba(191, 219, 254, 0.9)",
+  fontSize: 10.5,
+  fontWeight: dashboardTypography.weight.black,
+  boxShadow: "0 7px 14px rgba(37, 99, 235, 0.07)",
 };
 
-const upgradeTitleStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 14,
-  fontWeight: 950,
-  letterSpacing: "-0.025em",
+const workspaceTextStyle: React.CSSProperties = {
+  minWidth: 0,
+  display: "grid",
+  gap: 2,
+  flex: 1,
 };
 
-const upgradeSubtitleStyle: React.CSSProperties = {
-  marginTop: 2,
-  color: "#64748b",
-  fontSize: 11,
-  fontWeight: 720,
+const workspaceNameStyle: React.CSSProperties = {
+  color: dashboardColors.text.primary,
+  fontSize: 12.5,
+  lineHeight: dashboardTypography.lineHeight.snug,
+  fontWeight: dashboardTypography.weight.black,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 };
 
-const priceStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 20,
+const workspaceMetaStyle: React.CSSProperties = {
+  color: dashboardColors.text.muted,
+  fontSize: 10.5,
+  lineHeight: dashboardTypography.lineHeight.snug,
+  fontWeight: dashboardTypography.weight.medium,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const workspacePlanBadgeStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 20,
+  padding: "0 8px",
+  borderRadius: dashboardRadii.full,
+  color: dashboardColors.primary[700],
+  background: dashboardColors.primary[50],
+  border: `1px solid ${dashboardColors.primary[100]}`,
+  fontSize: 9.5,
   lineHeight: 1,
-  fontWeight: 950,
-  letterSpacing: "-0.055em",
-};
-
-const pricePeriodStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 11.5,
-  fontWeight: 760,
-  letterSpacing: "-0.02em",
-  marginLeft: 4,
+  fontWeight: dashboardTypography.weight.black,
+  letterSpacing: "0.045em",
+  textTransform: "uppercase",
+  flexShrink: 0,
 };
 
 const upgradeButtonStyle: React.CSSProperties = {
   width: "100%",
-  minHeight: 37,
+  minHeight: 34,
   border: "none",
-  borderRadius: 14,
-  color: "#ffffff",
-  background: "linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)",
-  fontSize: 12.75,
-  fontWeight: 950,
+  borderRadius: dashboardRadii.lg,
+  color: dashboardColors.text.inverse,
+  background: `linear-gradient(135deg, ${dashboardColors.primary[600]} 0%, ${dashboardColors.primary[500]} 100%)`,
+  fontSize: 12.25,
+  fontWeight: dashboardTypography.weight.black,
   cursor: "pointer",
-  transition: "transform 170ms ease, box-shadow 170ms ease",
-};
-
-const proDockStyle: React.CSSProperties = {
-  borderRadius: 18,
-  padding: "10px 11px",
-  background:
-    "linear-gradient(135deg, rgba(15,23,42,0.035), rgba(255,255,255,0.78)), linear-gradient(135deg, rgba(240,253,244,0.70), rgba(236,253,245,0.48))",
-  border: "1px solid rgba(187,247,208,0.72)",
-  boxShadow:
-    "0 10px 22px rgba(15,23,42,0.035), inset 0 1px 0 rgba(255,255,255,0.86)",
-  display: "grid",
-  gap: 8,
-};
-
-const proDockTopStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 9,
-  minWidth: 0,
-};
-
-const proDockIconStyle: React.CSSProperties = {
-  width: 30,
-  height: 30,
-  borderRadius: 12,
-  display: "grid",
-  placeItems: "center",
-  flexShrink: 0,
-  color: "#16a34a",
-  background:
-    "linear-gradient(135deg, rgba(220,252,231,0.94), rgba(240,253,244,0.86))",
-  border: "1px solid rgba(187,247,208,0.9)",
-  fontSize: 13,
-  fontWeight: 950,
-  boxShadow: "0 8px 16px rgba(34,197,94,0.08)",
-};
-
-const proDockTextWrapStyle: React.CSSProperties = {
-  minWidth: 0,
-  display: "grid",
-  gap: 1,
-};
-
-const proDockTitleStyle: React.CSSProperties = {
-  color: "#14532d",
-  fontSize: 13,
-  lineHeight: 1.12,
-  fontWeight: 950,
-  letterSpacing: "-0.025em",
-};
-
-const proDockTextStyle: React.CSSProperties = {
-  color: "#166534",
-  fontSize: 10.75,
-  lineHeight: 1.3,
-  fontWeight: 720,
-  whiteSpace: "nowrap",
-};
-
-const proDockMeterStyle: React.CSSProperties = {
-  height: 4,
-  borderRadius: 999,
-  background: "rgba(187,247,208,0.48)",
-  overflow: "hidden",
-};
-
-const proDockMeterFillStyle: React.CSSProperties = {
-  display: "block",
-  width: "100%",
-  height: "100%",
-  borderRadius: 999,
-  background: "linear-gradient(90deg, #22c55e, #16a34a)",
+  transition: `transform ${dashboardTransitions.base}, box-shadow ${dashboardTransitions.base}`,
 };

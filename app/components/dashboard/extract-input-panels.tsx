@@ -111,24 +111,13 @@ export default function ExtractInputPanels({
               </div>
 
               <div style={{ minWidth: 0 }}>
-                <div style={eyebrowStyle}>Text request</div>
                 <h3 style={panelTitleStyle}>Paste client work details</h3>
               </div>
             </div>
-
-            <button
-              type="button"
-              className="extract-soft-button"
-              style={exampleButtonStyle}
-            >
-              ✦ Examples
-            </button>
           </div>
 
           <p style={panelDescriptionStyle}>
             Paste an email, WhatsApp message, revision note, or client brief.
-            Text2Task will extract the project, subtasks, budget, deadline,
-            priority, and contact details.
           </p>
 
           <div className="extract-textarea-shell" style={textareaShellStyle}>
@@ -145,22 +134,8 @@ Budget is around $2000 and I need the first draft by Friday.`}
             />
 
             <div style={textareaFooterStyle}>
-              <div style={supportTextStyle}>
-                Works best with client messages, project briefs, edits, budgets,
-                and delivery dates.
-              </div>
-
               <div style={counterStyle}>{text.length} / 8000</div>
             </div>
-          </div>
-
-          <div style={extractChipsRowStyle}>
-            <span style={extractLabelStyle}>AI will extract</span>
-            <ExtractChip tone="purple" label="Tasks" />
-            <ExtractChip tone="green" label="Budget" />
-            <ExtractChip tone="blue" label="Deadline" />
-            <ExtractChip tone="orange" label="Priority" />
-            <ExtractChip tone="slate" label="Contact" />
           </div>
 
           <div style={actionRowStyle}>
@@ -206,21 +181,14 @@ Budget is around $2000 and I need the first draft by Friday.`}
               </div>
 
               <div style={{ minWidth: 0 }}>
-                <div style={{ ...eyebrowStyle, color: "#0284c7" }}>
-                  Screenshot request
-                </div>
                 <h3 style={panelTitleStyle}>Upload or paste an image</h3>
               </div>
-            </div>
-
-            <div style={imageStatusPillStyle}>
-              {hasImage ? "Image ready" : "Optional"}
             </div>
           </div>
 
           <p style={panelDescriptionStyle}>
-            Use screenshots of WhatsApp, email, quotes, mobile messages, or
-            image-based project requests.
+            Upload or paste a screenshot from WhatsApp, email, or a client
+            message.
           </p>
 
           <input
@@ -419,75 +387,26 @@ Budget is around $2000 and I need the first draft by Friday.`}
   );
 }
 
-function ExtractChip({
-  label,
-  tone,
-}: {
-  label: string;
-  tone: "purple" | "green" | "blue" | "orange" | "slate";
-}) {
-  const palette = {
-    purple: {
-      background: "#eef2ff",
-      border: "#c7d2fe",
-      color: "#4338ca",
-    },
-    green: {
-      background: "#ecfdf5",
-      border: "#bbf7d0",
-      color: "#047857",
-    },
-    blue: {
-      background: "#eff6ff",
-      border: "#bfdbfe",
-      color: "#1d4ed8",
-    },
-    orange: {
-      background: "#fff7ed",
-      border: "#fed7aa",
-      color: "#c2410c",
-    },
-    slate: {
-      background: "#f8fafc",
-      border: "#e2e8f0",
-      color: "#475569",
-    },
-  }[tone];
-
-  return (
-    <span
-      className="extract-chip"
-      style={{
-        ...chipStyle,
-        background: palette.background,
-        borderColor: palette.border,
-        color: palette.color,
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
 const panelsGridStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "minmax(0, 1.12fr) minmax(360px, 0.88fr)",
   gap: 18,
   alignItems: "stretch",
+  marginTop: 8,
 };
 
 const panelCardStyle: CSSProperties = {
   position: "relative",
   display: "grid",
   alignContent: "start",
-  gap: 15,
-  borderRadius: 24,
+  gap: 16,
+  borderRadius: 22,
   padding: 18,
   background:
-    "radial-gradient(circle at top left, rgba(238,242,255,0.82) 0%, transparent 36%), linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.92) 100%)",
-  border: "1px solid rgba(226,232,240,0.95)",
+    "linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,252,0.72) 100%)",
+  border: "1px solid rgba(226,232,240,0.92)",
   boxShadow:
-    "0 18px 45px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.9)",
+    "0 12px 28px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.92)",
   transition:
     "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease",
 };
@@ -527,16 +446,8 @@ const imageIconStyle: CSSProperties = {
   border: "1px solid rgba(186,230,253,0.95)",
 };
 
-const eyebrowStyle: CSSProperties = {
-  color: "#4f46e5",
-  fontSize: 11,
-  fontWeight: 900,
-  textTransform: "uppercase",
-  letterSpacing: "0.12em",
-};
-
 const panelTitleStyle: CSSProperties = {
-  margin: "3px 0 0",
+  margin: 0,
   color: "#0f172a",
   fontSize: 19,
   lineHeight: 1.2,
@@ -550,20 +461,6 @@ const panelDescriptionStyle: CSSProperties = {
   fontSize: 13,
   lineHeight: 1.65,
   fontWeight: 620,
-};
-
-const exampleButtonStyle: CSSProperties = {
-  border: "1px solid rgba(199,210,254,0.92)",
-  background: "#ffffff",
-  color: "#4f46e5",
-  borderRadius: 14,
-  padding: "9px 12px",
-  fontSize: 12,
-  fontWeight: 850,
-  whiteSpace: "nowrap",
-  boxShadow: "0 8px 18px rgba(15,23,42,0.04)",
-  transition:
-    "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease",
 };
 
 const textareaShellStyle: CSSProperties = {
@@ -594,18 +491,11 @@ const textareaStyle: CSSProperties = {
 const textareaFooterStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  justifyContent: "space-between",
+  justifyContent: "flex-end",
   gap: 10,
   padding: "10px 14px",
   borderTop: "1px solid rgba(226,232,240,0.85)",
   background: "rgba(248,250,252,0.78)",
-};
-
-const supportTextStyle: CSSProperties = {
-  color: "#64748b",
-  fontSize: 11,
-  fontWeight: 700,
-  lineHeight: 1.4,
 };
 
 const counterStyle: CSSProperties = {
@@ -613,31 +503,6 @@ const counterStyle: CSSProperties = {
   fontSize: 11,
   fontWeight: 850,
   whiteSpace: "nowrap",
-};
-
-const extractChipsRowStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  flexWrap: "wrap",
-  gap: 8,
-};
-
-const extractLabelStyle: CSSProperties = {
-  color: "#64748b",
-  fontSize: 12,
-  fontWeight: 850,
-};
-
-const chipStyle: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  borderRadius: 999,
-  border: "1px solid",
-  padding: "6px 9px",
-  fontSize: 11,
-  fontWeight: 850,
-  transition: "transform 150ms ease, box-shadow 150ms ease",
 };
 
 const actionRowStyle: CSSProperties = {
@@ -676,18 +541,6 @@ const actionHintStyle: CSSProperties = {
   color: "#64748b",
   fontSize: 12,
   fontWeight: 700,
-};
-
-const imageStatusPillStyle: CSSProperties = {
-  borderRadius: 999,
-  padding: "7px 10px",
-  background: "#ffffff",
-  color: "#64748b",
-  border: "1px solid #e2e8f0",
-  fontSize: 11,
-  fontWeight: 850,
-  whiteSpace: "nowrap",
-  boxShadow: "0 8px 18px rgba(15,23,42,0.035)",
 };
 
 const imageTabsStyle: CSSProperties = {
@@ -874,15 +727,13 @@ const dangerButtonStyle: CSSProperties = {
 
 const extractInputPanelsCss = `
   .extract-input-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(129, 140, 248, 0.68) !important;
+    transform: translateY(-1px);
+    border-color: rgba(191, 219, 254, 0.9) !important;
     box-shadow:
-      0 28px 70px rgba(79, 70, 229, 0.12),
-      0 14px 35px rgba(15, 23, 42, 0.08),
+      0 16px 34px rgba(15, 23, 42, 0.055),
       inset 0 1px 0 rgba(255,255,255,0.95) !important;
     background:
-      radial-gradient(circle at top left, rgba(238,242,255,0.95) 0%, transparent 38%),
-      linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(248,250,252,0.96) 100%) !important;
+      linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(248,250,252,0.82) 100%) !important;
   }
 
   .extract-input-card:hover .extract-icon-card {
@@ -918,7 +769,6 @@ const extractInputPanelsCss = `
   }
 
   .extract-secondary-button:not(:disabled):hover,
-  .extract-soft-button:hover,
   .extract-outline-action:not(:disabled):hover,
   .extract-tab-button:not(:disabled):hover {
     transform: translateY(-1px);
@@ -932,11 +782,6 @@ const extractInputPanelsCss = `
     border-color: rgba(248,113,113,0.72) !important;
     background: #fff7f7 !important;
     box-shadow: 0 12px 24px rgba(220,38,38,0.08) !important;
-  }
-
-  .extract-chip:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 18px rgba(15,23,42,0.055);
   }
 
   @media (max-width: 1180px) {

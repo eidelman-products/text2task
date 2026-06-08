@@ -22,6 +22,8 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
   const backHref = cameFromDashboard ? "/dashboard" : "/";
   const backLabel = cameFromDashboard ? "Back to workspace" : "Back to Home";
   const footerHomeLabel = cameFromDashboard ? "Dashboard" : "Home";
+  const privacyHref = cameFromDashboard ? "/privacy?from=dashboard" : "/privacy";
+  const termsHref = cameFromDashboard ? "/terms?from=dashboard" : "/terms";
 
   const supportMailto =
     "mailto:support@text2task.com?subject=Text2Task%20support%20request";
@@ -60,12 +62,12 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
             </div>
 
             <h1 className="contact-title" style={h1Style}>
-              How can we help?
+              Contact Text2Task support.
             </h1>
 
             <p className="contact-lead" style={leadStyle}>
-              For support, billing, privacy requests, partnerships, or product
-              feedback — email the Text2Task team directly.
+              Need help with your account, billing, privacy, feedback, or
+              partnerships? Email the Text2Task team directly.
             </p>
           </div>
 
@@ -89,30 +91,31 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
           </div>
         </section>
 
-        <section className="contact-cards-grid" style={cardsGridStyle}>
-          <ContactCard
-            icon="💬"
-            title="Support & billing"
-            text="For account access, dashboard questions, extracts, billing, or subscription status, use the main support email above."
-            href={supportMailto}
-            cta="Send support email"
-          />
+        <section className="contact-help-list" style={helpSectionStyle}>
+          <h2 style={helpTitleStyle}>What we can help with</h2>
 
-          <ContactCard
-            icon="🔐"
-            title="Privacy requests"
-            text="Request account deletion, data deletion, privacy help, or information about your data."
-            href={privacyMailto}
-            cta="Send privacy request"
-          />
+          <div style={helpListStyle}>
+            <ContactCard
+              title="Support & billing"
+              text="Account access, dashboard questions, extracts, billing, subscription status."
+              href={supportMailto}
+              cta="Send support email"
+            />
 
-          <ContactCard
-            icon="✨"
-            title="Feedback & partnerships"
-            text="Share product feedback, report unclear flows, or contact us about partnerships."
-            href={feedbackMailto}
-            cta="Send feedback"
-          />
+            <ContactCard
+              title="Privacy requests"
+              text="Account deletion, data deletion, privacy help, or data questions."
+              href={privacyMailto}
+              cta="Send privacy request"
+            />
+
+            <ContactCard
+              title="Feedback & partnerships"
+              text="Product feedback, unclear flows, partnerships."
+              href={feedbackMailto}
+              cta="Send feedback"
+            />
+          </div>
         </section>
 
         <section className="contact-info-box" style={infoBoxStyle}>
@@ -145,10 +148,10 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
           <span>© 2026 Text2Task. All rights reserved.</span>
 
           <div style={footerLinksStyle}>
-            <Link href="/privacy" style={footerLinkStyle}>
+            <Link href={privacyHref} style={footerLinkStyle}>
               Privacy
             </Link>
-            <Link href="/terms" style={footerLinkStyle}>
+            <Link href={termsHref} style={footerLinkStyle}>
               Terms
             </Link>
             <Link href={backHref} style={footerLinkStyle}>
@@ -162,13 +165,11 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
 }
 
 function ContactCard({
-  icon,
   title,
   text,
   href,
   cta,
 }: {
-  icon: string;
   title: string;
   text: string;
   href?: string;
@@ -176,9 +177,10 @@ function ContactCard({
 }) {
   return (
     <article style={cardStyle}>
-      <div style={iconStyle}>{icon}</div>
-      <h2 style={cardTitleStyle}>{title}</h2>
-      <p style={cardTextStyle}>{text}</p>
+      <div style={cardContentStyle}>
+        <h2 style={cardTitleStyle}>{title}</h2>
+        <p style={cardTextStyle}>{text}</p>
+      </div>
 
       {href && cta ? (
         <a className="contact-action-button" href={href} style={secondaryButtonStyle}>
@@ -202,15 +204,14 @@ const responsiveCss = `
   @media (max-width: 900px) {
     .contact-hero {
       grid-template-columns: 1fr !important;
-      padding: 30px !important;
     }
 
     .contact-primary-card {
       max-width: 100% !important;
     }
 
-    .contact-cards-grid {
-      grid-template-columns: 1fr !important;
+    .contact-help-list {
+      margin-bottom: 24px !important;
     }
   }
 
@@ -224,8 +225,8 @@ const responsiveCss = `
     }
 
     .contact-hero {
-      border-radius: 28px !important;
-      padding: 24px !important;
+      border-radius: 0 !important;
+      padding: 0 !important;
     }
 
     .contact-title {
@@ -239,8 +240,8 @@ const responsiveCss = `
     }
 
     .contact-primary-card {
-      padding: 22px !important;
-      border-radius: 24px !important;
+      padding: 20px 0 !important;
+      border-radius: 0 !important;
     }
 
     .contact-action-button {
@@ -250,9 +251,15 @@ const responsiveCss = `
       text-align: center !important;
     }
 
+    .contact-help-list article {
+      grid-template-columns: 1fr !important;
+      justify-items: start !important;
+      gap: 10px !important;
+    }
+
     .contact-info-box {
-      padding: 22px !important;
-      border-radius: 26px !important;
+      padding: 24px 0 0 !important;
+      border-radius: 0 !important;
     }
 
     .contact-footer {
@@ -282,7 +289,7 @@ const pageStyle: React.CSSProperties = {
   minHeight: "100vh",
   padding: "30px 24px 56px",
   background:
-    "radial-gradient(circle at 12% 8%, rgba(91,91,214,0.10), transparent 30%), radial-gradient(circle at 90% 20%, rgba(79,124,255,0.08), transparent 28%), linear-gradient(180deg, #fcfcfe 0%, #f8f9fc 100%)",
+    "linear-gradient(180deg, #ffffff 0%, #f8fafc 56%, #ffffff 100%)",
   color: "#0f172a",
 };
 
@@ -296,7 +303,7 @@ const headerStyle: React.CSSProperties = {
   justifyContent: "space-between",
   alignItems: "center",
   gap: 16,
-  marginBottom: 42,
+  marginBottom: 34,
   flexWrap: "wrap",
 };
 
@@ -316,18 +323,18 @@ const logoStyle: React.CSSProperties = {
 };
 
 const backButtonStyle: React.CSSProperties = {
-  minHeight: 44,
-  padding: "0 18px",
-  borderRadius: 14,
-  background: "#0f172a",
-  color: "#ffffff",
+  minHeight: 34,
+  padding: "0 12px",
+  borderRadius: 999,
+  background: "rgba(239,246,255,0.72)",
+  color: "#1d4ed8",
+  border: "1px solid rgba(191,219,254,0.86)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   textDecoration: "none",
-  fontSize: 14,
+  fontSize: 12,
   fontWeight: 900,
-  boxShadow: "0 16px 34px rgba(15,23,42,0.16)",
 };
 
 const heroStyle: React.CSSProperties = {
@@ -335,14 +342,12 @@ const heroStyle: React.CSSProperties = {
   gridTemplateColumns: "1.06fr 0.94fr",
   gap: 28,
   alignItems: "stretch",
-  borderRadius: 34,
-  padding: 34,
-  background:
-    "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(246,244,255,0.72))",
-  border: "1px solid #e7e9f2",
-  boxShadow:
-    "0 30px 80px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.92)",
-  marginBottom: 20,
+  borderRadius: 0,
+  padding: 0,
+  background: "transparent",
+  border: "none",
+  boxShadow: "none",
+  marginBottom: 28,
 };
 
 const heroCopyStyle: React.CSSProperties = {
@@ -358,9 +363,9 @@ const statusPillStyle: React.CSSProperties = {
   gap: 8,
   padding: "8px 12px",
   borderRadius: 999,
-  background: "#eeecff",
-  border: "1px solid #ddd9ff",
-  color: "#4f46e5",
+  background: "rgba(239,246,255,0.72)",
+  border: "1px solid rgba(191,219,254,0.86)",
+  color: "#2563eb",
   fontSize: 12,
   fontWeight: 900,
   letterSpacing: "0.08em",
@@ -377,11 +382,11 @@ const statusDotStyle: React.CSSProperties = {
 
 const h1Style: React.CSSProperties = {
   margin: 0,
-  fontSize: "clamp(44px, 5.5vw, 66px)",
+  fontSize: "clamp(42px, 5vw, 60px)",
   lineHeight: 1.02,
-  letterSpacing: "-0.06em",
-  fontWeight: 900,
-  color: "#102045",
+  letterSpacing: "-0.055em",
+  fontWeight: 950,
+  color: "#0f172a",
 };
 
 const leadStyle: React.CSSProperties = {
@@ -393,11 +398,12 @@ const leadStyle: React.CSSProperties = {
 };
 
 const primaryCardStyle: React.CSSProperties = {
-  borderRadius: 28,
-  padding: 26,
-  background: "#ffffff",
-  border: "1px solid #eceef5",
-  boxShadow: "0 24px 60px rgba(15,23,42,0.08)",
+  borderRadius: 0,
+  padding: "22px 0",
+  background: "transparent",
+  borderTop: "1px solid rgba(226,232,240,0.92)",
+  borderBottom: "1px solid rgba(226,232,240,0.92)",
+  boxShadow: "none",
   display: "grid",
   alignContent: "center",
   gap: 18,
@@ -409,8 +415,9 @@ const primaryIconStyle: React.CSSProperties = {
   borderRadius: 16,
   display: "grid",
   placeItems: "center",
-  background: "#f5f3ff",
-  color: "#5550d6",
+  background: "rgba(239,246,255,0.82)",
+  color: "#1d4ed8",
+  border: "1px solid rgba(191,219,254,0.82)",
   fontSize: 24,
   fontWeight: 900,
 };
@@ -448,7 +455,7 @@ const primaryButtonStyle: React.CSSProperties = {
   minHeight: 48,
   padding: "0 18px",
   borderRadius: 14,
-  background: "linear-gradient(135deg, #5b5bd6 0%, #4a49c7 100%)",
+  background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
   color: "#ffffff",
   display: "inline-flex",
   alignItems: "center",
@@ -456,72 +463,80 @@ const primaryButtonStyle: React.CSSProperties = {
   textDecoration: "none",
   fontSize: 14,
   fontWeight: 900,
-  boxShadow: "0 16px 32px rgba(91,91,214,0.22)",
+  boxShadow: "0 14px 28px rgba(37,99,235,0.20)",
 };
 
-const cardsGridStyle: React.CSSProperties = {
+const helpSectionStyle: React.CSSProperties = {
+  marginBottom: 22,
+};
+
+const helpTitleStyle: React.CSSProperties = {
+  margin: "0 0 12px",
+  color: "#0f172a",
+  fontSize: 22,
+  lineHeight: 1.2,
+  fontWeight: 900,
+  letterSpacing: "-0.035em",
+};
+
+const helpListStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  gap: 16,
-  marginBottom: 20,
+  gap: 0,
+  borderTop: "1px solid rgba(226,232,240,0.92)",
 };
 
 const cardStyle: React.CSSProperties = {
-  borderRadius: 26,
-  padding: 22,
-  background: "rgba(255,255,255,0.96)",
-  border: "1px solid #eceef5",
-  boxShadow: "0 22px 56px rgba(15,23,42,0.06)",
+  minHeight: 74,
+  padding: "14px 0",
+  background: "transparent",
+  borderBottom: "1px solid rgba(226,232,240,0.92)",
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
+  alignItems: "center",
+  gap: 18,
 };
 
-const iconStyle: React.CSSProperties = {
-  width: 42,
-  height: 42,
-  borderRadius: 15,
-  display: "grid",
-  placeItems: "center",
-  background: "#f5f3ff",
-  fontSize: 21,
-  marginBottom: 16,
+const cardContentStyle: React.CSSProperties = {
+  minWidth: 0,
 };
 
 const cardTitleStyle: React.CSSProperties = {
-  margin: "0 0 9px",
-  fontSize: 21,
+  margin: "0 0 5px",
+  fontSize: 16,
   lineHeight: 1.18,
-  letterSpacing: "-0.035em",
+  letterSpacing: "-0.025em",
   fontWeight: 900,
-  color: "#102045",
+  color: "#0f172a",
 };
 
 const cardTextStyle: React.CSSProperties = {
-  margin: "0 0 18px",
+  margin: 0,
   color: "#5f6b85",
   fontSize: 14,
-  lineHeight: 1.68,
+  lineHeight: 1.58,
 };
 
 const secondaryButtonStyle: React.CSSProperties = {
-  minHeight: 42,
-  padding: "0 14px",
-  borderRadius: 13,
+  minHeight: 36,
+  padding: "0 12px",
+  borderRadius: 999,
   background: "#ffffff",
-  color: "#102045",
+  color: "#1d4ed8",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   textDecoration: "none",
   fontSize: 13,
   fontWeight: 900,
-  border: "1px solid #d8dce8",
+  border: "1px solid rgba(191,219,254,0.82)",
 };
 
 const infoBoxStyle: React.CSSProperties = {
-  borderRadius: 28,
-  padding: 26,
-  background: "rgba(255,255,255,0.96)",
-  border: "1px solid #eceef5",
-  boxShadow: "0 22px 56px rgba(15,23,42,0.06)",
+  borderRadius: 0,
+  padding: "24px 0 0",
+  background: "transparent",
+  borderTop: "1px solid rgba(226,232,240,0.92)",
+  boxShadow: "none",
 };
 
 const infoHeaderStyle: React.CSSProperties = {
@@ -538,7 +553,7 @@ const infoTitleStyle: React.CSSProperties = {
   lineHeight: 1.18,
   letterSpacing: "-0.04em",
   fontWeight: 900,
-  color: "#102045",
+  color: "#0f172a",
 };
 
 const infoSubtitleStyle: React.CSSProperties = {
@@ -550,19 +565,18 @@ const infoSubtitleStyle: React.CSSProperties = {
 
 const infoGridStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  gap: 12,
+  gap: 0,
+  borderTop: "1px solid rgba(226,232,240,0.92)",
 };
 
 const infoRowStyle: React.CSSProperties = {
-  borderRadius: 18,
-  padding: 16,
-  background: "#f8f9fc",
-  border: "1px solid #e6e8f0",
+  padding: "13px 0",
+  background: "transparent",
+  borderBottom: "1px solid rgba(226,232,240,0.92)",
 };
 
 const infoLabelStyle: React.CSSProperties = {
-  color: "#102045",
+  color: "#0f172a",
   fontSize: 14,
   fontWeight: 900,
   marginBottom: 5,
@@ -575,12 +589,12 @@ const infoTextStyle: React.CSSProperties = {
 };
 
 const footerStyle: React.CSSProperties = {
-  marginTop: 24,
+  marginTop: 26,
   display: "flex",
   justifyContent: "space-between",
   gap: 16,
   flexWrap: "wrap",
-  color: "#667085",
+  color: "#64748b",
   fontSize: 14,
   fontWeight: 700,
 };

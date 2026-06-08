@@ -1,6 +1,6 @@
 import type { TaskRow } from "./tasks-view";
 import { formatDeadline } from "@/lib/tasks/format-deadline";
-import { getDeadlineUi } from "@/lib/tasks/get-deadline-ui";
+import { getDashboardAlerts } from "@/lib/tasks/get-dashboard-alerts";
 
 export type DashboardUrgencyTone = "overdue" | "today" | "tomorrow" | "soon";
 
@@ -9,6 +9,7 @@ export type UrgentPreviewTask = {
   task: string;
   clientName: string;
   deadlineLabel: string;
+  usesProjectDeadline: boolean;
   tone: DashboardUrgencyTone;
   sortTime: number;
 };
@@ -346,65 +347,30 @@ export function getUrgentDeadlineBadgeStyle(
 }
 
 export function buildUrgentPreviewTasks(tasks: TaskRow[]): UrgentPreviewTask[] {
-  return tasks
-    .map((task) => {
-      const deadlineUi = getDeadlineUi(
-        task.deadline_original_text?.trim() || task.deadline?.trim() || "",
-        task.deadline_date?.trim() || null,
-        task.status || null
-      );
+  const alerts = getDashboardAlerts(tasks);
+  const buckets: Array<{
+    tone: DashboardUrgencyTone;
+    items: typeof alerts.overdue;
+  }> = [
+    { tone: "overdue", items: alerts.overdue },
+    { tone: "today", items: alerts.dueToday },
+    { tone: "tomorrow", items: alerts.dueTomorrow },
+    { tone: "soon", items: alerts.dueSoon },
+  ];
 
-      if (
-        deadlineUi.isDone ||
-        deadlineUi.isMissing ||
-        !deadlineUi.isParsed ||
-        deadlineUi.daysFromNow === null
-      ) {
-        return null;
-      }
-
-      let tone: DashboardUrgencyTone | null = null;
-
-      if (deadlineUi.isOverdue) {
-        tone = "overdue";
-      } else if (deadlineUi.isDueToday) {
-        tone = "today";
-      } else if (deadlineUi.isDueTomorrow) {
-        tone = "tomorrow";
-      } else if (deadlineUi.isDueSoon) {
-        tone = "soon";
-      }
-
-      if (!tone) return null;
-
-      const sortTime = deadlineUi.deadlineDate
-        ? new Date(deadlineUi.deadlineDate).getTime()
-        : Number.MAX_SAFE_INTEGER;
-
-      return {
-        id: task.id,
-        task: task.task || "Untitled task",
-        clientName: getClientDisplayName(task),
-        deadlineLabel: deadlineUi.label,
-        tone,
-        sortTime,
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => {
-      const toneOrder: Record<DashboardUrgencyTone, number> = {
-        overdue: 0,
-        today: 1,
-        tomorrow: 2,
-        soon: 3,
-      };
-
-      if (toneOrder[a!.tone] !== toneOrder[b!.tone]) {
-        return toneOrder[a!.tone] - toneOrder[b!.tone];
-      }
-
-      return a!.sortTime - b!.sortTime;
-    }) as UrgentPreviewTask[];
+  return buckets.flatMap(({ tone, items }) =>
+    items.map((item) => ({
+      id: item.id,
+      task: item.taskTitle,
+      clientName: item.clientName,
+      deadlineLabel: item.deadlineLabel,
+      usesProjectDeadline: item.usesProjectDeadline,
+      tone,
+      sortTime: item.deadlineDate
+        ? new Date(item.deadlineDate).getTime()
+        : Number.MAX_SAFE_INTEGER,
+    }))
+  );
 }
 
 export function getPaidCompletedProgress(

@@ -1,6 +1,12 @@
 "use client";
 
 import type React from "react";
+import {
+  dashboardColors,
+  dashboardRadii,
+  dashboardSpacing,
+  dashboardTypography,
+} from "../ui/tokens";
 import type { TaskRow } from "../tasks-view";
 import { openTaskInNewWindow } from "./dashboard-overview-utils";
 
@@ -17,11 +23,6 @@ type RecentActivityItem = {
   title: string;
   clientName: string;
   projectTitle: string;
-  status: string;
-  priority: string;
-  amount: string;
-  deadline: string;
-  taskCount: number;
   updatedAt: string | null;
   updatedTime: number;
 };
@@ -45,11 +46,7 @@ function getClientName(task: TaskRow) {
 }
 
 function getProjectTitle(task: TaskRow) {
-  return (
-    task.project?.title?.trim() ||
-    task.task?.trim() ||
-    "Project workspace"
-  );
+  return task.project?.title?.trim() || task.task?.trim() || "Project workspace";
 }
 
 function getTaskTitle(task: TaskRow) {
@@ -68,73 +65,12 @@ function getTime(value?: string | null) {
   return Number.isNaN(time) ? 0 : time;
 }
 
-function getStatus(task: TaskRow, kind: ActivityKind) {
-  const status =
-    kind === "task"
-      ? task.status || task.project?.status
-      : task.project?.status || task.status;
-
-  return String(status || "New").trim() || "New";
-}
-
-function getPriority(task: TaskRow, kind: ActivityKind) {
-  const priority =
-    kind === "task"
-      ? task.priority || task.project?.priority
-      : task.project?.priority || task.priority;
-
-  return String(priority || "Normal").trim() || "Normal";
-}
-
-function getAmount(task: TaskRow, kind: ActivityKind) {
-  const projectAmount = String(task.project?.amount || "").trim();
-  const taskAmount = String(task.amount || "").trim();
-
-  return kind === "task"
-    ? taskAmount || projectAmount || ""
-    : projectAmount || taskAmount || "";
-}
-
-function formatReadableDeadline(value?: string | null) {
-  if (!value) return "";
-
-  const trimmed = String(value).trim();
-  if (!trimmed) return "";
-
-  const date = new Date(trimmed);
-
-  if (Number.isNaN(date.getTime())) {
-    return trimmed;
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-  }).format(date);
-}
-
-function getDeadline(task: TaskRow, kind: ActivityKind) {
-  const projectDeadline = String(
-    task.project?.deadline_text || task.project?.deadline_date || ""
-  ).trim();
-
-  const taskDeadline = String(
-    task.deadline_original_text || task.deadline_date || task.deadline || ""
-  ).trim();
-
-  return formatReadableDeadline(
-    kind === "task"
-      ? taskDeadline || projectDeadline
-      : projectDeadline || taskDeadline
-  );
-}
-
 function formatShortDate(value?: string | null) {
-  if (!value) return "Recently";
+  if (!value) return "Recent";
 
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) return "Recently";
+  if (Number.isNaN(date.getTime())) return "Recent";
 
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -159,85 +95,21 @@ function formatUpdatedLabel(value?: string | null) {
   startOfYesterday.setDate(startOfYesterday.getDate() - 1);
 
   if (date >= startOfToday) {
-    return "Updated today";
+    return "Today";
   }
 
   if (date >= startOfYesterday) {
-    return "Updated yesterday";
+    return "Yesterday";
   }
 
-  return `Updated ${new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
-  }).format(date)}`;
+  }).format(date);
 }
 
-function getStatusStyle(status: string): React.CSSProperties {
-  const normalized = status.toLowerCase();
-
-  if (normalized.includes("done")) {
-    return {
-      color: "#15803d",
-      background: "rgba(34,197,94,0.1)",
-      border: "1px solid rgba(34,197,94,0.18)",
-    };
-  }
-
-  if (normalized.includes("progress")) {
-    return {
-      color: "#047857",
-      background: "rgba(16,185,129,0.1)",
-      border: "1px solid rgba(16,185,129,0.18)",
-    };
-  }
-
-  if (normalized.includes("review")) {
-    return {
-      color: "#92400e",
-      background: "rgba(245,158,11,0.1)",
-      border: "1px solid rgba(245,158,11,0.18)",
-    };
-  }
-
-  return {
-    color: "#475569",
-    background: "rgba(148,163,184,0.1)",
-    border: "1px solid rgba(148,163,184,0.16)",
-  };
-}
-
-function getPriorityStyle(priority: string): React.CSSProperties {
-  const normalized = priority.toLowerCase();
-
-  if (normalized === "high") {
-    return {
-      color: "#b91c1c",
-      background: "rgba(239,68,68,0.08)",
-      border: "1px solid rgba(239,68,68,0.16)",
-    };
-  }
-
-  if (normalized === "medium") {
-    return {
-      color: "#92400e",
-      background: "rgba(245,158,11,0.08)",
-      border: "1px solid rgba(245,158,11,0.16)",
-    };
-  }
-
-  if (normalized === "low") {
-    return {
-      color: "#15803d",
-      background: "rgba(34,197,94,0.08)",
-      border: "1px solid rgba(34,197,94,0.16)",
-    };
-  }
-
-  return {
-    color: "#475569",
-    background: "rgba(148,163,184,0.08)",
-    border: "1px solid rgba(148,163,184,0.16)",
-  };
+function getActivityLabel(kind: ActivityKind) {
+  return kind === "project" ? "Project details updated" : "Task updated";
 }
 
 function isVisibleActivityTask(task: TaskRow) {
@@ -254,20 +126,13 @@ function buildTaskActivityItem(task: TaskRow): RecentActivityItem | null {
 
   if (!updatedAt || updatedTime <= 0) return null;
 
-  const projectTitle = getProjectTitle(task);
-
   return {
     id: task.id,
     key: `task-${task.id}-${updatedTime}`,
     kind: "task",
     title: getTaskTitle(task),
     clientName: getClientName(task),
-    projectTitle,
-    status: getStatus(task, "task"),
-    priority: getPriority(task, "task"),
-    amount: getAmount(task, "task"),
-    deadline: getDeadline(task, "task"),
-    taskCount: 1,
+    projectTitle: getProjectTitle(task),
     updatedAt,
     updatedTime,
   };
@@ -352,11 +217,6 @@ function buildProjectActivityItem(
     title: getProjectTitle(task),
     clientName: getClientName(task),
     projectTitle: "Project details updated",
-    status: getStatus(task, "project"),
-    priority: getPriority(task, "project"),
-    amount: getAmount(task, "project"),
-    deadline: getDeadline(task, "project"),
-    taskCount: candidate.taskCount,
     updatedAt: candidate.projectUpdatedAt,
     updatedTime: candidate.projectUpdatedTime,
   };
@@ -378,72 +238,33 @@ function buildRecentActivityItems(tasks: TaskRow[]) {
     .slice(0, 5);
 }
 
-function DetailChip({ children }: { children: React.ReactNode }) {
-  if (!children) return null;
-
-  return <span style={detailChipStyle}>{children}</span>;
-}
-
-function ActivityCard({ item }: { item: RecentActivityItem }) {
-  const statusStyle = getStatusStyle(item.status);
-  const priorityStyle = getPriorityStyle(item.priority);
-
+function ActivityRow({ item }: { item: RecentActivityItem }) {
   return (
     <button
       type="button"
-      className="recent-activity-card"
+      className="recent-activity-row"
       onClick={() => openTaskInNewWindow(item.id)}
-      style={cardStyle}
+      style={rowStyle}
       aria-label={`Open ${item.title}`}
     >
-      <div style={cardGlowStyle} />
+      <div style={dateColumnStyle}>
+        <span style={dateStyle}>{formatShortDate(item.updatedAt)}</span>
+        <span style={relativeDateStyle}>{formatUpdatedLabel(item.updatedAt)}</span>
+      </div>
 
-      <div className="recent-activity-card-main" style={cardMainStyle}>
-        <div style={iconWrapStyle}>
-          <span style={iconDotStyle} />
-        </div>
+      <div style={contentStyle}>
+        <div style={titleStyle}>{item.title}</div>
 
-        <div style={contentStyle}>
-          <div className="recent-activity-card-top" style={topLineStyle}>
-            <div style={titleWrapStyle}>
-              <div style={titleStyle}>{item.title}</div>
-              <div style={subtitleStyle}>
-                {item.clientName}
-                {item.projectTitle ? ` · ${item.projectTitle}` : ""}
-              </div>
-            </div>
-
-            <div className="recent-activity-date-wrap" style={dateWrapStyle}>
-              <span style={dateStyle}>{formatShortDate(item.updatedAt)}</span>
-              <span className="recent-activity-arrow" style={arrowStyle}>
-                ↗
-              </span>
-            </div>
-          </div>
-
-          <div style={chipsRowStyle}>
-            <span style={{ ...pillStyle, ...statusStyle }}>{item.status}</span>
-
-            <span style={{ ...pillStyle, ...priorityStyle }}>
-              {item.priority}
-            </span>
-
-            {item.deadline ? <DetailChip>Due {item.deadline}</DetailChip> : null}
-            {item.amount ? <DetailChip>{item.amount}</DetailChip> : null}
-
-            {item.kind === "project" && item.taskCount > 1 ? (
-              <DetailChip>{item.taskCount} tasks</DetailChip>
-            ) : (
-              <DetailChip>{item.kind === "task" ? "Task update" : "Project update"}</DetailChip>
-            )}
-          </div>
-
-          <div style={footerLineStyle}>
-            <span>{formatUpdatedLabel(item.updatedAt)}</span>
-            <span style={openTextStyle}>Open task</span>
-          </div>
+        <div style={metaStyle}>
+          <span style={clientStyle}>{item.clientName}</span>
+          <span style={metaSeparatorStyle}>•</span>
+          <span style={activityTypeStyle}>{getActivityLabel(item.kind)}</span>
         </div>
       </div>
+
+      <span className="recent-activity-open" style={openTextStyle}>
+        Open →
+      </span>
     </button>
   );
 }
@@ -459,32 +280,29 @@ export default function DashboardRecentActivity({ tasks }: Props) {
         <div style={headerTextStyle}>
           <div style={kickerStyle}>Recent activity</div>
 
-          <div style={headingStyle}>Latest workspace changes</div>
+          <div style={headingRowStyle}>
+            <div style={headingStyle}>Latest workspace changes</div>
+            <span style={countTextStyle}>{recentItems.length} updated</span>
+          </div>
 
           <div style={subTextStyle}>
-            The most recent task, subtask, and project updates in your CRM.
+            The latest project and task updates in your workspace.
           </div>
         </div>
-
-        <span style={countPillStyle}>{recentItems.length} updated</span>
       </div>
 
       {recentItems.length ? (
         <div style={listStyle}>
           {recentItems.map((item) => (
-            <ActivityCard key={item.key} item={item} />
+            <ActivityRow key={item.key} item={item} />
           ))}
         </div>
       ) : (
         <div style={emptyStyle}>
-          <div style={emptyIconStyle}>↗</div>
+          <div style={emptyTitleStyle}>No recent activity yet</div>
 
-          <div style={emptyTextWrapStyle}>
-            <div style={emptyTitleStyle}>No recent activity yet</div>
-
-            <div style={emptyTextStyle}>
-              Task and project updates will appear here after your first change.
-            </div>
+          <div style={emptyTextStyle}>
+            Task and project updates will appear here after your first change.
           </div>
         </div>
       )}
@@ -502,51 +320,50 @@ const responsiveCss = `
     font-family: inherit;
   }
 
-  .recent-activity-card {
-    position: relative;
-    overflow: hidden;
+  .recent-activity-row {
     transition:
-      transform 170ms ease,
-      box-shadow 170ms ease,
+      background 170ms ease,
       border-color 170ms ease,
-      background 170ms ease;
+      box-shadow 170ms ease,
+      transform 170ms ease;
   }
 
-  .recent-activity-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(99,102,241,0.22) !important;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,255,0.98)) !important;
-    box-shadow:
-      0 22px 42px rgba(15,23,42,0.085),
-      0 0 0 1px rgba(99,102,241,0.06),
-      inset 0 1px 0 rgba(255,255,255,0.98) !important;
+  .recent-activity-row:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.99) !important;
+    border-color: rgba(37, 99, 235, 0.16) !important;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.055) !important;
   }
 
-  .recent-activity-card:hover .recent-activity-arrow {
-    transform: translate(2px, -2px);
+  .recent-activity-row:hover .recent-activity-open {
+    color: #1d4ed8 !important;
+    transform: translateX(2px);
   }
 
-  @media (max-width: 900px) {
-    .recent-activity-card-main {
-      align-items: flex-start !important;
-    }
-  }
-
-  @media (max-width: 720px) {
+  @media (max-width: 760px) {
     .recent-activity-root {
-      border-radius: 24px !important;
-      padding: 16px !important;
+      max-width: 100% !important;
     }
 
-    .recent-activity-card-top {
-      align-items: flex-start !important;
-      flex-direction: column !important;
+    .recent-activity-row {
+      grid-template-columns: minmax(0, 1fr) !important;
+      gap: 7px !important;
+      min-height: 0 !important;
+      padding: 9px 11px !important;
     }
 
-    .recent-activity-date-wrap {
-      width: 100% !important;
-      justify-content: space-between !important;
+    .recent-activity-row > div:first-child {
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      padding-right: 0 !important;
+      border-right: 0 !important;
+    }
+
+    .recent-activity-row > span:last-child {
+      justify-self: start !important;
+      padding-left: 0 !important;
+      font-size: 11px !important;
     }
   }
 `;
@@ -554,268 +371,188 @@ const responsiveCss = `
 const shellStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 0,
-  borderRadius: 30,
-  padding: 18,
-  border: "1px solid rgba(226,232,240,0.82)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,255,0.95) 100%)",
-  boxShadow:
-    "0 26px 58px rgba(15,23,42,0.055), inset 0 1px 0 rgba(255,255,255,0.98)",
   display: "grid",
-  gap: 14,
+  gap: dashboardSpacing[3],
 };
 
 const headerStyle: React.CSSProperties = {
+  width: "100%",
   display: "flex",
-  justifyContent: "space-between",
-  gap: 12,
+  gap: dashboardSpacing[3],
   alignItems: "flex-start",
-  flexWrap: "wrap",
 };
 
 const headerTextStyle: React.CSSProperties = {
   display: "grid",
-  gap: 4,
+  gap: 5,
   minWidth: 0,
 };
 
 const kickerStyle: React.CSSProperties = {
-  color: "#4f46e5",
-  fontSize: 11,
-  fontWeight: 950,
+  color: dashboardColors.primary[600],
+  fontSize: 10.5,
+  fontWeight: dashboardTypography.weight.black,
   letterSpacing: "0.12em",
   textTransform: "uppercase",
 };
 
 const headingStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 20,
-  lineHeight: 1.1,
-  fontWeight: 950,
-  letterSpacing: "-0.045em",
+  color: dashboardColors.text.primary,
+  fontSize: 19,
+  lineHeight: 1.12,
+  fontWeight: dashboardTypography.weight.black,
+  letterSpacing: "-0.04em",
+};
+
+const headingRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: dashboardSpacing[2],
+  flexWrap: "wrap",
 };
 
 const subTextStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 13,
-  lineHeight: 1.5,
-  fontWeight: 650,
-  maxWidth: 560,
+  color: dashboardColors.text.muted,
+  fontSize: 12.5,
+  lineHeight: dashboardTypography.lineHeight.normal,
+  fontWeight: dashboardTypography.weight.medium,
 };
 
-const countPillStyle: React.CSSProperties = {
-  borderRadius: 999,
-  border: "1px solid rgba(99,102,241,0.16)",
-  background: "rgba(99,102,241,0.07)",
-  color: "#4338ca",
-  padding: "7px 10px",
-  fontSize: 11,
+const countTextStyle: React.CSSProperties = {
+  color: dashboardColors.text.secondary,
+  fontSize: 10.5,
   lineHeight: 1,
-  fontWeight: 950,
+  fontWeight: dashboardTypography.weight.bold,
   whiteSpace: "nowrap",
+  padding: "4px 7px",
+  borderRadius: dashboardRadii.full,
+  border: `1px solid ${dashboardColors.border.subtle}`,
+  background: "rgba(248, 250, 252, 0.78)",
 };
 
 const listStyle: React.CSSProperties = {
+  width: "100%",
   display: "grid",
-  gap: 10,
+  gap: dashboardSpacing[2],
 };
 
-const cardStyle: React.CSSProperties = {
+const rowStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 0,
-  border: "1px solid rgba(226,232,240,0.78)",
-  borderRadius: 20,
-  padding: 13,
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(248,250,255,0.82) 100%)",
-  boxShadow:
-    "0 14px 28px rgba(15,23,42,0.045), inset 0 1px 0 rgba(255,255,255,0.98)",
+  minHeight: 58,
+  display: "grid",
+  gridTemplateColumns: "88px minmax(0, 1fr) auto",
+  alignItems: "center",
+  gap: dashboardSpacing[3],
+  border: `1px solid ${dashboardColors.border.subtle}`,
+  borderRadius: dashboardRadii.lg,
+  padding: "10px 13px",
+  background: "rgba(255, 255, 255, 0.78)",
+  boxShadow: "none",
   cursor: "pointer",
   textAlign: "left",
 };
 
-const cardGlowStyle: React.CSSProperties = {
-  position: "absolute",
-  inset: "0 auto 0 0",
-  width: 4,
-  background:
-    "linear-gradient(180deg, rgba(99,102,241,0.95), rgba(168,85,247,0.65), rgba(14,165,233,0.45))",
-};
-
-const cardMainStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "flex-start",
-  gap: 12,
-  minWidth: 0,
-};
-
-const iconWrapStyle: React.CSSProperties = {
-  width: 30,
-  height: 30,
-  borderRadius: 999,
+const dateColumnStyle: React.CSSProperties = {
   display: "grid",
-  placeItems: "center",
-  background:
-    "linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.08))",
-  border: "1px solid rgba(99,102,241,0.12)",
-  flexShrink: 0,
-  marginLeft: 2,
-};
-
-const iconDotStyle: React.CSSProperties = {
-  width: 9,
-  height: 9,
-  borderRadius: 999,
-  background: "#6366f1",
-  boxShadow: "0 0 0 5px rgba(99,102,241,0.12)",
-};
-
-const contentStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 9,
+  gap: 4,
   minWidth: 0,
-  flex: 1,
-};
-
-const topLineStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: 12,
-  minWidth: 0,
-};
-
-const titleWrapStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 3,
-  minWidth: 0,
-};
-
-const titleStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 14,
-  lineHeight: 1.25,
-  fontWeight: 950,
-  letterSpacing: "-0.03em",
-  display: "-webkit-box",
-  WebkitLineClamp: 1,
-  WebkitBoxOrient: "vertical",
-  overflow: "hidden",
-};
-
-const subtitleStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 12,
-  lineHeight: 1.35,
-  fontWeight: 700,
-  display: "-webkit-box",
-  WebkitLineClamp: 1,
-  WebkitBoxOrient: "vertical",
-  overflow: "hidden",
-};
-
-const dateWrapStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  color: "#4338ca",
-  fontSize: 12,
-  fontWeight: 900,
-  whiteSpace: "nowrap",
-  flexShrink: 0,
+  paddingRight: dashboardSpacing[3],
+  borderRight: `1px solid ${dashboardColors.border.subtle}`,
 };
 
 const dateStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontWeight: 850,
-};
-
-const arrowStyle: React.CSSProperties = {
-  color: "#4338ca",
-  fontWeight: 950,
-  transition: "transform 170ms ease",
-};
-
-const chipsRowStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 7,
-  flexWrap: "wrap",
-};
-
-const pillStyle: React.CSSProperties = {
-  borderRadius: 999,
-  padding: "5px 8px",
-  fontSize: 10,
+  color: dashboardColors.text.primary,
+  fontSize: 12,
   lineHeight: 1,
-  fontWeight: 950,
+  fontWeight: dashboardTypography.weight.black,
+  whiteSpace: "nowrap",
 };
 
-const detailChipStyle: React.CSSProperties = {
-  borderRadius: 999,
-  padding: "5px 8px",
-  color: "#475569",
-  background: "rgba(248,250,252,0.92)",
-  border: "1px solid rgba(226,232,240,0.82)",
-  fontSize: 10,
+const relativeDateStyle: React.CSSProperties = {
+  color: dashboardColors.text.subtle,
+  fontSize: 10.5,
   lineHeight: 1,
-  fontWeight: 900,
+  fontWeight: dashboardTypography.weight.bold,
+  whiteSpace: "nowrap",
 };
 
-const footerLineStyle: React.CSSProperties = {
-  color: "#94a3b8",
-  fontSize: 11,
-  lineHeight: 1.2,
-  fontWeight: 800,
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 10,
-  flexWrap: "wrap",
-};
-
-const openTextStyle: React.CSSProperties = {
-  color: "#4338ca",
-  fontWeight: 950,
-};
-
-const emptyStyle: React.CSSProperties = {
-  borderRadius: 20,
-  border: "1px dashed rgba(148,163,184,0.3)",
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.78), rgba(248,250,255,0.68))",
-  padding: 16,
-  display: "flex",
-  alignItems: "center",
-  gap: 13,
-};
-
-const emptyIconStyle: React.CSSProperties = {
-  width: 38,
-  height: 38,
-  borderRadius: 999,
-  display: "grid",
-  placeItems: "center",
-  background: "rgba(99,102,241,0.08)",
-  color: "#4338ca",
-  fontSize: 17,
-  fontWeight: 950,
-  flexShrink: 0,
-};
-
-const emptyTextWrapStyle: React.CSSProperties = {
+const contentStyle: React.CSSProperties = {
+  minWidth: 0,
+  maxWidth: 680,
   display: "grid",
   gap: 4,
 };
 
-const emptyTitleStyle: React.CSSProperties = {
-  color: "#0f172a",
+const titleStyle: React.CSSProperties = {
+  color: dashboardColors.text.primary,
   fontSize: 14,
-  fontWeight: 950,
+  lineHeight: dashboardTypography.lineHeight.snug,
+  fontWeight: dashboardTypography.weight.black,
+  letterSpacing: "-0.03em",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const metaStyle: React.CSSProperties = {
+  minWidth: 0,
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  color: dashboardColors.text.muted,
+  fontSize: 12,
+  lineHeight: dashboardTypography.lineHeight.snug,
+  fontWeight: dashboardTypography.weight.medium,
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+};
+
+const clientStyle: React.CSSProperties = {
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const metaSeparatorStyle: React.CSSProperties = {
+  color: dashboardColors.text.subtle,
+  flexShrink: 0,
+};
+
+const activityTypeStyle: React.CSSProperties = {
+  color: dashboardColors.text.muted,
+  flexShrink: 0,
+};
+
+const openTextStyle: React.CSSProperties = {
+  color: dashboardColors.primary[700],
+  fontSize: 11.5,
+  lineHeight: 1,
+  fontWeight: dashboardTypography.weight.black,
+  whiteSpace: "nowrap",
+  paddingLeft: dashboardSpacing[2],
+  transition: "color 170ms ease, transform 170ms ease",
+};
+
+const emptyStyle: React.CSSProperties = {
+  borderRadius: dashboardRadii.xl,
+  border: `1px dashed ${dashboardColors.border.default}`,
+  background: "rgba(255, 255, 255, 0.66)",
+  padding: dashboardSpacing[4],
+  display: "grid",
+  gap: 5,
+};
+
+const emptyTitleStyle: React.CSSProperties = {
+  color: dashboardColors.text.primary,
+  fontSize: 14.5,
+  fontWeight: dashboardTypography.weight.black,
 };
 
 const emptyTextStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 13,
-  lineHeight: 1.5,
-  fontWeight: 650,
+  color: dashboardColors.text.muted,
+  fontSize: 12.5,
+  lineHeight: dashboardTypography.lineHeight.normal,
+  fontWeight: dashboardTypography.weight.medium,
 };

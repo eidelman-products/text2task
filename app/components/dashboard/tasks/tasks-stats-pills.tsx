@@ -4,7 +4,7 @@ type TasksStatsPillsProps = {
   activeProjectsCount: number;
   totalTasksCount: number;
   completedProjectsCount: number;
-  archivedTasksCount: number;
+  archivedProjectsCount: number;
   highPriorityTasksCount: number;
 };
 
@@ -14,8 +14,7 @@ export default function TasksStatsPills({
   activeProjectsCount,
   totalTasksCount,
   completedProjectsCount,
-  archivedTasksCount,
-  highPriorityTasksCount,
+  archivedProjectsCount,
 }: TasksStatsPillsProps) {
   return (
     <div className="tasks-top-stats" style={topStatsWrapStyle}>
@@ -31,7 +30,7 @@ export default function TasksStatsPills({
       <StatPill
         tone="blue"
         value={totalTasksCount}
-        label="Total Tasks"
+        label="Active Tasks"
         compactLabel="Tasks"
       />
 
@@ -44,17 +43,11 @@ export default function TasksStatsPills({
 
       <StatPill
         tone="gray"
-        value={archivedTasksCount}
-        label="Archived Tasks"
-        compactLabel="Archive"
+        value={archivedProjectsCount}
+        label="Archived Projects"
+        compactLabel="Archived"
       />
 
-      <StatPill
-        tone="orange"
-        value={highPriorityTasksCount}
-        label="High Priority Tasks"
-        compactLabel="High"
-      />
     </div>
   );
 }
@@ -87,7 +80,7 @@ function StatPill({
         style={{
           ...dotStyle,
           background: palette.dot,
-          boxShadow: `0 0 0 4px ${palette.dot}18`,
+          boxShadow: "none",
         }}
       />
 
@@ -107,44 +100,39 @@ function StatPill({
 function getPalette(tone: StatTone) {
   const palette = {
     purple: {
-      background:
-        "linear-gradient(135deg, rgba(238,242,255,0.98) 0%, rgba(255,255,255,0.92) 100%)",
-      border: "rgba(199,210,254,0.95)",
-      color: "#4338ca",
-      dot: "#6366f1",
-      shadow: "0 10px 24px rgba(79,70,229,0.075)",
+      background: "transparent",
+      border: "rgba(226,232,240,0.46)",
+      color: "#334155",
+      dot: "#2563eb",
+      shadow: "none",
     },
     blue: {
-      background:
-        "linear-gradient(135deg, rgba(239,246,255,0.98) 0%, rgba(255,255,255,0.92) 100%)",
-      border: "rgba(191,219,254,0.95)",
-      color: "#2563eb",
-      dot: "#3b82f6",
-      shadow: "0 10px 24px rgba(37,99,235,0.065)",
+      background: "transparent",
+      border: "rgba(226,232,240,0.46)",
+      color: "#334155",
+      dot: "#2563eb",
+      shadow: "none",
     },
     green: {
-      background:
-        "linear-gradient(135deg, rgba(240,253,244,0.98) 0%, rgba(255,255,255,0.92) 100%)",
-      border: "rgba(187,247,208,0.95)",
-      color: "#15803d",
-      dot: "#22c55e",
-      shadow: "0 10px 24px rgba(22,163,74,0.065)",
+      background: "transparent",
+      border: "rgba(226,232,240,0.46)",
+      color: "#334155",
+      dot: "#16a34a",
+      shadow: "none",
     },
     orange: {
-      background:
-        "linear-gradient(135deg, rgba(255,247,237,0.98) 0%, rgba(255,255,255,0.92) 100%)",
-      border: "rgba(254,215,170,0.95)",
-      color: "#c2410c",
-      dot: "#f97316",
-      shadow: "0 10px 24px rgba(234,88,12,0.06)",
+      background: "transparent",
+      border: "rgba(226,232,240,0.46)",
+      color: "#475569",
+      dot: "#f59e0b",
+      shadow: "none",
     },
     gray: {
-      background:
-        "linear-gradient(135deg, rgba(248,250,252,0.98) 0%, rgba(255,255,255,0.92) 100%)",
-      border: "rgba(226,232,240,0.95)",
+      background: "transparent",
+      border: "rgba(226,232,240,0.46)",
       color: "#475569",
       dot: "#64748b",
-      shadow: "0 10px 24px rgba(15,23,42,0.045)",
+      shadow: "none",
     },
   }[tone];
 
@@ -155,20 +143,20 @@ const topStatsWrapStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "flex-end",
-  gap: 9,
-  flexWrap: "wrap",
+  gap: 5,
+  flexWrap: "nowrap",
   minWidth: 0,
 };
 
 const topStatPillStyle: CSSProperties = {
-  minHeight: 34,
+  minHeight: 28,
   display: "inline-flex",
   alignItems: "center",
-  gap: 7,
-  padding: "8px 12px",
+  gap: 5,
+  padding: "4px 7px",
   borderRadius: 999,
   border: "1px solid",
-  fontSize: 12,
+  fontSize: 11.5,
   fontWeight: 850,
   whiteSpace: "nowrap",
   boxSizing: "border-box",
@@ -177,8 +165,8 @@ const topStatPillStyle: CSSProperties = {
 };
 
 const dotStyle: CSSProperties = {
-  width: 7,
-  height: 7,
+  width: 6,
+  height: 6,
   borderRadius: 999,
   flexShrink: 0,
 };
@@ -198,10 +186,10 @@ const statsCss = `
   }
 
   .tasks-stat-pill:hover {
-    transform: translateY(-1px);
+    transform: none;
   }
 
-  @media (max-width: 1180px) {
+  @media (max-width: 1080px) {
     .tasks-top-stats {
       justify-content: flex-start !important;
     }

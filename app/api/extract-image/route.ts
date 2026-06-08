@@ -22,6 +22,7 @@ const ExtractedTaskSchema = z.object({
 });
 
 const ExtractedTasksResponseSchema = z.object({
+  raw_input: z.string().optional().default(""),
   tasks: z.array(ExtractedTaskSchema),
 });
 
@@ -248,6 +249,7 @@ You must infer the most realistic structured tasks without inventing unsupported
 
 Return ONLY valid JSON in this exact format:
 {
+  "raw_input": "full visible text from the uploaded image, preserving line breaks when possible",
   "tasks": [
     {
       "client_name": string,
@@ -260,7 +262,7 @@ Return ONLY valid JSON in this exact format:
       "deadline_text": string,
       "priority": "low" | "medium" | "high",
       "source": "image",
-      "raw_input": "Extracted from uploaded image"
+      "raw_input": string
     }
   ]
 }
@@ -271,12 +273,14 @@ STRICT OUTPUT RULES:
 - No explanations.
 - No comments.
 - No extra text before or after the JSON.
+- The top-level "raw_input" must contain the full visible text from the uploaded image, not a summary.
+- Preserve important visible lines when possible, especially Client, Email, Phone, Project, Budget, Deadline, Priority, and Notes.
 - "source" must always be "image".
-- "raw_input" must always be exactly "Extracted from uploaded image".
+- Each task object's "raw_input" may match the top-level "raw_input".
 - Every task object must include all fields exactly as shown.
 - If a field is missing or unknown, return an empty string "".
 - If there are no clearly actionable work items, return:
-  { "tasks": [] }
+  { "raw_input": "", "tasks": [] }
 
 ----------------------
 CRITICAL PRODUCT RULE
@@ -484,6 +488,10 @@ Strong signals for separate subtasks:
 - "5 story slides"
 - "captions for each post"
 - "hashtags"
+
+Treat explicit "make sure", "ensure", "test", or "verify" requirements as subtasks only when they describe an independently verifiable delivery requirement, such as mobile responsiveness, form validation, browser compatibility, link testing, upload testing, or making sure a contact form works.
+Keep subjective style, tone, brand, color, mood, or preference comments as client_notes.
+Do not duplicate the same requirement in both subtasks and client_notes once it becomes a subtask.
 
 Avoid weak over-splitting:
 - Do not split tiny style notes unless they are deliverables.
@@ -824,9 +832,17 @@ Before returning JSON, verify:
         ? null
         : Math.max(FREE_EXTRACT_LIMIT - nextExtractCount, 0);
 
+    const imageRawInput =
+      parsedTasks.data.raw_input?.trim() || "Extracted from uploaded image";
+    const tasks = parsedTasks.data.tasks.map((task) => ({
+      ...task,
+      raw_input: imageRawInput,
+    }));
+
     return NextResponse.json({
       success: true,
-      tasks: parsedTasks.data.tasks,
+      tasks,
+      raw_input: imageRawInput,
       usage: {
         plan: profile.plan,
         extract_count: nextExtractCount,

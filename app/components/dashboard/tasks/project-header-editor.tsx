@@ -1,17 +1,8 @@
 import type { CSSProperties, KeyboardEvent } from "react";
 import type { TaskProjectGroup } from "./task-types";
 
-type ProjectHeaderVisual = {
-  avatarBackground: string;
-  avatarText: string;
-  label: string;
-  labelColor: string;
-  labelBackground: string;
-};
-
 type ProjectHeaderEditorProps = {
   project: TaskProjectGroup;
-  visual: ProjectHeaderVisual;
   isDeleting: boolean;
   createdLabel: string;
   onEnterBlur: (
@@ -26,7 +17,6 @@ type ProjectHeaderEditorProps = {
 
 export default function ProjectHeaderEditor({
   project,
-  visual,
   isDeleting,
   createdLabel,
   onEnterBlur,
@@ -36,12 +26,11 @@ export default function ProjectHeaderEditor({
   const canEditProject = Boolean(projectId) && !isDeleting;
 
   const clientName = project.clientName || "";
-  const contactName = project.contactName || project.contact_name || "";
   const projectTitle = project.projectTitle || "";
   const projectSummary = project.projectSummary || "";
 
   function commitProjectField(
-    field: "client_name" | "contact_name" | "title" | "summary",
+    field: "client_name" | "title" | "summary",
     currentValue: string,
     nextValue: string
   ) {
@@ -63,62 +52,20 @@ export default function ProjectHeaderEditor({
     <div style={headerShellStyle}>
       <style>{projectHeaderEditorCss}</style>
 
-      <div style={topRowStyle}>
-        <span
-          style={{
-            ...clientAvatarStyle,
-            background: visual.avatarBackground,
-            color: visual.avatarText,
-          }}
-        >
-          {getClientInitials(clientName)}
-        </span>
+      <div style={clientMetaRowStyle}>
+        <EditableHeaderField
+          ariaLabel="Client name"
+          value={clientName}
+          placeholder="Client name"
+          disabled={!canEditProject}
+          variant="client"
+          onEnterBlur={onEnterBlur}
+          onCommit={(nextValue) =>
+            commitProjectField("client_name", clientName, nextValue)
+          }
+        />
 
-        <div style={clientStackStyle}>
-          <div style={clientMetaRowStyle}>
-            <EditableHeaderField
-              ariaLabel="Client name"
-              value={clientName}
-              placeholder="Client name"
-              disabled={!canEditProject}
-              variant="client"
-              onEnterBlur={onEnterBlur}
-              onCommit={(nextValue) =>
-                commitProjectField("client_name", clientName, nextValue)
-              }
-            />
-
-            <span style={createdPillStyle}>{createdLabel}</span>
-
-            {visual.label ? (
-              <span
-                style={{
-                  ...statePillStyle,
-                  color: visual.labelColor,
-                  background: visual.labelBackground,
-                }}
-              >
-                {visual.label}
-              </span>
-            ) : null}
-          </div>
-
-          <div style={contactRowStyle}>
-            <span style={contactPrefixStyle}>Contact:</span>
-
-            <EditableHeaderField
-              ariaLabel="Contact name"
-              value={contactName}
-              placeholder="Add contact"
-              disabled={!canEditProject}
-              variant="contact"
-              onEnterBlur={onEnterBlur}
-              onCommit={(nextValue) =>
-                commitProjectField("contact_name", contactName, nextValue)
-              }
-            />
-          </div>
-        </div>
+        <span style={createdMetaStyle}>{createdLabel}</span>
       </div>
 
       <EditableHeaderField
@@ -236,7 +183,7 @@ function getShellVariantStyle(
   }
 
   return {
-    width: "min(250px, 100%)",
+    width: "min(340px, 100%)",
     borderRadius: 999,
   };
 }
@@ -278,24 +225,13 @@ function getInputVariantStyle(
   }
 
   return {
-    minHeight: 23,
-    fontSize: 12,
+    minHeight: 27,
+    fontSize: 14,
     fontWeight: 950,
-    color: "#344054",
-    padding: "1px 26px 1px 7px",
+    color: "#0f172a",
+    letterSpacing: "-0.025em",
+    padding: "2px 28px 2px 7px",
   };
-}
-
-function getClientInitials(clientName: string) {
-  const clean = String(clientName || "").trim();
-
-  if (!clean) return "C";
-
-  const parts = clean.split(/\s+/).filter(Boolean);
-
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-
-  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 }
 
 const headerShellStyle: CSSProperties = {
@@ -304,72 +240,20 @@ const headerShellStyle: CSSProperties = {
   gap: 4,
 };
 
-const topRowStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 9,
-  minWidth: 0,
-};
-
-const clientAvatarStyle: CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: 12,
-  display: "inline-grid",
-  placeItems: "center",
-  fontSize: 11,
-  fontWeight: 950,
-  flexShrink: 0,
-  boxShadow:
-    "inset 0 1px 0 rgba(255,255,255,0.78), 0 8px 18px rgba(15,23,42,0.04)",
-};
-
-const clientStackStyle: CSSProperties = {
-  display: "grid",
-  gap: 1,
-  minWidth: 0,
-};
-
 const clientMetaRowStyle: CSSProperties = {
-  display: "flex",
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
   alignItems: "center",
-  gap: 6,
-  minWidth: 0,
-  flexWrap: "wrap",
-};
-
-const contactRowStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 3,
+  gap: 12,
   minWidth: 0,
 };
 
-const contactPrefixStyle: CSSProperties = {
-  fontSize: 10,
+const createdMetaStyle: CSSProperties = {
+  fontSize: 12,
+  lineHeight: 1.2,
   fontWeight: 850,
-  color: "#98a2b3",
+  color: "#475569",
   whiteSpace: "nowrap",
-};
-
-const createdPillStyle: CSSProperties = {
-  padding: "3px 7px",
-  borderRadius: 999,
-  fontSize: 10,
-  fontWeight: 850,
-  color: "#667085",
-  background: "rgba(248,250,252,0.72)",
-  whiteSpace: "nowrap",
-  border: "1px solid rgba(226,232,240,0.44)",
-};
-
-const statePillStyle: CSSProperties = {
-  padding: "3px 7px",
-  borderRadius: 999,
-  fontSize: 10,
-  fontWeight: 900,
-  whiteSpace: "nowrap",
-  border: "1px solid rgba(255,255,255,0.58)",
 };
 
 const shellBaseStyle: CSSProperties = {
@@ -377,8 +261,7 @@ const shellBaseStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   minWidth: 0,
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.44) 0%, rgba(255,255,255,0.14) 100%)",
+  background: "transparent",
   border: "1px solid transparent",
   transition:
     "background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease",
@@ -405,9 +288,9 @@ const editCueStyle: CSSProperties = {
   borderRadius: 999,
   display: "inline-grid",
   placeItems: "center",
-  color: "#4f46e5",
-  background: "rgba(238,242,255,0.9)",
-  border: "1px solid rgba(199,210,254,0.82)",
+  color: "#2563eb",
+  background: "rgba(239,246,255,0.76)",
+  border: "1px solid rgba(191,219,254,0.72)",
   fontSize: 9,
   fontWeight: 950,
   opacity: 0,
@@ -417,34 +300,34 @@ const editCueStyle: CSSProperties = {
 
 const projectHeaderEditorCss = `
   .project-header-edit-shell:hover:not(.project-header-edit-shell-disabled) {
-    background: linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(248,250,252,0.82) 100%) !important;
-    border-color: rgba(199,210,254,0.78) !important;
+    background: rgba(248,250,252,0.66) !important;
+    border-color: rgba(191,219,254,0.58) !important;
     box-shadow:
-      0 7px 16px rgba(79,70,229,0.07),
+      0 5px 12px rgba(15,23,42,0.025),
       inset 0 1px 0 rgba(255,255,255,0.92) !important;
     transform: translateY(-1px);
   }
 
   .project-header-edit-shell:hover:not(.project-header-edit-shell-disabled) .project-header-edit-cue {
-    opacity: 1 !important;
+    opacity: 0.72 !important;
     transform: translateY(-50%) scale(1.02) !important;
   }
 
   .project-header-edit-shell:focus-within {
-    background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(238,242,255,0.72) 100%) !important;
-    border-color: rgba(129,140,248,0.92) !important;
+    background: rgba(239,246,255,0.72) !important;
+    border-color: rgba(37,99,235,0.36) !important;
     box-shadow:
-      0 0 0 3px rgba(99,102,241,0.105),
-      0 10px 22px rgba(79,70,229,0.09),
+      0 0 0 3px rgba(37,99,235,0.055),
+      0 7px 16px rgba(15,23,42,0.035),
       inset 0 1px 0 rgba(255,255,255,0.96) !important;
     transform: translateY(-1px);
   }
 
   .project-header-edit-shell:focus-within .project-header-edit-cue {
     opacity: 1 !important;
-    background: rgba(79,70,229,0.98) !important;
+    background: rgba(37,99,235,0.94) !important;
     color: #ffffff !important;
-    border-color: rgba(79,70,229,0.98) !important;
+    border-color: rgba(37,99,235,0.94) !important;
   }
 
   .project-header-editor-input::placeholder {
@@ -452,7 +335,7 @@ const projectHeaderEditorCss = `
   }
 
   .project-header-editor-input::selection {
-    background: rgba(199,210,254,0.78);
+    background: rgba(191,219,254,0.78);
   }
 
   .project-header-editor-input-title:focus,

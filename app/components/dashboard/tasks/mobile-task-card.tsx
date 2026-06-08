@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
-import TaskRowActions from "../task-row-actions";
 import type {
   TaskArchiveView,
   TaskProjectGroup,
@@ -17,6 +16,10 @@ type MobileTaskCardProps = {
   isSelected: boolean;
   isPartiallySelected: boolean;
   archiveView: TaskArchiveView;
+  projectResourceCount?: number;
+  onOpenProjectResources?: (project: TaskProjectGroup) => void;
+  onOpenProjectUpdate?: (project: TaskProjectGroup) => void;
+  onOpenProjectHistory?: (project: TaskProjectGroup) => void;
   onToggleProjectSelection: (project: TaskProjectGroup) => void;
   updateTaskField: (taskId: number, field: string, value: any) => void;
   updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
@@ -31,23 +34,23 @@ export default function MobileTaskCard({
   isSaving,
   isSaved,
   isDeleting,
-  isCopied,
   isSelected,
   isPartiallySelected,
   archiveView,
+  projectResourceCount = 0,
+  onOpenProjectResources,
+  onOpenProjectUpdate,
+  onOpenProjectHistory,
   onToggleProjectSelection,
   updateTaskField,
   updateTaskStatus,
-  copyTask,
-  archiveProject,
-  restoreProject,
-  permanentlyDeleteProject,
 }: MobileTaskCardProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const isBusy = isSaving || isDeleting;
   const actionMode =
     archiveView === "archived" || project.is_archived ? "archived" : "active";
+  const archivedDate = formatArchivedDate(project.archived_at);
 
   const projectState = getProjectVisualState(project);
   const deadlineStyle = getDeadlineStyle(project);
@@ -139,8 +142,15 @@ export default function MobileTaskCard({
               ) : null}
 
               <div style={mobileCreatedStyle}>
-                Created {formatCreatedDate(project.created_at)}
+                {formatCreatedDate(project.created_at)}
               </div>
+
+              {actionMode === "archived" ? (
+                <div style={mobileArchivedIndicatorStyle}>
+                  Archived project
+                  {archivedDate ? ` · Archived ${archivedDate}` : ""}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -161,7 +171,6 @@ export default function MobileTaskCard({
 
       <div style={projectTitleBlockStyle}>
         <div style={projectTitleStyle}>{project.projectTitle}</div>
-        <div style={projectSummaryStyle}>{project.projectSummary}</div>
       </div>
 
       <div style={mobileMetricsGridStyle}>
@@ -177,40 +186,50 @@ export default function MobileTaskCard({
       <div style={mobileMetricsGridStyle}>
         <div style={mobileFieldStackStyle}>
           <label style={mobileFieldLabelStyle}>Priority</label>
-          <select
-            value={project.priority || "Medium"}
-            onChange={(e) => updateProjectPriority(e.target.value)}
-            disabled={isBusy}
-            style={{
-              ...mobileInputStyle,
-              ...getPrioritySelectStyle(project.priority),
-            }}
-          >
-            <option>Low</option>
-            <option>Medium</option>
-            <option>High</option>
-          </select>
+          {actionMode === "archived" ? (
+            <div style={mobileReadOnlyMetaStyle}>
+              {project.priority || "Medium"}
+            </div>
+          ) : (
+            <select
+              value={project.priority || "Medium"}
+              onChange={(e) => updateProjectPriority(e.target.value)}
+              disabled={isBusy}
+              style={{
+                ...mobileInputStyle,
+                ...getPrioritySelectStyle(project.priority),
+              }}
+            >
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
+          )}
         </div>
 
         <div style={mobileFieldStackStyle}>
           <label style={mobileFieldLabelStyle}>Status</label>
-          <select
-            value={project.status || "New"}
-            onChange={(e) => updateProjectStatus(e.target.value)}
-            disabled={isBusy}
-            style={{
-              ...mobileInputStyle,
-              color: statusStyle.color,
-              background: statusStyle.background,
-              borderColor: statusStyle.borderColor,
-            }}
-          >
-            <option value="New">New</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Review">Review</option>
-            <option value="Urgent">Urgent</option>
-            <option value="Done">Done</option>
-          </select>
+          {actionMode === "archived" ? (
+            <div style={mobileReadOnlyMetaStyle}>{project.status || "New"}</div>
+          ) : (
+            <select
+              value={project.status || "New"}
+              onChange={(e) => updateProjectStatus(e.target.value)}
+              disabled={isBusy}
+              style={{
+                ...mobileInputStyle,
+                color: statusStyle.color,
+                background: statusStyle.background,
+                borderColor: statusStyle.borderColor,
+              }}
+            >
+              <option value="New">New</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Review">Review</option>
+              <option value="Urgent">Urgent</option>
+              <option value="Done">Done</option>
+            </select>
+          )}
         </div>
       </div>
 
@@ -252,6 +271,54 @@ export default function MobileTaskCard({
         </span>
       </button>
 
+      {onOpenProjectResources ||
+      onOpenProjectHistory ||
+      (actionMode !== "archived" && onOpenProjectUpdate && !isDeleting) ? (
+        <div style={mobileProjectActionsStyle}>
+          {onOpenProjectResources ? (
+            <button
+              type="button"
+              onClick={() => onOpenProjectResources(project)}
+              disabled={isDeleting}
+              style={mobileSharedActionButtonStyle}
+            >
+              Resources
+              {projectResourceCount > 0 ? (
+                <span style={mobileResourceCountStyle}>
+                  {projectResourceCount}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
+
+          {actionMode !== "archived" &&
+          onOpenProjectUpdate &&
+          !isDeleting ? (
+            <button
+              type="button"
+              onClick={() => onOpenProjectUpdate(project)}
+              style={{
+                ...mobileSharedActionButtonStyle,
+                ...mobileUpdateActionButtonStyle,
+              }}
+            >
+              Add update
+            </button>
+          ) : null}
+
+          {onOpenProjectHistory ? (
+            <button
+              type="button"
+              onClick={() => onOpenProjectHistory(project)}
+              disabled={isDeleting}
+              style={mobileSharedActionButtonStyle}
+            >
+              History
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {isOpen && (
         <div style={mobileDetailsPanelStyle}>
           <div style={mobileDetailSectionStyle}>
@@ -277,6 +344,7 @@ export default function MobileTaskCard({
                   subtask={subtask}
                   index={index}
                   isBusy={isBusy}
+                  readOnly={actionMode === "archived"}
                   onTextareaEnter={handleTextareaEnter}
                   updateTaskField={updateTaskField}
                   updateTaskStatus={updateTaskStatus}
@@ -289,9 +357,6 @@ export default function MobileTaskCard({
             <div style={mobileDetailHeaderStyle}>
               <div>
                 <div style={mobileDetailTitleStyle}>Client details</div>
-                <div style={mobileDetailSubtitleStyle}>
-                  Contact and project notes
-                </div>
               </div>
             </div>
 
@@ -314,19 +379,8 @@ export default function MobileTaskCard({
         </div>
       )}
 
-      <div style={mobileActionsRowStyle}>
-        <TaskRowActions
-          taskId={project.primaryTask.id}
-          isDeleting={isBusy}
-          isCopied={isCopied}
-          actionMode={actionMode}
-          onCopy={copyTask}
-          onArchive={() => archiveProject(project)}
-          onRestore={() => restoreProject(project)}
-          onPermanentDelete={() => permanentlyDeleteProject(project)}
-        />
-
-        {(isSaving || isSaved || isDeleting) && (
+      {(isSaving || isSaved || isDeleting) && (
+        <div style={mobileActionsRowStyle}>
           <div
             style={{
               fontSize: 11,
@@ -342,8 +396,8 @@ export default function MobileTaskCard({
                 ? "Saved"
                 : "Saving..."}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </article>
   );
 }
@@ -352,6 +406,7 @@ function MobileSubtaskRow({
   subtask,
   index,
   isBusy,
+  readOnly,
   onTextareaEnter,
   updateTaskField,
   updateTaskStatus,
@@ -359,6 +414,7 @@ function MobileSubtaskRow({
   subtask: TaskProjectSubtask;
   index: number;
   isBusy: boolean;
+  readOnly: boolean;
   onTextareaEnter: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
   updateTaskField: (taskId: number, field: string, value: any) => void;
   updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
@@ -371,10 +427,10 @@ function MobileSubtaskRow({
     <div
       style={{
         ...mobileSubtaskRowStyle,
-        background: isDone ? "rgba(240,253,244,0.64)" : "rgba(255,255,255,0.8)",
+        background: isDone ? "rgba(240,253,244,0.10)" : "transparent",
         borderColor: isDone
-          ? "rgba(187,247,208,0.72)"
-          : "rgba(226,232,240,0.72)",
+          ? "rgba(187,247,208,0.24)"
+          : "rgba(226,232,240,0.28)",
       }}
     >
       <div style={mobileSubtaskTopLineStyle}>
@@ -383,55 +439,71 @@ function MobileSubtaskRow({
             ...mobileSubtaskIndexStyle,
             color: isDone ? "#067647" : "#64748b",
             background: isDone
-              ? "rgba(220,252,231,0.72)"
-              : "rgba(248,250,252,0.88)",
+              ? "rgba(220,252,231,0.22)"
+              : "rgba(248,250,252,0.36)",
             borderColor: isDone
-              ? "rgba(187,247,208,0.72)"
-              : "rgba(226,232,240,0.8)",
+              ? "rgba(187,247,208,0.26)"
+              : "rgba(226,232,240,0.30)",
           }}
         >
           {isDone ? "✓" : index + 1}
         </span>
 
-        <textarea
-          defaultValue={subtask.title}
-          rows={2}
-          onBlur={(e) => {
-            const next = e.currentTarget.value.trim();
+        {readOnly ? (
+          <div
+            style={{
+              ...mobileSubtaskReadOnlyTitleStyle,
+              color: isDone ? "#64748b" : "#334155",
+              textDecoration: isDone ? "line-through" : "none",
+            }}
+          >
+            {subtask.title}
+          </div>
+        ) : (
+          <textarea
+            defaultValue={subtask.title}
+            rows={2}
+            onBlur={(e) => {
+              const next = e.currentTarget.value.trim();
 
-            if (next && next !== subtask.title) {
-              updateTaskField(subtask.id, "task", next);
-            }
-          }}
-          onKeyDown={onTextareaEnter}
-          disabled={isBusy}
-          style={{
-            ...mobileSubtaskTextareaStyle,
-            color: isDone ? "#475467" : "#0f172a",
-            background: isDone ? "rgba(255,255,255,0.62)" : "rgba(255,255,255,0.86)",
-            textDecoration: isDone ? "line-through" : "none",
-          }}
-        />
+              if (next && next !== subtask.title) {
+                updateTaskField(subtask.id, "task", next);
+              }
+            }}
+            onKeyDown={onTextareaEnter}
+            disabled={isBusy}
+            style={{
+              ...mobileSubtaskTextareaStyle,
+              color: isDone ? "#475467" : "#0f172a",
+              background: isDone ? "transparent" : "transparent",
+              textDecoration: isDone ? "line-through" : "none",
+            }}
+          />
+        )}
       </div>
 
       <div style={mobileSubtaskStatusRowStyle}>
-        <span style={mobileSubtaskStatusLabelStyle}>Status</span>
-
-        <select
-          value={subtask.status || "New"}
-          onChange={(e) => updateTaskStatus(subtask.id, e.target.value)}
-          disabled={isBusy}
-          style={{
-            ...mobileSubtaskStatusStyle,
-            ...getSubtaskStatusStyle(subtask.status),
-          }}
-        >
-          <option value="New">New</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Review">Review</option>
-          <option value="Urgent">Urgent</option>
-          <option value="Done">Done</option>
-        </select>
+        {readOnly ? (
+          <span style={mobileSubtaskReadOnlyStatusStyle}>
+            {subtask.status || "New"}
+          </span>
+        ) : (
+          <select
+            value={subtask.status || "New"}
+            onChange={(e) => updateTaskStatus(subtask.id, e.target.value)}
+            disabled={isBusy}
+            style={{
+              ...mobileSubtaskStatusStyle,
+              ...getSubtaskStatusStyle(subtask.status),
+            }}
+          >
+            <option value="New">New</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Review">Review</option>
+            <option value="Urgent">Urgent</option>
+            <option value="Done">Done</option>
+          </select>
+        )}
       </div>
     </div>
   );
@@ -482,6 +554,20 @@ function getClientInitial(clientName: string) {
   return (clientName || "U").trim().charAt(0).toUpperCase();
 }
 
+function formatArchivedDate(value?: string | null) {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "2-digit",
+  }).format(date);
+}
+
 function getProjectVisualState(project: TaskProjectGroup) {
   const status = String(project.status || "").trim().toLowerCase();
   const priority = String(project.priority || "").trim().toLowerCase();
@@ -490,16 +576,17 @@ function getProjectVisualState(project: TaskProjectGroup) {
   if (status === "done") {
     return {
       kind: "done",
-      accent: "linear-gradient(180deg, #22c55e 0%, #16a34a 100%)",
+      accent:
+        "linear-gradient(180deg, rgba(22,163,74,0.76) 0%, rgba(134,239,172,0.58) 100%)",
       background:
-        "linear-gradient(180deg, rgba(240,253,244,0.9) 0%, rgba(255,255,255,0.88) 72%)",
-      border: "rgba(187,247,208,0.76)",
+        "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.86) 100%)",
+      border: "rgba(203,213,225,0.64)",
       shadow:
-        "0 18px 42px rgba(22,163,74,0.08), 0 8px 20px rgba(15,23,42,0.035)",
-      avatarBackground: "rgba(220,252,231,0.74)",
-      avatarText: "#067647",
-      avatarBorder: "rgba(187,247,208,0.72)",
-      clientColor: "#067647",
+        "0 14px 32px rgba(15,23,42,0.042), 0 4px 12px rgba(15,23,42,0.024)",
+      avatarBackground: "rgba(248,250,252,0.72)",
+      avatarText: "#475569",
+      avatarBorder: "rgba(226,232,240,0.58)",
+      clientColor: "#334155",
       label: "Done",
       labelColor: "#067647",
       labelBackground: "rgba(240,253,244,0.84)",
@@ -510,16 +597,17 @@ function getProjectVisualState(project: TaskProjectGroup) {
   if (deadlineState === "overdue") {
     return {
       kind: "overdue",
-      accent: "linear-gradient(180deg, #f43f5e 0%, #e11d48 100%)",
+      accent:
+        "linear-gradient(180deg, rgba(185,28,28,0.78) 0%, rgba(248,113,113,0.58) 100%)",
       background:
-        "linear-gradient(180deg, rgba(255,241,242,0.82) 0%, rgba(255,255,255,0.9) 78%)",
-      border: "rgba(253,164,175,0.74)",
+        "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.86) 100%)",
+      border: "rgba(203,213,225,0.64)",
       shadow:
-        "0 18px 42px rgba(225,29,72,0.075), 0 8px 20px rgba(15,23,42,0.035)",
-      avatarBackground: "rgba(255,228,230,0.74)",
-      avatarText: "#be123c",
-      avatarBorder: "rgba(253,164,175,0.72)",
-      clientColor: "#be123c",
+        "0 14px 32px rgba(15,23,42,0.042), 0 4px 12px rgba(15,23,42,0.024)",
+      avatarBackground: "rgba(248,250,252,0.72)",
+      avatarText: "#475569",
+      avatarBorder: "rgba(226,232,240,0.58)",
+      clientColor: "#334155",
       label: "Overdue",
       labelColor: "#be123c",
       labelBackground: "rgba(255,241,242,0.86)",
@@ -530,17 +618,18 @@ function getProjectVisualState(project: TaskProjectGroup) {
   if (priority === "high" || status === "urgent") {
     return {
       kind: "high",
-      accent: "linear-gradient(180deg, #fb7185 0%, #f43f5e 100%)",
+      accent:
+        "linear-gradient(180deg, rgba(217,119,6,0.76) 0%, rgba(251,191,36,0.58) 100%)",
       background:
-        "linear-gradient(180deg, rgba(255,241,242,0.62) 0%, rgba(255,255,255,0.9) 82%)",
-      border: "rgba(253,164,175,0.64)",
+        "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.86) 100%)",
+      border: "rgba(203,213,225,0.64)",
       shadow:
-        "0 16px 38px rgba(225,29,72,0.055), 0 8px 20px rgba(15,23,42,0.03)",
-      avatarBackground: "rgba(255,228,230,0.72)",
-      avatarText: "#be123c",
-      avatarBorder: "rgba(253,164,175,0.66)",
-      clientColor: "#be123c",
-      label: "High",
+        "0 14px 32px rgba(15,23,42,0.042), 0 4px 12px rgba(15,23,42,0.024)",
+      avatarBackground: "rgba(248,250,252,0.72)",
+      avatarText: "#475569",
+      avatarBorder: "rgba(226,232,240,0.58)",
+      clientColor: "#334155",
+      label: "",
       labelColor: "#be123c",
       labelBackground: "rgba(255,241,242,0.82)",
       labelBorder: "rgba(253,164,175,0.7)",
@@ -549,15 +638,16 @@ function getProjectVisualState(project: TaskProjectGroup) {
 
   return {
     kind: "default",
-    accent: "linear-gradient(180deg, #6366f1 0%, #a5b4fc 100%)",
+    accent:
+      "linear-gradient(180deg, rgba(37,99,235,0.76) 0%, rgba(147,197,253,0.58) 100%)",
     background:
-      "linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(248,250,252,0.88) 100%)",
-    border: "rgba(226,232,240,0.78)",
+      "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.86) 100%)",
+    border: "rgba(203,213,225,0.64)",
     shadow:
-      "0 16px 38px rgba(15,23,42,0.045), 0 4px 12px rgba(15,23,42,0.025)",
-    avatarBackground: "rgba(238,242,255,0.72)",
-    avatarText: "#4338ca",
-    avatarBorder: "rgba(199,210,254,0.68)",
+      "0 14px 32px rgba(15,23,42,0.042), 0 4px 12px rgba(15,23,42,0.024)",
+    avatarBackground: "rgba(248,250,252,0.72)",
+    avatarText: "#1d4ed8",
+    avatarBorder: "rgba(219,234,254,0.58)",
     clientColor: "#334155",
     label: "",
     labelColor: "#475467",
@@ -627,39 +717,39 @@ function getStatusStyle(statusValue: string) {
   if (status === "done") {
     return {
       color: "#067647",
-      background: "rgba(240,253,244,0.78)",
-      borderColor: "rgba(187,247,208,0.72)",
+      background: "rgba(240,253,244,0.34)",
+      borderColor: "rgba(187,247,208,0.42)",
     };
   }
 
   if (status === "urgent") {
     return {
       color: "#be123c",
-      background: "rgba(255,241,242,0.78)",
-      borderColor: "rgba(253,164,175,0.72)",
+      background: "rgba(255,241,242,0.34)",
+      borderColor: "rgba(254,202,202,0.42)",
     };
   }
 
   if (status === "review") {
     return {
-      color: "#6d28d9",
-      background: "rgba(245,243,255,0.78)",
-      borderColor: "rgba(221,214,254,0.72)",
+      color: "#2563eb",
+      background: "rgba(239,246,255,0.34)",
+      borderColor: "rgba(191,219,254,0.42)",
     };
   }
 
   if (status === "in progress" || status === "in-progress") {
     return {
       color: "#1d4ed8",
-      background: "rgba(239,246,255,0.78)",
-      borderColor: "rgba(191,219,254,0.72)",
+      background: "rgba(239,246,255,0.34)",
+      borderColor: "rgba(191,219,254,0.42)",
     };
   }
 
   return {
     color: "#344054",
-    background: "rgba(255,255,255,0.62)",
-    borderColor: "rgba(226,232,240,0.62)",
+    background: "rgba(255,255,255,0.56)",
+    borderColor: "rgba(226,232,240,0.56)",
   };
 }
 
@@ -669,8 +759,8 @@ function getPrioritySelectStyle(priorityValue: string) {
   if (priority === "high") {
     return {
       color: "#be123c",
-      background: "rgba(255,241,242,0.76)",
-      borderColor: "rgba(253,164,175,0.68)",
+      background: "rgba(255,241,242,0.34)",
+      borderColor: "rgba(254,202,202,0.42)",
     };
   }
 
@@ -687,50 +777,50 @@ function getSubtaskStatusStyle(statusValue: string) {
   if (status === "done") {
     return {
       color: "#067647",
-      background: "rgba(240,253,244,0.78)",
-      borderColor: "rgba(187,247,208,0.72)",
+      background: "rgba(240,253,244,0.24)",
+      borderColor: "rgba(187,247,208,0.32)",
     };
   }
 
   if (status === "urgent") {
     return {
       color: "#be123c",
-      background: "rgba(255,241,242,0.78)",
-      borderColor: "rgba(253,164,175,0.72)",
+      background: "rgba(255,241,242,0.24)",
+      borderColor: "rgba(254,202,202,0.32)",
     };
   }
 
   if (status === "review") {
     return {
-      color: "#6d28d9",
-      background: "rgba(245,243,255,0.78)",
-      borderColor: "rgba(221,214,254,0.72)",
+      color: "#2563eb",
+      background: "rgba(239,246,255,0.24)",
+      borderColor: "rgba(191,219,254,0.32)",
     };
   }
 
   if (status === "in progress" || status === "in-progress") {
     return {
       color: "#1d4ed8",
-      background: "rgba(239,246,255,0.78)",
-      borderColor: "rgba(191,219,254,0.72)",
+      background: "rgba(239,246,255,0.24)",
+      borderColor: "rgba(191,219,254,0.32)",
     };
   }
 
   return {
     color: "#344054",
-    background: "rgba(255,255,255,0.62)",
-    borderColor: "rgba(226,232,240,0.62)",
+    background: "rgba(248,250,252,0.36)",
+    borderColor: "rgba(226,232,240,0.46)",
   };
 }
 
 const mobileCardStyle: CSSProperties = {
   position: "relative",
   overflow: "hidden",
-  borderRadius: 24,
-  border: "1px solid rgba(226,232,240,0.78)",
-  padding: 16,
+  borderRadius: 18,
+  border: "1px solid rgba(226,232,240,0.38)",
+  padding: 12,
   display: "grid",
-  gap: 14,
+  gap: 9,
   transition:
     "border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease",
 };
@@ -738,10 +828,11 @@ const mobileCardStyle: CSSProperties = {
 const mobileAccentStyle: CSSProperties = {
   position: "absolute",
   left: 0,
-  top: 18,
-  bottom: 18,
-  width: 3,
+  top: 30,
+  bottom: 30,
+  width: 1,
   borderRadius: "0 999px 999px 0",
+  opacity: 0.38,
 };
 
 const mobileCardTopStyle: CSSProperties = {
@@ -813,9 +904,17 @@ const mobileContactInlineStyle: CSSProperties = {
 
 const mobileCreatedStyle: CSSProperties = {
   marginTop: 3,
-  fontSize: 10,
-  fontWeight: 820,
-  color: "#98a2b3",
+  fontSize: 11,
+  fontWeight: 850,
+  color: "#475569",
+};
+
+const mobileArchivedIndicatorStyle: CSSProperties = {
+  marginTop: 3,
+  color: "#64748b",
+  fontSize: 10.5,
+  lineHeight: 1.35,
+  fontWeight: 760,
 };
 
 const mobileStatePillStyle: CSSProperties = {
@@ -845,21 +944,10 @@ const projectTitleStyle: CSSProperties = {
   letterSpacing: "-0.035em",
 };
 
-const projectSummaryStyle: CSSProperties = {
-  fontSize: 13,
-  lineHeight: 1.45,
-  fontWeight: 720,
-  color: "#667085",
-  display: "-webkit-box",
-  WebkitLineClamp: 2,
-  WebkitBoxOrient: "vertical",
-  overflow: "hidden",
-};
-
 const mobileMetricsGridStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
-  gap: 10,
+  gap: 8,
 };
 
 const mobileFieldStackStyle: CSSProperties = {
@@ -877,10 +965,10 @@ const mobileFieldLabelStyle: CSSProperties = {
 };
 
 const mobileMetricValueStyle: CSSProperties = {
-  minHeight: 46,
-  borderRadius: 14,
-  border: "1px solid rgba(226,232,240,0.62)",
-  background: "rgba(255,255,255,0.62)",
+  minHeight: 39,
+  borderRadius: 11,
+  border: "1px solid rgba(226,232,240,0.40)",
+  background: "rgba(255,255,255,0.42)",
   color: "#344054",
   display: "flex",
   alignItems: "center",
@@ -892,10 +980,10 @@ const mobileMetricValueStyle: CSSProperties = {
 
 const mobileInputStyle: CSSProperties = {
   width: "100%",
-  minHeight: 46,
-  borderRadius: 14,
-  border: "1px solid rgba(226,232,240,0.62)",
-  background: "rgba(255,255,255,0.62)",
+  minHeight: 39,
+  borderRadius: 11,
+  border: "1px solid rgba(226,232,240,0.40)",
+  background: "rgba(255,255,255,0.42)",
   color: "#344054",
   padding: "0 12px",
   fontSize: 14,
@@ -905,11 +993,23 @@ const mobileInputStyle: CSSProperties = {
 
 const doneProgressWrapStyle: CSSProperties = {
   display: "grid",
-  gap: 7,
-  padding: "9px 10px",
-  borderRadius: 16,
-  background: "rgba(255,255,255,0.54)",
-  border: "1px solid rgba(187,247,208,0.52)",
+  gap: 5,
+  padding: "6px 0",
+  borderRadius: 0,
+  background: "transparent",
+  border: "none",
+  borderTop: "1px solid rgba(226,232,240,0.38)",
+};
+
+const mobileReadOnlyMetaStyle: CSSProperties = {
+  ...mobileInputStyle,
+  display: "flex",
+  alignItems: "center",
+  color: "#475569",
+  background: "rgba(248,250,252,0.62)",
+  borderColor: "rgba(226,232,240,0.52)",
+  cursor: "default",
+  boxSizing: "border-box",
 };
 
 const doneProgressTopStyle: CSSProperties = {
@@ -922,27 +1022,28 @@ const doneProgressTopStyle: CSSProperties = {
 };
 
 const doneProgressTrackStyle: CSSProperties = {
-  height: 6,
+  height: 4,
   borderRadius: 999,
-  background: "rgba(187,247,208,0.46)",
+  background: "rgba(226,232,240,0.42)",
   overflow: "hidden",
 };
 
 const doneProgressFillStyle: CSSProperties = {
   height: "100%",
   borderRadius: 999,
-  background: "linear-gradient(90deg, #22c55e, #16a34a)",
+  background: "#16a34a",
+  opacity: 0.66,
 };
 
 const mobileDetailsButtonStyle: CSSProperties = {
-  minHeight: 42,
-  borderRadius: 15,
+  minHeight: 39,
+  borderRadius: 13,
   border: "1px solid rgba(203,213,225,0.72)",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
   gap: 12,
-  padding: "0 13px",
+  padding: "0 12px",
   fontSize: 13,
   fontWeight: 920,
   cursor: "pointer",
@@ -954,18 +1055,63 @@ const mobileDetailsCountStyle: CSSProperties = {
   fontWeight: 900,
 };
 
+const mobileProjectActionsStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 7,
+  flexWrap: "wrap",
+};
+
+const mobileSharedActionButtonStyle: CSSProperties = {
+  minHeight: 36,
+  padding: "0 11px",
+  borderRadius: 10,
+  border: "1px solid rgba(203,213,225,0.62)",
+  background: "rgba(255,255,255,0.68)",
+  color: "#1d4ed8",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
+  fontSize: 11.5,
+  fontWeight: 850,
+  cursor: "pointer",
+  boxShadow: "none",
+};
+
+const mobileUpdateActionButtonStyle: CSSProperties = {
+  borderColor: "rgba(191,219,254,0.70)",
+  background: "rgba(239,246,255,0.70)",
+};
+
+const mobileResourceCountStyle: CSSProperties = {
+  minWidth: 17,
+  height: 17,
+  padding: "0 4px",
+  borderRadius: 999,
+  border: "1px solid rgba(191,219,254,0.62)",
+  background: "rgba(255,255,255,0.82)",
+  color: "#1d4ed8",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: 9.5,
+  fontWeight: 950,
+};
+
 const mobileDetailsPanelStyle: CSSProperties = {
   display: "grid",
-  gap: 12,
+  gap: 7,
 };
 
 const mobileDetailSectionStyle: CSSProperties = {
-  borderRadius: 20,
-  border: "1px solid rgba(226,232,240,0.58)",
-  background: "rgba(255,255,255,0.58)",
-  padding: 12,
+  borderRadius: 0,
+  border: "none",
+  borderTop: "1px solid rgba(226,232,240,0.28)",
+  background: "transparent",
+  padding: "6px 0 0",
   display: "grid",
-  gap: 11,
+  gap: 6,
 };
 
 const mobileDetailHeaderStyle: CSSProperties = {
@@ -989,9 +1135,9 @@ const mobileDetailSubtitleStyle: CSSProperties = {
 };
 
 const mobileMiniPillStyle: CSSProperties = {
-  padding: "5px 8px",
+  padding: "2px 6px",
   borderRadius: 999,
-  background: "rgba(248,250,252,0.76)",
+  background: "rgba(248,250,252,0.52)",
   color: "#667085",
   fontSize: 10,
   fontWeight: 950,
@@ -1000,84 +1146,112 @@ const mobileMiniPillStyle: CSSProperties = {
 
 const mobileSubtaskListStyle: CSSProperties = {
   display: "grid",
-  gap: 9,
+  gap: 0,
+  borderTop: "1px solid rgba(226,232,240,0.28)",
 };
 
 const mobileSubtaskRowStyle: CSSProperties = {
-  borderRadius: 17,
-  border: "1px solid rgba(226,232,240,0.72)",
-  padding: 10,
+  borderRadius: 0,
+  border: "none",
+  borderBottom: "1px solid rgba(226,232,240,0.28)",
+  padding: "4px 0",
   display: "grid",
-  gap: 10,
+  gap: 5,
 };
 
 const mobileSubtaskTopLineStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "26px minmax(0,1fr)",
-  gap: 9,
+  gridTemplateColumns: "22px minmax(0,1fr)",
+  gap: 7,
   alignItems: "flex-start",
 };
 
 const mobileSubtaskIndexStyle: CSSProperties = {
-  width: 24,
-  height: 24,
-  borderRadius: 9,
-  border: "1px solid rgba(226,232,240,0.8)",
+  width: 20,
+  height: 20,
+  borderRadius: 999,
+  border: "1px solid rgba(226,232,240,0.46)",
   display: "grid",
   placeItems: "center",
-  fontSize: 11,
-  fontWeight: 950,
+  fontSize: 10,
+  fontWeight: 900,
 };
 
 const mobileSubtaskTextareaStyle: CSSProperties = {
   width: "100%",
-  minHeight: 44,
+  minHeight: 30,
   resize: "vertical",
-  borderRadius: 12,
-  border: "1px solid rgba(226,232,240,0.62)",
-  padding: "8px 10px",
+  borderRadius: 8,
+  border: "1px solid transparent",
+  padding: "1px 0",
   outline: "none",
   fontSize: 13,
   lineHeight: 1.35,
-  fontWeight: 820,
+  fontWeight: 780,
+};
+
+const mobileSubtaskReadOnlyTitleStyle: CSSProperties = {
+  width: "100%",
+  minHeight: 30,
+  padding: "1px 0",
+  fontSize: 13,
+  lineHeight: 1.35,
+  fontWeight: 780,
+  cursor: "default",
 };
 
 const mobileSubtaskStatusRowStyle: CSSProperties = {
-  display: "grid",
-  gap: 6,
-};
-
-const mobileSubtaskStatusLabelStyle: CSSProperties = {
-  fontSize: 10,
-  fontWeight: 950,
-  letterSpacing: "0.09em",
-  textTransform: "uppercase",
-  color: "#98a2b3",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: 8,
 };
 
 const mobileSubtaskStatusStyle: CSSProperties = {
-  width: "100%",
-  minHeight: 38,
-  borderRadius: 13,
-  border: "1px solid rgba(226,232,240,0.62)",
-  padding: "0 10px",
+  width: "auto",
+  minWidth: 124,
+  minHeight: 30,
+  borderRadius: 8,
+  border: "1px solid rgba(226,232,240,0.32)",
+  padding: "0 8px",
   outline: "none",
   fontSize: 13,
-  fontWeight: 900,
+  fontWeight: 820,
+};
+
+const mobileSubtaskReadOnlyStatusStyle: CSSProperties = {
+  width: "auto",
+  minWidth: 124,
+  minHeight: 30,
+  borderRadius: 8,
+  border: "1px solid rgba(226,232,240,0.36)",
+  background: "rgba(248,250,252,0.62)",
+  color: "#64748b",
+  padding: "0 8px",
+  display: "inline-flex",
+  alignItems: "center",
+  boxSizing: "border-box",
+  fontSize: 13,
+  fontWeight: 820,
+  cursor: "default",
 };
 
 const mobileMetaGridStyle: CSSProperties = {
   display: "grid",
-  gap: 8,
+  gap: 0,
+  borderTop: "1px solid rgba(226,232,240,0.26)",
 };
 
 const mobileMetaLineStyle: CSSProperties = {
   display: "grid",
-  gap: 3,
-  padding: "10px 11px",
-  borderRadius: 14,
-  background: "rgba(248,250,252,0.66)",
-  border: "1px solid rgba(226,232,240,0.42)",
+  gridTemplateColumns: "106px minmax(0, 1fr)",
+  alignItems: "start",
+  gap: 8,
+  padding: "6px 0",
+  borderRadius: 0,
+  background: "transparent",
+  border: "none",
+  borderBottom: "1px solid rgba(226,232,240,0.24)",
 };
 
 const mobileMetaLabelStyle: CSSProperties = {
@@ -1097,9 +1271,9 @@ const mobileMetaValueStyle: CSSProperties = {
 };
 
 const mobileEmptyDetailsStyle: CSSProperties = {
-  padding: 11,
-  borderRadius: 14,
-  background: "rgba(248,250,252,0.66)",
+  padding: "8px 0 0",
+  borderRadius: 0,
+  background: "transparent",
   color: "#667085",
   fontSize: 13,
   fontWeight: 760,

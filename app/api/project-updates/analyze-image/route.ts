@@ -79,7 +79,9 @@ export async function POST(request: NextRequest) {
   }
 
   const unifiedRawInput =
-    imageResult.extraction.rawTranscription.trim() || imageResult.rawInput;
+    imageResult.rawInput?.trim() ||
+    imageResult.extraction.rawTranscription?.trim() ||
+    "Uploaded screenshot update";
 
   const result = await analyzeProjectUpdateV2({
     projectId,

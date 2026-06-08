@@ -460,6 +460,10 @@ Strong signals for separate subtasks:
 - "captions for each post"
 - "hashtags"
 
+Treat explicit "make sure", "ensure", "test", or "verify" requirements as subtasks only when they describe an independently verifiable delivery requirement, such as mobile responsiveness, form validation, browser compatibility, link testing, upload testing, or making sure a contact form works.
+Keep subjective style, tone, brand, color, mood, or preference comments as client_notes.
+Do not duplicate the same requirement in both subtasks and client_notes once it becomes a subtask.
+
 Avoid weak over-splitting:
 - Do not split tiny style notes unless they are deliverables.
 - Do not split vague ideas like "make it look nice".

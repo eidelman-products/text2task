@@ -130,6 +130,7 @@ export function mapUrgentTasksToNotes(
     title: task.task || "Untitled task",
     clientName: task.clientName || "Unassigned",
     deadlineLabel: task.deadlineLabel || "Due soon",
+    usesProjectDeadline: task.usesProjectDeadline,
     tone: task.tone as UrgentNoteTone,
     openLabel: task.tone === "overdue" ? "Open now" : "Open task",
   }));
@@ -145,7 +146,13 @@ export function mapUrgentTasksToNotes(
  * Recent Activity is a different feature and must use updated_at later.
  */
 export function getRecentActiveProjects(tasks: TaskRow[]): ProjectSnapshotItem[] {
-  const projectMap = new Map<string, TaskRow>();
+  const projectMap = new Map<
+    string,
+    {
+      representativeTask: TaskRow;
+      tasks: TaskRow[];
+    }
+  >();
 
   for (const task of tasks) {
     if (!task || isDeletedOrArchived(task)) continue;
@@ -158,29 +165,51 @@ export function getRecentActiveProjects(tasks: TaskRow[]): ProjectSnapshotItem[]
     const existing = projectMap.get(key);
 
     if (!existing) {
-      projectMap.set(key, task);
+      projectMap.set(key, {
+        representativeTask: task,
+        tasks: [task],
+      });
       continue;
     }
 
-    if (getProjectSortTime(task) > getProjectSortTime(existing)) {
-      projectMap.set(key, task);
-    }
+    projectMap.set(key, {
+      representativeTask:
+        getProjectSortTime(task) >
+        getProjectSortTime(existing.representativeTask)
+          ? task
+          : existing.representativeTask,
+      tasks: [...existing.tasks, task],
+    });
   }
 
   return Array.from(projectMap.values())
-    .sort((a, b) => getProjectSortTime(b) - getProjectSortTime(a))
+    .sort(
+      (a, b) =>
+        getProjectSortTime(b.representativeTask) -
+        getProjectSortTime(a.representativeTask)
+    )
     .slice(0, 5)
-    .map((task) => ({
-      id: task.id,
-      clientName: getClientDisplayName(task),
-      title: getProjectTitle(task),
-      summary: getProjectSummary(task),
-      amount: getProjectAmount(task),
-      deadline: getProjectDeadline(task),
-      priority: getProjectPriority(task),
-      status: getProjectStatus(task),
-      tone: getProjectTone(task),
-    }));
+    .map(({ representativeTask, tasks: projectTasks }) => {
+      const completedTaskCount = projectTasks.filter(
+        (task) =>
+          normalizeStatus(task.status) === "done" || Boolean(task.completed_at)
+      ).length;
+
+      return {
+        id: representativeTask.id,
+        clientName: getClientDisplayName(representativeTask),
+        title: getProjectTitle(representativeTask),
+        summary: getProjectSummary(representativeTask),
+        amount: getProjectAmount(representativeTask),
+        deadline: getProjectDeadline(representativeTask),
+        createdAt: getProjectCreatedAt(representativeTask),
+        taskCount: projectTasks.length,
+        completedTaskCount,
+        priority: getProjectPriority(representativeTask),
+        status: getProjectStatus(representativeTask),
+        tone: getProjectTone(representativeTask),
+      };
+    });
 }
 
 export function getProjectTone(task: TaskRow): ProjectCardTone {

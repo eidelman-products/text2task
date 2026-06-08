@@ -38,14 +38,37 @@ export async function GET() {
 
     const { data: appUser } = await supabase
       .from("users")
-      .select("id,email,plan,created_at,updated_at")
+      .select(
+        "id,email,plan,created_at,updated_at,subscription_status,pro_current_period_end,cancel_at_period_end,creem_customer_id"
+      )
       .eq("id", user.id)
       .maybeSingle();
+
+    const plan = appUser?.plan === "pro" ? "pro" : "free";
+    const subscriptionStatus =
+      typeof appUser?.subscription_status === "string"
+        ? appUser.subscription_status
+        : null;
+    const portalEligibleStatuses = new Set([
+      "active",
+      "trialing",
+      "paid",
+      "scheduled_cancel",
+    ]);
+    const hasBillingPortal = Boolean(
+      appUser?.creem_customer_id &&
+        (plan === "pro" ||
+          (subscriptionStatus && portalEligibleStatuses.has(subscriptionStatus)))
+    );
 
     return NextResponse.json({
       id: user.id,
       email: appUser?.email || user.email,
-      plan: appUser?.plan === "pro" ? "pro" : "free",
+      plan,
+      subscription_status: subscriptionStatus,
+      pro_current_period_end: appUser?.pro_current_period_end || null,
+      cancel_at_period_end: Boolean(appUser?.cancel_at_period_end),
+      has_billing_portal: hasBillingPortal,
       created_at: appUser?.created_at || null,
       updated_at: appUser?.updated_at || null,
     });
