@@ -32,105 +32,101 @@ export default async function LoginPage({ searchParams }: PageProps) {
   const reset = params.reset === "1";
 
   return (
-    <main style={pageStyle}>
+    <main className="login-page" style={pageStyle}>
       <style>{responsiveCss}</style>
 
-      <section className="auth-shell" style={shellStyle}>
-        <aside className="auth-brand-panel" style={brandPanelStyle}>
-          <Link href="/" style={brandStyle} aria-label="Back to Text2Task home">
-            <Image
-              src="/text2task-logo.png"
-              alt="Text2Task"
-              width={180}
-              height={55}
-              priority
-              style={logoStyle}
+      <section className="login-card" style={cardStyle}>
+        <Link href="/" style={brandStyle} aria-label="Back to Text2Task home">
+          <Image
+            src="/text2task-logo.png"
+            alt="Text2Task"
+            width={164}
+            height={44}
+            priority
+            style={logoStyle}
+          />
+        </Link>
+
+        <div style={headerStyle}>
+          <p style={kickerStyle}>Welcome back</p>
+
+          <h1 style={titleStyle}>Log in to Text2Task</h1>
+
+          <p style={subtitleStyle}>
+            Continue managing your client requests, projects, deadlines, and
+            follow-ups from your workspace.
+          </p>
+        </div>
+
+        {confirmed ? (
+          <div style={successStyle}>
+            Email confirmed successfully. You can log in now.
+          </div>
+        ) : null}
+
+        {reset ? (
+          <div style={successStyle}>
+            Password updated successfully. Log in with your new password.
+          </div>
+        ) : null}
+
+        {errorMessage ? <div style={errorStyle}>{errorMessage}</div> : null}
+
+        <form action="/api/auth/login" method="post" style={formStyle}>
+          <div style={fieldGroupStyle}>
+            <label htmlFor="email" style={labelStyle}>
+              Email address
+            </label>
+
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+              style={inputStyle}
             />
-          </Link>
-
-          <div style={brandContentStyle}>
-            <div style={badgeStyle}>Welcome back</div>
-            <h1 style={heroTitleStyle}>Continue managing your client work.</h1>
-            <p style={heroTextStyle}>
-              Log in to access your CRM, saved tasks, dashboard analytics, and
-              client workspace.
-            </p>
-
-            <div style={trustListStyle}>
-              <div style={bulletItemStyle}>✓ Structured task workspace</div>
-              <div style={bulletItemStyle}>✓ Client and revenue tracking</div>
-              <div style={bulletItemStyle}>✓ AI extraction history</div>
-            </div>
-          </div>
-        </aside>
-
-        <div className="auth-card" style={cardStyle}>
-          <div>
-            <div style={kickerStyle}>Text2Task</div>
-            <h2 style={titleStyle}>Log in</h2>
-            <p style={subtitleStyle}>
-              Access your CRM and continue working from where you left off.
-            </p>
           </div>
 
-          {confirmed ? (
-            <div style={successStyle}>
-              Email confirmed successfully. You can log in now.
-            </div>
-          ) : null}
-
-          {reset ? (
-            <div style={successStyle}>
-              Password updated successfully. Log in with your new password.
-            </div>
-          ) : null}
-
-          {errorMessage ? <div style={errorStyle}>{errorMessage}</div> : null}
-
-          <form action="/api/auth/login" method="post" style={formStyle}>
-            <div style={fieldGroupStyle}>
-              <label htmlFor="email" style={labelStyle}>
-                Email address
-              </label>
-
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                autoComplete="email"
-                placeholder="you@example.com"
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={fieldGroupStyle}>
+          <div style={fieldGroupStyle}>
+            <div style={passwordLabelRowStyle}>
               <label htmlFor="password" style={labelStyle}>
                 Password
               </label>
 
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                placeholder="Your password"
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={forgotRowStyle}>
               <Link href="/forgot-password" style={forgotLinkStyle}>
                 Forgot password?
               </Link>
             </div>
 
-            <button type="submit" style={buttonStyle}>
-              Log in
-            </button>
-          </form>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              autoComplete="current-password"
+              placeholder="Your password"
+              style={inputStyle}
+            />
+          </div>
 
+          <button type="submit" style={buttonStyle}>
+            Log in
+          </button>
+        </form>
+
+        <div style={noteBoxStyle}>
+          <div style={noteIconStyle} aria-hidden="true">
+            ✓
+          </div>
+          <p style={noteTextStyle}>
+            Access your saved projects, client updates, resources, and organized
+            task workspace.
+          </p>
+        </div>
+
+        <div style={footerStyle}>
           <p style={bottomTextStyle}>
             Don&apos;t have an account?{" "}
             <Link href="/signup" style={bottomLinkStyle}>
@@ -139,238 +135,160 @@ export default async function LoginPage({ searchParams }: PageProps) {
           </p>
 
           <Link href="/" style={backLinkStyle}>
-            ← Back to home
+            Back to home
           </Link>
         </div>
+
+        <p style={supportTextStyle}>
+          Need help?{" "}
+          <a href="mailto:support@text2task.com" style={supportLinkStyle}>
+            support@text2task.com
+          </a>
+        </p>
       </section>
     </main>
   );
 }
 
 const responsiveCss = `
-  /* prevent horizontal overflow on small screens */
-  html, body, main { overflow-x: hidden; }
+  html,
+  body,
+  main {
+    overflow-x: hidden;
+  }
 
-  @media (max-width: 980px) {
-    .auth-shell {
-      grid-template-columns: 1fr !important;
-      max-width: calc(100% - 48px) !important;
-      margin: 0 auto !important;
-      box-sizing: border-box !important;
-      overflow-x: hidden !important;
-    }
+  .login-card button,
+  .login-card a {
+    transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
 
-    .auth-brand-panel {
-      padding: 30px !important;
-      gap: 20px !important;
-      border-right: none !important;
-      border-bottom: 1px solid #e7e9f2 !important;
-      min-height: auto !important;
-      width: 100% !important;
-      box-sizing: border-box !important;
-    }
+  .login-card button:hover {
+    transform: translateY(-1px);
+  }
 
-    .auth-card {
-      padding: 28px !important;
-      width: 100% !important;
-      box-sizing: border-box !important;
-    }
+  .login-card input:focus {
+    border-color: #93c5fd !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10);
+  }
+
+  .login-card button:focus-visible,
+  .login-card a:focus-visible,
+  .login-card input:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.25);
+    outline-offset: 3px;
   }
 
   @media (max-width: 640px) {
-    .auth-brand-panel h1,
-    .auth-brand-panel p {
-      max-width: 100% !important;
-      overflow-wrap: break-word !important;
-      word-break: break-word !important;
+    .login-page {
+      padding: 16px !important;
+      align-items: center !important;
     }
 
-    .auth-brand-panel h1 {
-      font-size: 28px !important;
-      line-height: 1.08 !important;
-    }
-
-    .auth-brand-panel, .auth-card {
-      padding: 24px !important;
-      box-sizing: border-box !important;
-    }
-
-    .auth-card {
+    .login-card {
       border-radius: 24px !important;
-      max-width: 100% !important;
+      padding: 28px 22px !important;
+      gap: 18px !important;
     }
   }
 `;
 
 const pageStyle: React.CSSProperties = {
-  minHeight: "100vh",
-  display: "grid",
-  placeItems: "center",
+  minHeight: "100svh",
   padding: 24,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   background:
-    "radial-gradient(circle at top left, #eef4ff 0%, #f8fafc 46%, #ffffff 100%)",
+    "radial-gradient(circle at 50% 0%, rgba(219, 234, 254, 0.92) 0, rgba(219, 234, 254, 0) 36%), radial-gradient(circle at 12% 18%, rgba(226, 232, 240, 0.72) 0, rgba(226, 232, 240, 0) 28%), linear-gradient(135deg, #f8fbff 0%, #eef5ff 48%, #ffffff 100%)",
+  color: "#0f172a",
 };
 
-const shellStyle: React.CSSProperties = {
+const cardStyle: React.CSSProperties = {
   width: "100%",
-  maxWidth: 1180,
+  maxWidth: 444,
+  borderRadius: 28,
+  background: "rgba(255, 255, 255, 0.95)",
+  border: "1px solid rgba(203, 213, 225, 0.82)",
+  boxShadow: "0 28px 90px rgba(15, 23, 42, 0.13)",
+  padding: "34px 30px",
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  background: "#ffffff",
-  borderRadius: 32,
-  overflow: "hidden",
-  border: "1px solid #e8eaf2",
-  boxShadow: "0 32px 80px rgba(15, 23, 42, 0.10)",
-};
-
-const brandPanelStyle: React.CSSProperties = {
-  minHeight: 620,
-  padding: 42,
-  display: "grid",
-  alignContent: "start",
-  gap: 28,
-  background:
-    "linear-gradient(180deg, #f6f4ff 0%, #f8f8ff 52%, #fbfcff 100%)",
-  borderRight: "1px solid #e7e9f2",
+  gap: 20,
 };
 
 const brandStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  gap: 12,
-  width: "fit-content",
+  justifyContent: "center",
+  justifySelf: "center",
   textDecoration: "none",
-  color: "#0f172a",
-  fontSize: 22,
-  fontWeight: 900,
-  letterSpacing: "-0.04em",
-};
-
-const brandDotStyle: React.CSSProperties = {
-  width: 16,
-  height: 16,
-  borderRadius: 999,
-  background: "linear-gradient(135deg, #60a5fa, #6366f1, #8b5cf6)",
-  boxShadow: "0 0 0 8px rgba(99,102,241,0.10)",
-};
-
-const brandContentStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 18,
-};
-
-const badgeStyle: React.CSSProperties = {
-  width: "fit-content",
-  padding: "8px 14px",
-  borderRadius: 999,
-  background: "rgba(99,102,241,0.10)",
-  color: "#4f46e5",
-  fontSize: 13,
-  fontWeight: 900,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-};
-
-const heroTitleStyle: React.CSSProperties = {
-  margin: 0,
-  color: "#111827",
-  fontSize: "clamp(36px, 5vw, 54px)",
-  lineHeight: 1.04,
-  letterSpacing: "-0.055em",
-  fontWeight: 850,
-};
-
-const heroTextStyle: React.CSSProperties = {
-  margin: 0,
-  color: "#475569",
-  fontSize: 17,
-  lineHeight: 1.75,
-};
-
-const trustListStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 10,
-  color: "#334155",
-  fontSize: 14,
-  fontWeight: 800,
-};
-
-const cardStyle: React.CSSProperties = {
-  width: "100%",
-  maxWidth: 420,
-  padding: 34,
-  borderRadius: 28,
-  background: "#ffffff",
-  border: "1px solid #eceef5",
-  boxShadow: "0 24px 60px rgba(15, 23, 42, 0.08)",
-  display: "grid",
-  gap: 24,
-};
-
-const kickerStyle: React.CSSProperties = {
-  color: "#4f46e5",
-  fontSize: 14,
-  fontWeight: 900,
-  marginBottom: 8,
-};
-
-const titleStyle: React.CSSProperties = {
-  margin: 0,
-  color: "#102045",
-  fontSize: 24,
-  lineHeight: 1.1,
-  letterSpacing: "-0.035em",
-  fontWeight: 900,
-};
-
-const subtitleStyle: React.CSSProperties = {
-  margin: "10px 0 0",
-  color: "#6b7280",
-  fontSize: 15,
-  lineHeight: 1.6,
+  marginBottom: 2,
 };
 
 const logoStyle: React.CSSProperties = {
-  width: 180,
+  width: 164,
   height: "auto",
   objectFit: "contain",
   display: "block",
 };
 
-const bulletItemStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 12,
-  color: "#344054",
+const headerStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+  textAlign: "center",
+};
+
+const kickerStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#2563eb",
+  fontSize: 12,
+  fontWeight: 850,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+};
+
+const titleStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#0f172a",
+  fontSize: "clamp(28px, 4.8vw, 34px)",
+  lineHeight: 1.06,
+  letterSpacing: "-0.04em",
+  fontWeight: 850,
+};
+
+const subtitleStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#475569",
   fontSize: 15,
-  fontWeight: 700,
+  lineHeight: 1.65,
 };
 
 const successStyle: React.CSSProperties = {
-  padding: "13px 14px",
-  borderRadius: 14,
-  background: "#f0fdf4",
+  padding: "12px 14px",
+  borderRadius: 16,
   border: "1px solid #bbf7d0",
+  background: "#f0fdf4",
   color: "#166534",
   fontSize: 14,
   fontWeight: 800,
+  lineHeight: 1.5,
   textAlign: "center",
 };
 
 const errorStyle: React.CSSProperties = {
-  padding: "13px 14px",
-  borderRadius: 14,
-  background: "#fef2f2",
+  padding: "12px 14px",
+  borderRadius: 16,
   border: "1px solid #fecaca",
+  background: "#fff1f2",
   color: "#b91c1c",
   fontSize: 14,
   fontWeight: 800,
+  lineHeight: 1.5,
   textAlign: "center",
 };
 
 const formStyle: React.CSSProperties = {
   display: "grid",
-  gap: 14,
+  gap: 16,
 };
 
 const fieldGroupStyle: React.CSSProperties = {
@@ -378,67 +296,121 @@ const fieldGroupStyle: React.CSSProperties = {
   gap: 8,
 };
 
+const passwordLabelRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
 const labelStyle: React.CSSProperties = {
-  color: "#334155",
+  color: "#0f172a",
   fontSize: 13,
   fontWeight: 850,
 };
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  height: 54,
-  borderRadius: 15,
+  height: 52,
+  padding: "0 15px",
+  borderRadius: 14,
   border: "1px solid #cbd5e1",
-  background: "#f8fafc",
+  background: "#ffffff",
   color: "#0f172a",
-  padding: "0 16px",
   outline: "none",
-  fontSize: 16,
+  fontSize: 15,
   boxSizing: "border-box",
 };
 
-const forgotRowStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "flex-end",
-};
-
 const forgotLinkStyle: React.CSSProperties = {
-  color: "#4f46e5",
+  color: "#2563eb",
   textDecoration: "none",
-  fontSize: 14,
-  fontWeight: 900,
+  fontSize: 13,
+  fontWeight: 850,
+  whiteSpace: "nowrap",
 };
 
 const buttonStyle: React.CSSProperties = {
   width: "100%",
-  height: 54,
+  height: 52,
   border: "none",
-  borderRadius: 15,
+  borderRadius: 14,
   background: "#0f172a",
   color: "#ffffff",
-  fontSize: 16,
-  fontWeight: 900,
+  fontSize: 15,
+  fontWeight: 850,
   cursor: "pointer",
-  boxShadow: "0 18px 34px rgba(15,23,42,0.16)",
+  boxShadow: "0 18px 38px rgba(15, 23, 42, 0.22)",
+};
+
+const noteBoxStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "28px 1fr",
+  gap: 10,
+  alignItems: "start",
+  padding: "13px 14px",
+  borderRadius: 18,
+  border: "1px solid #dbeafe",
+  background: "#f8fbff",
+};
+
+const noteIconStyle: React.CSSProperties = {
+  width: 28,
+  height: 28,
+  borderRadius: 999,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "#eff6ff",
+  color: "#2563eb",
+  fontSize: 14,
+  fontWeight: 900,
+  lineHeight: 1,
+};
+
+const noteTextStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#475569",
+  fontSize: 13,
+  lineHeight: 1.6,
+};
+
+const footerStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+  textAlign: "center",
+  paddingTop: 4,
 };
 
 const bottomTextStyle: React.CSSProperties = {
   margin: 0,
-  textAlign: "center",
   color: "#64748b",
   fontSize: 14,
 };
 
 const bottomLinkStyle: React.CSSProperties = {
-  color: "#4f46e5",
+  color: "#2563eb",
   textDecoration: "none",
-  fontWeight: 900,
+  fontWeight: 850,
 };
 
 const backLinkStyle: React.CSSProperties = {
-  textAlign: "center",
   color: "#475569",
-  textDecoration: "none",
   fontSize: 14,
   fontWeight: 800,
+  textDecoration: "none",
+};
+
+const supportTextStyle: React.CSSProperties = {
+  margin: "0",
+  color: "#64748b",
+  fontSize: 13,
+  lineHeight: 1.6,
+  textAlign: "center",
+};
+
+const supportLinkStyle: React.CSSProperties = {
+  color: "#2563eb",
+  fontWeight: 850,
+  textDecoration: "none",
 };

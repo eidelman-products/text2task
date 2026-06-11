@@ -1,5 +1,7 @@
-import React from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import type React from "react";
 
 type SearchParams = {
   error?: string;
@@ -24,9 +26,7 @@ function getErrorMessage(error?: string) {
   }
 }
 
-export default async function ResetPasswordPage({
-  searchParams,
-}: PageProps) {
+export default async function ResetPasswordPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {};
   const errorMessage = getErrorMessage(params.error);
 
@@ -36,228 +36,410 @@ export default async function ResetPasswordPage({
   } = await supabase.auth.getUser();
 
   const hasRecoverySession = Boolean(user);
+  const visibleErrorMessage = hasRecoverySession ? errorMessage : "";
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        background:
-          "radial-gradient(circle at top, #0d1b3b 0%, #08142d 45%, #061127 100%)",
-        padding: 24,
-      }}
-    >
-      <section
-        style={{
-          width: "100%",
-          maxWidth: 460,
-          background: "rgba(9, 20, 45, 0.92)",
-          border: "1px solid rgba(86, 109, 160, 0.28)",
-          borderRadius: 24,
-          padding: 28,
-          boxShadow: "0 30px 80px rgba(0, 0, 0, 0.35)",
-          color: "#ffffff",
-        }}
-      >
-        <div style={{ marginBottom: 20 }}>
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: "#9fb4ff",
-              marginBottom: 10,
-            }}
-          >
-            Text2Task
-          </div>
+    <main className="reset-password-page" style={pageStyle}>
+      <style>{responsiveCss}</style>
 
-          <h1
-            style={{
-              fontSize: 32,
-              lineHeight: 1.05,
-              margin: 0,
-              marginBottom: 10,
-              fontWeight: 900,
-              letterSpacing: "-0.04em",
-            }}
-          >
-            Set a new password
-          </h1>
+      <section className="reset-password-card" style={cardStyle}>
+        <Link href="/" style={brandStyle} aria-label="Back to Text2Task home">
+          <Image
+            src="/text2task-logo.png"
+            alt="Text2Task"
+            width={164}
+            height={44}
+            priority
+            style={logoStyle}
+          />
+        </Link>
 
-          <p
-            style={{
-              margin: 0,
-              color: "#b6c3e1",
-              fontSize: 15,
-              lineHeight: 1.7,
-            }}
-          >
-            Choose a strong password for your account.
+        <div style={headerStyle}>
+          <p style={kickerStyle}>Password reset</p>
+
+          <h1 style={titleStyle}>Set a new password</h1>
+
+          <p style={subtitleStyle}>
+            Choose a strong password for your Text2Task account.
           </p>
         </div>
 
-        {errorMessage ? (
-          <div
-            style={{
-              marginBottom: 16,
-              padding: "14px 16px",
-              borderRadius: 14,
-              background: "rgba(125, 31, 54, 0.28)",
-              border: "1px solid rgba(239, 68, 68, 0.38)",
-              color: "#ffd5d9",
-              fontSize: 14,
-              fontWeight: 700,
-              textAlign: "center",
-            }}
-          >
-            {errorMessage}
-          </div>
+        {visibleErrorMessage ? (
+          <div style={errorStyle}>{visibleErrorMessage}</div>
         ) : null}
 
         {!hasRecoverySession ? (
-          <div
-            style={{
-              padding: "16px 18px",
-              borderRadius: 16,
-              background: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid rgba(101, 120, 168, 0.28)",
-              color: "#d7e0f6",
-              lineHeight: 1.7,
-            }}
-          >
-            Your recovery session is missing.
-            <br />
-            Please request a new password reset email.
-            <div style={{ marginTop: 16 }}>
-              <a
-                href="/forgot-password"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minHeight: 46,
-                  padding: "0 16px",
-                  borderRadius: 12,
-                  textDecoration: "none",
-                  background: "#22c55e",
-                  color: "#031321",
-                  fontWeight: 900,
-                }}
-              >
-                Request new reset link
-              </a>
+          <>
+            <div style={warningBoxStyle}>
+              <div style={warningIconStyle} aria-hidden="true">
+                !
+              </div>
+              <p style={warningTextStyle}>
+                Your recovery session is missing or expired. Please request a
+                new password reset email.
+              </p>
             </div>
-          </div>
+
+            <Link href="/forgot-password" style={buttonLinkStyle}>
+              Request new reset link
+            </Link>
+          </>
         ) : (
-          <form action="/api/auth/update-password" method="post">
-            <label
-              htmlFor="password"
-              style={{
-                display: "block",
-                marginBottom: 10,
-                fontSize: 13,
-                color: "#b6c3e1",
-                fontWeight: 700,
-              }}
+          <>
+            <form
+              action="/api/auth/update-password"
+              method="post"
+              style={formStyle}
             >
-              New password
-            </label>
+              <div style={fieldGroupStyle}>
+                <label htmlFor="password" style={labelStyle}>
+                  New password
+                </label>
 
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              placeholder="At least 8 characters"
-              style={{
-                width: "100%",
-                height: 54,
-                borderRadius: 14,
-                border: "1px solid rgba(101, 120, 168, 0.35)",
-                background: "rgba(255, 255, 255, 0.06)",
-                color: "#ffffff",
-                padding: "0 16px",
-                outline: "none",
-                fontSize: 16,
-                marginBottom: 14,
-                boxSizing: "border-box",
-              }}
-            />
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  placeholder="At least 8 characters"
+                  style={inputStyle}
+                />
+              </div>
 
-            <label
-              htmlFor="confirmPassword"
-              style={{
-                display: "block",
-                marginBottom: 10,
-                fontSize: 13,
-                color: "#b6c3e1",
-                fontWeight: 700,
-              }}
-            >
-              Confirm new password
-            </label>
+              <div style={fieldGroupStyle}>
+                <label htmlFor="confirmPassword" style={labelStyle}>
+                  Confirm new password
+                </label>
 
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              placeholder="Repeat the new password"
-              style={{
-                width: "100%",
-                height: 54,
-                borderRadius: 14,
-                border: "1px solid rgba(101, 120, 168, 0.35)",
-                background: "rgba(255, 255, 255, 0.06)",
-                color: "#ffffff",
-                padding: "0 16px",
-                outline: "none",
-                fontSize: 16,
-                marginBottom: 14,
-                boxSizing: "border-box",
-              }}
-            />
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  placeholder="Repeat the new password"
+                  style={inputStyle}
+                />
+              </div>
 
-            <button
-              type="submit"
-              style={{
-                width: "100%",
-                height: 54,
-                border: "none",
-                borderRadius: 14,
-                background: "#22c55e",
-                color: "#031321",
-                fontWeight: 900,
-                fontSize: 18,
-                cursor: "pointer",
-                boxShadow: "0 18px 35px rgba(34, 197, 94, 0.18)",
-              }}
-            >
-              Update password
-            </button>
-          </form>
+              <button type="submit" style={buttonStyle}>
+                Update password
+              </button>
+            </form>
+
+            <div style={noteBoxStyle}>
+              <div style={noteIconStyle} aria-hidden="true">
+                ✓
+              </div>
+              <p style={noteTextStyle}>
+                After updating your password, we’ll send you back to login.
+              </p>
+            </div>
+          </>
         )}
 
-        <div
-          style={{
-            marginTop: 18,
-            display: "flex",
-            justifyContent: "center",
-            gap: 16,
-            flexWrap: "wrap",
-            fontSize: 14,
-          }}
-        >
-          <a href="/login" style={{ color: "#c8d5f2", textDecoration: "none" }}>
+        <div style={footerStyle}>
+          <Link href="/login" style={primaryLinkStyle}>
             Back to login
-          </a>
+          </Link>
+
+          <Link href="/" style={backLinkStyle}>
+            Back to home
+          </Link>
         </div>
+
+        <p style={supportTextStyle}>
+          Need help?{" "}
+          <a href="mailto:support@text2task.com" style={supportLinkStyle}>
+            support@text2task.com
+          </a>
+        </p>
       </section>
     </main>
   );
 }
+
+const responsiveCss = `
+  html,
+  body,
+  main {
+    overflow-x: hidden;
+  }
+
+  .reset-password-card button,
+  .reset-password-card a {
+    transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+
+  .reset-password-card button:hover,
+  .reset-password-card a:hover {
+    transform: translateY(-1px);
+  }
+
+  .reset-password-card input:focus {
+    border-color: #93c5fd !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10);
+  }
+
+  .reset-password-card button:focus-visible,
+  .reset-password-card a:focus-visible,
+  .reset-password-card input:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.25);
+    outline-offset: 3px;
+  }
+
+  @media (max-width: 640px) {
+    .reset-password-page {
+      padding: 16px !important;
+      align-items: center !important;
+    }
+
+    .reset-password-card {
+      border-radius: 24px !important;
+      padding: 28px 22px !important;
+      gap: 18px !important;
+    }
+  }
+`;
+
+const pageStyle: React.CSSProperties = {
+  minHeight: "100svh",
+  padding: 24,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background:
+    "radial-gradient(circle at 50% 0%, rgba(219, 234, 254, 0.92) 0, rgba(219, 234, 254, 0) 36%), radial-gradient(circle at 12% 18%, rgba(226, 232, 240, 0.72) 0, rgba(226, 232, 240, 0) 28%), linear-gradient(135deg, #f8fbff 0%, #eef5ff 48%, #ffffff 100%)",
+  color: "#0f172a",
+};
+
+const cardStyle: React.CSSProperties = {
+  width: "100%",
+  maxWidth: 444,
+  borderRadius: 28,
+  background: "rgba(255, 255, 255, 0.95)",
+  border: "1px solid rgba(203, 213, 225, 0.82)",
+  boxShadow: "0 28px 90px rgba(15, 23, 42, 0.13)",
+  padding: "34px 30px",
+  display: "grid",
+  gap: 20,
+};
+
+const brandStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  justifySelf: "center",
+  textDecoration: "none",
+  marginBottom: 2,
+};
+
+const logoStyle: React.CSSProperties = {
+  width: 164,
+  height: "auto",
+  objectFit: "contain",
+  display: "block",
+};
+
+const headerStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+  textAlign: "center",
+};
+
+const kickerStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#2563eb",
+  fontSize: 12,
+  fontWeight: 850,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+};
+
+const titleStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#0f172a",
+  fontSize: "clamp(28px, 4.8vw, 34px)",
+  lineHeight: 1.06,
+  letterSpacing: "-0.04em",
+  fontWeight: 850,
+};
+
+const subtitleStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#475569",
+  fontSize: 15,
+  lineHeight: 1.65,
+};
+
+const errorStyle: React.CSSProperties = {
+  padding: "12px 14px",
+  borderRadius: 16,
+  border: "1px solid #fecaca",
+  background: "#fff1f2",
+  color: "#b91c1c",
+  fontSize: 14,
+  fontWeight: 800,
+  lineHeight: 1.5,
+  textAlign: "center",
+};
+
+const warningBoxStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "28px 1fr",
+  gap: 10,
+  alignItems: "start",
+  padding: "13px 14px",
+  borderRadius: 18,
+  border: "1px solid #fed7aa",
+  background: "#fff7ed",
+};
+
+const warningIconStyle: React.CSSProperties = {
+  width: 28,
+  height: 28,
+  borderRadius: 999,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "#ffedd5",
+  color: "#c2410c",
+  fontSize: 14,
+  fontWeight: 900,
+  lineHeight: 1,
+};
+
+const warningTextStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#9a3412",
+  fontSize: 13,
+  lineHeight: 1.6,
+  fontWeight: 750,
+};
+
+const formStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 16,
+};
+
+const fieldGroupStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+};
+
+const labelStyle: React.CSSProperties = {
+  color: "#0f172a",
+  fontSize: 13,
+  fontWeight: 850,
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  height: 52,
+  padding: "0 15px",
+  borderRadius: 14,
+  border: "1px solid #cbd5e1",
+  background: "#ffffff",
+  color: "#0f172a",
+  outline: "none",
+  fontSize: 15,
+  boxSizing: "border-box",
+};
+
+const buttonStyle: React.CSSProperties = {
+  width: "100%",
+  height: 52,
+  border: "none",
+  borderRadius: 14,
+  background: "#0f172a",
+  color: "#ffffff",
+  fontSize: 15,
+  fontWeight: 850,
+  cursor: "pointer",
+  boxShadow: "0 18px 38px rgba(15, 23, 42, 0.22)",
+};
+
+const buttonLinkStyle: React.CSSProperties = {
+  width: "100%",
+  minHeight: 52,
+  borderRadius: 14,
+  background: "#0f172a",
+  color: "#ffffff",
+  fontSize: 15,
+  fontWeight: 850,
+  textDecoration: "none",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  boxShadow: "0 18px 38px rgba(15, 23, 42, 0.22)",
+};
+
+const noteBoxStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "28px 1fr",
+  gap: 10,
+  alignItems: "start",
+  padding: "13px 14px",
+  borderRadius: 18,
+  border: "1px solid #dbeafe",
+  background: "#f8fbff",
+};
+
+const noteIconStyle: React.CSSProperties = {
+  width: 28,
+  height: 28,
+  borderRadius: 999,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "#eff6ff",
+  color: "#2563eb",
+  fontSize: 14,
+  fontWeight: 900,
+  lineHeight: 1,
+};
+
+const noteTextStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#475569",
+  fontSize: 13,
+  lineHeight: 1.6,
+};
+
+const footerStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+  textAlign: "center",
+  paddingTop: 4,
+};
+
+const primaryLinkStyle: React.CSSProperties = {
+  color: "#2563eb",
+  fontSize: 14,
+  fontWeight: 850,
+  textDecoration: "none",
+};
+
+const backLinkStyle: React.CSSProperties = {
+  color: "#475569",
+  fontSize: 14,
+  fontWeight: 800,
+  textDecoration: "none",
+};
+
+const supportTextStyle: React.CSSProperties = {
+  margin: "0",
+  color: "#64748b",
+  fontSize: 13,
+  lineHeight: 1.6,
+  textAlign: "center",
+};
+
+const supportLinkStyle: React.CSSProperties = {
+  color: "#2563eb",
+  fontWeight: 850,
+  textDecoration: "none",
+};
