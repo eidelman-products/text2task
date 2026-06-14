@@ -221,6 +221,14 @@ export default async function PrivacyPage({ searchParams }: PrivacyPageProps) {
               in, secure your session, remember authentication state, and operate
               the dashboard. Some cookies are necessary for the service to work.
             </p>
+            <p>
+              <strong>Google sign-in.</strong> If you choose to sign in with
+              Google, Text2Task uses Google only to create and access your
+              Text2Task account. We may receive basic account information such
+              as your name and email address. Text2Task does not request access
+              to your Gmail, Google Drive, Google Calendar, Google Contacts, or
+              your Google files.
+            </p>
           </PolicyBlock>
 
           <PolicyBlock title="6. Data storage and security">

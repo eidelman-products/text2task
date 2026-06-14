@@ -167,6 +167,9 @@ export default function HeroSection() {
             <a href="#demo" className="t2t-secondary">
               Watch demo
             </a>
+            <p className="t2t-hero-auth-helper">
+              Start with Google or email. 30 AI extracts included.
+            </p>
           </div>
         </section>
 
@@ -484,6 +487,12 @@ function PricingCard({
       </ul>
 
       <Link href="/signup">{button}</Link>
+
+      {title === "Free" ? (
+        <p className="t2t-price-helper">
+          Create your workspace with Google or email.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -627,6 +636,15 @@ const styles = `
     align-self: start;
     gap: 14px;
     flex-wrap: wrap;
+  }
+
+  .t2t-hero-auth-helper {
+    flex-basis: 100%;
+    margin: 0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 700;
   }
 
   .t2t-primary,
@@ -1475,6 +1493,15 @@ const styles = `
     box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15);
   }
 
+  .t2t-price-helper {
+    margin: 10px 0 0;
+    color: #64748b;
+    font-size: 11.5px;
+    line-height: 1.5;
+    font-weight: 700;
+    text-align: center;
+  }
+
   main .t2t-footer {
     margin-top: 68px;
     border-top-color: rgba(226, 232, 240, 0.58);
@@ -1606,6 +1633,10 @@ const styles = `
       margin-top: 24px;
       justify-content: center;
       align-self: auto;
+    }
+
+    .t2t-hero-auth-helper {
+      text-align: center;
     }
 
     .t2t-hero-line {
