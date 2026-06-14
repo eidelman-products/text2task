@@ -1,7 +1,34 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+function cleanPathname(pathname: string) {
+  return pathname
+    .replace(/%5C/gi, "")
+    .replace(/\\/g, "")
+    .replace(/\/{2,}/g, "/");
+}
+
 export async function proxy(request: NextRequest) {
+  const originalPathname = request.nextUrl.pathname;
+  const cleanedPathname = cleanPathname(originalPathname);
+
+  // Clean weird backslash URLs:
+  // /signup%5C -> /signup
+  // /about%5C%5C%5C -> /about
+  if (cleanedPathname !== originalPathname) {
+    const cleanUrl = request.nextUrl.clone();
+    cleanUrl.pathname = cleanedPathname || "/";
+    return NextResponse.redirect(cleanUrl, 308);
+  }
+
+  // Optional cleanup for bot/crawler noise:
+  // /image -> /
+  if (originalPathname === "/image") {
+    const cleanUrl = request.nextUrl.clone();
+    cleanUrl.pathname = "/";
+    return NextResponse.redirect(cleanUrl, 308);
+  }
+
   const response = NextResponse.next();
 
   const supabase = createServerClient(
