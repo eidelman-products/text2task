@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { toast } from "sonner";
 import EditablePreviewList, {
   buildPreviewProjectGroups,
   getPreviewProjectStats,
@@ -539,7 +540,7 @@ export default function ExtractWorkspace({
       clearSelectedImage();
     } catch (error: any) {
       console.error(error);
-      alert(error.message || "Extraction failed");
+      toast.error(error.message || "Extraction failed");
     } finally {
       setIsExtracting(false);
     }
@@ -598,7 +599,7 @@ export default function ExtractWorkspace({
     } catch (error: any) {
       console.error(error);
       setImageProgress(0);
-      alert(error.message || "Image extraction failed");
+      toast.error(error.message || "Image extraction failed");
     } finally {
       setIsExtracting(false);
     }
@@ -866,7 +867,7 @@ export default function ExtractWorkspace({
       finishSuccessfulSaveFlow();
     } catch (error: any) {
       console.error(error);
-      alert(error.message || "Failed to save project");
+      toast.error(error.message || "Failed to save project");
     } finally {
       setIsSavingAll(false);
     }
@@ -920,7 +921,7 @@ export default function ExtractWorkspace({
         return;
       }
 
-      alert(error.message || "Failed to save project");
+      toast.error(error.message || "Failed to save project");
     } finally {
       setIsSavingDuplicateAnyway(false);
       setIsSavingAll(false);

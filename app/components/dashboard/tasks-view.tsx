@@ -79,7 +79,14 @@ type TasksViewProps = {
   onSortOptionChange: (value: TaskSortOption) => void;
   onExportCsv: () => void;
   toggleClientGroup: (groupKey: string) => void;
-  updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
+  updateTaskStatus: (
+    taskId: number,
+    status: string,
+    options?: {
+      suppressErrorToast?: boolean;
+      throwOnError?: boolean;
+    }
+  ) => Promise<void> | void;
   updateTaskField: (taskId: number, field: string, value: any) => void;
   updateProjectField: (
     projectId: string,
@@ -173,6 +180,7 @@ export default function TasksView({
   });
 
   const {
+    pendingBulkAction,
     isBulkDeleting,
     showBulkDeleteConfirm,
     handleBulkStatus,
@@ -188,8 +196,6 @@ export default function TasksView({
     clearSelection,
     refreshTasks: onRefreshTasks,
     updateTaskStatus,
-    archiveTask,
-    restoreTask,
   });
 
   const {
@@ -449,6 +455,7 @@ export default function TasksView({
             <TasksBulkBar
               selectedCount={selectedTaskIds.length}
               archiveView={archiveView}
+              pendingBulkAction={pendingBulkAction}
               onBulkStatus={handleBulkStatus}
               onBulkArchive={handleBulkArchive}
               onBulkRestore={handleBulkRestore}

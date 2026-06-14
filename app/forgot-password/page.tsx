@@ -65,7 +65,12 @@ export default async function ForgotPasswordPage({ searchParams }: PageProps) {
           </div>
         ) : null}
 
-        <form action="/api/auth/forgot-password" method="post" style={formStyle}>
+        <form
+          id="forgot-password-form"
+          action="/api/auth/forgot-password"
+          method="post"
+          style={formStyle}
+        >
           <div style={fieldGroupStyle}>
             <label htmlFor="email" style={labelStyle}>
               Email address
@@ -83,10 +88,36 @@ export default async function ForgotPasswordPage({ searchParams }: PageProps) {
             />
           </div>
 
-          <button type="submit" style={buttonStyle}>
+          <button id="forgot-password-submit" type="submit" style={buttonStyle}>
             Send reset link
           </button>
         </form>
+
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (() => {
+                const form = document.getElementById("forgot-password-form");
+                const submitButton = document.getElementById("forgot-password-submit");
+
+                if (!form || !submitButton) return;
+
+                form.addEventListener("submit", (event) => {
+                  if (!form.checkValidity()) return;
+
+                  if (form.dataset.submitting === "true") {
+                    event.preventDefault();
+                    return;
+                  }
+
+                  form.dataset.submitting = "true";
+                  submitButton.disabled = true;
+                  submitButton.textContent = "Sending...";
+                });
+              })();
+            `,
+          }}
+        />
 
         <div style={noteBoxStyle}>
           <div style={noteIconStyle} aria-hidden="true">
@@ -140,6 +171,12 @@ const responsiveCss = `
 
   .forgot-password-card button:hover {
     transform: translateY(-1px);
+  }
+
+  .forgot-password-card button:disabled {
+    cursor: not-allowed !important;
+    opacity: 0.72;
+    transform: none !important;
   }
 
   .forgot-password-card input:focus {

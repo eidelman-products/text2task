@@ -87,6 +87,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
         ) : (
           <>
             <form
+              id="reset-password-form"
               action="/api/auth/update-password"
               method="post"
               style={formStyle}
@@ -125,10 +126,36 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
                 />
               </div>
 
-              <button type="submit" style={buttonStyle}>
+              <button id="reset-password-submit" type="submit" style={buttonStyle}>
                 Update password
               </button>
             </form>
+
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  (() => {
+                    const form = document.getElementById("reset-password-form");
+                    const submitButton = document.getElementById("reset-password-submit");
+
+                    if (!form || !submitButton) return;
+
+                    form.addEventListener("submit", (event) => {
+                      if (!form.checkValidity()) return;
+
+                      if (form.dataset.submitting === "true") {
+                        event.preventDefault();
+                        return;
+                      }
+
+                      form.dataset.submitting = "true";
+                      submitButton.disabled = true;
+                      submitButton.textContent = "Updating...";
+                    });
+                  })();
+                `,
+              }}
+            />
 
             <div style={noteBoxStyle}>
               <div style={noteIconStyle} aria-hidden="true">
@@ -177,6 +204,12 @@ const responsiveCss = `
   .reset-password-card button:hover,
   .reset-password-card a:hover {
     transform: translateY(-1px);
+  }
+
+  .reset-password-card button:disabled {
+    cursor: not-allowed !important;
+    opacity: 0.72;
+    transform: none !important;
   }
 
   .reset-password-card input:focus {

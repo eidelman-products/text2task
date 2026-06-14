@@ -91,7 +91,12 @@ export default async function LoginPage({ searchParams }: PageProps) {
           <span style={dividerLineStyle} />
         </div>
 
-        <form action="/api/auth/login" method="post" style={formStyle}>
+        <form
+          id="login-form"
+          action="/api/auth/login"
+          method="post"
+          style={formStyle}
+        >
           <div style={fieldGroupStyle}>
             <label htmlFor="email" style={labelStyle}>
               Email address
@@ -130,10 +135,36 @@ export default async function LoginPage({ searchParams }: PageProps) {
             />
           </div>
 
-          <button type="submit" style={buttonStyle}>
+          <button id="login-submit" type="submit" style={buttonStyle}>
             Log in
           </button>
         </form>
+
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (() => {
+                const form = document.getElementById("login-form");
+                const submitButton = document.getElementById("login-submit");
+
+                if (!form || !submitButton) return;
+
+                form.addEventListener("submit", (event) => {
+                  if (!form.checkValidity()) return;
+
+                  if (form.dataset.submitting === "true") {
+                    event.preventDefault();
+                    return;
+                  }
+
+                  form.dataset.submitting = "true";
+                  submitButton.disabled = true;
+                  submitButton.textContent = "Logging in...";
+                });
+              })();
+            `,
+          }}
+        />
 
         <div style={noteBoxStyle}>
           <div style={noteIconStyle} aria-hidden="true">
@@ -183,6 +214,12 @@ const responsiveCss = `
 
   .login-card button:hover {
     transform: translateY(-1px);
+  }
+
+  .login-card button:disabled {
+    cursor: not-allowed !important;
+    opacity: 0.72;
+    transform: none !important;
   }
 
   .login-card input:focus {

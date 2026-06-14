@@ -36,6 +36,7 @@ export default function ExtractInputPanels({
   const [isDraggingImage, setIsDraggingImage] = useState(false);
   const [isPasteFocused, setIsPasteFocused] = useState(false);
   const [pasteHintVisible, setPasteHintVisible] = useState(false);
+  const [imageValidationError, setImageValidationError] = useState("");
 
   const hasText = Boolean(text.trim());
   const hasImage = Boolean(selectedImagePreviewUrl);
@@ -44,10 +45,11 @@ export default function ExtractInputPanels({
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file.");
+      setImageValidationError("Please upload or paste an image file.");
       return;
     }
 
+    setImageValidationError("");
     onImageSelected(file);
   }
 
@@ -71,16 +73,26 @@ export default function ExtractInputPanels({
 
   function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
     const items = e.clipboardData?.items;
-    if (!items) return;
+    if (!items) {
+      setImageValidationError("Clipboard does not contain an image.");
+      return;
+    }
 
     for (const item of items) {
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
         handleFile(file);
         setPasteHintVisible(false);
-        break;
+        return;
       }
     }
+
+    setImageValidationError("Clipboard does not contain an image.");
+  }
+
+  function handleRemoveImage() {
+    setImageValidationError("");
+    onRemoveImage();
   }
 
   function focusPasteZone() {
@@ -97,6 +109,10 @@ export default function ExtractInputPanels({
 
     return () => clearTimeout(timer);
   }, [pasteHintVisible]);
+
+  useEffect(() => {
+    setImageValidationError("");
+  }, [selectedImagePreviewUrl]);
 
   return (
     <>
@@ -334,6 +350,12 @@ Budget is around $2000 and I need the first draft by Friday.`}
             )}
           </div>
 
+          {imageValidationError ? (
+            <div role="alert" style={imageValidationErrorStyle}>
+              {imageValidationError}
+            </div>
+          ) : null}
+
           {isBusy && imageProgress > 0 ? (
             <div style={progressShellStyle}>
               <div style={progressTopStyle}>
@@ -370,7 +392,7 @@ Budget is around $2000 and I need the first draft by Friday.`}
             <button
               type="button"
               className="extract-danger-button"
-              onClick={onRemoveImage}
+              onClick={handleRemoveImage}
               disabled={isBusy || !hasImage}
               style={{
                 ...dangerButtonStyle,
@@ -627,6 +649,17 @@ const pasteHintStyle: CSSProperties = {
   border: "1px solid #c7d2fe",
   borderRadius: 14,
   padding: "9px 11px",
+};
+
+const imageValidationErrorStyle: CSSProperties = {
+  borderRadius: 14,
+  border: "1px solid rgba(248,113,113,0.34)",
+  background: "rgba(254,242,242,0.9)",
+  color: "#b91c1c",
+  padding: "10px 12px",
+  fontSize: 12,
+  lineHeight: 1.45,
+  fontWeight: 800,
 };
 
 const selectedImageShellStyle: CSSProperties = {

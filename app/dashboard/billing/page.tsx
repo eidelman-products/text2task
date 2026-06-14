@@ -15,6 +15,7 @@ export default function BillingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   useEffect(() => {
     async function loadAccount() {
@@ -53,6 +54,7 @@ export default function BillingPage() {
 
     try {
       setIsCheckoutLoading(true);
+      setActionError("");
 
       const res = await fetch("/api/creem/checkout", {
         method: "POST",
@@ -73,7 +75,7 @@ export default function BillingPage() {
       throw new Error("Checkout URL missing");
     } catch (error) {
       console.error(error);
-      alert("Could not open checkout. Please try again.");
+      setActionError("Could not open checkout. Please try again.");
       setIsCheckoutLoading(false);
     }
   }
@@ -83,6 +85,7 @@ export default function BillingPage() {
 
     try {
       setIsPortalLoading(true);
+      setActionError("");
 
       const res = await fetch("/api/billing/portal", {
         method: "POST",
@@ -102,7 +105,7 @@ export default function BillingPage() {
       throw new Error("Billing portal URL missing");
     } catch (error) {
       console.error(error);
-      alert("Could not open billing portal. Please contact support.");
+      setActionError("Could not open billing portal. Please contact support.");
       setIsPortalLoading(false);
     }
   }
@@ -172,6 +175,12 @@ export default function BillingPage() {
           <Feature title="Dashboard analytics" enabled />
           <Feature title="CSV export" enabled={isPro} />
         </div>
+
+        {actionError ? (
+          <div role="alert" style={styles.errorBox}>
+            {actionError}
+          </div>
+        ) : null}
 
         <div style={styles.actions}>
           {isPro ? (
@@ -466,6 +475,18 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: "wrap",
     alignItems: "center",
     gap: 12,
+  },
+
+  errorBox: {
+    marginTop: 18,
+    borderRadius: 16,
+    border: "1px solid rgba(248,113,113,0.34)",
+    background: "rgba(254,242,242,0.9)",
+    color: "#b91c1c",
+    padding: "12px 14px",
+    fontSize: 13,
+    lineHeight: 1.5,
+    fontWeight: 800,
   },
 
   primaryButton: {

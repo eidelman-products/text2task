@@ -26,10 +26,17 @@ export default function DashboardSidebarProfile({
   onNavChange: (nav: DashboardNav) => void;
 }) {
   const [upgradeHovered, setUpgradeHovered] = useState(false);
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
   const isPro = plan === "pro";
 
   async function handleUpgrade() {
+    if (isCheckoutLoading) return;
+
     try {
+      setIsCheckoutLoading(true);
+      setCheckoutError("");
+
       const res = await fetch("/api/creem/checkout", {
         method: "POST",
       });
@@ -49,7 +56,8 @@ export default function DashboardSidebarProfile({
       throw new Error("Checkout URL missing");
     } catch (error) {
       console.error(error);
-      alert("Failed to start checkout");
+      setCheckoutError("Could not open checkout. Please try again.");
+      setIsCheckoutLoading(false);
     }
   }
 
@@ -116,18 +124,30 @@ export default function DashboardSidebarProfile({
             <button
               type="button"
               onClick={handleUpgrade}
+              disabled={isCheckoutLoading}
               onMouseEnter={() => setUpgradeHovered(true)}
               onMouseLeave={() => setUpgradeHovered(false)}
               style={{
                 ...upgradeButtonStyle,
-                transform: upgradeHovered ? "translateY(-1px)" : "translateY(0)",
-                boxShadow: upgradeHovered
+                cursor: isCheckoutLoading ? "not-allowed" : "pointer",
+                opacity: isCheckoutLoading ? 0.72 : 1,
+                transform:
+                  upgradeHovered && !isCheckoutLoading
+                    ? "translateY(-1px)"
+                    : "translateY(0)",
+                boxShadow: upgradeHovered && !isCheckoutLoading
                   ? "0 14px 28px rgba(37, 99, 235, 0.2)"
                   : "0 8px 18px rgba(37, 99, 235, 0.13)",
               }}
             >
-              Upgrade to Pro
+              {isCheckoutLoading ? "Opening checkout..." : "Upgrade to Pro"}
             </button>
+          ) : null}
+
+          {checkoutError ? (
+            <div role="alert" style={checkoutErrorStyle}>
+              {checkoutError}
+            </div>
           ) : null}
         </div>
       </div>
@@ -335,4 +355,15 @@ const upgradeButtonStyle: React.CSSProperties = {
   fontWeight: dashboardTypography.weight.black,
   cursor: "pointer",
   transition: `transform ${dashboardTransitions.base}, box-shadow ${dashboardTransitions.base}`,
+};
+
+const checkoutErrorStyle: React.CSSProperties = {
+  borderRadius: dashboardRadii.lg,
+  border: "1px solid rgba(248, 113, 113, 0.3)",
+  background: "rgba(254, 242, 242, 0.82)",
+  color: dashboardColors.status.red,
+  padding: "8px 9px",
+  fontSize: 10.5,
+  lineHeight: 1.4,
+  fontWeight: dashboardTypography.weight.bold,
 };

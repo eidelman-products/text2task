@@ -894,7 +894,14 @@ export default function DashboardClient({
     }, 1800);
   }
 
-  async function updateTaskStatus(taskId: number, status: string) {
+  async function updateTaskStatus(
+    taskId: number,
+    status: string,
+    options: {
+      suppressErrorToast?: boolean;
+      throwOnError?: boolean;
+    } = {}
+  ) {
     const previousTasks = tasks;
     const previousAllTasks = allTasksForStats;
     const isNextDone = String(status || "").trim().toLowerCase() === "done";
@@ -971,13 +978,19 @@ export default function DashboardClient({
       console.error(error);
       setTasks(previousTasks);
       setAllTasksForStats(previousAllTasks);
-      toast.error("Status update failed", {
-        description: message,
-        action: {
-          label: "Retry",
-          onClick: () => updateTaskStatus(taskId, status),
-        },
-      });
+      if (!options.suppressErrorToast) {
+        toast.error("Status update failed", {
+          description: message,
+          action: {
+            label: "Retry",
+            onClick: () => updateTaskStatus(taskId, status),
+          },
+        });
+      }
+
+      if (options.throwOnError) {
+        throw error;
+      }
     } finally {
       setSavingTaskIds((prev) => {
         const next = { ...prev };

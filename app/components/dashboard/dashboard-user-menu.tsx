@@ -25,6 +25,7 @@ export default function DashboardUserMenu({
   const [menuOpen, setMenuOpen] = useState(false);
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -88,6 +89,7 @@ export default function DashboardUserMenu({
 
     try {
       setIsLoggingOut(true);
+      setLogoutError("");
 
       const res = await fetch("/api/auth/logout", {
         method: "POST",
@@ -103,7 +105,7 @@ export default function DashboardUserMenu({
     } catch (error) {
       console.error(error);
       setIsLoggingOut(false);
-      alert("Logout failed. Please try again.");
+      setLogoutError("Logout failed. Please try again.");
     }
   }
 
@@ -214,6 +216,12 @@ export default function DashboardUserMenu({
             <span style={styles.logoutIcon}>↗</span>
             <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
           </button>
+
+          {logoutError ? (
+            <div role="alert" style={styles.logoutError}>
+              {logoutError}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -456,6 +464,18 @@ const styles: Record<string, React.CSSProperties> = {
     color: dashboardColors.status.red,
     background: "rgba(254, 242, 242, 0.68)",
     border: "1px solid rgba(254, 202, 202, 0.78)",
+  },
+
+  logoutError: {
+    margin: "6px 4px 2px",
+    borderRadius: 13,
+    border: "1px solid rgba(248, 113, 113, 0.3)",
+    background: "rgba(254, 242, 242, 0.82)",
+    color: dashboardColors.status.red,
+    padding: "9px 10px",
+    fontSize: 11.5,
+    lineHeight: 1.4,
+    fontWeight: dashboardTypography.weight.bold,
   },
 
   divider: {

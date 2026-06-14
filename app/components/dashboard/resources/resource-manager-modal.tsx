@@ -74,6 +74,9 @@ export default function ResourceManagerModal({
   const [deletingResourceId, setDeletingResourceId] = useState<string | null>(
     null
   );
+  const [resourcePendingDelete, setResourcePendingDelete] =
+    useState<TaskResource | null>(null);
+  const [deleteConfirmationError, setDeleteConfirmationError] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
   const [editingNoteResource, setEditingNoteResource] =
@@ -133,6 +136,12 @@ export default function ResourceManagerModal({
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape" && !isBusy) {
+        if (resourcePendingDelete) {
+          setResourcePendingDelete(null);
+          setDeleteConfirmationError("");
+          return;
+        }
+
         onClose();
       }
     }
@@ -150,7 +159,7 @@ export default function ResourceManagerModal({
       document.documentElement.style.overflow = previousHtmlOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, isBusy, onClose]);
+  }, [isOpen, isBusy, onClose, resourcePendingDelete]);
 
   if (!isMounted || !isOpen) return null;
 
@@ -339,17 +348,38 @@ export default function ResourceManagerModal({
     }
   }
 
-  async function handleDeleteResource(resourceId: string) {
+  function requestDeleteResource(resource: TaskResource) {
     if (deletingResourceId) return;
+
+    setResourcePendingDelete(resource);
+    setDeleteConfirmationError("");
+  }
+
+  function cancelDeleteConfirmation() {
+    if (deletingResourceId) return;
+
+    setResourcePendingDelete(null);
+    setDeleteConfirmationError("");
+  }
+
+  async function handleDeleteResource() {
+    if (!resourcePendingDelete || deletingResourceId) return;
+
+    const resourceId = resourcePendingDelete.id;
 
     try {
       setDeletingResourceId(resourceId);
       setErrorMessage("");
+      setDeleteConfirmationError("");
 
       await deleteTaskResource(resourceId);
       await loadResources();
+      setResourcePendingDelete(null);
     } catch (error: any) {
-      setErrorMessage(error?.message || "Failed to delete resource.");
+      const message = error?.message || "Failed to delete resource.";
+
+      setErrorMessage(message);
+      setDeleteConfirmationError(message);
     } finally {
       setDeletingResourceId(null);
     }
@@ -684,7 +714,7 @@ export default function ResourceManagerModal({
                       key={resource.id}
                       resource={resource}
                       isDeleting={deletingResourceId === resource.id}
-                      onDelete={() => handleDeleteResource(resource.id)}
+                      onDelete={() => requestDeleteResource(resource)}
                       onEditNote={() => {
                         setNoteEditorError("");
                         setEditingNoteResource(resource);
@@ -711,6 +741,62 @@ export default function ResourceManagerModal({
         }}
         onSave={handleUpdateNoteResource}
       />
+
+      {resourcePendingDelete ? (
+        <div
+          role="presentation"
+          className="t2t-resource-delete-confirm-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              cancelDeleteConfirmation();
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="resource-delete-confirm-title"
+            className="t2t-resource-delete-confirm"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="t2t-resource-delete-confirm-icon">!</div>
+
+            <div>
+              <h3 id="resource-delete-confirm-title">Delete this resource?</h3>
+              <p>This will remove the resource from this project.</p>
+            </div>
+
+            {deleteConfirmationError ? (
+              <div
+                role="alert"
+                className="t2t-resource-delete-confirm-error"
+              >
+                {deleteConfirmationError}
+              </div>
+            ) : null}
+
+            <div className="t2t-resource-delete-confirm-actions">
+              <button
+                type="button"
+                onClick={cancelDeleteConfirmation}
+                disabled={Boolean(deletingResourceId)}
+                className="t2t-resource-delete-confirm-cancel"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDeleteResource}
+                disabled={Boolean(deletingResourceId)}
+                className="t2t-resource-delete-confirm-submit"
+              >
+                {deletingResourceId ? "Deleting..." : "Delete resource"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       <style jsx global>{`
         .t2t-resource-overlay {
@@ -1371,6 +1457,106 @@ export default function ResourceManagerModal({
 
         .t2t-resource-open:disabled,
         .t2t-resource-delete:disabled {
+          opacity: 0.65;
+          cursor: not-allowed;
+        }
+
+        .t2t-resource-delete-confirm-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 10030;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 18px;
+          background: rgba(15, 23, 42, 0.46);
+          backdrop-filter: blur(5px);
+          box-sizing: border-box;
+        }
+
+        .t2t-resource-delete-confirm {
+          width: min(430px, calc(100vw - 36px));
+          border-radius: 20px;
+          border: 1px solid rgba(254, 202, 202, 0.82);
+          background: #ffffff;
+          box-shadow: 0 24px 64px rgba(15, 23, 42, 0.2);
+          padding: 20px;
+          display: grid;
+          gap: 16px;
+          box-sizing: border-box;
+        }
+
+        .t2t-resource-delete-confirm-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 999px;
+          display: grid;
+          place-items: center;
+          border: 1px solid rgba(248, 113, 113, 0.28);
+          background: rgba(254, 242, 242, 0.92);
+          color: #dc2626;
+          font-size: 19px;
+          font-weight: 950;
+        }
+
+        .t2t-resource-delete-confirm h3 {
+          margin: 0;
+          color: #0f172a;
+          font-size: 20px;
+          line-height: 1.15;
+          font-weight: 900;
+        }
+
+        .t2t-resource-delete-confirm p {
+          margin: 6px 0 0;
+          color: #64748b;
+          font-size: 13px;
+          line-height: 1.55;
+          font-weight: 650;
+        }
+
+        .t2t-resource-delete-confirm-error {
+          border-radius: 10px;
+          border: 1px solid rgba(254, 202, 202, 0.78);
+          background: rgba(254, 242, 242, 0.82);
+          color: #b91c1c;
+          padding: 10px 11px;
+          font-size: 12px;
+          line-height: 1.45;
+          font-weight: 750;
+        }
+
+        .t2t-resource-delete-confirm-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 9px;
+        }
+
+        .t2t-resource-delete-confirm-cancel,
+        .t2t-resource-delete-confirm-submit {
+          min-height: 40px;
+          border-radius: 10px;
+          padding: 0 14px;
+          font-size: 12px;
+          font-weight: 850;
+          cursor: pointer;
+        }
+
+        .t2t-resource-delete-confirm-cancel {
+          border: 1px solid rgba(203, 213, 225, 0.82);
+          background: #ffffff;
+          color: #475569;
+        }
+
+        .t2t-resource-delete-confirm-submit {
+          border: 1px solid rgba(220, 38, 38, 0.9);
+          background: #dc2626;
+          color: #ffffff;
+          box-shadow: 0 8px 18px rgba(220, 38, 38, 0.16);
+        }
+
+        .t2t-resource-delete-confirm-cancel:disabled,
+        .t2t-resource-delete-confirm-submit:disabled {
           opacity: 0.65;
           cursor: not-allowed;
         }

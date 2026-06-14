@@ -1,9 +1,11 @@
 import type { CSSProperties } from "react";
 import type { TaskArchiveView } from "./task-types";
+import type { BulkPendingAction } from "./use-task-bulk-actions";
 
 type TasksBulkBarProps = {
   selectedCount: number;
   archiveView: TaskArchiveView;
+  pendingBulkAction: BulkPendingAction;
   onBulkStatus: (nextStatus: string) => Promise<void> | void;
   onBulkArchive: () => Promise<void> | void;
   onBulkRestore: () => Promise<void> | void;
@@ -14,6 +16,7 @@ type TasksBulkBarProps = {
 export default function TasksBulkBar({
   selectedCount,
   archiveView,
+  pendingBulkAction,
   onBulkStatus,
   onBulkArchive,
   onBulkRestore,
@@ -21,6 +24,8 @@ export default function TasksBulkBar({
   onClearSelection,
 }: TasksBulkBarProps) {
   if (selectedCount <= 0) return null;
+
+  const isPending = Boolean(pendingBulkAction);
 
   return (
     <div className="tasks-bulk-bar" style={bulkBarStyle}>
@@ -31,33 +36,41 @@ export default function TasksBulkBar({
           <button
             type="button"
             onClick={() => onBulkStatus("Done")}
-            style={bulkActionButtonStyle}
+            disabled={isPending}
+            style={getBulkButtonStyle(bulkActionButtonStyle, isPending)}
           >
-            Mark Done
+            {pendingBulkAction === "mark_done" ? "Marking done..." : "Mark Done"}
           </button>
 
           <button
             type="button"
             onClick={() => onBulkStatus("In Progress")}
-            style={bulkActionButtonStyle}
+            disabled={isPending}
+            style={getBulkButtonStyle(bulkActionButtonStyle, isPending)}
           >
-            Mark In Progress
+            {pendingBulkAction === "mark_in_progress"
+              ? "Updating..."
+              : "Mark In Progress"}
           </button>
 
           <button
             type="button"
             onClick={onBulkArchive}
-            style={bulkArchiveButtonStyle}
+            disabled={isPending}
+            style={getBulkButtonStyle(bulkArchiveButtonStyle, isPending)}
           >
-            Move to Archive
+            {pendingBulkAction === "archive"
+              ? "Archiving..."
+              : "Move to Archive"}
           </button>
 
           <button
             type="button"
             onClick={onOpenBulkDeleteConfirm}
-            style={bulkDeleteButtonStyle}
+            disabled={isPending}
+            style={getBulkButtonStyle(bulkDeleteButtonStyle, isPending)}
           >
-            Delete
+            {pendingBulkAction === "delete" ? "Deleting..." : "Delete"}
           </button>
         </>
       ) : (
@@ -65,17 +78,23 @@ export default function TasksBulkBar({
           <button
             type="button"
             onClick={onBulkRestore}
-            style={bulkRestoreButtonStyle}
+            disabled={isPending}
+            style={getBulkButtonStyle(bulkRestoreButtonStyle, isPending)}
           >
-            Restore selected
+            {pendingBulkAction === "restore"
+              ? "Restoring..."
+              : "Restore selected"}
           </button>
 
           <button
             type="button"
             onClick={onOpenBulkDeleteConfirm}
-            style={bulkDeleteButtonStyle}
+            disabled={isPending}
+            style={getBulkButtonStyle(bulkDeleteButtonStyle, isPending)}
           >
-            Delete permanently
+            {pendingBulkAction === "delete"
+              ? "Deleting..."
+              : "Delete permanently"}
           </button>
         </>
       )}
@@ -83,12 +102,26 @@ export default function TasksBulkBar({
       <button
         type="button"
         onClick={onClearSelection}
-        style={bulkSecondaryButtonStyle}
+        disabled={isPending}
+        style={getBulkButtonStyle(bulkSecondaryButtonStyle, isPending)}
       >
         Clear
       </button>
     </div>
   );
+}
+
+function getBulkButtonStyle(
+  style: CSSProperties,
+  isPending: boolean
+): CSSProperties {
+  if (!isPending) return style;
+
+  return {
+    ...style,
+    cursor: "not-allowed",
+    opacity: 0.58,
+  };
 }
 
 const bulkBarStyle: CSSProperties = {

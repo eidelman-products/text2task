@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
 import { trackBeginCheckout } from "@/lib/analytics/events";
 
 type Props = {
@@ -9,8 +10,16 @@ type Props = {
 };
 
 export default function UpgradeModal({ isOpen, onClose }: Props) {
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
   async function handleUpgrade() {
+    if (isCheckoutLoading) return;
+
     try {
+      setIsCheckoutLoading(true);
+      setErrorMessage("");
+
       const res = await fetch("/api/creem/checkout", {
         method: "POST",
       });
@@ -30,8 +39,16 @@ export default function UpgradeModal({ isOpen, onClose }: Props) {
       throw new Error("Checkout URL missing");
     } catch (error) {
       console.error(error);
-      alert("Failed to start checkout");
+      setErrorMessage("Could not open checkout. Please try again.");
+      setIsCheckoutLoading(false);
     }
+  }
+
+  function handleClose() {
+    if (isCheckoutLoading) return;
+
+    setErrorMessage("");
+    onClose();
   }
 
   if (!isOpen) return null;
@@ -152,6 +169,25 @@ export default function UpgradeModal({ isOpen, onClose }: Props) {
             </div>
           </div>
 
+          {errorMessage ? (
+            <div
+              role="alert"
+              style={{
+                marginTop: 16,
+                borderRadius: 14,
+                border: "1px solid rgba(248,113,113,0.34)",
+                background: "rgba(254,242,242,0.9)",
+                color: "#b91c1c",
+                padding: "11px 13px",
+                fontSize: 13,
+                lineHeight: 1.45,
+                fontWeight: 800,
+              }}
+            >
+              {errorMessage}
+            </div>
+          ) : null}
+
           <div
             style={{
               display: "flex",
@@ -162,7 +198,8 @@ export default function UpgradeModal({ isOpen, onClose }: Props) {
           >
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
+              disabled={isCheckoutLoading}
               style={{
                 minHeight: 42,
                 padding: "0 16px",
@@ -172,7 +209,8 @@ export default function UpgradeModal({ isOpen, onClose }: Props) {
                 color: "#334155",
                 fontSize: 14,
                 fontWeight: 800,
-                cursor: "pointer",
+                cursor: isCheckoutLoading ? "not-allowed" : "pointer",
+                opacity: isCheckoutLoading ? 0.65 : 1,
               }}
             >
               Close
@@ -181,6 +219,7 @@ export default function UpgradeModal({ isOpen, onClose }: Props) {
             <button
               type="button"
               onClick={handleUpgrade}
+              disabled={isCheckoutLoading}
               style={{
                 minHeight: 42,
                 padding: "0 18px",
@@ -190,11 +229,12 @@ export default function UpgradeModal({ isOpen, onClose }: Props) {
                 color: "#ffffff",
                 fontSize: 14,
                 fontWeight: 900,
-                cursor: "pointer",
+                cursor: isCheckoutLoading ? "not-allowed" : "pointer",
+                opacity: isCheckoutLoading ? 0.72 : 1,
                 boxShadow: "0 12px 24px rgba(79,70,229,0.24)",
               }}
             >
-              Upgrade to Pro
+              {isCheckoutLoading ? "Opening checkout..." : "Upgrade to Pro"}
             </button>
           </div>
         </motion.div>
