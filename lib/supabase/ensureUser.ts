@@ -11,6 +11,21 @@ export type AppUser = {
   plan: "free" | "pro";
 };
 
+type UserRow = {
+  id: string;
+  email: string;
+  plan: string | null;
+  extract_count: number | null;
+  subscription_status: string | null;
+};
+
+const USER_SELECT =
+  "id, email, plan, extract_count, subscription_status" as const;
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
 function normalizeAppUser(user: {
   id: string;
   email: string;
@@ -18,62 +33,120 @@ function normalizeAppUser(user: {
 }): AppUser {
   return {
     id: user.id,
-    email: user.email,
+    email: normalizeEmail(user.email),
     plan: user.plan === "pro" ? "pro" : "free",
   };
+}
+
+function buildMissingDefaultsPatch(user: UserRow, normalizedEmail: string) {
+  const patch: Partial<{
+    email: string;
+    plan: "free";
+    extract_count: number;
+    subscription_status: "free";
+  }> = {};
+
+  if (normalizeEmail(user.email) !== normalizedEmail) {
+    patch.email = normalizedEmail;
+  }
+
+  if (!user.plan) {
+    patch.plan = "free";
+  }
+
+  if (user.extract_count === null || user.extract_count === undefined) {
+    patch.extract_count = 0;
+  }
+
+  if (!user.subscription_status) {
+    patch.subscription_status = "free";
+  }
+
+  return patch;
+}
+
+async function fetchUserById(id: string) {
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .select(USER_SELECT)
+    .eq("id", id)
+    .maybeSingle<UserRow>();
+
+  if (error) {
+    console.error("ensureUser select by id error:", error);
+    throw new Error("Failed to check user by id");
+  }
+
+  return data;
+}
+
+async function fetchUserByEmail(email: string) {
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .select(USER_SELECT)
+    .eq("email", email)
+    .maybeSingle<UserRow>();
+
+  if (error) {
+    console.error("ensureUser select by email error:", error);
+    throw new Error("Failed to check user by email");
+  }
+
+  return data;
+}
+
+async function normalizeExistingUser(user: UserRow, normalizedEmail: string) {
+  const patch = buildMissingDefaultsPatch(user, normalizedEmail);
+
+  if (Object.keys(patch).length === 0) {
+    return normalizeAppUser(user);
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .update(patch)
+    .eq("id", user.id)
+    .select(USER_SELECT)
+    .single<UserRow>();
+
+  if (error) {
+    console.error("ensureUser normalize existing user error:", error);
+    throw new Error("Failed to normalize existing user");
+  }
+
+  return normalizeAppUser(data);
 }
 
 export async function ensureUser({
   id,
   email,
 }: EnsureUserInput): Promise<AppUser> {
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(email);
 
-  const { data: existingById, error: selectByIdError } = await supabaseAdmin
-    .from("users")
-    .select("id, email, plan")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (selectByIdError) {
-    console.error("ensureUser select by id error:", selectByIdError);
-    throw new Error("Failed to check user by id");
+  if (!id || !normalizedEmail) {
+    throw new Error("Missing user id or email");
   }
+
+  const existingById = await fetchUserById(id);
 
   if (existingById) {
-    return normalizeAppUser(existingById);
+    return normalizeExistingUser(existingById, normalizedEmail);
   }
 
-  const { data: existingByEmail, error: selectByEmailError } =
-    await supabaseAdmin
-      .from("users")
-      .select("id, email, plan")
-      .eq("email", normalizedEmail)
-      .maybeSingle();
-
-  if (selectByEmailError) {
-    console.error("ensureUser select by email error:", selectByEmailError);
-    throw new Error("Failed to check user by email");
-  }
+  const existingByEmail = await fetchUserByEmail(normalizedEmail);
 
   if (existingByEmail) {
     if (existingByEmail.id !== id) {
-      const { data: updatedUser, error: updateError } = await supabaseAdmin
-        .from("users")
-        .update({ id })
-        .eq("email", normalizedEmail)
-        .select("id, email, plan")
-        .single();
+      console.error("ensureUser email belongs to a different auth user:", {
+        email: normalizedEmail,
+        existingUserId: existingByEmail.id,
+        incomingUserId: id,
+      });
 
-      if (updateError) {
-        console.error("ensureUser update existing email error:", updateError);
-        throw new Error("Failed to link existing user");
-      }
-
-      return normalizeAppUser(updatedUser);
+      throw new Error("User email is already linked to another auth identity");
     }
 
-    return normalizeAppUser(existingByEmail);
+    return normalizeExistingUser(existingByEmail, normalizedEmail);
   }
 
   const { data: insertedUser, error: insertError } = await supabaseAdmin
@@ -82,51 +155,37 @@ export async function ensureUser({
       id,
       email: normalizedEmail,
       plan: "free",
+      extract_count: 0,
+      subscription_status: "free",
     })
-    .select("id, email, plan")
-    .single();
+    .select(USER_SELECT)
+    .single<UserRow>();
 
   if (!insertError && insertedUser) {
     return normalizeAppUser(insertedUser);
   }
 
   if (insertError?.code === "23505") {
-    const { data: duplicateUser, error: duplicateFetchError } =
-      await supabaseAdmin
-        .from("users")
-        .select("id, email, plan")
-        .eq("email", normalizedEmail)
-        .maybeSingle();
+    const duplicateById = await fetchUserById(id);
 
-    if (duplicateFetchError) {
-      console.error(
-        "ensureUser duplicate fetch error after insert conflict:",
-        duplicateFetchError
-      );
-      throw new Error("Failed to recover existing user");
+    if (duplicateById) {
+      return normalizeExistingUser(duplicateById, normalizedEmail);
     }
 
-    if (duplicateUser) {
-      if (duplicateUser.id !== id) {
-        const { data: relinkedUser, error: relinkError } = await supabaseAdmin
-          .from("users")
-          .update({ id })
-          .eq("email", normalizedEmail)
-          .select("id, email, plan")
-          .single();
+    const duplicateByEmail = await fetchUserByEmail(normalizedEmail);
 
-        if (relinkError) {
-          console.error(
-            "ensureUser relink error after duplicate conflict:",
-            relinkError
-          );
-          throw new Error("Failed to relink existing user");
-        }
+    if (duplicateByEmail) {
+      if (duplicateByEmail.id !== id) {
+        console.error("ensureUser insert conflict with different auth id:", {
+          email: normalizedEmail,
+          existingUserId: duplicateByEmail.id,
+          incomingUserId: id,
+        });
 
-        return normalizeAppUser(relinkedUser);
+        throw new Error("User email is already linked to another auth identity");
       }
 
-      return normalizeAppUser(duplicateUser);
+      return normalizeExistingUser(duplicateByEmail, normalizedEmail);
     }
   }
 

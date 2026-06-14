@@ -203,7 +203,10 @@ export default function DashboardUrgentBoard({
       {notes.length ? (
         <div className="urgent-task-list" style={taskListStyle}>
           {visibleNotes.map((note) => (
-            <UrgentTaskRow key={note.id} note={note} />
+            <UrgentTaskRow
+              key={`${note.usesProjectDeadline ? "project" : "task"}-${note.id}`}
+              note={note}
+            />
           ))}
         </div>
       ) : (

@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       email: normalizedEmail,
       password: normalizedPassword,
       options: {
-        emailRedirectTo: `${origin}/auth/confirm`,
+        emailRedirectTo: `${origin}/auth/confirm?next=/dashboard`,
       },
     });
 

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { GoogleAuthButton } from "../components/auth/google-auth-button";
 import type React from "react";
 
 type SearchParams = {
@@ -20,6 +21,16 @@ function getErrorMessage(error?: string) {
       return "The confirmation link is invalid or incomplete.";
     case "confirmation_failed":
       return "We could not confirm your email. Please try again.";
+    case "oauth_start_failed":
+      return "Could not start Google sign-in. Please try again.";
+    case "oauth_cancelled":
+      return "Google sign-in was cancelled.";
+    case "oauth_callback_failed":
+      return "Google sign-in could not be completed. Please try again.";
+    case "oauth_missing_email":
+      return "Google did not return an email address. Please use another account.";
+    case "account_link_conflict":
+      return "This email is already linked to a different login method. Please log in with email and password, or contact support.";
     default:
       return "";
   }
@@ -71,6 +82,14 @@ export default async function LoginPage({ searchParams }: PageProps) {
         ) : null}
 
         {errorMessage ? <div style={errorStyle}>{errorMessage}</div> : null}
+
+        <GoogleAuthButton label="Continue with Google" next="/dashboard" />
+
+        <div style={dividerStyle}>
+          <span style={dividerLineStyle} />
+          <span style={dividerTextStyle}>or log in with email</span>
+          <span style={dividerLineStyle} />
+        </div>
 
         <form action="/api/auth/login" method="post" style={formStyle}>
           <div style={fieldGroupStyle}>
@@ -284,6 +303,24 @@ const errorStyle: React.CSSProperties = {
   fontWeight: 800,
   lineHeight: 1.5,
   textAlign: "center",
+};
+
+const dividerStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1fr auto 1fr",
+  alignItems: "center",
+  gap: 12,
+};
+
+const dividerLineStyle: React.CSSProperties = {
+  height: 1,
+  background: "#e2e8f0",
+};
+
+const dividerTextStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  fontWeight: 800,
 };
 
 const formStyle: React.CSSProperties = {

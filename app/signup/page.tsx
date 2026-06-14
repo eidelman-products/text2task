@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { GoogleAuthButton } from "../components/auth/google-auth-button";
 import type React from "react";
 
 export default function SignupPage() {
@@ -100,6 +101,14 @@ export default function SignupPage() {
           </p>
         </div>
 
+        <GoogleAuthButton label="Continue with Google" next="/dashboard" />
+
+        <div style={dividerStyle}>
+          <span style={dividerLineStyle} />
+          <span style={dividerTextStyle}>or sign up with email</span>
+          <span style={dividerLineStyle} />
+        </div>
+
         <form onSubmit={handleSignup} style={formStyle}>
           <div style={fieldGroupStyle}>
             <label htmlFor="email" style={labelStyle}>
@@ -176,8 +185,8 @@ export default function SignupPage() {
             ✓
           </div>
           <p style={noteTextStyle}>
-            After signup, we’ll send you a confirmation email. Confirm it to
-            activate your workspace. You can start free with 30 AI extracts.
+            Use Google to open your workspace faster, or sign up with email and
+            confirm your address. You can start free with 30 AI extracts.
           </p>
         </div>
 
@@ -321,6 +330,24 @@ const subtitleStyle: React.CSSProperties = {
   color: "#475569",
   fontSize: 15,
   lineHeight: 1.65,
+};
+
+const dividerStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1fr auto 1fr",
+  alignItems: "center",
+  gap: 12,
+};
+
+const dividerLineStyle: React.CSSProperties = {
+  height: 1,
+  background: "#e2e8f0",
+};
+
+const dividerTextStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  fontWeight: 800,
 };
 
 const formStyle: React.CSSProperties = {
