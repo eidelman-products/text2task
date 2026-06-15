@@ -3,22 +3,33 @@ import type { TaskRow } from "./task-types";
 
 type TaskDeleteModalsProps = {
   singleDeleteTask: TaskRow | null;
+  projectDeleteTarget: {
+    projectId: string;
+    title: string;
+  } | null;
   showBulkDeleteConfirm: boolean;
   isSingleDeleting: boolean;
+  isProjectDeleting: boolean;
   isBulkDeleting: boolean;
   onCloseSingleDeleteConfirm: () => void;
   onConfirmSinglePermanentDelete: () => Promise<void> | void;
+  onCloseProjectDeleteConfirm: () => void;
+  onConfirmProjectDelete: () => Promise<void> | void;
   onCloseBulkDeleteConfirm: () => void;
   onConfirmBulkPermanentDelete: () => Promise<void> | void;
 };
 
 export default function TaskDeleteModals({
   singleDeleteTask,
+  projectDeleteTarget,
   showBulkDeleteConfirm,
   isSingleDeleting,
+  isProjectDeleting,
   isBulkDeleting,
   onCloseSingleDeleteConfirm,
   onConfirmSinglePermanentDelete,
+  onCloseProjectDeleteConfirm,
+  onConfirmProjectDelete,
   onCloseBulkDeleteConfirm,
   onConfirmBulkPermanentDelete,
 }: TaskDeleteModalsProps) {
@@ -60,6 +71,48 @@ export default function TaskDeleteModals({
                 disabled={isSingleDeleting}
               >
                 {isSingleDeleting ? "Deleting..." : "Delete forever"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {projectDeleteTarget && (
+        <div style={modalOverlayStyle} onClick={onCloseProjectDeleteConfirm}>
+          <div
+            style={modalCardStyle}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Delete project confirmation"
+          >
+            <div style={modalIconDangerStyle}>!</div>
+
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={modalTitleStyle}>Delete project?</div>
+              <div style={modalTextStyle}>
+                <strong>{projectDeleteTarget.title}</strong> and its subtasks
+                will be deleted. This cannot be undone.
+              </div>
+            </div>
+
+            <div style={modalActionsStyle}>
+              <button
+                type="button"
+                onClick={onCloseProjectDeleteConfirm}
+                style={modalSecondaryButtonStyle}
+                disabled={isProjectDeleting}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={onConfirmProjectDelete}
+                style={modalDeleteButtonStyle}
+                disabled={isProjectDeleting}
+              >
+                {isProjectDeleting ? "Deleting..." : "Delete forever"}
               </button>
             </div>
           </div>

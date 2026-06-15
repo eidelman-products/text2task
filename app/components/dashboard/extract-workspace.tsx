@@ -51,18 +51,15 @@ type SelectedImageItem = {
 
 type DuplicateSaveState = {
   duplicate: DuplicateProjectMatch;
-  group: PreviewProjectGroup;
-  remainingGroups: PreviewProjectGroup[];
-  savedRowsBeforeDuplicate: TaskRow[];
-};
-
-type SaveProjectOptions = {
-  skipDuplicateCheck?: boolean;
+  projectGroups: PreviewProjectGroup[];
+  duplicateGroupIndex: number;
+  overrideGroupIndexes: number[];
 };
 
 type DuplicateProjectSaveError = Error & {
   code: "DUPLICATE_PROJECT_DETECTED";
   duplicate: DuplicateProjectMatch;
+  groupIndex: number;
 };
 
 function normalizePriority(value: unknown): "Low" | "Medium" | "High" {
@@ -718,17 +715,12 @@ export default function ExtractWorkspace({
     });
   }
 
-  function buildProjectPayload(
-    group: PreviewProjectGroup,
-    options: SaveProjectOptions = {}
-  ) {
+  function buildProjectPayload(group: PreviewProjectGroup) {
     const rawInput = getGroupRawInput(group);
     const contactName = getGroupContactName(group);
 
     return {
       create_project: true,
-      skip_duplicate_check: Boolean(options.skipDuplicateCheck),
-      save_anyway: Boolean(options.skipDuplicateCheck),
       project: {
         client_name: group.clientName,
         contact_name: contactName,
@@ -781,28 +773,41 @@ export default function ExtractWorkspace({
     };
   }
 
-  async function saveProjectGroup(
-    group: PreviewProjectGroup,
-    options: SaveProjectOptions = {}
+  async function saveProjectBatch(
+    projectGroups: PreviewProjectGroup[],
+    duplicateOverrideGroupIndexes: number[] = []
   ) {
-    const res = await fetch("/api/tasks", {
+    const res = await fetch("/api/projects/import", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(buildProjectPayload(group, options)),
+      body: JSON.stringify({
+        projects: projectGroups.map((group) => buildProjectPayload(group)),
+        duplicateOverrideGroupIndexes,
+      }),
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      if (res.status === 409 && data?.error === "DUPLICATE_PROJECT_DETECTED") {
+      const firstDuplicate = Array.isArray(data?.duplicates)
+        ? data.duplicates[0]
+        : null;
+
+      if (
+        res.status === 409 &&
+        data?.code === "DUPLICATE_PROJECT_DETECTED" &&
+        firstDuplicate?.duplicate &&
+        Number.isSafeInteger(firstDuplicate.groupIndex)
+      ) {
         const duplicateError = new Error(
           "Duplicate project detected"
         ) as DuplicateProjectSaveError;
 
         duplicateError.code = "DUPLICATE_PROJECT_DETECTED";
-        duplicateError.duplicate = data.duplicate;
+        duplicateError.duplicate = firstDuplicate.duplicate;
+        duplicateError.groupIndex = firstDuplicate.groupIndex;
 
         throw duplicateError;
       }
@@ -810,7 +815,7 @@ export default function ExtractWorkspace({
       throw new Error(data.message || data.error || "Failed to save project");
     }
 
-    const savedTasks = Array.isArray(data.tasks) ? data.tasks : [];
+    const savedTasks = Array.isArray(data.createdTasks) ? data.createdTasks : [];
 
     return savedTasks.map(mapSavedTaskToRow);
   }
@@ -831,34 +836,14 @@ export default function ExtractWorkspace({
   async function savePreviewToTasks() {
     if (!previewItems.length || isSavingAll) return;
 
+    const projectGroups = buildPreviewProjectGroups(previewItems);
+
     try {
       setIsSavingAll(true);
       setSaveSuccess(false);
       setDuplicateSaveState(null);
 
-      const projectGroups = buildPreviewProjectGroups(previewItems);
-      const allSavedRows: TaskRow[] = [];
-
-      for (let index = 0; index < projectGroups.length; index += 1) {
-        const group = projectGroups[index];
-
-        try {
-          const savedRows = await saveProjectGroup(group);
-          allSavedRows.push(...savedRows);
-        } catch (error) {
-          if (isDuplicateProjectSaveError(error)) {
-            setDuplicateSaveState({
-              duplicate: error.duplicate,
-              group,
-              remainingGroups: projectGroups.slice(index + 1),
-              savedRowsBeforeDuplicate: allSavedRows,
-            });
-            return;
-          }
-
-          throw error;
-        }
-      }
+      const allSavedRows = await saveProjectBatch(projectGroups);
 
       if (allSavedRows.length > 0) {
         onTasksSaved(allSavedRows);
@@ -867,6 +852,17 @@ export default function ExtractWorkspace({
       finishSuccessfulSaveFlow();
     } catch (error: any) {
       console.error(error);
+
+      if (isDuplicateProjectSaveError(error)) {
+        setDuplicateSaveState({
+          duplicate: error.duplicate,
+          projectGroups,
+          duplicateGroupIndex: error.groupIndex,
+          overrideGroupIndexes: [],
+        });
+        return;
+      }
+
       toast.error(error.message || "Failed to save project");
     } finally {
       setIsSavingAll(false);
@@ -881,23 +877,16 @@ export default function ExtractWorkspace({
       setIsSavingAll(true);
       setSaveSuccess(false);
 
-      const allSavedRows: TaskRow[] = [
-        ...duplicateSaveState.savedRowsBeforeDuplicate,
-      ];
-
-      const duplicateSavedRows = await saveProjectGroup(
-        duplicateSaveState.group,
-        {
-          skipDuplicateCheck: true,
-        }
+      const nextOverrideGroupIndexes = Array.from(
+        new Set([
+          ...duplicateSaveState.overrideGroupIndexes,
+          duplicateSaveState.duplicateGroupIndex,
+        ])
       );
-
-      allSavedRows.push(...duplicateSavedRows);
-
-      for (const group of duplicateSaveState.remainingGroups) {
-        const savedRows = await saveProjectGroup(group);
-        allSavedRows.push(...savedRows);
-      }
+      const allSavedRows = await saveProjectBatch(
+        duplicateSaveState.projectGroups,
+        nextOverrideGroupIndexes
+      );
 
       setDuplicateSaveState(null);
 
@@ -915,6 +904,13 @@ export default function ExtractWorkspace({
             ? {
                 ...current,
                 duplicate: error.duplicate,
+                duplicateGroupIndex: error.groupIndex,
+                overrideGroupIndexes: Array.from(
+                  new Set([
+                    ...current.overrideGroupIndexes,
+                    current.duplicateGroupIndex,
+                  ])
+                ),
               }
             : current
         );

@@ -19,14 +19,6 @@ type UseTaskBulkActionsArgs = {
   tasks: TaskRow[];
   clearSelection: () => void;
   refreshTasks: () => Promise<void> | void;
-  updateTaskStatus: (
-    taskId: number,
-    status: string,
-    options?: {
-      suppressErrorToast?: boolean;
-      throwOnError?: boolean;
-    }
-  ) => Promise<void> | void;
 };
 
 export function useTaskBulkActions({
@@ -34,7 +26,6 @@ export function useTaskBulkActions({
   tasks,
   clearSelection,
   refreshTasks,
-  updateTaskStatus,
 }: UseTaskBulkActionsArgs) {
   const [pendingBulkAction, setPendingBulkAction] =
     useState<BulkPendingAction>(null);
@@ -63,24 +54,27 @@ export function useTaskBulkActions({
       if (ids.length === 0 || !startBulkAction(action)) return;
 
       try {
-        for (const id of ids) {
-          await updateTaskStatus(id, nextStatus, {
-            suppressErrorToast: true,
-            throwOnError: true,
-          });
+        const response = await fetch("/api/tasks/bulk-status", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            taskIds: ids,
+            status: nextStatus,
+          }),
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data?.ok) {
+          throw new Error(data?.error || "Bulk task status update failed");
         }
 
+        await refreshTasks();
         clearSelection();
         toast.success(`Updated ${ids.length} task(s) to ${nextStatus}`);
       } catch (error) {
         console.error("Bulk status update failed:", error);
-
-        try {
-          await refreshTasks();
-        } catch (refreshError) {
-          console.error("Bulk status refresh failed:", refreshError);
-        }
-
         toast.error("Could not update selected tasks");
       } finally {
         finishBulkAction();
@@ -88,7 +82,6 @@ export function useTaskBulkActions({
     },
     [
       selectedTaskIds,
-      updateTaskStatus,
       clearSelection,
       refreshTasks,
       startBulkAction,

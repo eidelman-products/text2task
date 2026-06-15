@@ -39,11 +39,14 @@ type DesktopTasksTableProps = {
     value: any
   ) => Promise<void> | void;
   copyTask: (taskId: number) => void;
-  archiveTask: (taskId: number) => Promise<void> | void;
-  restoreTask: (taskId: number) => Promise<void> | void;
-  permanentlyDeleteTask: (taskId: number) => Promise<void> | void;
+  pendingProjectAction: {
+    projectId: string;
+    action: "archive" | "restore" | "delete";
+  } | null;
+  onArchiveProject: (project: TaskProjectGroup) => void;
+  onRestoreProject: (project: TaskProjectGroup) => void;
+  onRequestProjectDelete: (project: TaskProjectGroup) => void;
   formatCreatedDate: (value?: string | null) => string;
-  onRefreshTasks: () => Promise<void> | void;
   projectResourceCounts: Record<string, number>;
   onOpenProjectResources: (project: TaskProjectGroup) => void;
   onOpenProjectUpdate: (project: TaskProjectGroup) => void;
@@ -70,9 +73,10 @@ export default function DesktopTasksTable({
   updateTaskStatus,
   updateProjectField,
   copyTask,
-  archiveTask,
-  restoreTask,
-  permanentlyDeleteTask,
+  pendingProjectAction,
+  onArchiveProject,
+  onRestoreProject,
+  onRequestProjectDelete,
   formatCreatedDate,
   projectResourceCounts,
   onOpenProjectResources,
@@ -176,24 +180,6 @@ export default function DesktopTasksTable({
     });
   }
 
-  async function archiveProject(project: TaskProjectGroup) {
-    for (const task of project.tasks) {
-      await archiveTask(task.id);
-    }
-  }
-
-  async function restoreProject(project: TaskProjectGroup) {
-    for (const task of project.tasks) {
-      await restoreTask(task.id);
-    }
-  }
-
-  async function permanentlyDeleteProject(project: TaskProjectGroup) {
-    for (const task of project.tasks) {
-      await permanentlyDeleteTask(task.id);
-    }
-  }
-
   return (
     <>
       <div className="tasks-desktop-table" style={desktopShellStyle}>
@@ -243,6 +229,11 @@ export default function DesktopTasksTable({
 
             const visual = getProjectVisualState(project);
             const resolvedProjectId = getResolvedProjectId(project);
+            const projectPendingAction =
+              pendingProjectAction?.projectId === resolvedProjectId
+                ? pendingProjectAction.action
+                : null;
+            const isProjectBusy = isDeleting || Boolean(projectPendingAction);
             const canManageResources = Boolean(resolvedProjectId);
             const projectResourceCount = getProjectResourceCount(project);
             const hasProjectResources = projectResourceCount > 0;
@@ -276,7 +267,7 @@ export default function DesktopTasksTable({
                       ? "rgba(147,197,253,0.78)"
                       : visual.cardBorder,
                   boxShadow: isHovered ? visual.hoverShadow : visual.cardShadow,
-                  opacity: isDeleting ? 0.62 : 1,
+                  opacity: isProjectBusy ? 0.62 : 1,
                   transform: isHovered ? "translateY(-1px)" : "translateY(0)",
                 }}
               >
@@ -303,7 +294,7 @@ export default function DesktopTasksTable({
                         if (node) node.indeterminate = isPartiallySelected;
                       }}
                       onChange={() => toggleProjectSelection(project)}
-                      disabled={isDeleting}
+                      disabled={isProjectBusy}
                       style={cardCheckboxStyle}
                     />
                   </div>
@@ -311,7 +302,7 @@ export default function DesktopTasksTable({
                   <div style={projectIdentityStyle}>
                     <ProjectHeaderEditor
                       project={project}
-                      isDeleting={isDeleting}
+                      isDeleting={isProjectBusy}
                       createdLabel={formatCreatedDate(project.created_at)}
                       onEnterBlur={onEnterBlur}
                       updateProjectField={updateProjectField}
@@ -339,7 +330,7 @@ export default function DesktopTasksTable({
                       <button
                         type="button"
                         onClick={() => onOpenProjectResources(project)}
-                        disabled={!canManageResources || isDeleting}
+                        disabled={!canManageResources || isProjectBusy}
                         className="crm-soft-button-v6"
                         title={
                           hasProjectResources
@@ -356,9 +347,9 @@ export default function DesktopTasksTable({
                             ? resourcesButtonActiveStyle
                             : {}),
                           opacity:
-                            !canManageResources || isDeleting ? 0.55 : 1,
+                            !canManageResources || isProjectBusy ? 0.55 : 1,
                           cursor:
-                            !canManageResources || isDeleting
+                            !canManageResources || isProjectBusy
                               ? "not-allowed"
                               : "pointer",
                         }}
@@ -374,7 +365,7 @@ export default function DesktopTasksTable({
                       {actionMode !== "archived" ? (
                         <ProjectUpdateButton
                           project={project}
-                          isDeleting={isDeleting}
+                          isDeleting={isProjectBusy}
                           onOpenModal={onOpenProjectUpdate}
                         />
                       ) : null}
@@ -382,7 +373,7 @@ export default function DesktopTasksTable({
                       <button
                         type="button"
                         onClick={() => onOpenProjectHistory(project)}
-                        disabled={!canManageResources || isDeleting}
+                        disabled={!canManageResources || isProjectBusy}
                         onMouseEnter={() =>
                           setHoveredHistoryProjectKey(project.key)
                         }
@@ -394,7 +385,7 @@ export default function DesktopTasksTable({
                             : "History is available for saved projects"
                         }
                         style={
-                          !canManageResources || isDeleting
+                          !canManageResources || isProjectBusy
                             ? historyStyles.historyButtonDisabledStyle
                             : hoveredHistoryProjectKey === project.key
                               ? historyStyles.historyButtonHoverStyle
@@ -404,20 +395,17 @@ export default function DesktopTasksTable({
                         History
                       </button>
 
-                      {actionMode !== "archived" ? (
-                        <TaskRowActions
-                          taskId={project.primaryTask.id}
-                          isDeleting={isDeleting}
-                          isCopied={isCopied}
-                          actionMode={actionMode}
-                          onCopy={copyTask}
-                          onArchive={() => archiveProject(project)}
-                          onRestore={() => restoreProject(project)}
-                          onPermanentDelete={() =>
-                            permanentlyDeleteProject(project)
-                          }
-                        />
-                      ) : null}
+                      <TaskRowActions
+                        taskId={project.primaryTask.id}
+                        isDeleting={isProjectBusy}
+                        isCopied={isCopied}
+                        actionMode={actionMode}
+                        pendingAction={projectPendingAction}
+                        onCopy={copyTask}
+                        onArchive={() => onArchiveProject(project)}
+                        onRestore={() => onRestoreProject(project)}
+                        onPermanentDelete={() => onRequestProjectDelete(project)}
+                      />
 
                       {actionMode === "archived" ? (
                         <span style={archivedProjectIndicatorStyle}>
@@ -426,21 +414,23 @@ export default function DesktopTasksTable({
                         </span>
                       ) : null}
 
-                      {(isSaving || isSaved || isDeleting) && (
+                      {(isSaving || isSaved || isProjectBusy) && (
                         <span
                           style={{
                             ...saveStateStyle,
-                            color: isDeleting
+                            color: isProjectBusy
                               ? "#b42318"
                               : isSaved
                                 ? "#067647"
                                 : "#667085",
                           }}
                         >
-                          {isDeleting
-                            ? actionMode === "archived"
-                              ? "Deleting..."
-                              : "Archiving..."
+                          {isProjectBusy
+                            ? projectPendingAction === "restore"
+                              ? "Restoring..."
+                              : projectPendingAction === "delete"
+                                ? "Deleting..."
+                                : "Archiving..."
                             : isSaved
                               ? "Saved"
                               : "Saving..."}
@@ -455,7 +445,7 @@ export default function DesktopTasksTable({
                   >
                     <ProjectMetaEditor
                       project={project}
-                      isDeleting={isDeleting}
+                      isDeleting={isProjectBusy}
                       readOnlyStatusPriority={actionMode === "archived"}
                       onEnterBlur={onEnterBlur}
                       updateProjectField={updateProjectField}
@@ -473,7 +463,7 @@ export default function DesktopTasksTable({
                     <div style={detailsGridStyle}>
                       <ClientContactEditor
                         project={project}
-                        isDeleting={isDeleting}
+                        isDeleting={isProjectBusy}
                         onEnterBlur={onEnterBlur}
                         updateTaskField={updateTaskField}
                         updateProjectField={updateProjectField}
@@ -590,7 +580,7 @@ export default function DesktopTasksTable({
                                         ? "#475467"
                                         : "#101828",
                                     }}
-                                    disabled={isDeleting}
+                                    disabled={isProjectBusy}
                                   />
                                 )}
 
@@ -608,7 +598,7 @@ export default function DesktopTasksTable({
                                       )
                                     }
                                     onKeyDown={onEnterBlur}
-                                    disabled={isDeleting}
+                                    disabled={isProjectBusy}
                                     style={{
                                       ...subtaskStatusSelectStyle,
                                       ...getSubtaskStatusStyle(subtask.status),

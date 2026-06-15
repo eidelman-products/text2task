@@ -282,25 +282,47 @@ export async function uploadAndCreateFileResource(input: {
   title?: string | null;
   notes?: string | null;
   resource_type?: TaskResourceType;
-}) {
-  const uploadedFile = await uploadTaskResourceFile({
-    file: input.file,
-    project_id: input.project_id,
-    task_id: input.task_id,
+}): Promise<TaskResource> {
+  const formData = new FormData();
+
+  formData.append("file", input.file);
+
+  if (input.project_id) {
+    formData.append("project_id", input.project_id);
+  }
+
+  if (input.task_id) {
+    formData.append("task_id", String(input.task_id));
+  }
+
+  if (input.resource_type) {
+    formData.append("resource_type", input.resource_type);
+  }
+
+  if (input.title) {
+    formData.append("title", input.title);
+  }
+
+  if (input.notes) {
+    formData.append("notes", input.notes);
+  }
+
+  const res = await fetch("/api/task-resources/upload-and-create", {
+    method: "POST",
+    body: formData,
   });
 
-  return createTaskResource({
-    project_id: input.project_id,
-    task_id: input.task_id,
-    resource_type: input.resource_type || uploadedFile.resource_type || "file",
-    title:
-      input.title || uploadedFile.original_file_name || uploadedFile.file_name,
-    notes: input.notes || null,
-    storage_path: uploadedFile.storage_path,
-    file_name: uploadedFile.file_name,
-    mime_type: uploadedFile.mime_type,
-    size_bytes: uploadedFile.size_bytes,
-  });
+  const data = await readJsonResponse(res);
+
+  if (!res.ok) {
+    throw new Error(data?.error || "Failed to upload file");
+  }
+
+  if (!data?.resource) {
+    throw new Error("Created resource was not returned by the server");
+  }
+
+  return data.resource;
 }
 
 export function formatResourceFileSize(sizeBytes?: number | null) {

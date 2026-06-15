@@ -39,6 +39,13 @@ type DashboardClientProps = {
 type DashboardNav = "dashboard" | "extract" | "tasks";
 type TasksApiView = TaskArchiveView | "stats";
 
+type TasksSnapshot = {
+  tasks: TaskRow[];
+  activeTasks: TaskRow[];
+  archivedTasks: TaskRow[];
+  statsTasks: TaskRow[];
+};
+
 type ProjectUpdateAppliedResult = {
   focusTaskId?: number | null;
   projectId?: string | null;
@@ -461,21 +468,41 @@ export default function DashboardClient({
     return (data.tasks || []).map(normalizeTaskFromApi);
   }
 
+  async function fetchTasksSnapshot(
+    viewOverride: TaskArchiveView = archiveView
+  ): Promise<TasksSnapshot> {
+    const res = await fetch(`/api/tasks/snapshot?view=${viewOverride}`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to load task snapshot");
+    }
+
+    const normalizeRows = (rows: unknown) =>
+      Array.isArray(rows) ? rows.map(normalizeTaskFromApi) : [];
+
+    return {
+      tasks: normalizeRows(data.tasks),
+      activeTasks: normalizeRows(data.activeTasks),
+      archivedTasks: normalizeRows(data.archivedTasks),
+      statsTasks: normalizeRows(data.statsTasks),
+    };
+  }
+
   async function refreshTasks(
     viewOverride: TaskArchiveView = archiveView,
     patch?: ProjectRefreshPatch
   ) {
-    const [
-      mappedTasks,
-      mappedStatsTasks,
-      mappedActiveTasks,
-      mappedArchivedTasks,
-    ] = await Promise.all([
-      fetchTasksFromServer(viewOverride),
-      fetchTasksFromServer("stats"),
-      fetchTasksFromServer("active"),
-      fetchTasksFromServer("archived"),
-    ]);
+    const {
+      tasks: mappedTasks,
+      statsTasks: mappedStatsTasks,
+      activeTasks: mappedActiveTasks,
+      archivedTasks: mappedArchivedTasks,
+    } = await fetchTasksSnapshot(viewOverride);
 
     const pendingDashboardSnapshot = dashboardTaskSnapshotRef.current;
     const pendingSnapshot = projectTaskSnapshotRef.current;
@@ -594,12 +621,11 @@ export default function DashboardClient({
   }
 
   async function refreshStatsOnly() {
-    const [mappedStatsTasks, mappedActiveTasks, mappedArchivedTasks] =
-      await Promise.all([
-        fetchTasksFromServer("stats"),
-        fetchTasksFromServer("active"),
-        fetchTasksFromServer("archived"),
-      ]);
+    const {
+      statsTasks: mappedStatsTasks,
+      activeTasks: mappedActiveTasks,
+      archivedTasks: mappedArchivedTasks,
+    } = await fetchTasksSnapshot(archiveView);
 
     setAllTasksForStats(
       mergeTaskStatsSources({
@@ -1578,10 +1604,7 @@ export default function DashboardClient({
     const taskToDelete = tasks.find((task) => task.id === taskId);
 
     if (!taskToDelete) {
-      toast.error("Task not found", {
-        description: "Could not find the task to delete.",
-      });
-      return;
+      throw new Error("Could not find the task to delete.");
     }
 
     const previousTasks = tasks;
@@ -1606,23 +1629,13 @@ export default function DashboardClient({
         throw new Error(data.error || "Failed to permanently delete task");
       }
 
-      toast.success("Task permanently deleted", {
-        description: taskToDelete.task
-          ? `"${taskToDelete.task}" was removed from Archive.`
-          : "The task was removed from Archive.",
-      });
-
       await refreshTasks();
     } catch (error: any) {
-      const message = error.message || "Failed to permanently delete task";
       console.error(error);
 
       setTasks(previousTasks);
       setAllTasksForStats(previousAllTasks);
-
-      toast.error("Permanent delete failed", {
-        description: message,
-      });
+      throw error;
     } finally {
       setDeletingTaskIds((prev) => {
         const next = { ...prev };

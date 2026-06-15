@@ -6,7 +6,7 @@ type UseTaskSingleDeleteArgs = {
   flatTasks: TaskRow[];
   allNormalizedTasks: TaskRow[];
   normalizedStatsTasks: TaskRow[];
-  permanentlyDeleteTask: (taskId: number) => Promise<void> | void;
+  permanentlyDeleteTask: (taskId: number) => Promise<void>;
 };
 
 export function useTaskSingleDelete({

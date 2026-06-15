@@ -12,6 +12,7 @@ type TaskRowActionsProps = {
   onRestore?: (taskId: number) => void | Promise<void>;
   onPermanentDelete?: (taskId: number) => void | Promise<void>;
   onDelete?: (taskId: number) => void | Promise<void>;
+  pendingAction?: "archive" | "restore" | "delete" | null;
 };
 
 export default function TaskRowActions({
@@ -24,6 +25,7 @@ export default function TaskRowActions({
   onRestore,
   onPermanentDelete,
   onDelete,
+  pendingAction = null,
 }: TaskRowActionsProps) {
   const isArchivedMode = actionMode === "archived";
 
@@ -64,7 +66,7 @@ export default function TaskRowActions({
             }}
           >
             <span style={buttonDotStyle("green")} />
-            Restore
+            {pendingAction === "restore" ? "Restoring" : "Restore"}
           </button>
 
           <button
@@ -81,7 +83,9 @@ export default function TaskRowActions({
             }}
           >
             <span style={buttonDotStyle("red")} />
-            {isDeleting ? "Deleting" : "Delete"}
+            {pendingAction === "delete" || (isDeleting && !pendingAction)
+              ? "Deleting"
+              : "Delete"}
           </button>
         </>
       ) : (
@@ -105,7 +109,9 @@ export default function TaskRowActions({
           }}
         >
           <span style={buttonDotStyle("orange")} />
-          {isDeleting ? "Archiving" : "Archive"}
+          {pendingAction === "archive" || (isDeleting && !pendingAction)
+            ? "Archiving"
+            : "Archive"}
         </button>
       )}
     </div>

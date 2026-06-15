@@ -9,6 +9,7 @@ import { formatCreatedDate } from "./task-utils";
 
 type MobileTaskCardProps = {
   project: TaskProjectGroup;
+  projectId: string | null;
   isSaving: boolean;
   isSaved: boolean;
   isDeleting: boolean;
@@ -23,14 +24,17 @@ type MobileTaskCardProps = {
   onToggleProjectSelection: (project: TaskProjectGroup) => void;
   updateTaskField: (taskId: number, field: string, value: any) => void;
   updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
+  updateProjectField: (
+    projectId: string,
+    field: string,
+    value: any
+  ) => Promise<void> | void;
   copyTask: (taskId: number) => void;
-  archiveProject: (project: TaskProjectGroup) => Promise<void> | void;
-  restoreProject: (project: TaskProjectGroup) => Promise<void> | void;
-  permanentlyDeleteProject: (project: TaskProjectGroup) => Promise<void> | void;
 };
 
 export default function MobileTaskCard({
   project,
+  projectId,
   isSaving,
   isSaved,
   isDeleting,
@@ -44,6 +48,7 @@ export default function MobileTaskCard({
   onToggleProjectSelection,
   updateTaskField,
   updateTaskStatus,
+  updateProjectField,
 }: MobileTaskCardProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -62,16 +67,14 @@ export default function MobileTaskCard({
         )
       : 0;
 
-  async function updateProjectStatus(status: string) {
-    for (const task of project.tasks) {
-      await updateTaskStatus(task.id, status);
-    }
+  function updateProjectStatus(status: string) {
+    if (!projectId) return;
+    updateProjectField(projectId, "status", status);
   }
 
   function updateProjectPriority(priority: string) {
-    for (const task of project.tasks) {
-      updateTaskField(task.id, "priority", priority);
-    }
+    if (!projectId) return;
+    updateProjectField(projectId, "priority", priority);
   }
 
   function handleTextareaEnter(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -194,7 +197,7 @@ export default function MobileTaskCard({
             <select
               value={project.priority || "Medium"}
               onChange={(e) => updateProjectPriority(e.target.value)}
-              disabled={isBusy}
+              disabled={isBusy || !projectId}
               style={{
                 ...mobileInputStyle,
                 ...getPrioritySelectStyle(project.priority),
@@ -215,7 +218,7 @@ export default function MobileTaskCard({
             <select
               value={project.status || "New"}
               onChange={(e) => updateProjectStatus(e.target.value)}
-              disabled={isBusy}
+              disabled={isBusy || !projectId}
               style={{
                 ...mobileInputStyle,
                 color: statusStyle.color,

@@ -22,7 +22,8 @@ import ProjectUpdateHistoryModal from "./tasks/project-updates/project-update-hi
 import { useProjectUpdate } from "./tasks/project-updates/use-project-update";
 import { useProjectUpdateHistory } from "./tasks/project-updates/use-project-update-history";
 import type { CSSProperties, KeyboardEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import type {
   TaskPriorityFilter,
   TaskSortOption,
@@ -96,7 +97,7 @@ type TasksViewProps = {
   copyTask: (taskId: number) => void;
   archiveTask: (taskId: number) => Promise<void> | void;
   restoreTask: (taskId: number) => Promise<void> | void;
-  permanentlyDeleteTask: (taskId: number) => Promise<void> | void;
+  permanentlyDeleteTask: (taskId: number) => Promise<void>;
   onRefreshTasks: () => Promise<void> | void;
   onProjectUpdateApplied: (
     result: ProjectUpdateAppliedResult
@@ -109,6 +110,18 @@ type ProjectUpdateAppliedResult = {
   project?: (ProjectEntity & { client?: ClientEntity | null }) | null;
   projectTasks?: unknown[];
   dashboardTasks?: unknown[];
+};
+
+type ProjectAction = "archive" | "restore" | "delete";
+
+type PendingProjectAction = {
+  projectId: string;
+  action: ProjectAction;
+};
+
+type ProjectDeleteTarget = {
+  projectId: string;
+  title: string;
 };
 
 export default function TasksView({
@@ -138,8 +151,6 @@ export default function TasksView({
   updateTaskField,
   updateProjectField,
   copyTask,
-  archiveTask,
-  restoreTask,
   permanentlyDeleteTask,
   onRefreshTasks,
   onProjectUpdateApplied,
@@ -195,7 +206,6 @@ export default function TasksView({
     tasks: flatTasks,
     clearSelection,
     refreshTasks: onRefreshTasks,
-    updateTaskStatus,
   });
 
   const {
@@ -216,12 +226,17 @@ export default function TasksView({
   const [projectResourceCounts, setProjectResourceCounts] = useState<
     Record<string, number>
   >({});
+  const [pendingProjectAction, setPendingProjectAction] =
+    useState<PendingProjectAction | null>(null);
+  const [projectDeleteTarget, setProjectDeleteTarget] =
+    useState<ProjectDeleteTarget | null>(null);
+  const pendingProjectActionRef = useRef<PendingProjectAction | null>(null);
 
   const projectUpdateState = useProjectUpdate();
   const projectUpdateHistoryState = useProjectUpdateHistory();
 
   useEffect(() => {
-    if (!tasks.length) return;
+    if (isLoadingTasks) return;
 
     let isMounted = true;
 
@@ -256,7 +271,7 @@ export default function TasksView({
     return () => {
       isMounted = false;
     };
-  }, [tasks]);
+  }, [isLoadingTasks]);
 
   useEffect(() => {
     resetBulkDeleteConfirm();
@@ -289,22 +304,108 @@ export default function TasksView({
     });
   }
 
-  async function archiveProject(project: TaskProjectGroup) {
-    for (const task of project.tasks) {
-      await archiveTask(task.id);
+  async function runProjectAction(
+    projectId: string,
+    action: ProjectAction
+  ) {
+    if (pendingProjectActionRef.current) return;
+
+    const pendingAction = { projectId, action };
+
+    pendingProjectActionRef.current = pendingAction;
+    setPendingProjectAction(pendingAction);
+
+    try {
+      const response = await fetch("/api/projects/bulk-action", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: action === "delete" ? "soft_delete" : action,
+          targets: [{ kind: "project", projectId }],
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error || `Project ${action} failed`);
+      }
+
+      await onRefreshTasks();
+
+      if (action === "delete") {
+        setProjectDeleteTarget(null);
+      }
+
+      toast.success(
+        action === "archive"
+          ? "Project archived"
+          : action === "restore"
+            ? "Project restored"
+            : "Project deleted"
+      );
+    } catch (error) {
+      console.error(`Project ${action} failed:`, error);
+      toast.error(
+        action === "archive"
+          ? "Could not archive this project."
+          : action === "restore"
+            ? "Could not restore this project."
+            : "Could not delete this project."
+      );
+    } finally {
+      pendingProjectActionRef.current = null;
+      setPendingProjectAction(null);
     }
   }
 
-  async function restoreProject(project: TaskProjectGroup) {
-    for (const task of project.tasks) {
-      await restoreTask(task.id);
+  function archiveProject(project: TaskProjectGroup) {
+    const projectId = getResolvedProjectId(project);
+
+    if (!projectId) {
+      toast.error("Could not find this project.");
+      return;
     }
+
+    void runProjectAction(projectId, "archive");
   }
 
-  async function permanentlyDeleteProject(project: TaskProjectGroup) {
-    for (const task of project.tasks) {
-      await requestSinglePermanentDelete(task.id);
+  function restoreProject(project: TaskProjectGroup) {
+    const projectId = getResolvedProjectId(project);
+
+    if (!projectId) {
+      toast.error("Could not find this project.");
+      return;
     }
+
+    void runProjectAction(projectId, "restore");
+  }
+
+  function requestProjectDelete(project: TaskProjectGroup) {
+    if (pendingProjectActionRef.current) return;
+
+    const projectId = getResolvedProjectId(project);
+
+    if (!projectId) {
+      toast.error("Could not find this project.");
+      return;
+    }
+
+    setProjectDeleteTarget({
+      projectId,
+      title: project.projectTitle || "This project",
+    });
+  }
+
+  function closeProjectDeleteConfirm() {
+    if (pendingProjectActionRef.current?.action === "delete") return;
+    setProjectDeleteTarget(null);
+  }
+
+  function confirmProjectDelete() {
+    if (!projectDeleteTarget) return;
+    void runProjectAction(projectDeleteTarget.projectId, "delete");
   }
 
   function openProjectResources(project: TaskProjectGroup) {
@@ -477,7 +578,7 @@ export default function TasksView({
                   const isSaved = project.taskIds.some((id) => savedTaskIds[id]);
                   const isDeleting = project.taskIds.some(
                     (id) => deletingTaskIds[id]
-                  );
+                  ) || pendingProjectAction?.projectId === resolvedProjectId;
                   const isCopied = Boolean(
                     copiedTaskIds[project.primaryTask.id]
                   );
@@ -511,6 +612,7 @@ export default function TasksView({
                     >
                       <MobileTaskCard
                         project={project}
+                        projectId={resolvedProjectId}
                         isSaving={isSaving}
                         isSaved={isSaved}
                         isDeleting={isDeleting}
@@ -532,10 +634,8 @@ export default function TasksView({
                         onToggleProjectSelection={toggleProjectSelection}
                         updateTaskField={updateTaskField}
                         updateTaskStatus={updateTaskStatus}
+                        updateProjectField={updateProjectField}
                         copyTask={copyTask}
-                        archiveProject={archiveProject}
-                        restoreProject={restoreProject}
-                        permanentlyDeleteProject={permanentlyDeleteProject}
                       />
                     </div>
                   );
@@ -562,11 +662,11 @@ export default function TasksView({
                 updateTaskStatus={updateTaskStatus}
                 updateProjectField={updateProjectField}
                 copyTask={copyTask}
-                archiveTask={archiveTask}
-                restoreTask={restoreTask}
-                permanentlyDeleteTask={requestSinglePermanentDelete}
+                pendingProjectAction={pendingProjectAction}
+                onArchiveProject={archiveProject}
+                onRestoreProject={restoreProject}
+                onRequestProjectDelete={requestProjectDelete}
                 formatCreatedDate={formatCreatedDate}
-                onRefreshTasks={onRefreshTasks}
                 projectResourceCounts={projectResourceCounts}
                 onOpenProjectResources={openProjectResources}
                 onOpenProjectUpdate={projectUpdateState.openModal}
@@ -621,11 +721,15 @@ export default function TasksView({
 
       <TaskDeleteModals
         singleDeleteTask={singleDeleteTask}
+        projectDeleteTarget={projectDeleteTarget}
         showBulkDeleteConfirm={showBulkDeleteConfirm}
         isSingleDeleting={isSingleDeleting}
+        isProjectDeleting={pendingProjectAction?.action === "delete"}
         isBulkDeleting={isBulkDeleting}
         onCloseSingleDeleteConfirm={closeSingleDeleteConfirm}
         onConfirmSinglePermanentDelete={confirmSinglePermanentDelete}
+        onCloseProjectDeleteConfirm={closeProjectDeleteConfirm}
+        onConfirmProjectDelete={confirmProjectDelete}
         onCloseBulkDeleteConfirm={closeBulkDeleteConfirm}
         onConfirmBulkPermanentDelete={confirmBulkPermanentDelete}
       />
