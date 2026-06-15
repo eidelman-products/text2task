@@ -44,7 +44,7 @@ const structuredData = {
       "@id": `${siteUrl}/#organization`,
       name: "Text2Task",
       url: siteUrl,
-      logo: `${siteUrl}/favicon.ico`,
+      logo: `${siteUrl}/text2task-logo.png`,
       sameAs: [],
     },
     {
