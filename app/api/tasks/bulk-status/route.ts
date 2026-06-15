@@ -14,6 +14,15 @@ const BulkTaskStatusSchema = z
   })
   .strict();
 
+const TransactionalBulkTaskStatusRpcResponseSchema = z
+  .object({
+    status: z.enum(["Done", "In Progress"]),
+    affectedTaskIds: z.array(z.number().int().positive().safe()),
+    affectedProjectIds: z.array(z.string().uuid()),
+    completedProjectIds: z.array(z.string().uuid()),
+  })
+  .strict();
+
 type OwnedTask = {
   id: number;
   project_id: string | null;
@@ -33,6 +42,65 @@ function errorResponse(code: string, error: string, status: number) {
 
 function uniqueValues<T>(values: T[]) {
   return Array.from(new Set(values));
+}
+
+function transactionalRpcErrorResponse(error: {
+  code?: string | null;
+  message?: string | null;
+}) {
+  const message = error.message || "";
+
+  if (message.includes("UNAUTHORIZED")) {
+    return errorResponse("UNAUTHORIZED", "Unauthorized", 401);
+  }
+
+  if (
+    message.includes("INVALID_STATUS") ||
+    message.includes("INVALID_TASK_IDS") ||
+    message.includes("TOO_MANY_TASKS")
+  ) {
+    return errorResponse("INVALID_PAYLOAD", "Invalid request body", 400);
+  }
+
+  if (message.includes("TARGET_VALIDATION_FAILED")) {
+    return errorResponse(
+      "TARGET_VALIDATION_FAILED",
+      "One or more selected tasks could not be found",
+      400
+    );
+  }
+
+  if (message.includes("CONCURRENT_MODIFICATION")) {
+    return errorResponse(
+      "CONCURRENT_MODIFICATION",
+      "Selected tasks changed while the update was running. Please try again.",
+      409
+    );
+  }
+
+  if (message.includes("TASK_UPDATE_FAILED")) {
+    return errorResponse(
+      "TASK_UPDATE_FAILED",
+      "Could not update every selected task",
+      500
+    );
+  }
+
+  if (message.includes("PROJECT_UPDATE_FAILED")) {
+    return errorResponse(
+      "PROJECT_UPDATE_FAILED",
+      "Could not complete related projects",
+      500
+    );
+  }
+
+  console.error("Transactional bulk task status RPC error:", error);
+
+  return errorResponse(
+    "INTERNAL_ERROR",
+    "Could not update selected tasks",
+    500
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -62,6 +130,79 @@ export async function POST(req: NextRequest) {
 
     if (userError || !user?.id) {
       return errorResponse("UNAUTHORIZED", "Unauthorized", 401);
+    }
+
+    if (status === "Done" || status === "In Progress") {
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        "apply_task_bulk_status_transaction",
+        {
+          p_task_ids: taskIds,
+          p_status: status,
+        }
+      );
+
+      if (rpcError) {
+        return transactionalRpcErrorResponse(rpcError);
+      }
+
+      const parsedRpcData =
+        TransactionalBulkTaskStatusRpcResponseSchema.safeParse(rpcData);
+
+      if (!parsedRpcData.success || parsedRpcData.data.status !== status) {
+        console.error("Invalid transactional bulk task status RPC response:", {
+          status,
+          rpcData,
+          validationError: parsedRpcData.success
+            ? null
+            : parsedRpcData.error.flatten(),
+        });
+
+        return errorResponse(
+          "INTERNAL_ERROR",
+          "Could not update selected tasks",
+          500
+        );
+      }
+
+      const affectedTaskIds = uniqueValues(
+        parsedRpcData.data.affectedTaskIds
+      );
+      const affectedTaskIdSet = new Set(affectedTaskIds);
+
+      if (
+        affectedTaskIds.length !== taskIds.length ||
+        taskIds.some((taskId) => !affectedTaskIdSet.has(taskId))
+      ) {
+        console.error("Transactional bulk task status affected-task mismatch:", {
+          status,
+          requestedTaskIds: taskIds,
+          affectedTaskIds,
+        });
+
+        return errorResponse(
+          "INTERNAL_ERROR",
+          "Could not update selected tasks",
+          500
+        );
+      }
+
+      const { data: updatedTasks, error: reloadError } = await supabase
+        .from("tasks")
+        .select("id, project_id, status, completed_at, updated_at")
+        .in("id", taskIds)
+        .eq("user_id", user.id)
+        .is("deleted_at", null);
+
+      if (reloadError) {
+        console.warn("Bulk task status reload error:", reloadError);
+      }
+
+      return NextResponse.json({
+        ok: true,
+        affectedTaskIds: taskIds,
+        ...(reloadError ? {} : { updatedTasks: updatedTasks ?? [] }),
+        message: `Updated ${taskIds.length} task(s) to ${status}`,
+      });
     }
 
     const { data: ownedTaskRows, error: ownershipError } = await supabase
@@ -121,155 +262,6 @@ export async function POST(req: NextRequest) {
         "Could not update every selected task",
         500
       );
-    }
-
-    if (status === "Done") {
-      const taskIdsMissingCompletedAt = ownedTasks
-        .filter((task) => !task.completed_at)
-        .map((task) => task.id);
-
-      if (taskIdsMissingCompletedAt.length > 0) {
-        const { error: completionUpdateError } = await supabase
-          .from("tasks")
-          .update({
-            completed_at: nowIso,
-          })
-          .in("id", taskIdsMissingCompletedAt)
-          .eq("user_id", user.id)
-          .is("deleted_at", null);
-
-        if (completionUpdateError) {
-          console.error(
-            "Bulk task completion timestamp update error:",
-            completionUpdateError
-          );
-          return errorResponse(
-            "TASK_UPDATE_FAILED",
-            "Could not complete selected tasks",
-            500
-          );
-        }
-      }
-
-      const projectIds = uniqueValues(
-        ownedTasks.flatMap((task) => (task.project_id ? [task.project_id] : []))
-      );
-
-      if (projectIds.length > 0) {
-        const { data: projectTaskRows, error: projectTasksError } =
-          await supabase
-            .from("tasks")
-            .select("project_id, status")
-            .in("project_id", projectIds)
-            .eq("user_id", user.id)
-            .or("is_archived.eq.false,is_archived.is.null")
-            .is("deleted_at", null);
-
-        if (projectTasksError) {
-          console.error(
-            "Bulk task status project completion validation error:",
-            projectTasksError
-          );
-          return errorResponse(
-            "PROJECT_UPDATE_FAILED",
-            "Could not validate project completion",
-            500
-          );
-        }
-
-        const projectCompletionState = new Map<string, boolean>();
-
-        for (const task of projectTaskRows ?? []) {
-          if (!task.project_id) continue;
-
-          const isDone = String(task.status || "").trim().toLowerCase() === "done";
-          projectCompletionState.set(
-            task.project_id,
-            (projectCompletionState.get(task.project_id) ?? true) && isDone
-          );
-        }
-
-        const completedProjectIds = projectIds.filter(
-          (projectId) => projectCompletionState.get(projectId) === true
-        );
-
-        if (completedProjectIds.length > 0) {
-          const { data: projects, error: projectsError } = await supabase
-            .from("projects")
-            .select("id, completed_at")
-            .in("id", completedProjectIds)
-            .eq("user_id", user.id)
-            .is("deleted_at", null);
-
-          if (projectsError) {
-            console.error(
-              "Bulk task status project lookup error:",
-              projectsError
-            );
-            return errorResponse(
-              "PROJECT_UPDATE_FAILED",
-              "Could not load completed projects",
-              500
-            );
-          }
-
-          const ownedCompletedProjectIds = (projects ?? []).map(
-            (project) => project.id
-          );
-
-          if (ownedCompletedProjectIds.length > 0) {
-            const { error: projectUpdateError } = await supabase
-              .from("projects")
-              .update({
-                status: "Done",
-                priority: "Low",
-                updated_at: nowIso,
-              })
-              .in("id", ownedCompletedProjectIds)
-              .eq("user_id", user.id)
-              .is("deleted_at", null);
-
-            if (projectUpdateError) {
-              console.error(
-                "Bulk task status project completion update error:",
-                projectUpdateError
-              );
-              return errorResponse(
-                "PROJECT_UPDATE_FAILED",
-                "Could not complete related projects",
-                500
-              );
-            }
-
-            const projectIdsMissingCompletedAt = (projects ?? [])
-              .filter((project) => !project.completed_at)
-              .map((project) => project.id);
-
-            if (projectIdsMissingCompletedAt.length > 0) {
-              const { error: projectCompletionTimestampError } = await supabase
-                .from("projects")
-                .update({
-                  completed_at: nowIso,
-                })
-                .in("id", projectIdsMissingCompletedAt)
-                .eq("user_id", user.id)
-                .is("deleted_at", null);
-
-              if (projectCompletionTimestampError) {
-                console.error(
-                  "Bulk task status project completion timestamp error:",
-                  projectCompletionTimestampError
-                );
-                return errorResponse(
-                  "PROJECT_UPDATE_FAILED",
-                  "Could not complete related projects",
-                  500
-                );
-              }
-            }
-          }
-        }
-      }
     }
 
     const { data: updatedTasks, error: reloadError } = await supabase
