@@ -341,41 +341,77 @@ export async function POST(req: NextRequest) {
         clientUpdateData.notes = normalizedValue;
       }
 
-      const { error: clientUpdateError } = await supabase
+      const { data: updatedClient, error: clientUpdateError } = await supabase
         .from("clients")
         .update(clientUpdateData)
         .eq("id", existingTask.client_id)
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .select("id, name, contact_name, phone, email, notes, created_at")
+        .single();
 
-      if (clientUpdateError) {
+      const clientUpdateErrorMessage =
+        clientUpdateError?.message || "Failed to update client details";
+
+      if (clientUpdateError || !updatedClient) {
         console.error("Client update error:", clientUpdateError);
+
+        if (clientUpdateError?.code === "PGRST116" || !updatedClient) {
+          return NextResponse.json(
+            { error: "Client not found" },
+            { status: 404 }
+          );
+        }
 
         return NextResponse.json(
           {
-            error:
-              clientUpdateError.message || "Failed to update client details",
+            error: clientUpdateErrorMessage,
           },
           { status: 500 }
         );
       }
 
-      await touchTaskForActivity({
-        supabase,
-        taskId,
-        userId: user.id,
-      });
+      try {
+        await touchTaskForActivity({
+          supabase,
+          taskId,
+          userId: user.id,
+        });
+      } catch (activityError) {
+        console.warn(
+          "Client details updated, but task activity touch failed:",
+          activityError
+        );
+      }
 
-      const cleanTask = await reloadTask({
-        supabase,
-        taskId,
-        userId: user.id,
-        fallbackClient: currentClient,
-      });
+      try {
+        const cleanTask = await reloadTask({
+          supabase,
+          taskId,
+          userId: user.id,
+          fallbackClient: updatedClient,
+        });
 
-      return NextResponse.json({
-        success: true,
-        task: cleanTask,
-      });
+        return NextResponse.json({
+          success: true,
+          task: cleanTask,
+        });
+      } catch (reloadError) {
+        console.warn(
+          "Client details updated, but task reload failed:",
+          reloadError
+        );
+
+        return NextResponse.json({
+          success: true,
+          task: cleanJoinedTask(
+            {
+              ...existingTask,
+              clients: updatedClient,
+            },
+            updatedClient
+          ),
+        });
+      }
     }
 
     let updateData: Record<string, unknown> = {};
