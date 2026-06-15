@@ -159,6 +159,30 @@ type ApplyMutationResult = {
   metadata?: JsonRecord | null;
 };
 
+type TransactionalApplyPayloadItem = {
+  itemId: string;
+  itemType: ProjectUpdateItemType;
+  newValue: JsonRecord | null;
+  mutation: JsonRecord;
+  event: {
+    eventType: ApplyMutationResult["timelineEventType"];
+    title: string;
+    summary: string | null;
+    targetTaskId: number | null;
+    targetField: string | null;
+    oldValue: JsonRecord | null;
+    newValue: JsonRecord | null;
+    metadata: JsonRecord | null;
+  };
+};
+
+type TransactionalApplyResult = {
+  update: ProjectUpdate;
+  appliedItems: ProjectUpdateItem[];
+  rejectedItems: ProjectUpdateItem[];
+  timelineEvents: ProjectTimelineEvent[];
+};
+
 function asJsonRecord(value: unknown): JsonRecord | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
@@ -232,11 +256,6 @@ function normalizePriority(value: string | null): string {
   }
 
   return value.trim();
-}
-
-function isDoneStatus(value: string | null | undefined): boolean {
-  const normalized = (value ?? "").trim().toLowerCase();
-  return normalized === "done" || normalized === "completed" || normalized === "complete";
 }
 
 function getOptionalString(record: JsonRecord, keys: string[]): string | null {
@@ -698,498 +717,235 @@ async function claimProjectUpdateForApply(input: {
   return getProjectUpdateStateFailure(typedUpdate);
 }
 
-async function getNextSubtaskOrder(input: {
-  supabase: SupabaseServerClient;
-  projectId: string;
-  userId: string;
-}): Promise<number> {
-  const { data } = await input.supabase
-    .from("tasks")
-    .select("subtask_order")
-    .eq("project_id", input.projectId)
-    .eq("user_id", input.userId)
-    .is("deleted_at", null)
-    .order("subtask_order", { ascending: false, nullsFirst: false })
-    .limit(1);
-
-  const currentMax = data?.[0]?.subtask_order;
-
-  if (typeof currentMax === "number" && Number.isFinite(currentMax)) {
-    return currentMax + 1;
-  }
-
-  return 1;
-}
-
-async function applyNewSubtask(input: {
-  supabase: SupabaseServerClient;
-  userId: string;
-  project: ProjectRow;
-  update: ProjectUpdateRow;
-  item: ProjectUpdateItemRow;
-}): Promise<ApplyMutationResult> {
-  const nextValue = asJsonRecord(input.item.new_value);
-  const nowIso = new Date().toISOString();
-  const status = normalizeStatus(getStringValue(nextValue, ["status"], input.project.status));
-  const priority = normalizePriority(getStringValue(nextValue, ["priority"], input.project.priority));
-
-  const nextSubtaskOrder = await getNextSubtaskOrder({
-    supabase: input.supabase,
-    projectId: input.project.id,
-    userId: input.userId,
-  });
-
-  const taskTitle = getTaskTitleFromItem(input.item);
-
-  const taskPayload = {
-    user_id: input.userId,
-    client_name: input.project.client_name ?? "Client",
-    contact_name: input.project.contact_name ?? null,
-    client_id: input.project.client_id,
-    project_id: input.project.id,
-    subtask_order: nextSubtaskOrder,
-
-    task_title: taskTitle,
-    amount: getStringValue(nextValue, ["amount", "budget", "price", "cost"], input.project.amount),
-    amount_value: getNumberValue(nextValue, ["amount_value", "budget_value"], input.project.amount_value),
-    currency_code: getStringValue(nextValue, ["currency_code", "currency"], input.project.currency_code),
-
-    deadline_text: getStringValue(nextValue, ["deadline_text", "deadline"], input.project.deadline_text),
-    deadline_date: getStringValue(nextValue, ["deadline_date"], input.project.deadline_date),
-
-    priority,
-    status,
-
-    source: "client_update",
-    raw_input: input.update.raw_input,
-
-    is_archived: false,
-    archived_at: null,
-    completed_at: isDoneStatus(status) ? nowIso : null,
-    deleted_at: null,
-    updated_at: nowIso,
-  };
-
-  const { data, error } = await input.supabase
-    .from("tasks")
-    .insert(taskPayload)
-    .select("id")
-    .single();
-
-  if (error || !data) {
-    throw new Error(error?.message || "Could not create new subtask.");
-  }
-
-  const newTaskId = Number(data.id);
-
-  return {
-    timelineEventType: "subtask_added",
-    eventTitle: "New subtask added",
-    eventSummary: taskTitle,
-    targetTaskId: newTaskId,
-    targetField: "task_title",
-    oldValue: null,
-    newValue: {
-      task_id: newTaskId,
-      task_title: taskTitle,
-      subtask_order: nextSubtaskOrder,
-    },
-    metadata: {
-      updateItemType: input.item.type,
-    },
-  };
-}
-
-async function applyUpdateSubtask(input: {
-  supabase: SupabaseServerClient;
-  userId: string;
+function buildTransactionalApplyPayloadItem(input: {
   project: ProjectRow;
   item: ProjectUpdateItemRow;
-}): Promise<ApplyMutationResult> {
-  if (!input.item.target_task_id) {
-    throw new Error("Missing target task id for subtask update.");
-  }
-
-  const nextValue = asJsonRecord(input.item.new_value);
-
-  if (!nextValue) {
-    throw new Error("Missing new value for subtask update.");
-  }
-
-  const updateData: Record<string, unknown> = {
-    updated_at: new Date().toISOString(),
+}): TransactionalApplyPayloadItem {
+  const { project, item } = input;
+  const nextValue = asJsonRecord(item.new_value);
+  let mutation: JsonRecord = { kind: "timeline_only" };
+  let eventType: ApplyMutationResult["timelineEventType"] =
+    item.type === "project_note" || item.type === "client_note"
+      ? "note_added"
+      : "update_item_accepted";
+  let eventTitle = getProjectUpdateItemEventTitle(item);
+  let eventSummary = item.description ?? item.ai_reason ?? null;
+  let targetTaskId = item.target_task_id;
+  let targetField = item.target_field ?? null;
+  let eventMetadata: JsonRecord = {
+    updateItemType: item.type,
+    timelineOnly: true,
   };
 
-  const taskTitle = getStringValue(nextValue, ["task_title", "title", "name"]);
-  const amount = getStringValue(nextValue, ["amount", "budget", "price", "cost"]);
-  const amountValue = getNumberValue(nextValue, ["amount_value", "budget_value"]);
-  const currencyCode = getStringValue(nextValue, ["currency_code", "currency"]);
-  const deadlineText = getStringValue(nextValue, ["deadline_text", "deadline"]);
-  const deadlineDate = getStringValue(nextValue, ["deadline_date"]);
-  const priority = getStringValue(nextValue, ["priority"]);
-  const status = getStringValue(nextValue, ["status"]);
+  if (item.type === "new_subtask") {
+    const status = normalizeStatus(
+      getStringValue(nextValue, ["status"], project.status)
+    );
+    const priority = normalizePriority(
+      getStringValue(nextValue, ["priority"], project.priority)
+    );
+    const taskTitle = getTaskTitleFromItem(item);
 
-  if (taskTitle !== null) updateData.task_title = taskTitle;
-  if (amount !== null) updateData.amount = amount;
-  if (amountValue !== null) updateData.amount_value = amountValue;
-  if (currencyCode !== null) updateData.currency_code = currencyCode;
-  if (deadlineText !== null) updateData.deadline_text = deadlineText;
-  if (deadlineDate !== null) updateData.deadline_date = deadlineDate;
-  if (priority !== null) updateData.priority = priority;
-  if (status !== null) {
-    updateData.status = status;
-    updateData.completed_at = isDoneStatus(status) ? new Date().toISOString() : null;
-  }
+    mutation = {
+      kind: "new_subtask",
+      task: {
+        client_name: project.client_name ?? "Client",
+        contact_name: project.contact_name ?? null,
+        task_title: taskTitle,
+        amount: getStringValue(
+          nextValue,
+          ["amount", "budget", "price", "cost"],
+          project.amount
+        ),
+        amount_value: getNumberValue(
+          nextValue,
+          ["amount_value", "budget_value"],
+          project.amount_value
+        ),
+        currency_code: getStringValue(
+          nextValue,
+          ["currency_code", "currency"],
+          project.currency_code
+        ),
+        deadline_text: getStringValue(
+          nextValue,
+          ["deadline_text", "deadline"],
+          project.deadline_text
+        ),
+        deadline_date: getStringValue(
+          nextValue,
+          ["deadline_date"],
+          project.deadline_date
+        ),
+        priority,
+        status,
+      },
+    };
+    eventType = "subtask_added";
+    eventTitle = "New subtask added";
+    eventSummary = taskTitle;
+    targetTaskId = null;
+    targetField = "task_title";
+    eventMetadata = { updateItemType: item.type };
+  } else if (item.type === "update_subtask") {
+    if (!item.target_task_id || !nextValue) {
+      throw new Error("Missing target task or value for subtask update.");
+    }
 
-  const { error } = await input.supabase
-    .from("tasks")
-    .update(updateData)
-    .eq("id", input.item.target_task_id)
-    .eq("project_id", input.project.id)
-    .eq("user_id", input.userId)
-    .is("deleted_at", null);
-
-  if (error) {
-    throw new Error(error.message || "Could not update subtask.");
-  }
-
-  return {
-    timelineEventType: "subtask_updated",
-    eventTitle: "Subtask updated",
-    eventSummary: input.item.title,
-    targetTaskId: input.item.target_task_id,
-    targetField: input.item.target_field ?? null,
-    oldValue: asJsonRecord(input.item.old_value),
-    newValue: nextValue,
-    metadata: {
-      updateItemType: input.item.type,
-    },
-  };
-}
-
-async function applyProjectFieldChange(input: {
-  supabase: SupabaseServerClient;
-  userId: string;
-  project: ProjectRow;
-  item: ProjectUpdateItemRow;
-}): Promise<ApplyMutationResult> {
-  const nextValue = asJsonRecord(input.item.new_value);
-
-  if (!nextValue) {
-    throw new Error("Missing new value for project field update.");
-  }
-
-  const updateData: Record<string, unknown> = {
-    updated_at: new Date().toISOString(),
-  };
-
-  let timelineEventType: ApplyMutationResult["timelineEventType"] = "update_item_accepted";
-  let eventTitle = getProjectUpdateItemEventTitle(input.item);
-  let targetField = input.item.target_field ?? null;
-
-  if (input.item.type === "deadline_change") {
-    const deadlineText = getStringValue(nextValue, ["deadline_text", "deadline"]);
-    const deadlineDate =
-      getStringValue(nextValue, ["deadline_date"]) ||
-      (deadlineText ? parseDeadline(deadlineText).deadlineDate : null);
-
-    if (deadlineText !== null) updateData.deadline_text = deadlineText;
-    if (deadlineDate !== null) updateData.deadline_date = deadlineDate;
-
-    timelineEventType = "deadline_updated";
-    eventTitle = "Deadline updated";
-    targetField = targetField ?? "deadline";
-  }
-
-  if (input.item.type === "budget_change") {
+    const updates: JsonRecord = {};
+    const taskTitle = getStringValue(nextValue, ["task_title", "title", "name"]);
     const amount = getStringValue(nextValue, ["amount", "budget", "price", "cost"]);
     const amountValue = getNumberValue(nextValue, ["amount_value", "budget_value"]);
     const currencyCode = getStringValue(nextValue, ["currency_code", "currency"]);
-
-    if (amount !== null) updateData.amount = amount;
-    if (amountValue !== null) updateData.amount_value = amountValue;
-    if (currencyCode !== null) updateData.currency_code = currencyCode;
-
-    timelineEventType = "budget_updated";
-    eventTitle = "Budget updated";
-    targetField = targetField ?? "budget";
-  }
-
-  if (input.item.type === "priority_change") {
+    const deadlineText = getStringValue(nextValue, ["deadline_text", "deadline"]);
+    const deadlineDate = getStringValue(nextValue, ["deadline_date"]);
     const priority = getStringValue(nextValue, ["priority"]);
-
-    if (priority !== null) {
-      updateData.priority = priority;
-    }
-
-    timelineEventType = "priority_updated";
-    eventTitle = "Priority updated";
-    targetField = targetField ?? "priority";
-  }
-
-  if (input.item.type === "status_change") {
     const status = getStringValue(nextValue, ["status"]);
 
-    if (status !== null) {
-      updateData.status = status;
+    if (taskTitle !== null) updates.task_title = taskTitle;
+    if (amount !== null) updates.amount = amount;
+    if (amountValue !== null) updates.amount_value = amountValue;
+    if (currencyCode !== null) updates.currency_code = currencyCode;
+    if (deadlineText !== null) updates.deadline_text = deadlineText;
+    if (deadlineDate !== null) updates.deadline_date = deadlineDate;
+    if (priority !== null) updates.priority = priority;
+    if (status !== null) updates.status = status;
+
+    if (Object.keys(updates).length === 0) {
+      throw new Error("No supported subtask field was found to update.");
     }
 
-    timelineEventType = "status_updated";
-    eventTitle = "Status updated";
-    targetField = targetField ?? "status";
-  }
+    mutation = {
+      kind: "update_subtask",
+      taskId: item.target_task_id,
+      updates,
+    };
+    eventType = "subtask_updated";
+    eventTitle = "Subtask updated";
+    eventSummary = item.title;
+    eventMetadata = { updateItemType: item.type };
+  } else if (
+    item.type === "deadline_change" ||
+    item.type === "budget_change" ||
+    item.type === "priority_change" ||
+    item.type === "status_change"
+  ) {
+    if (!nextValue) {
+      throw new Error("Missing new value for project field update.");
+    }
 
-  if (Object.keys(updateData).length === 1) {
-    throw new Error("No supported project field was found to update.");
-  }
+    const updates: JsonRecord = {};
 
-  const { error } = await input.supabase
-    .from("projects")
-    .update(updateData)
-    .eq("id", input.project.id)
-    .eq("user_id", input.userId)
-    .is("deleted_at", null);
+    if (item.type === "deadline_change") {
+      const deadlineText = getStringValue(nextValue, ["deadline_text", "deadline"]);
+      const deadlineDate =
+        getStringValue(nextValue, ["deadline_date"]) ||
+        (deadlineText ? parseDeadline(deadlineText).deadlineDate : null);
 
-  if (error) {
-    throw new Error(error.message || "Could not update project field.");
+      if (deadlineText !== null) updates.deadline_text = deadlineText;
+      if (deadlineDate !== null) updates.deadline_date = deadlineDate;
+      eventType = "deadline_updated";
+      eventTitle = "Deadline updated";
+      targetField = targetField ?? "deadline";
+    }
+
+    if (item.type === "budget_change") {
+      const amount = getStringValue(nextValue, ["amount", "budget", "price", "cost"]);
+      const amountValue = getNumberValue(nextValue, ["amount_value", "budget_value"]);
+      const currencyCode = getStringValue(nextValue, ["currency_code", "currency"]);
+
+      if (amount !== null) updates.amount = amount;
+      if (amountValue !== null) updates.amount_value = amountValue;
+      if (currencyCode !== null) updates.currency_code = currencyCode;
+      eventType = "budget_updated";
+      eventTitle = "Budget updated";
+      targetField = targetField ?? "budget";
+    }
+
+    if (item.type === "priority_change") {
+      const priority = getStringValue(nextValue, ["priority"]);
+      if (priority !== null) updates.priority = priority;
+      eventType = "priority_updated";
+      eventTitle = "Priority updated";
+      targetField = targetField ?? "priority";
+    }
+
+    if (item.type === "status_change") {
+      const status = getStringValue(nextValue, ["status"]);
+      if (status !== null) updates.status = status;
+      eventType = "status_updated";
+      eventTitle = "Status updated";
+      targetField = targetField ?? "status";
+    }
+
+    if (Object.keys(updates).length === 0) {
+      throw new Error("No supported project field was found to update.");
+    }
+
+    mutation = { kind: "project_field", updates };
+    targetTaskId = null;
+    eventSummary = item.title;
+    eventMetadata = { updateItemType: item.type };
+  } else if (item.type === "client_detail_change") {
+    if (!nextValue) {
+      throw new Error("Missing new value for client detail update.");
+    }
+
+    const projectUpdates: JsonRecord = {};
+    const clientUpdates: JsonRecord = {};
+    const taskUpdates: JsonRecord = {};
+    const clientName = getStringValue(nextValue, ["client_name", "name"]);
+    const contactName = getStringValue(nextValue, ["contact_name"]);
+    const phone = getStringValue(nextValue, ["phone"]);
+    const email = getStringValue(nextValue, ["email"]);
+    const notes = getStringValue(nextValue, ["notes", "client_notes"]);
+
+    if (clientName !== null) {
+      projectUpdates.client_name = clientName;
+      clientUpdates.name = clientName;
+      taskUpdates.client_name = clientName;
+    }
+
+    if (contactName !== null) {
+      projectUpdates.contact_name = contactName;
+      clientUpdates.contact_name = contactName;
+      taskUpdates.contact_name = contactName;
+    }
+
+    if (phone !== null) clientUpdates.phone = phone;
+    if (email !== null) clientUpdates.email = email;
+    if (notes !== null) clientUpdates.notes = notes;
+
+    mutation = {
+      kind: "client_detail",
+      projectUpdates,
+      clientUpdates,
+      taskUpdates,
+    };
+    eventType = "client_details_updated";
+    eventTitle = "Client details updated";
+    eventSummary = item.title;
+    targetTaskId = null;
+    targetField = targetField ?? "client";
+    eventMetadata = { updateItemType: item.type };
   }
 
   return {
-    timelineEventType,
-    eventTitle,
-    eventSummary: input.item.title,
-    targetTaskId: null,
-    targetField,
-    oldValue: asJsonRecord(input.item.old_value),
+    itemId: item.id,
+    itemType: item.type,
     newValue: nextValue,
-    metadata: {
-      updateItemType: input.item.type,
+    mutation,
+    event: {
+      eventType,
+      title: eventTitle,
+      summary: eventSummary,
+      targetTaskId,
+      targetField,
+      oldValue: asJsonRecord(item.old_value),
+      newValue: nextValue,
+      metadata: eventMetadata,
     },
   };
-}
-
-async function applyClientDetailChange(input: {
-  supabase: SupabaseServerClient;
-  userId: string;
-  project: ProjectRow;
-  item: ProjectUpdateItemRow;
-}): Promise<ApplyMutationResult> {
-  const nextValue = asJsonRecord(input.item.new_value);
-
-  if (!nextValue) {
-    throw new Error("Missing new value for client detail update.");
-  }
-
-  const nowIso = new Date().toISOString();
-
-  const clientName = getStringValue(nextValue, ["client_name", "name"]);
-  const contactName = getStringValue(nextValue, ["contact_name"]);
-  const phone = getStringValue(nextValue, ["phone"]);
-  const email = getStringValue(nextValue, ["email"]);
-  const notes = getStringValue(nextValue, ["notes", "client_notes"]);
-
-  const projectUpdateData: Record<string, unknown> = {
-    updated_at: nowIso,
-  };
-
-  const clientUpdateData: Record<string, unknown> = {};
-  const taskUpdateData: Record<string, unknown> = {
-    updated_at: nowIso,
-  };
-
-  if (clientName !== null) {
-    projectUpdateData.client_name = clientName;
-    clientUpdateData.name = clientName;
-    taskUpdateData.client_name = clientName;
-  }
-
-  if (contactName !== null) {
-    projectUpdateData.contact_name = contactName;
-    clientUpdateData.contact_name = contactName;
-    taskUpdateData.contact_name = contactName;
-  }
-
-  if (phone !== null) {
-    clientUpdateData.phone = phone;
-  }
-
-  if (email !== null) {
-    clientUpdateData.email = email;
-  }
-
-  if (notes !== null) {
-    clientUpdateData.notes = notes;
-  }
-
-  if (Object.keys(projectUpdateData).length > 1) {
-    const { error: projectError } = await input.supabase
-      .from("projects")
-      .update(projectUpdateData)
-      .eq("id", input.project.id)
-      .eq("user_id", input.userId)
-      .is("deleted_at", null);
-
-    if (projectError) {
-      throw new Error(projectError.message || "Could not update project client fields.");
-    }
-  }
-
-  if (input.project.client_id && Object.keys(clientUpdateData).length > 0) {
-    const { error: clientError } = await input.supabase
-      .from("clients")
-      .update(clientUpdateData)
-      .eq("id", input.project.client_id)
-      .eq("user_id", input.userId);
-
-    if (clientError) {
-      throw new Error(clientError.message || "Could not update client details.");
-    }
-  }
-
-  if (Object.keys(taskUpdateData).length > 1) {
-    const { error: taskError } = await input.supabase
-      .from("tasks")
-      .update(taskUpdateData)
-      .eq("project_id", input.project.id)
-      .eq("user_id", input.userId)
-      .is("deleted_at", null);
-
-    if (taskError) {
-      throw new Error(taskError.message || "Could not sync client fields to tasks.");
-    }
-  }
-
-  return {
-    timelineEventType: "client_details_updated",
-    eventTitle: "Client details updated",
-    eventSummary: input.item.title,
-    targetTaskId: null,
-    targetField: input.item.target_field ?? "client",
-    oldValue: asJsonRecord(input.item.old_value),
-    newValue: nextValue,
-    metadata: {
-      updateItemType: input.item.type,
-    },
-  };
-}
-
-async function applyTimelineOnlyItem(input: {
-  item: ProjectUpdateItemRow;
-}): Promise<ApplyMutationResult> {
-  return {
-    timelineEventType:
-      input.item.type === "project_note" || input.item.type === "client_note"
-        ? "note_added"
-        : "update_item_accepted",
-    eventTitle: getProjectUpdateItemEventTitle(input.item),
-    eventSummary: input.item.description ?? input.item.ai_reason ?? null,
-    targetTaskId: input.item.target_task_id,
-    targetField: input.item.target_field ?? null,
-    oldValue: asJsonRecord(input.item.old_value),
-    newValue: asJsonRecord(input.item.new_value),
-    metadata: {
-      updateItemType: input.item.type,
-      timelineOnly: true,
-    },
-  };
-}
-
-async function applyAcceptedItem(input: {
-  supabase: SupabaseServerClient;
-  userId: string;
-  project: ProjectRow;
-  update: ProjectUpdateRow;
-  item: ProjectUpdateItemRow;
-}): Promise<ApplyMutationResult> {
-  switch (input.item.type as ProjectUpdateItemType) {
-    case "new_subtask":
-      return applyNewSubtask(input);
-
-    case "update_subtask":
-      return applyUpdateSubtask(input);
-
-    case "deadline_change":
-    case "budget_change":
-    case "priority_change":
-    case "status_change":
-      return applyProjectFieldChange(input);
-
-    case "client_detail_change":
-      return applyClientDetailChange(input);
-
-    case "project_note":
-    case "client_note":
-    case "duplicate_warning":
-    case "no_action":
-      return applyTimelineOnlyItem({
-        item: input.item,
-      });
-
-    default:
-      return applyTimelineOnlyItem({
-        item: input.item,
-      });
-  }
-}
-
-async function markItemsApplied(input: {
-  supabase: SupabaseServerClient;
-  userId: string;
-  itemIds: string[];
-}): Promise<ProjectUpdateItem[]> {
-  if (input.itemIds.length === 0) {
-    return [];
-  }
-
-  const nowIso = new Date().toISOString();
-
-  const { data, error } = await input.supabase
-    .from("project_update_items")
-    .update({
-      status: "applied",
-      accepted_at: nowIso,
-      applied_at: nowIso,
-      accepted_by: input.userId,
-      applied_by: input.userId,
-    })
-    .in("id", input.itemIds)
-    .eq("user_id", input.userId)
-    .select("*");
-
-  if (error) {
-    throw new Error(error.message || "Could not mark update items as applied.");
-  }
-
-  return (data ?? []) as ProjectUpdateItem[];
-}
-
-async function markItemsRejected(input: {
-  supabase: SupabaseServerClient;
-  userId: string;
-  itemIds: string[];
-}): Promise<ProjectUpdateItem[]> {
-  if (input.itemIds.length === 0) {
-    return [];
-  }
-
-  const nowIso = new Date().toISOString();
-
-  const { data, error } = await input.supabase
-    .from("project_update_items")
-    .update({
-      status: "rejected",
-      rejected_at: nowIso,
-      rejected_by: input.userId,
-    })
-    .in("id", input.itemIds)
-    .eq("user_id", input.userId)
-    .select("*");
-
-  if (error) {
-    throw new Error(error.message || "Could not mark update items as rejected.");
-  }
-
-  return (data ?? []) as ProjectUpdateItem[];
 }
 
 function buildValidatedEditedItemOverrides(input: {
@@ -1223,34 +979,6 @@ function buildValidatedEditedItemOverrides(input: {
   }
 
   return overrides;
-}
-
-async function persistEditedItemOverrides(input: {
-  supabase: SupabaseServerClient;
-  userId: string;
-  projectUpdateId: string;
-  overrides: Map<string, JsonRecord>;
-}): Promise<Map<string, ProjectUpdateItemRow>> {
-  const updatedItems = new Map<string, ProjectUpdateItemRow>();
-
-  for (const [itemId, newValue] of input.overrides) {
-    const { data, error } = await input.supabase
-      .from("project_update_items")
-      .update({ new_value: newValue })
-      .eq("id", itemId)
-      .eq("project_update_id", input.projectUpdateId)
-      .eq("user_id", input.userId)
-      .select("*")
-      .single();
-
-    if (error || !data) {
-      throw new Error(error?.message || "Could not save edited update item.");
-    }
-
-    updatedItems.set(itemId, data as ProjectUpdateItemRow);
-  }
-
-  return updatedItems;
 }
 
 async function findDuplicateAcceptedNewSubtask(input: {
@@ -1288,82 +1016,6 @@ async function findDuplicateAcceptedNewSubtask(input: {
   }
 
   return null;
-}
-
-async function insertTimelineEvents(input: {
-  supabase: SupabaseServerClient;
-  userId: string;
-  projectId: string;
-  updateId: string;
-  events: Array<ApplyMutationResult & { sourceItemId: string }>;
-}): Promise<ProjectTimelineEvent[]> {
-  if (input.events.length === 0) {
-    return [];
-  }
-
-  const rows = input.events.map((event) => ({
-    user_id: input.userId,
-    project_id: input.projectId,
-
-    event_type: event.timelineEventType,
-    event_title: event.eventTitle,
-    event_summary: event.eventSummary,
-
-    source_update_id: input.updateId,
-    source_item_id: event.sourceItemId,
-    target_task_id: event.targetTaskId ?? null,
-
-    target_field: event.targetField ?? null,
-    old_value: event.oldValue ?? null,
-    new_value: event.newValue ?? null,
-
-    actor_user_id: input.userId,
-    metadata: event.metadata ?? null,
-  }));
-
-  const { data, error } = await input.supabase
-    .from("project_timeline_events")
-    .insert(rows)
-    .select("*");
-
-  if (error) {
-    throw new Error(error.message || "Could not create project timeline events.");
-  }
-
-  return (data ?? []) as ProjectTimelineEvent[];
-}
-
-async function markProjectUpdateApplied(input: {
-  supabase: SupabaseServerClient;
-  userId: string;
-  updateId: string;
-  attemptId: string;
-}): Promise<ProjectUpdate> {
-  const nowIso = new Date().toISOString();
-
-  const { data, error } = await input.supabase
-    .from("project_updates")
-    .update({
-      status: "applied",
-      reviewed_by: input.userId,
-      applied_by: input.userId,
-      reviewed_at: nowIso,
-      applied_at: nowIso,
-      apply_failed_at: null,
-      apply_error_code: null,
-    })
-    .eq("id", input.updateId)
-    .eq("user_id", input.userId)
-    .eq("status", "applying")
-    .eq("apply_attempt_id", input.attemptId)
-    .select("*")
-    .single();
-
-  if (error || !data) {
-    throw new Error(error?.message || "Could not mark project update as applied.");
-  }
-
-  return data as ProjectUpdate;
 }
 
 async function markProjectUpdateApplyFailed(input: {
@@ -1410,6 +1062,116 @@ async function markProjectUpdateApplyFailed(input: {
     update: data ? (data as ProjectUpdate) : null,
     recordingError: null,
   };
+}
+
+function parseTransactionalApplyResult(
+  value: unknown
+): TransactionalApplyResult | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const result = value as Record<string, unknown>;
+
+  if (
+    !result.update ||
+    typeof result.update !== "object" ||
+    Array.isArray(result.update) ||
+    !Array.isArray(result.appliedItems) ||
+    !Array.isArray(result.rejectedItems) ||
+    !Array.isArray(result.timelineEvents)
+  ) {
+    return null;
+  }
+
+  return {
+    update: result.update as ProjectUpdate,
+    appliedItems: result.appliedItems as ProjectUpdateItem[],
+    rejectedItems: result.rejectedItems as ProjectUpdateItem[],
+    timelineEvents: result.timelineEvents as ProjectTimelineEvent[],
+  };
+}
+
+async function recoverTransactionalApplyResult(input: {
+  supabase: SupabaseServerClient;
+  userId: string;
+  updateId: string;
+  attemptId: string;
+  acceptedItemIds: string[];
+  rejectedItemIds: string[];
+}): Promise<TransactionalApplyResult | null> {
+  const { data: update, error: updateError } = await input.supabase
+    .from("project_updates")
+    .select("*")
+    .eq("id", input.updateId)
+    .eq("user_id", input.userId)
+    .eq("status", "applied")
+    .eq("apply_attempt_id", input.attemptId)
+    .maybeSingle();
+
+  if (updateError || !update) {
+    return null;
+  }
+
+  const loadItems = async (itemIds: string[]) => {
+    if (itemIds.length === 0) return [];
+
+    const { data, error } = await input.supabase
+      .from("project_update_items")
+      .select("*")
+      .in("id", itemIds)
+      .eq("project_update_id", input.updateId)
+      .eq("user_id", input.userId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      throw new Error(error.message || "Could not recover applied items.");
+    }
+
+    return (data ?? []) as ProjectUpdateItem[];
+  };
+
+  try {
+    const [appliedItems, rejectedItems, timelineResult] = await Promise.all([
+      loadItems(input.acceptedItemIds),
+      loadItems(input.rejectedItemIds),
+      input.acceptedItemIds.length > 0
+        ? input.supabase
+            .from("project_timeline_events")
+            .select("*")
+            .eq("source_update_id", input.updateId)
+            .eq("user_id", input.userId)
+            .in("source_item_id", input.acceptedItemIds)
+            .order("created_at", { ascending: true })
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    if (timelineResult.error) {
+      throw new Error(
+        timelineResult.error.message || "Could not recover timeline events."
+      );
+    }
+
+    return {
+      update: update as ProjectUpdate,
+      appliedItems,
+      rejectedItems,
+      timelineEvents: (timelineResult.data ?? []) as ProjectTimelineEvent[],
+    };
+  } catch (error) {
+    console.warn("Recovered applied update, but related apply result reads failed:", {
+      updateId: input.updateId,
+      attemptId: input.attemptId,
+      error,
+    });
+
+    return {
+      update: update as ProjectUpdate,
+      appliedItems: [],
+      rejectedItems: [],
+      timelineEvents: [],
+    };
+  }
 }
 
 async function reloadProjectAfterApply(input: {
@@ -1471,10 +1233,11 @@ async function reloadProjectAfterApply(input: {
   const client = Array.isArray(project.clients)
     ? project.clients[0] ?? null
     : project.clients ?? null;
-  const { clients, ...cleanProject } = {
+  const cleanProject = {
     ...project,
     client,
   };
+  delete cleanProject.clients;
 
   return cleanProject as ProjectRow;
 }
@@ -1724,72 +1487,114 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let applyStage = "persist_edited_items";
+  let applyStage = "build_transactional_payload";
 
   try {
-    const updatedItemsById = await persistEditedItemOverrides({
-      supabase,
-      userId: user.id,
-      projectUpdateId,
+    const itemsForApply = applyEditedOverridesToItems({
+      items: loaded.items,
       overrides: editedOverrides,
     });
-    const itemsForApply = loaded.items.map((item) => updatedItemsById.get(item.id) ?? item);
     const acceptedItemsForApply = itemsForApply.filter((item) =>
       uniqueAcceptedIds.includes(item.id)
     );
-    const appliedTimelineResults: Array<ApplyMutationResult & { sourceItemId: string }> = [];
+    const normalizedApplyPayload = acceptedItemsForApply.map((item) =>
+      buildTransactionalApplyPayloadItem({
+        project: loaded.project,
+        item,
+      })
+    );
+    const normalizedEditedItems = Array.from(
+      editedOverrides,
+      ([itemId, newValue]) => ({ itemId, newValue })
+    );
 
-    applyStage = "apply_accepted_items";
+    applyStage = "transactional_apply";
 
-    for (const item of acceptedItemsForApply) {
-      const result = await applyAcceptedItem({
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
+      "apply_project_update_transaction",
+      {
+        p_update_id: loaded.update.id,
+        p_apply_attempt_id: claim.attemptId,
+        p_accepted_item_ids: uniqueAcceptedIds,
+        p_rejected_item_ids: uniqueRejectedIds,
+        p_edited_items: normalizedEditedItems,
+        p_apply_payload: normalizedApplyPayload,
+      }
+    );
+
+    let transactionalResult = parseTransactionalApplyResult(rpcData);
+
+    if (rpcError) {
+      transactionalResult = await recoverTransactionalApplyResult({
         supabase,
         userId: user.id,
-        project: loaded.project,
-        update: claim.update,
-        item,
+        updateId: loaded.update.id,
+        attemptId: claim.attemptId,
+        acceptedItemIds: uniqueAcceptedIds,
+        rejectedItemIds: uniqueRejectedIds,
       });
 
-      appliedTimelineResults.push({
-        ...result,
-        sourceItemId: item.id,
+      if (!transactionalResult) {
+        throw new Error(
+          rpcError.message || "Could not transactionally apply project update."
+        );
+      }
+
+      console.warn(
+        "Project update apply RPC returned an error after commit; recovered committed result:",
+        {
+          updateId: loaded.update.id,
+          attemptId: claim.attemptId,
+          error: rpcError.message,
+        }
+      );
+    }
+
+    if (!transactionalResult) {
+      transactionalResult = await recoverTransactionalApplyResult({
+        supabase,
+        userId: user.id,
+        updateId: loaded.update.id,
+        attemptId: claim.attemptId,
+        acceptedItemIds: uniqueAcceptedIds,
+        rejectedItemIds: uniqueRejectedIds,
       });
     }
 
-    applyStage = "mark_applied_items";
+    if (!transactionalResult) {
+      /*
+        A successful RPC response means the transaction committed. Keep that
+        server success authoritative even if the returned JSON cannot be
+        narrowed or the follow-up recovery read fails.
+      */
+      console.error("Committed project update apply result could not be narrowed:", {
+        updateId: loaded.update.id,
+        attemptId: claim.attemptId,
+        rpcData,
+      });
 
-    const appliedItems = await markItemsApplied({
-      supabase,
-      userId: user.id,
-      itemIds: uniqueAcceptedIds,
-    });
-
-    applyStage = "mark_rejected_items";
-
-    const finalRejectedItems = await markItemsRejected({
-      supabase,
-      userId: user.id,
-      itemIds: uniqueRejectedIds,
-    });
-
-    applyStage = "insert_timeline_events";
-
-    const timelineEvents = await insertTimelineEvents({
-      supabase,
-      userId: user.id,
-      projectId: loaded.project.id,
-      updateId: loaded.update.id,
-      events: appliedTimelineResults,
-    });
-
-    applyStage = "mark_update_applied";
-
-    const finalUpdate = await markProjectUpdateApplied({
-      supabase,
-      userId: user.id,
-      updateId: loaded.update.id,
-      attemptId: claim.attemptId,
-    });
+      const committedAt = new Date().toISOString();
+      transactionalResult = {
+        update: {
+          ...claim.update,
+          status: "applied",
+          reviewed_by: user.id,
+          applied_by: user.id,
+          reviewed_at: committedAt,
+          applied_at: committedAt,
+          apply_failed_at: null,
+          apply_error_code: null,
+        },
+        appliedItems: acceptedItemsForApply.map((item) => ({
+          ...item,
+          status: "applied",
+        })),
+        rejectedItems: itemsForApply
+          .filter((item) => uniqueRejectedIds.includes(item.id))
+          .map((item) => ({ ...item, status: "rejected" })),
+        timelineEvents: [],
+      };
+    }
 
     const updatedProject = await reloadProjectAfterApply({
       supabase,
@@ -1808,13 +1613,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json<ApplyProjectUpdateResponse>({
       ok: true,
-      update: finalUpdate,
+      update: transactionalResult.update,
       project: updatedProject,
       projectTasks,
       dashboardTasks,
-      appliedItems,
-      rejectedItems: finalRejectedItems,
-      timelineEvents,
+      appliedItems: transactionalResult.appliedItems,
+      rejectedItems: transactionalResult.rejectedItems,
+      timelineEvents: transactionalResult.timelineEvents,
     }, {
       headers: dashboardTasksNoStoreHeaders,
     });
