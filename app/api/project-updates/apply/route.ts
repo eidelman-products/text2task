@@ -73,6 +73,22 @@ type ProjectUpdateRow = ProjectUpdate;
 
 type ProjectUpdateItemRow = ProjectUpdateItem;
 
+type ProjectUpdateClaimFailure = {
+  ok: false;
+  status: number;
+  code: string;
+  error: string;
+  details?: unknown;
+};
+
+type ProjectUpdateClaimResult =
+  | {
+      ok: true;
+      attemptId: string;
+      update: ProjectUpdateRow;
+    }
+  | ProjectUpdateClaimFailure;
+
 type EditedItemOverride = {
   itemId: string;
   newValue: JsonRecord;
@@ -556,6 +572,130 @@ async function loadProjectUpdateForApply(input: {
     project: project as ProjectRow,
     items: (items ?? []) as ProjectUpdateItemRow[],
   };
+}
+
+function getApplyOperationalDetails(update: ProjectUpdateRow) {
+  return {
+    status: update.status,
+    applyAttemptId: update.apply_attempt_id,
+    applyStartedAt: update.apply_started_at,
+    applyFailedAt: update.apply_failed_at,
+    applyErrorCode: update.apply_error_code,
+  };
+}
+
+function getProjectUpdateStateFailure(
+  update: ProjectUpdateRow
+): ProjectUpdateClaimFailure {
+  const details = getApplyOperationalDetails(update);
+
+  if (update.status === "applied") {
+    return {
+      ok: false,
+      status: 409,
+      code: "project_update_already_applied",
+      error: "This project update was already applied. Refresh the workspace to see the latest changes.",
+      details,
+    };
+  }
+
+  if (update.status === "applying") {
+    return {
+      ok: false,
+      status: 409,
+      code: "project_update_apply_in_progress",
+      error:
+        "This project update is already being applied. Wait for it to finish, then refresh the workspace. If it remains in progress, contact support before trying again.",
+      details,
+    };
+  }
+
+  if (update.status === "failed") {
+    const error = update.apply_attempt_id
+      ? "A previous apply attempt failed after it started. It was not retried automatically. Contact support before trying again."
+      : "This project update is in a failed state and cannot be applied. Re-analyze the client update or contact support before trying again.";
+
+    return {
+      ok: false,
+      status: 409,
+      code: "project_update_apply_failed",
+      error,
+      details,
+    };
+  }
+
+  return {
+    ok: false,
+    status: 409,
+    code: "project_update_invalid_state",
+    error: `This project update cannot be applied while its status is "${update.status}".`,
+    details,
+  };
+}
+
+async function claimProjectUpdateForApply(input: {
+  supabase: SupabaseServerClient;
+  projectUpdateId: string;
+  userId: string;
+}): Promise<ProjectUpdateClaimResult> {
+  const attemptId = crypto.randomUUID();
+  const startedAt = new Date().toISOString();
+
+  const { data: claimedUpdate, error: claimError } = await input.supabase
+    .from("project_updates")
+    .update({
+      status: "applying",
+      apply_started_at: startedAt,
+      apply_attempt_id: attemptId,
+      apply_failed_at: null,
+      apply_error_code: null,
+    })
+    .eq("id", input.projectUpdateId)
+    .eq("user_id", input.userId)
+    .in("status", ["analyzed", "reviewed"])
+    .select("*")
+    .maybeSingle();
+
+  if (claimError) {
+    console.error("Could not claim project update for apply:", {
+      updateId: input.projectUpdateId,
+      error: claimError.message,
+    });
+
+    return {
+      ok: false,
+      status: 500,
+      code: "project_update_claim_failed",
+      error: "Text2Task could not safely start applying this update. No changes were applied.",
+    };
+  }
+
+  if (claimedUpdate) {
+    return {
+      ok: true,
+      attemptId,
+      update: claimedUpdate as ProjectUpdateRow,
+    };
+  }
+
+  const { data: currentUpdate, error: currentError } = await input.supabase
+    .from("project_updates")
+    .select("*")
+    .eq("id", input.projectUpdateId)
+    .eq("user_id", input.userId)
+    .maybeSingle();
+
+  if (currentError || !currentUpdate) {
+    return {
+      ok: false,
+      status: 404,
+      code: "project_update_not_found",
+      error: "Project update not found or you do not have access to it.",
+    };
+  }
+
+  const typedUpdate = currentUpdate as ProjectUpdateRow;
+  return getProjectUpdateStateFailure(typedUpdate);
 }
 
 async function getNextSubtaskOrder(input: {
@@ -1197,6 +1337,7 @@ async function markProjectUpdateApplied(input: {
   supabase: SupabaseServerClient;
   userId: string;
   updateId: string;
+  attemptId: string;
 }): Promise<ProjectUpdate> {
   const nowIso = new Date().toISOString();
 
@@ -1208,9 +1349,13 @@ async function markProjectUpdateApplied(input: {
       applied_by: input.userId,
       reviewed_at: nowIso,
       applied_at: nowIso,
+      apply_failed_at: null,
+      apply_error_code: null,
     })
     .eq("id", input.updateId)
     .eq("user_id", input.userId)
+    .eq("status", "applying")
+    .eq("apply_attempt_id", input.attemptId)
     .select("*")
     .single();
 
@@ -1219,6 +1364,52 @@ async function markProjectUpdateApplied(input: {
   }
 
   return data as ProjectUpdate;
+}
+
+async function markProjectUpdateApplyFailed(input: {
+  supabase: SupabaseServerClient;
+  userId: string;
+  updateId: string;
+  attemptId: string;
+  errorCode: string;
+}): Promise<{
+  recorded: boolean;
+  update: ProjectUpdate | null;
+  recordingError: string | null;
+}> {
+  const { data, error } = await input.supabase
+    .from("project_updates")
+    .update({
+      status: "failed",
+      apply_failed_at: new Date().toISOString(),
+      apply_error_code: input.errorCode,
+    })
+    .eq("id", input.updateId)
+    .eq("user_id", input.userId)
+    .eq("status", "applying")
+    .eq("apply_attempt_id", input.attemptId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Could not record failed project update apply attempt:", {
+      updateId: input.updateId,
+      attemptId: input.attemptId,
+      error: error.message,
+    });
+
+    return {
+      recorded: false,
+      update: null,
+      recordingError: error.message,
+    };
+  }
+
+  return {
+    recorded: Boolean(data),
+    update: data ? (data as ProjectUpdate) : null,
+    recordingError: null,
+  };
 }
 
 async function reloadProjectAfterApply(input: {
@@ -1408,6 +1599,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (loaded.update.status !== "analyzed" && loaded.update.status !== "reviewed") {
+    const stateFailure = getProjectUpdateStateFailure(loaded.update);
+
+    return NextResponse.json<ApplyProjectUpdateResponse>(
+      {
+        ok: false,
+        code: stateFailure.code,
+        error: stateFailure.error,
+        message: stateFailure.error,
+        details: stateFailure.details,
+      },
+      { status: stateFailure.status, headers: dashboardTasksNoStoreHeaders }
+    );
+  }
+
   const acceptedItems = loaded.items.filter((item) => uniqueAcceptedIds.includes(item.id));
   const rejectedItems = loaded.items.filter((item) => uniqueRejectedIds.includes(item.id));
 
@@ -1455,14 +1661,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const preflightItemsForApply = applyEditedOverridesToItems({
+    items: loaded.items,
+    overrides: editedOverrides,
+  });
+  const preflightAcceptedItems = preflightItemsForApply.filter((item) =>
+    uniqueAcceptedIds.includes(item.id)
+  );
+
   try {
-    const preflightItemsForApply = applyEditedOverridesToItems({
-      items: loaded.items,
-      overrides: editedOverrides,
-    });
-    const preflightAcceptedItems = preflightItemsForApply.filter((item) =>
-      uniqueAcceptedIds.includes(item.id)
-    );
     const duplicateSubtask = await findDuplicateAcceptedNewSubtask({
       supabase,
       userId: user.id,
@@ -1484,7 +1691,42 @@ export async function POST(request: NextRequest) {
         { status: 409, headers: dashboardTasksNoStoreHeaders }
       );
     }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Could not validate this project update.";
 
+    return NextResponse.json<ApplyProjectUpdateResponse>(
+      {
+        ok: false,
+        code: "project_update_preflight_failed",
+        error: `Could not safely validate this project update: ${message}`,
+      },
+      { status: 500, headers: dashboardTasksNoStoreHeaders }
+    );
+  }
+
+  const claim = await claimProjectUpdateForApply({
+    supabase,
+    projectUpdateId,
+    userId: user.id,
+  });
+
+  if (!claim.ok) {
+    return NextResponse.json<ApplyProjectUpdateResponse>(
+      {
+        ok: false,
+        code: claim.code,
+        error: claim.error,
+        message: claim.error,
+        details: claim.details,
+      },
+      { status: claim.status, headers: dashboardTasksNoStoreHeaders }
+    );
+  }
+
+  let applyStage = "persist_edited_items";
+
+  try {
     const updatedItemsById = await persistEditedItemOverrides({
       supabase,
       userId: user.id,
@@ -1497,12 +1739,14 @@ export async function POST(request: NextRequest) {
     );
     const appliedTimelineResults: Array<ApplyMutationResult & { sourceItemId: string }> = [];
 
+    applyStage = "apply_accepted_items";
+
     for (const item of acceptedItemsForApply) {
       const result = await applyAcceptedItem({
         supabase,
         userId: user.id,
         project: loaded.project,
-        update: loaded.update,
+        update: claim.update,
         item,
       });
 
@@ -1512,17 +1756,23 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    applyStage = "mark_applied_items";
+
     const appliedItems = await markItemsApplied({
       supabase,
       userId: user.id,
       itemIds: uniqueAcceptedIds,
     });
 
+    applyStage = "mark_rejected_items";
+
     const finalRejectedItems = await markItemsRejected({
       supabase,
       userId: user.id,
       itemIds: uniqueRejectedIds,
     });
+
+    applyStage = "insert_timeline_events";
 
     const timelineEvents = await insertTimelineEvents({
       supabase,
@@ -1532,10 +1782,13 @@ export async function POST(request: NextRequest) {
       events: appliedTimelineResults,
     });
 
+    applyStage = "mark_update_applied";
+
     const finalUpdate = await markProjectUpdateApplied({
       supabase,
       userId: user.id,
       updateId: loaded.update.id,
+      attemptId: claim.attemptId,
     });
 
     const updatedProject = await reloadProjectAfterApply({
@@ -1567,11 +1820,38 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown apply error.";
+    const errorCode = `project_update_${applyStage}_failed`;
+
+    console.error("Project update apply attempt failed:", {
+      updateId: loaded.update.id,
+      attemptId: claim.attemptId,
+      stage: applyStage,
+      error: message,
+    });
+
+    const failedState = await markProjectUpdateApplyFailed({
+      supabase,
+      userId: user.id,
+      updateId: loaded.update.id,
+      attemptId: claim.attemptId,
+      errorCode,
+    });
+    const recoveryMessage = failedState.recorded
+      ? "The update was marked failed and will not be retried automatically. Contact support before trying again."
+      : "Text2Task could not record the recovery state. Do not retry this update until support has inspected it.";
 
     return NextResponse.json<ApplyProjectUpdateResponse>(
       {
         ok: false,
-        error: `Could not apply project update: ${message}`,
+        code: "project_update_apply_failed",
+        error: `Could not apply project update: ${message} ${recoveryMessage}`,
+        message: recoveryMessage,
+        details: {
+          applyAttemptId: claim.attemptId,
+          applyErrorCode: errorCode,
+          failedStateRecorded: failedState.recorded,
+          applyFailedAt: failedState.update?.apply_failed_at ?? null,
+        },
       },
       { status: 500, headers: dashboardTasksNoStoreHeaders }
     );

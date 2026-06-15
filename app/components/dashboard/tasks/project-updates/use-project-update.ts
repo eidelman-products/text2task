@@ -134,12 +134,30 @@ function getApplyPayloadErrorMessage(
   status: number,
   payload: ApplyProjectUpdateApiResponse | null
 ) {
-  if (payload && !payload.ok && payload.code === "duplicate_subtask") {
-    const existingTitle = payload.duplicate?.existingTitle;
+  if (payload && !payload.ok) {
+    if (payload.code === "duplicate_subtask") {
+      const existingTitle = payload.duplicate?.existingTitle;
 
-    return existingTitle
-      ? `This looks similar to an existing subtask: ${existingTitle}. Edit the title or unselect this change before applying.`
-      : "This suggested subtask looks similar to an existing subtask. Edit the title or unselect this change before applying.";
+      return existingTitle
+        ? `This looks similar to an existing subtask: ${existingTitle}. Edit the title or unselect this change before applying.`
+        : "This suggested subtask looks similar to an existing subtask. Edit the title or unselect this change before applying.";
+    }
+
+    if (payload.code === "project_update_already_applied") {
+      return "This project update was already applied. Refresh the workspace to see the latest changes.";
+    }
+
+    if (payload.code === "project_update_apply_in_progress") {
+      return "This project update is already being applied. Wait for it to finish, then refresh the workspace. If it remains in progress, contact support before trying again.";
+    }
+
+    if (payload.code === "project_update_apply_failed") {
+      return payload.error || payload.message || "This project update could not be applied.";
+    }
+
+    if (payload.code === "project_update_invalid_state") {
+      return payload.message || payload.error;
+    }
   }
 
   const fallback = payload && !payload.ok ? payload.message || payload.error : undefined;
@@ -635,18 +653,6 @@ export function useProjectUpdate() {
         ? payload.dashboardTasks
         : [];
 
-      if (onApplied) {
-        await onApplied({
-          focusTaskId,
-          projectId,
-          project: payload.project ?? null,
-          projectTasks: Array.isArray(payload.projectTasks)
-            ? payload.projectTasks
-            : [],
-          dashboardTasks: payloadDashboardTasks,
-        });
-      }
-
       setUIState((prev) => ({
         ...prev,
         form: {
@@ -665,6 +671,37 @@ export function useProjectUpdate() {
           },
         },
       }));
+
+      if (onApplied) {
+        try {
+          await onApplied({
+            focusTaskId,
+            projectId,
+            project: payload.project ?? null,
+            projectTasks: Array.isArray(payload.projectTasks)
+              ? payload.projectTasks
+              : [],
+            dashboardTasks: payloadDashboardTasks,
+          });
+        } catch (refreshError) {
+          console.error(
+            "Project update applied, but dashboard synchronization failed:",
+            refreshError
+          );
+
+          setUIState((prev) => ({
+            ...prev,
+            form: {
+              ...prev.form,
+              isApplying: false,
+              applyError:
+                "Changes were applied, but the dashboard could not refresh. Please refresh the workspace.",
+              applyDuplicate: null,
+              applySuccessMessage: "Selected changes were applied.",
+            },
+          }));
+        }
+      }
     } catch (error) {
       const duplicate =
         error instanceof Error && "duplicate" in error

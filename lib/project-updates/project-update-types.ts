@@ -4,6 +4,7 @@ export type ProjectUpdateStatus =
   | "draft"
   | "analyzed"
   | "reviewed"
+  | "applying"
   | "applied"
   | "ignored"
   | "failed";
@@ -72,6 +73,10 @@ export type ProjectUpdate = {
   reviewed_at: string | null;
   applied_at: string | null;
   ignored_at: string | null;
+  apply_started_at: string | null;
+  apply_attempt_id: string | null;
+  apply_failed_at: string | null;
+  apply_error_code: string | null;
 };
 
 export type ProjectUpdateItem = {
