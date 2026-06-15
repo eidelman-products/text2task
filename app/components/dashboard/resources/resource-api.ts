@@ -27,15 +27,6 @@ export type TaskResource = {
   updated_at: string;
 };
 
-export type UploadedResourceFile = {
-  storage_path: string;
-  file_name: string;
-  original_file_name: string;
-  mime_type: string;
-  size_bytes: number;
-  resource_type: TaskResourceType;
-};
-
 export type CreateTaskResourceInput = {
   project_id?: string | null;
   task_id?: number | null;
@@ -55,12 +46,6 @@ export type UpdateTaskResourceInput = {
   title?: string | null;
   url?: string | null;
   notes?: string | null;
-};
-
-export type UploadTaskResourceFileInput = {
-  file: File;
-  project_id?: string | null;
-  task_id?: number | null;
 };
 
 function buildQueryString(
@@ -159,41 +144,6 @@ export async function updateTaskResource(
   }
 
   return data.resource;
-}
-
-export async function uploadTaskResourceFile({
-  file,
-  project_id,
-  task_id,
-}: UploadTaskResourceFileInput): Promise<UploadedResourceFile> {
-  const formData = new FormData();
-
-  formData.append("file", file);
-
-  if (project_id) {
-    formData.append("project_id", project_id);
-  }
-
-  if (task_id) {
-    formData.append("task_id", String(task_id));
-  }
-
-  const res = await fetch("/api/task-resources/upload", {
-    method: "POST",
-    body: formData,
-  });
-
-  const data = await readJsonResponse(res);
-
-  if (!res.ok) {
-    throw new Error(data?.error || "Failed to upload file");
-  }
-
-  if (!data?.file) {
-    throw new Error("Uploaded file metadata was not returned by the server");
-  }
-
-  return data.file;
 }
 
 export async function getTaskResourceFileUrl(

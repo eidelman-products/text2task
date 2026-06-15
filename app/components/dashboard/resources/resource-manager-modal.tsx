@@ -163,10 +163,17 @@ export default function ResourceManagerModal({
 
   if (!isMounted || !isOpen) return null;
 
-  async function loadResources() {
+  function syncResources(nextResources: TaskResource[]) {
+    setResources(nextResources);
+    onResourcesChanged?.(nextResources);
+  }
+
+  async function loadResources(options?: {
+    failureMessage?: string;
+  }): Promise<boolean> {
     if (!hasTarget) {
-      setResources([]);
-      return;
+      syncResources([]);
+      return true;
     }
 
     try {
@@ -178,10 +185,15 @@ export default function ResourceManagerModal({
         task_id: taskId,
       });
 
-      setResources(nextResources);
-      onResourcesChanged?.(nextResources);
+      syncResources(nextResources);
+      return true;
     } catch (error: any) {
-      setErrorMessage(error?.message || "Failed to load resources.");
+      setErrorMessage(
+        options?.failureMessage ||
+          error?.message ||
+          "Failed to load resources."
+      );
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -239,7 +251,7 @@ export default function ResourceManagerModal({
       setIsSavingLink(true);
       setErrorMessage("");
 
-      await createLinkResource({
+      const createdResource = await createLinkResource({
         project_id: projectId,
         task_id: taskId,
         title: linkTitle.trim() || cleanUrl,
@@ -248,7 +260,11 @@ export default function ResourceManagerModal({
       });
 
       resetLinkForm();
-      await loadResources();
+      syncResources([...resources, createdResource]);
+      await loadResources({
+        failureMessage:
+          "Link added, but the resource list could not refresh. Use Refresh to pull the latest resources.",
+      });
     } catch (error: any) {
       setErrorMessage(error?.message || "Failed to add link.");
     } finally {
@@ -270,7 +286,7 @@ export default function ResourceManagerModal({
       setIsSavingNote(true);
       setErrorMessage("");
 
-      await createNoteResource({
+      const createdResource = await createNoteResource({
         project_id: projectId,
         task_id: taskId,
         title: noteTitle.trim() || "Internal note",
@@ -278,7 +294,11 @@ export default function ResourceManagerModal({
       });
 
       resetNoteForm();
-      await loadResources();
+      syncResources([...resources, createdResource]);
+      await loadResources({
+        failureMessage:
+          "Note added, but the resource list could not refresh. Use Refresh to pull the latest resources.",
+      });
     } catch (error: any) {
       setErrorMessage(error?.message || "Failed to add note.");
     } finally {
@@ -297,7 +317,7 @@ export default function ResourceManagerModal({
       setIsUpdatingNote(true);
       setNoteEditorError("");
 
-      await updateTaskResource({
+      const updatedResource = await updateTaskResource({
         resource_id: input.resourceId,
         resource_type: "note",
         title: input.title || "Internal note",
@@ -305,7 +325,15 @@ export default function ResourceManagerModal({
       });
 
       setEditingNoteResource(null);
-      await loadResources();
+      syncResources(
+        resources.map((resource) =>
+          resource.id === updatedResource.id ? updatedResource : resource
+        )
+      );
+      await loadResources({
+        failureMessage:
+          "Note updated, but the resource list could not refresh. Use Refresh to pull the latest resources.",
+      });
     } catch (error: any) {
       setNoteEditorError(error?.message || "Failed to update note.");
     } finally {
@@ -330,7 +358,7 @@ export default function ResourceManagerModal({
       setIsUploadingFile(true);
       setErrorMessage("");
 
-      await uploadAndCreateFileResource({
+      const createdResource = await uploadAndCreateFileResource({
         file: selectedFile,
         project_id: projectId,
         task_id: taskId,
@@ -340,7 +368,11 @@ export default function ResourceManagerModal({
       });
 
       resetFileForm();
-      await loadResources();
+      syncResources([...resources, createdResource]);
+      await loadResources({
+        failureMessage:
+          "File uploaded, but the resource list could not refresh. Use Refresh to pull the latest resources.",
+      });
     } catch (error: any) {
       setErrorMessage(error?.message || "Failed to upload file.");
     } finally {
@@ -373,8 +405,12 @@ export default function ResourceManagerModal({
       setDeleteConfirmationError("");
 
       await deleteTaskResource(resourceId);
-      await loadResources();
+      syncResources(resources.filter((resource) => resource.id !== resourceId));
       setResourcePendingDelete(null);
+      await loadResources({
+        failureMessage:
+          "Resource deleted, but the resource list could not refresh. Use Refresh to pull the latest resources.",
+      });
     } catch (error: any) {
       const message = error?.message || "Failed to delete resource.";
 
@@ -688,7 +724,9 @@ export default function ResourceManagerModal({
 
                 <button
                   type="button"
-                  onClick={loadResources}
+                  onClick={() => {
+                    void loadResources();
+                  }}
                   disabled={isLoading || !hasTarget}
                 >
                   {isLoading ? "Loading..." : "Refresh"}

@@ -477,35 +477,58 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    const { data: deletedResource, error: deleteError } = await supabase
+      .from("task_resources")
+      .delete()
+      .eq("id", parsed.data.resource_id)
+      .eq("user_id", user.id)
+      .select("id")
+      .maybeSingle();
+
+    if (deleteError || !deletedResource) {
+      console.error("task resources DELETE error:", deleteError);
+
+      return NextResponse.json(
+        {
+          error:
+            deleteError?.message ||
+            "Resource could not be deleted. It may have already been removed.",
+        },
+        { status: deleteError ? 500 : 404 }
+      );
+    }
+
+    let cleanupWarning: string | null = null;
+
     if (existingResource.storage_path) {
       const { error: storageError } = await supabase.storage
         .from("task-resources")
         .remove([existingResource.storage_path]);
 
       if (storageError) {
-        console.error("task resource storage delete error:", storageError);
+        cleanupWarning = "storage_cleanup_failed";
+        console.error("task resource storage cleanup error after DB delete:", {
+          resourceId: parsed.data.resource_id,
+          storagePath: existingResource.storage_path,
+          error: storageError,
+        });
       }
     }
 
-    const { error: deleteError } = await supabase
-      .from("task_resources")
-      .delete()
-      .eq("id", parsed.data.resource_id)
-      .eq("user_id", user.id);
-
-    if (deleteError) {
-      console.error("task resources DELETE error:", deleteError);
-
-      return NextResponse.json(
-        { error: deleteError.message || "Failed to delete resource" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
+    const response: {
+      success: true;
+      deleted_resource_id: string;
+      cleanup_warning?: string;
+    } = {
       success: true,
       deleted_resource_id: parsed.data.resource_id,
-    });
+    };
+
+    if (cleanupWarning) {
+      response.cleanup_warning = cleanupWarning;
+    }
+
+    return NextResponse.json(response);
   } catch (error: any) {
     console.error("task resources DELETE unexpected error:", error);
 
