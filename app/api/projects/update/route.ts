@@ -299,6 +299,59 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const isSimpleProjectField =
+      field !== "client_name" && field !== "contact_name";
+
+    if (isSimpleProjectField) {
+      const { data: updatedProject, error: projectUpdateError } = await supabase
+        .from("projects")
+        .update(updateData)
+        .eq("id", projectId)
+        .eq("user_id", user.id)
+        .is("deleted_at", null)
+        .select("*")
+        .single();
+
+      if (projectUpdateError || !updatedProject) {
+        console.error("Project update error:", projectUpdateError);
+
+        if (projectUpdateError?.code === "PGRST116" || !updatedProject) {
+          return NextResponse.json(
+            { error: "Project not found" },
+            { status: 404 }
+          );
+        }
+
+        return NextResponse.json(
+          { error: projectUpdateError?.message || "Failed to update project" },
+          { status: 500 }
+        );
+      }
+
+      try {
+        const project = await reloadProject({
+          supabase,
+          projectId,
+          userId: user.id,
+        });
+
+        return NextResponse.json({
+          success: true,
+          project,
+        });
+      } catch (reloadError) {
+        console.warn(
+          "Project updated, but relationship reload failed:",
+          reloadError
+        );
+
+        return NextResponse.json({
+          success: true,
+          project: updatedProject,
+        });
+      }
+    }
+
     const { error: projectUpdateError } = await supabase
       .from("projects")
       .update(updateData)
