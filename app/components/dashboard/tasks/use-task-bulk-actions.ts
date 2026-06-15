@@ -70,9 +70,17 @@ export function useTaskBulkActions({
           throw new Error(data?.error || "Bulk task status update failed");
         }
 
-        await refreshTasks();
         clearSelection();
         toast.success(`Updated ${ids.length} task(s) to ${nextStatus}`);
+
+        try {
+          await refreshTasks();
+        } catch (refreshError) {
+          console.error("Bulk status refresh failed:", refreshError);
+          toast.warning(
+            "Updated successfully, but the task list could not refresh. Please refresh the workspace."
+          );
+        }
       } catch (error) {
         console.error("Bulk status update failed:", error);
         toast.error("Could not update selected tasks");
@@ -116,13 +124,21 @@ export function useTaskBulkActions({
           throw new Error(data?.error || `Bulk project ${action} failed`);
         }
 
-        await refreshTasks();
         clearSelection();
         toast.success(
           action === "archive"
             ? "Selected work moved to Archive."
             : "Selected work restored."
         );
+
+        try {
+          await refreshTasks();
+        } catch (refreshError) {
+          console.error(`Bulk ${action} refresh failed:`, refreshError);
+          toast.warning(
+            "Action completed successfully, but the task list could not refresh. Please refresh the workspace."
+          );
+        }
       } catch (error) {
         console.error(`Bulk ${action} failed:`, error);
         toast.error(
@@ -190,10 +206,18 @@ export function useTaskBulkActions({
         throw new Error(data?.error || "Bulk project delete failed");
       }
 
-      await refreshTasks();
       clearSelection();
       setShowBulkDeleteConfirm(false);
       toast.success("Selected projects deleted successfully.");
+
+      try {
+        await refreshTasks();
+      } catch (refreshError) {
+        console.error("Bulk delete refresh failed:", refreshError);
+        toast.warning(
+          "Projects were deleted, but the task list could not refresh. Please refresh the workspace."
+        );
+      }
     } catch (error) {
       console.error("Bulk permanent delete failed:", error);
       toast.error(

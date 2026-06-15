@@ -1478,13 +1478,23 @@ export default function DashboardClient({
         throw new Error(data.error || "Failed to archive task");
       }
 
-      await refreshStatsOnly();
-
       toast.success("Task archived", {
         description: taskToArchive.task
           ? `"${taskToArchive.task}" is now in Archive.`
           : "The task is now in Archive.",
       });
+
+      try {
+        await refreshStatsOnly();
+      } catch (refreshError) {
+        console.error(
+          "Task archived, but task statistics refresh failed:",
+          refreshError
+        );
+        toast.warning(
+          "Task archived, but dashboard statistics could not refresh. Please refresh the workspace."
+        );
+      }
     } catch (error: any) {
       const message = error.message || "Failed to archive task";
       console.error(error);
@@ -1572,11 +1582,21 @@ export default function DashboardClient({
         }
       }
 
-      await refreshStatsOnly();
-
       toast.success("Task restored", {
         description: "The task is back in your active workspace.",
       });
+
+      try {
+        await refreshStatsOnly();
+      } catch (refreshError) {
+        console.error(
+          "Task restored, but task statistics refresh failed:",
+          refreshError
+        );
+        toast.warning(
+          "Task restored, but dashboard statistics could not refresh. Please refresh the workspace."
+        );
+      }
     } catch (error: any) {
       const message = error.message || "Failed to restore task";
       console.error(error);
@@ -1615,27 +1635,39 @@ export default function DashboardClient({
     setAllTasksForStats((prev) => markTaskDeletedInList(prev, taskId));
 
     try {
-      const res = await fetch("/api/tasks/delete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ taskId, mode: "permanent" }),
-      });
+      try {
+        const res = await fetch("/api/tasks/delete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ taskId, mode: "permanent" }),
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to permanently delete task");
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to permanently delete task");
+        }
+      } catch (error: any) {
+        console.error(error);
+
+        setTasks(previousTasks);
+        setAllTasksForStats(previousAllTasks);
+        throw error;
       }
 
-      await refreshTasks();
-    } catch (error: any) {
-      console.error(error);
-
-      setTasks(previousTasks);
-      setAllTasksForStats(previousAllTasks);
-      throw error;
+      try {
+        await refreshTasks();
+      } catch (refreshError) {
+        console.error(
+          "Task deleted, but task list refresh failed:",
+          refreshError
+        );
+        toast.warning(
+          "Task deleted, but the task list could not refresh. Please refresh the workspace."
+        );
+      }
     } finally {
       setDeletingTaskIds((prev) => {
         const next = { ...prev };

@@ -332,8 +332,6 @@ export default function TasksView({
         throw new Error(data?.error || `Project ${action} failed`);
       }
 
-      await onRefreshTasks();
-
       if (action === "delete") {
         setProjectDeleteTarget(null);
       }
@@ -345,6 +343,18 @@ export default function TasksView({
             ? "Project restored"
             : "Project deleted"
       );
+
+      try {
+        await onRefreshTasks();
+      } catch (refreshError) {
+        console.error(
+          `Project ${action} succeeded, but task refresh failed:`,
+          refreshError
+        );
+        toast.warning(
+          "Action completed successfully, but the task list could not refresh. Please refresh the workspace."
+        );
+      }
     } catch (error) {
       console.error(`Project ${action} failed:`, error);
       toast.error(
