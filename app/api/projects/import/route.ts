@@ -27,6 +27,16 @@ const ProjectImportSchema = z
   })
   .strict();
 
+const ProjectImportSuccessSchema = z
+  .object({
+    ok: z.literal(true),
+    createdProjects: z.array(z.record(z.string(), z.unknown())),
+    createdTasks: z.array(z.record(z.string(), z.unknown())),
+    duplicates: z.array(z.unknown()),
+    failedGroups: z.array(z.unknown()),
+  })
+  .strict();
+
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 type JsonRecord = Record<string, unknown>;
 type ProjectSubtaskInput = JsonRecord & {
@@ -56,6 +66,8 @@ type ClaimedImportAttempt = {
   supabase: SupabaseServerClient;
   userId: string;
   attemptId: string;
+  idempotencyKey: string;
+  requestHash: string;
 };
 
 const TASK_WITH_CONTEXT_SELECT = `
@@ -361,6 +373,112 @@ function getImportRequestHash(projects: JsonRecord[]) {
     .digest("hex");
 }
 
+function buildTransactionalImportGroups(projects: JsonRecord[]) {
+  return projects.map((body) => {
+    const project = getProjectPayload(body);
+    const subtasks = extractProjectSubtasks(body);
+    const fallbackTitle =
+      project.title || getSubtaskTitle(subtasks[0]) || "Untitled project";
+    const normalizedSubtasks =
+      subtasks.length > 0
+        ? subtasks
+        : [
+            {
+              task: fallbackTitle,
+              amount: project.amount,
+              deadline: project.deadline_text,
+              priority: project.priority,
+              status: project.status,
+              source: project.source,
+              raw_input: project.raw_input,
+            },
+          ];
+
+    return {
+      client: {
+        name: project.client_name,
+        contact_name: project.contact_name || null,
+        phone: project.client_phone || null,
+        email: project.client_email || null,
+        notes: project.client_notes || null,
+      },
+      project: {
+        client_name: project.client_name,
+        contact_name: project.contact_name || null,
+        title: fallbackTitle,
+        summary: project.summary || null,
+        amount: project.amount,
+        amount_value: project.amount_value,
+        currency_code: project.currency_code,
+        deadline_text: project.deadline_text,
+        deadline_date: project.deadline_date,
+        priority: project.priority,
+        status: project.status,
+        source: project.source,
+        raw_input: project.raw_input,
+      },
+      tasks: normalizedSubtasks.map((subtask, index) => {
+        const rawAmount = normalizeAmountInput(subtask.amount ?? project.amount);
+        const parsedAmount = parseAmount(rawAmount);
+        const deadlineText =
+          pickFirstString(
+            subtask.deadline_text,
+            subtask.deadlineText,
+            subtask.deadline
+          ) || project.deadline_text;
+        const { deadlineDate } = parseDeadline(deadlineText);
+        const resources = Array.isArray(subtask.resources)
+          ? subtask.resources.flatMap((resource) => {
+              const title = pickFirstString(resource.title);
+              const url = pickFirstString(resource.url);
+              const notes = pickFirstString(resource.notes);
+
+              if (!title && !url && !notes) return [];
+
+              return [
+                {
+                  resource_type: normalizeResourceType(resource.resource_type),
+                  title: title || null,
+                  url: url || null,
+                  notes: notes || null,
+                },
+              ];
+            })
+          : [];
+
+        return {
+          client_name: project.client_name,
+          contact_name:
+            pickFirstString(subtask.contact_name, subtask.contactName) ||
+            project.contact_name ||
+            null,
+          subtask_order: index + 1,
+          task_title: getSubtaskTitle(subtask),
+          amount:
+            parsedAmount.displayAmount ??
+            (typeof rawAmount === "string"
+              ? rawAmount
+              : typeof rawAmount === "number"
+                ? String(rawAmount)
+                : project.amount),
+          amount_value: parsedAmount.amountValue ?? project.amount_value,
+          currency_code: parsedAmount.currencyCode ?? project.currency_code,
+          deadline_text: deadlineText,
+          deadline_date: deadlineDate ?? project.deadline_date,
+          priority:
+            pickFirstString(subtask.priority) || project.priority || "Medium",
+          status: pickFirstString(subtask.status) || project.status || "New",
+          source: pickFirstString(subtask.source) || project.source,
+          raw_input:
+            pickFirstString(subtask.raw_input, subtask.rawInput) ||
+            project.raw_input,
+          resources,
+        };
+      }),
+    };
+  });
+}
+
 function isJsonRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -478,29 +596,6 @@ async function prepareProjectImportAttemptForDuplicateReview(
   }
 }
 
-async function commitProjectImportAttempt(
-  attempt: ClaimedImportAttempt,
-  result: JsonRecord
-) {
-  const { data, error } = await attempt.supabase
-    .from("project_import_attempts")
-    .update({
-      status: "committed",
-      result_json: result,
-      completed_at: new Date().toISOString(),
-      failed_at: null,
-      error_code: null,
-    })
-    .eq("id", attempt.attemptId)
-    .eq("user_id", attempt.userId)
-    .eq("status", "started")
-    .select("id");
-
-  if (error || data?.length !== 1) {
-    throw new Error(error?.message || "Could not commit import attempt");
-  }
-}
-
 async function failProjectImportAttempt(
   attempt: ClaimedImportAttempt,
   errorCode: string
@@ -523,6 +618,68 @@ async function failProjectImportAttempt(
       error,
     });
   }
+}
+
+async function loadCommittedProjectImportResult(
+  attempt: ClaimedImportAttempt
+) {
+  const { data, error } = await attempt.supabase
+    .from("project_import_attempts")
+    .select("status, result_json")
+    .eq("id", attempt.attemptId)
+    .eq("user_id", attempt.userId)
+    .single();
+
+  if (error) {
+    console.error("Project import committed-result recovery error:", error);
+    return null;
+  }
+
+  return data?.status === "committed" && isJsonRecord(data.result_json)
+    ? data.result_json
+    : null;
+}
+
+function transactionalImportErrorResponse(error: {
+  code?: string | null;
+  message?: string | null;
+}) {
+  const message = error.message || "";
+
+  if (message.includes("UNAUTHORIZED")) {
+    return errorResponse("UNAUTHORIZED", "Unauthorized", 401);
+  }
+
+  if (
+    message.includes("INVALID_ATTEMPT") ||
+    message.includes("INVALID_GROUPS") ||
+    message.includes("INVALID_PROJECT") ||
+    message.includes("INVALID_TASKS") ||
+    message.includes("INVALID_RESOURCES")
+  ) {
+    return errorResponse("INVALID_PAYLOAD", "Invalid import request", 400);
+  }
+
+  if (
+    message.includes("ATTEMPT_NOT_FOUND") ||
+    message.includes("ATTEMPT_CONFLICT") ||
+    message.includes("ATTEMPT_NOT_READY")
+  ) {
+    return errorResponse(
+      "IMPORT_ATTEMPT_CONFLICT",
+      "This import attempt is no longer ready to be processed.",
+      409
+    );
+  }
+
+  console.error("Transactional project import RPC error:", error);
+
+  return errorResponse("IMPORT_FAILED", "Failed to import projects", 500, {
+    createdProjects: [],
+    createdTasks: [],
+    duplicates: [],
+    failedGroups: [],
+  });
 }
 
 function isDoneStatus(value: unknown) {
@@ -935,6 +1092,8 @@ export async function POST(req: NextRequest) {
         supabase,
         userId: user.id,
         attemptId: claim.attempt.id,
+        idempotencyKey,
+        requestHash,
       };
     }
 
@@ -995,6 +1154,61 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (claimedAttempt) {
+      const transactionalAttempt = claimedAttempt;
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        "import_projects_transaction",
+        {
+          p_attempt_id: transactionalAttempt.attemptId,
+          p_idempotency_key: transactionalAttempt.idempotencyKey,
+          p_request_hash: transactionalAttempt.requestHash,
+          p_groups: buildTransactionalImportGroups(projects),
+        }
+      );
+
+      if (rpcError) {
+        const committedResult =
+          await loadCommittedProjectImportResult(transactionalAttempt);
+
+        if (committedResult) {
+          claimedAttempt = null;
+          return NextResponse.json(committedResult);
+        }
+
+        await failProjectImportAttempt(
+          transactionalAttempt,
+          "TRANSACTIONAL_IMPORT_FAILED"
+        );
+        claimedAttempt = null;
+        return transactionalImportErrorResponse(rpcError);
+      }
+
+      claimedAttempt = null;
+
+      const parsedRpcData = ProjectImportSuccessSchema.safeParse(rpcData);
+
+      if (!parsedRpcData.success) {
+        /*
+          The RPC committed the import and stored this response atomically.
+          Keep that committed server result authoritative even if its runtime
+          shape cannot be narrowed locally.
+        */
+        console.error("Invalid transactional project import RPC response:", {
+          rpcData,
+          validationError: parsedRpcData.error.flatten(),
+        });
+
+        return NextResponse.json(rpcData);
+      }
+
+      return NextResponse.json(parsedRpcData.data);
+    }
+
+    /*
+      Compatibility fallback for callers that do not provide an idempotency
+      key. Remove this sequential path only after the transactional keyed path
+      has been verified in production.
+    */
     const createdProjectIds: string[] = [];
     const createdProjects: unknown[] = [];
     const createdTasks: unknown[] = [];
@@ -1042,20 +1256,6 @@ export async function POST(req: NextRequest) {
       duplicates: [],
       failedGroups: [],
     };
-
-    if (claimedAttempt) {
-      try {
-        await commitProjectImportAttempt(claimedAttempt, successResult);
-      } catch (error) {
-        /*
-          The import writes already succeeded. Keep that server result
-          authoritative and leave the started attempt blocking unsafe replay.
-        */
-        console.error("Project import committed-result recording error:", error);
-      }
-
-      claimedAttempt = null;
-    }
 
     return NextResponse.json(successResult);
   } catch (error) {
