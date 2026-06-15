@@ -264,6 +264,47 @@ function normalizePeriodEnd(value: string | null) {
   return date.toISOString();
 }
 
+async function updateBillingUser({
+  updatePayload,
+  identifier,
+  identifierValue,
+  eventType,
+  action,
+}: {
+  updatePayload: JsonRecord;
+  identifier: "id" | "email";
+  identifierValue: string;
+  eventType: string;
+  action: string;
+}) {
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .update(updatePayload)
+    .eq(identifier, identifierValue)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.error(`Creem webhook failed to ${action}:`, {
+      eventType,
+      identifier,
+      error,
+    });
+    throw error;
+  }
+
+  if (!data?.id) {
+    console.error("Creem webhook did not match a Text2Task user:", {
+      eventType,
+      identifier,
+      action,
+    });
+    throw new Error("Creem webhook did not match a Text2Task user");
+  }
+
+  return data.id as string;
+}
+
 async function updateUserToPro(
   payload: CreemWebhookPayload,
   eventType: string
@@ -281,30 +322,24 @@ async function updateUserToPro(
   };
 
   if (userId) {
-    const { error } = await supabaseAdmin
-      .from("users")
-      .update(updatePayload)
-      .eq("id", userId);
-
-    if (error) {
-      console.error("Creem webhook failed to update user by id:", error);
-      throw error;
-    }
-
+    await updateBillingUser({
+      updatePayload,
+      identifier: "id",
+      identifierValue: userId,
+      eventType,
+      action: "update user to Pro by id",
+    });
     return;
   }
 
   if (email) {
-    const { error } = await supabaseAdmin
-      .from("users")
-      .update(updatePayload)
-      .eq("email", email);
-
-    if (error) {
-      console.error("Creem webhook failed to update user by email:", error);
-      throw error;
-    }
-
+    await updateBillingUser({
+      updatePayload,
+      identifier: "email",
+      identifierValue: email,
+      eventType,
+      action: "update user to Pro by email",
+    });
     return;
   }
 
@@ -326,30 +361,24 @@ async function downgradeUserToFree(
   };
 
   if (userId) {
-    const { error } = await supabaseAdmin
-      .from("users")
-      .update(updatePayload)
-      .eq("id", userId);
-
-    if (error) {
-      console.error("Creem webhook failed to downgrade user by id:", error);
-      throw error;
-    }
-
+    await updateBillingUser({
+      updatePayload,
+      identifier: "id",
+      identifierValue: userId,
+      eventType,
+      action: "downgrade user by id",
+    });
     return;
   }
 
   if (email) {
-    const { error } = await supabaseAdmin
-      .from("users")
-      .update(updatePayload)
-      .eq("email", email);
-
-    if (error) {
-      console.error("Creem webhook failed to downgrade user by email:", error);
-      throw error;
-    }
-
+    await updateBillingUser({
+      updatePayload,
+      identifier: "email",
+      identifierValue: email,
+      eventType,
+      action: "downgrade user by email",
+    });
     return;
   }
 
@@ -371,33 +400,24 @@ async function markScheduledCancel(
   };
 
   if (userId) {
-    const { error } = await supabaseAdmin
-      .from("users")
-      .update(updatePayload)
-      .eq("id", userId);
-
-    if (error) {
-      console.error("Creem webhook failed to mark scheduled cancel by id:", error);
-      throw error;
-    }
-
+    await updateBillingUser({
+      updatePayload,
+      identifier: "id",
+      identifierValue: userId,
+      eventType,
+      action: "mark scheduled cancel by id",
+    });
     return;
   }
 
   if (email) {
-    const { error } = await supabaseAdmin
-      .from("users")
-      .update(updatePayload)
-      .eq("email", email);
-
-    if (error) {
-      console.error(
-        "Creem webhook failed to mark scheduled cancel by email:",
-        error
-      );
-      throw error;
-    }
-
+    await updateBillingUser({
+      updatePayload,
+      identifier: "email",
+      identifierValue: email,
+      eventType,
+      action: "mark scheduled cancel by email",
+    });
     return;
   }
 
