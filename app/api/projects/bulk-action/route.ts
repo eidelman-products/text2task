@@ -65,6 +65,14 @@ const ProjectBulkActionSchema = z
     }
   });
 
+const ProjectOnlyBulkActionRpcResponseSchema = z
+  .object({
+    action: z.enum(["archive", "restore", "soft_delete"]),
+    affectedProjectIds: z.array(z.string().uuid()),
+    affectedTaskIds: z.array(z.number().int().positive().safe()),
+  })
+  .strict();
+
 type ProjectBulkAction = z.infer<typeof ProjectBulkActionSchema>["action"];
 type LegacyTaskGroupTarget = z.infer<typeof LegacyTaskGroupTargetSchema>;
 
@@ -119,6 +127,49 @@ function getUpdateData(action: ProjectBulkAction, nowIso: string) {
   };
 }
 
+function projectOnlyRpcErrorResponse(error: {
+  code?: string | null;
+  message?: string | null;
+}) {
+  const message = error.message || "";
+
+  if (message.includes("UNAUTHORIZED")) {
+    return errorResponse("UNAUTHORIZED", "Unauthorized", 401);
+  }
+
+  if (
+    message.includes("INVALID_ACTION") ||
+    message.includes("INVALID_PROJECT_IDS") ||
+    message.includes("TOO_MANY_PROJECTS")
+  ) {
+    return errorResponse("INVALID_PAYLOAD", "Invalid request body", 400);
+  }
+
+  if (message.includes("TARGET_VALIDATION_FAILED")) {
+    return errorResponse(
+      "TARGET_VALIDATION_FAILED",
+      "One or more selected projects could not be found",
+      400
+    );
+  }
+
+  if (message.includes("PROJECT_UPDATE_FAILED")) {
+    return errorResponse(
+      "PROJECT_UPDATE_FAILED",
+      "Could not update selected projects",
+      500
+    );
+  }
+
+  console.error("Transactional project bulk action RPC error:", error);
+
+  return errorResponse(
+    "INTERNAL_ERROR",
+    "Could not complete the selected project action",
+    500
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     let body: unknown;
@@ -162,6 +213,77 @@ export async function POST(req: NextRequest) {
       return errorResponse("UNAUTHORIZED", "Unauthorized", 401);
     }
 
+    if (projectIds.length > 0 && legacyGroups.length === 0) {
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        "apply_project_bulk_action_transaction",
+        {
+          p_action: action,
+          p_project_ids: projectIds,
+        }
+      );
+
+      if (rpcError) {
+        return projectOnlyRpcErrorResponse(rpcError);
+      }
+
+      const parsedRpcData =
+        ProjectOnlyBulkActionRpcResponseSchema.safeParse(rpcData);
+
+      if (!parsedRpcData.success || parsedRpcData.data.action !== action) {
+        console.error("Invalid transactional project bulk action RPC response:", {
+          action,
+          rpcData,
+          validationError: parsedRpcData.success
+            ? null
+            : parsedRpcData.error.flatten(),
+        });
+
+        return errorResponse(
+          "INTERNAL_ERROR",
+          "Could not complete the selected project action",
+          500
+        );
+      }
+
+      const affectedProjectIds = uniqueValues(
+        parsedRpcData.data.affectedProjectIds
+      );
+      const affectedTaskIds = uniqueValues(parsedRpcData.data.affectedTaskIds);
+      const affectedProjectIdSet = new Set(affectedProjectIds);
+
+      if (
+        affectedProjectIds.length !== projectIds.length ||
+        projectIds.some((projectId) => !affectedProjectIdSet.has(projectId))
+      ) {
+        console.error("Transactional project bulk action affected-project mismatch:", {
+          action,
+          requestedProjectIds: projectIds,
+          affectedProjectIds,
+        });
+
+        return errorResponse(
+          "INTERNAL_ERROR",
+          "Could not complete the selected project action",
+          500
+        );
+      }
+
+      return NextResponse.json({
+        ok: true,
+        action,
+        affectedProjectCount: affectedProjectIds.length,
+        affectedTaskCount: affectedTaskIds.length,
+        affectedLegacyGroupCount: 0,
+        affectedProjectIds,
+        affectedTaskIds,
+      });
+    }
+
+    /*
+      Phase 3B.2 will move legacy-only and mixed project + legacy requests into
+      one transaction. Do not partially call the project RPC for mixed requests,
+      because that would preserve the current partial-success risk.
+    */
     if (projectIds.length > 0) {
       const { data: projects, error: projectsError } = await supabase
         .from("projects")
@@ -233,8 +355,8 @@ export async function POST(req: NextRequest) {
     const updateData = getUpdateData(action, new Date().toISOString());
 
     /*
-      These batched updates intentionally validate every target before mutation.
-      A future database RPC can make the project and task updates fully atomic.
+      Legacy-only and mixed requests retain the existing validated batched
+      behavior until Phase 3B.2 adds transactional legacy task-group support.
     */
     let affectedProjectIds: string[] = [];
 
