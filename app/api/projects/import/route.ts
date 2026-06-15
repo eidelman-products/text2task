@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { parseAmount } from "@/lib/tasks/parse-amount";
 import { parseDeadline } from "@/lib/tasks/parse-deadline";
@@ -38,6 +39,7 @@ const ProjectImportSuccessSchema = z
   .strict();
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+type SupabaseAdminClient = typeof supabaseAdmin;
 type JsonRecord = Record<string, unknown>;
 type ProjectSubtaskInput = JsonRecord & {
   resources?: JsonRecord[];
@@ -61,13 +63,15 @@ type ProjectImportAttemptRow = {
   status: "started" | "committed" | "failed";
   result_json: unknown;
   error_code: string | null;
+  payload_json: unknown;
 };
 type ClaimedImportAttempt = {
-  supabase: SupabaseServerClient;
+  supabase: SupabaseAdminClient;
   userId: string;
   attemptId: string;
   idempotencyKey: string;
   requestHash: string;
+  payloadJson: JsonRecord[];
 };
 
 const TASK_WITH_CONTEXT_SELECT = `
@@ -488,11 +492,13 @@ async function claimProjectImportAttempt({
   userId,
   idempotencyKey,
   requestHash,
+  payloadJson,
 }: {
-  supabase: SupabaseServerClient;
+  supabase: SupabaseAdminClient;
   userId: string;
   idempotencyKey: string;
   requestHash: string;
+  payloadJson: JsonRecord[];
 }) {
   const { data: insertedAttempt, error: insertError } = await supabase
     .from("project_import_attempts")
@@ -500,9 +506,10 @@ async function claimProjectImportAttempt({
       user_id: userId,
       idempotency_key: idempotencyKey,
       request_hash: requestHash,
+      payload_json: payloadJson,
       status: "started",
     })
-    .select("id, request_hash, status, result_json, error_code")
+    .select("id, request_hash, status, result_json, error_code, payload_json")
     .single();
 
   if (!insertError && insertedAttempt) {
@@ -518,7 +525,7 @@ async function claimProjectImportAttempt({
 
   const { data: existingAttempt, error: lookupError } = await supabase
     .from("project_import_attempts")
-    .select("id, request_hash, status, result_json, error_code")
+    .select("id, request_hash, status, result_json, error_code, payload_json")
     .eq("user_id", userId)
     .eq("idempotency_key", idempotencyKey)
     .single();
@@ -556,12 +563,14 @@ async function claimProjectImportAttempt({
       .from("project_import_attempts")
       .update({
         error_code: null,
+        payload_json: payloadJson,
+        last_seen_at: new Date().toISOString(),
       })
       .eq("id", attempt.id)
       .eq("user_id", userId)
       .eq("status", "started")
       .eq("error_code", "AWAITING_DUPLICATE_OVERRIDE")
-      .select("id, request_hash, status, result_json, error_code");
+      .select("id, request_hash, status, result_json, error_code, payload_json");
 
     if (resumeError) {
       throw new Error(resumeError.message || "Could not resume import attempt");
@@ -585,6 +594,7 @@ async function prepareProjectImportAttemptForDuplicateReview(
     .from("project_import_attempts")
     .update({
       error_code: "AWAITING_DUPLICATE_OVERRIDE",
+      last_seen_at: new Date().toISOString(),
     })
     .eq("id", attempt.attemptId)
     .eq("user_id", attempt.userId)
@@ -606,6 +616,7 @@ async function failProjectImportAttempt(
       status: "failed",
       failed_at: new Date().toISOString(),
       error_code: errorCode,
+      last_seen_at: new Date().toISOString(),
     })
     .eq("id", attempt.attemptId)
     .eq("user_id", attempt.userId)
@@ -663,6 +674,7 @@ function transactionalImportErrorResponse(error: {
   if (
     message.includes("ATTEMPT_NOT_FOUND") ||
     message.includes("ATTEMPT_CONFLICT") ||
+    message.includes("ATTEMPT_PAYLOAD_CONFLICT") ||
     message.includes("ATTEMPT_NOT_READY")
   ) {
     return errorResponse(
@@ -1050,11 +1062,13 @@ export async function POST(req: NextRequest) {
 
     if (idempotencyKey) {
       const requestHash = getImportRequestHash(projects);
+      const payloadJson = buildTransactionalImportGroups(projects);
       const claim = await claimProjectImportAttempt({
-        supabase,
+        supabase: supabaseAdmin,
         userId: user.id,
         idempotencyKey,
         requestHash,
+        payloadJson,
       });
 
       if (claim.kind === "conflict") {
@@ -1089,11 +1103,12 @@ export async function POST(req: NextRequest) {
       }
 
       claimedAttempt = {
-        supabase,
+        supabase: supabaseAdmin,
         userId: user.id,
         attemptId: claim.attempt.id,
         idempotencyKey,
         requestHash,
+        payloadJson,
       };
     }
 
@@ -1156,15 +1171,16 @@ export async function POST(req: NextRequest) {
 
     if (claimedAttempt) {
       const transactionalAttempt = claimedAttempt;
-      const { data: rpcData, error: rpcError } = await supabase.rpc(
-        "import_projects_transaction",
-        {
-          p_attempt_id: transactionalAttempt.attemptId,
-          p_idempotency_key: transactionalAttempt.idempotencyKey,
-          p_request_hash: transactionalAttempt.requestHash,
-          p_groups: buildTransactionalImportGroups(projects),
-        }
-      );
+      const { data: rpcData, error: rpcError } =
+        await transactionalAttempt.supabase.rpc(
+          "import_projects_transaction",
+          {
+            p_attempt_id: transactionalAttempt.attemptId,
+            p_idempotency_key: transactionalAttempt.idempotencyKey,
+            p_request_hash: transactionalAttempt.requestHash,
+            p_groups: transactionalAttempt.payloadJson,
+          }
+        );
 
       if (rpcError) {
         const committedResult =
