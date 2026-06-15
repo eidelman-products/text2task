@@ -230,66 +230,12 @@ export async function POST(req: NextRequest) {
       }
 
       updateData.client_name = nextClientName;
-
-      if (existingProject.client_id) {
-        const { error: clientUpdateError } = await supabase
-          .from("clients")
-          .update({ name: nextClientName })
-          .eq("id", existingProject.client_id)
-          .eq("user_id", user.id);
-
-        if (clientUpdateError) {
-          console.error("Client name update error:", clientUpdateError);
-
-          return NextResponse.json(
-            { error: clientUpdateError.message || "Failed to update client" },
-            { status: 500 }
-          );
-        }
-      }
-
-      /*
-        Compatibility sync:
-        Existing CRM screens still have fallback logic from task rows.
-        The project remains the source of truth, but this prevents old fallback UI
-        from showing stale client names until the read model is fully project-based.
-      */
-      await supabase
-        .from("tasks")
-        .update({ client_name: nextClientName })
-        .eq("project_id", projectId)
-        .eq("user_id", user.id)
-        .is("deleted_at", null);
     }
 
     if (field === "contact_name") {
       const nextContactName = normalizeNullableText(value);
 
       updateData.contact_name = nextContactName;
-
-      if (existingProject.client_id) {
-        const { error: clientUpdateError } = await supabase
-          .from("clients")
-          .update({ contact_name: nextContactName })
-          .eq("id", existingProject.client_id)
-          .eq("user_id", user.id);
-
-        if (clientUpdateError) {
-          console.error("Contact name update error:", clientUpdateError);
-
-          return NextResponse.json(
-            { error: clientUpdateError.message || "Failed to update contact" },
-            { status: 500 }
-          );
-        }
-      }
-
-      await supabase
-        .from("tasks")
-        .update({ contact_name: nextContactName })
-        .eq("project_id", projectId)
-        .eq("user_id", user.id)
-        .is("deleted_at", null);
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -352,32 +298,67 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { error: projectUpdateError } = await supabase
-      .from("projects")
-      .update(updateData)
-      .eq("id", projectId)
-      .eq("user_id", user.id)
-      .is("deleted_at", null);
+    const identityValue =
+      field === "client_name"
+        ? String(updateData.client_name)
+        : (updateData.contact_name as string | null);
+    const { data: updatedProject, error: projectUpdateError } =
+      await supabase.rpc("update_project_client_identity_transaction", {
+        p_project_id: projectId,
+        p_field: field,
+        p_value: identityValue,
+      });
 
-    if (projectUpdateError) {
+    if (projectUpdateError || !updatedProject) {
       console.error("Project update error:", projectUpdateError);
 
+      const message = projectUpdateError?.message || "";
+
+      if (message.includes("PROJECT_NOT_FOUND")) {
+        return NextResponse.json(
+          { error: "Project not found" },
+          { status: 404 }
+        );
+      }
+
+      if (
+        message.includes("INVALID_REQUEST") ||
+        message.includes("INVALID_CLIENT_NAME")
+      ) {
+        return NextResponse.json(
+          { error: "Invalid request body" },
+          { status: 400 }
+        );
+      }
+
       return NextResponse.json(
-        { error: projectUpdateError.message || "Failed to update project" },
+        { error: projectUpdateError?.message || "Failed to update project" },
         { status: 500 }
       );
     }
 
-    const project = await reloadProject({
-      supabase,
-      projectId,
-      userId: user.id,
-    });
+    try {
+      const project = await reloadProject({
+        supabase,
+        projectId,
+        userId: user.id,
+      });
 
-    return NextResponse.json({
-      success: true,
-      project,
-    });
+      return NextResponse.json({
+        success: true,
+        project,
+      });
+    } catch (reloadError) {
+      console.warn(
+        "Project client identity updated, but relationship reload failed:",
+        reloadError
+      );
+
+      return NextResponse.json({
+        success: true,
+        project: updatedProject,
+      });
+    }
   } catch (error: any) {
     console.error("Update project route error:", error);
 
