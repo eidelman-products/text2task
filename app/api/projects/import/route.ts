@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { parseAmount } from "@/lib/tasks/parse-amount";
@@ -22,6 +23,7 @@ const ProjectImportSchema = z
       .array(z.number().int().nonnegative().safe())
       .max(MAX_PROJECTS)
       .default([]),
+    idempotencyKey: z.string().uuid().optional(),
   })
   .strict();
 
@@ -42,6 +44,18 @@ type ClientRow = {
 type JoinedTaskRow = JsonRecord & {
   clients?: ClientRow | ClientRow[] | null;
   projects?: JsonRecord | JsonRecord[] | null;
+};
+type ProjectImportAttemptRow = {
+  id: string;
+  request_hash: string;
+  status: "started" | "committed" | "failed";
+  result_json: unknown;
+  error_code: string | null;
+};
+type ClaimedImportAttempt = {
+  supabase: SupabaseServerClient;
+  userId: string;
+  attemptId: string;
 };
 
 const TASK_WITH_CONTEXT_SELECT = `
@@ -274,6 +288,241 @@ function normalizeResourceType(value: unknown) {
   ]);
 
   return allowed.has(raw) ? raw : "link";
+}
+
+function buildCanonicalImportPayload(projects: JsonRecord[]) {
+  return projects.map((body) => {
+    const project = getProjectPayload(body);
+    const subtasks = extractProjectSubtasks(body).map((subtask) => {
+      const rawAmount = normalizeAmountInput(subtask.amount ?? project.amount);
+      const parsedAmount = parseAmount(rawAmount);
+      const deadlineText =
+        pickFirstString(
+          subtask.deadline_text,
+          subtask.deadlineText,
+          subtask.deadline
+        ) || project.deadline_text;
+      const { deadlineDate } = parseDeadline(deadlineText);
+      const resources = Array.isArray(subtask.resources)
+        ? subtask.resources.flatMap((resource) => {
+            const title = pickFirstString(resource.title);
+            const url = pickFirstString(resource.url);
+            const notes = pickFirstString(resource.notes);
+
+            if (!title && !url && !notes) return [];
+
+            return [
+              {
+                resource_type: normalizeResourceType(resource.resource_type),
+                title,
+                url,
+                notes,
+              },
+            ];
+          })
+        : [];
+
+      return {
+        task_title: getSubtaskTitle(subtask),
+        contact_name:
+          pickFirstString(subtask.contact_name, subtask.contactName) ||
+          project.contact_name,
+        amount:
+          parsedAmount.displayAmount ??
+          (typeof rawAmount === "string"
+            ? rawAmount
+            : typeof rawAmount === "number"
+              ? String(rawAmount)
+              : project.amount),
+        amount_value: parsedAmount.amountValue ?? project.amount_value,
+        currency_code: parsedAmount.currencyCode ?? project.currency_code,
+        deadline_text: deadlineText,
+        deadline_date: deadlineDate ?? project.deadline_date,
+        priority: pickFirstString(subtask.priority) || project.priority || "Medium",
+        status: pickFirstString(subtask.status) || project.status || "New",
+        source: pickFirstString(subtask.source) || project.source,
+        raw_input:
+          pickFirstString(subtask.raw_input, subtask.rawInput) ||
+          project.raw_input,
+        resources,
+      };
+    });
+
+    return {
+      project,
+      subtasks,
+    };
+  });
+}
+
+function getImportRequestHash(projects: JsonRecord[]) {
+  return createHash("sha256")
+    .update(JSON.stringify(buildCanonicalImportPayload(projects)))
+    .digest("hex");
+}
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+async function claimProjectImportAttempt({
+  supabase,
+  userId,
+  idempotencyKey,
+  requestHash,
+}: {
+  supabase: SupabaseServerClient;
+  userId: string;
+  idempotencyKey: string;
+  requestHash: string;
+}) {
+  const { data: insertedAttempt, error: insertError } = await supabase
+    .from("project_import_attempts")
+    .insert({
+      user_id: userId,
+      idempotency_key: idempotencyKey,
+      request_hash: requestHash,
+      status: "started",
+    })
+    .select("id, request_hash, status, result_json, error_code")
+    .single();
+
+  if (!insertError && insertedAttempt) {
+    return {
+      kind: "claimed" as const,
+      attempt: insertedAttempt as ProjectImportAttemptRow,
+    };
+  }
+
+  if (insertError?.code !== "23505") {
+    throw new Error(insertError?.message || "Could not claim import attempt");
+  }
+
+  const { data: existingAttempt, error: lookupError } = await supabase
+    .from("project_import_attempts")
+    .select("id, request_hash, status, result_json, error_code")
+    .eq("user_id", userId)
+    .eq("idempotency_key", idempotencyKey)
+    .single();
+
+  if (lookupError || !existingAttempt) {
+    throw new Error(lookupError?.message || "Could not load import attempt");
+  }
+
+  const attempt = existingAttempt as ProjectImportAttemptRow;
+
+  if (attempt.request_hash !== requestHash) {
+    return { kind: "conflict" as const };
+  }
+
+  if (attempt.status === "committed") {
+    if (!isJsonRecord(attempt.result_json)) {
+      throw new Error("Committed import attempt has no replayable result");
+    }
+
+    return {
+      kind: "replay" as const,
+      result: attempt.result_json,
+    };
+  }
+
+  if (attempt.status === "failed") {
+    return {
+      kind: "failed" as const,
+      errorCode: attempt.error_code,
+    };
+  }
+
+  if (attempt.error_code === "AWAITING_DUPLICATE_OVERRIDE") {
+    const { data: resumedAttempts, error: resumeError } = await supabase
+      .from("project_import_attempts")
+      .update({
+        error_code: null,
+      })
+      .eq("id", attempt.id)
+      .eq("user_id", userId)
+      .eq("status", "started")
+      .eq("error_code", "AWAITING_DUPLICATE_OVERRIDE")
+      .select("id, request_hash, status, result_json, error_code");
+
+    if (resumeError) {
+      throw new Error(resumeError.message || "Could not resume import attempt");
+    }
+
+    if (resumedAttempts?.length === 1) {
+      return {
+        kind: "claimed" as const,
+        attempt: resumedAttempts[0] as ProjectImportAttemptRow,
+      };
+    }
+  }
+
+  return { kind: "in_progress" as const };
+}
+
+async function prepareProjectImportAttemptForDuplicateReview(
+  attempt: ClaimedImportAttempt
+) {
+  const { data, error } = await attempt.supabase
+    .from("project_import_attempts")
+    .update({
+      error_code: "AWAITING_DUPLICATE_OVERRIDE",
+    })
+    .eq("id", attempt.attemptId)
+    .eq("user_id", attempt.userId)
+    .eq("status", "started")
+    .select("id");
+
+  if (error || data?.length !== 1) {
+    throw new Error(error?.message || "Could not prepare import attempt");
+  }
+}
+
+async function commitProjectImportAttempt(
+  attempt: ClaimedImportAttempt,
+  result: JsonRecord
+) {
+  const { data, error } = await attempt.supabase
+    .from("project_import_attempts")
+    .update({
+      status: "committed",
+      result_json: result,
+      completed_at: new Date().toISOString(),
+      failed_at: null,
+      error_code: null,
+    })
+    .eq("id", attempt.attemptId)
+    .eq("user_id", attempt.userId)
+    .eq("status", "started")
+    .select("id");
+
+  if (error || data?.length !== 1) {
+    throw new Error(error?.message || "Could not commit import attempt");
+  }
+}
+
+async function failProjectImportAttempt(
+  attempt: ClaimedImportAttempt,
+  errorCode: string
+) {
+  const { data, error } = await attempt.supabase
+    .from("project_import_attempts")
+    .update({
+      status: "failed",
+      failed_at: new Date().toISOString(),
+      error_code: errorCode,
+    })
+    .eq("id", attempt.attemptId)
+    .eq("user_id", attempt.userId)
+    .eq("status", "started")
+    .select("id");
+
+  if (error || data?.length !== 1) {
+    console.error("Project import attempt failure-state update error:", {
+      attemptId: attempt.attemptId,
+      error,
+    });
+  }
 }
 
 function isDoneStatus(value: unknown) {
@@ -594,6 +843,8 @@ async function rollbackCreatedProjects(
 }
 
 export async function POST(req: NextRequest) {
+  let claimedAttempt: ClaimedImportAttempt | null = null;
+
   try {
     const body = await req.json().catch(() => null);
     const parsed = ProjectImportSchema.safeParse(body);
@@ -602,7 +853,8 @@ export async function POST(req: NextRequest) {
       return errorResponse("INVALID_PAYLOAD", "Invalid import request", 400);
     }
 
-    const { projects, duplicateOverrideGroupIndexes } = parsed.data;
+    const { projects, duplicateOverrideGroupIndexes, idempotencyKey } =
+      parsed.data;
     const overrideIndexes = new Set(duplicateOverrideGroupIndexes);
 
     if (
@@ -639,6 +891,53 @@ export async function POST(req: NextRequest) {
       return errorResponse("UNAUTHORIZED", "Unauthorized", 401);
     }
 
+    if (idempotencyKey) {
+      const requestHash = getImportRequestHash(projects);
+      const claim = await claimProjectImportAttempt({
+        supabase,
+        userId: user.id,
+        idempotencyKey,
+        requestHash,
+      });
+
+      if (claim.kind === "conflict") {
+        return errorResponse(
+          "IDEMPOTENCY_KEY_CONFLICT",
+          "This import attempt was already used for different project data.",
+          409
+        );
+      }
+
+      if (claim.kind === "replay") {
+        return NextResponse.json(claim.result);
+      }
+
+      if (claim.kind === "in_progress") {
+        return errorResponse(
+          "IMPORT_IN_PROGRESS",
+          "This import is already being processed.",
+          409
+        );
+      }
+
+      if (claim.kind === "failed") {
+        return errorResponse(
+          "IMPORT_ATTEMPT_FAILED",
+          "This import attempt previously failed and cannot be retried automatically.",
+          409,
+          {
+            previousErrorCode: claim.errorCode,
+          }
+        );
+      }
+
+      claimedAttempt = {
+        supabase,
+        userId: user.id,
+        attemptId: claim.attempt.id,
+      };
+    }
+
     const duplicates: Array<{
       groupIndex: number;
       duplicate: DuplicateProjectMatch;
@@ -659,6 +958,30 @@ export async function POST(req: NextRequest) {
     }
 
     if (duplicates.length > 0) {
+      if (claimedAttempt) {
+        const duplicateReviewAttempt = claimedAttempt;
+
+        try {
+          await prepareProjectImportAttemptForDuplicateReview(
+            duplicateReviewAttempt
+          );
+          claimedAttempt = null;
+        } catch (error) {
+          console.error("Project import duplicate claim preparation error:", error);
+          await failProjectImportAttempt(
+            duplicateReviewAttempt,
+            "DUPLICATE_PREFLIGHT_PREPARATION_FAILED"
+          );
+          claimedAttempt = null;
+
+          return errorResponse(
+            "IDEMPOTENCY_PREPARATION_FAILED",
+            "Could not safely prepare this import for duplicate review.",
+            500
+          );
+        }
+      }
+
       return errorResponse(
         "DUPLICATE_PROJECT_DETECTED",
         "One or more projects may already exist",
@@ -699,6 +1022,11 @@ export async function POST(req: NextRequest) {
 
       await rollbackCreatedProjects(supabase, user.id, createdProjectIds);
 
+      if (claimedAttempt) {
+        await failProjectImportAttempt(claimedAttempt, "IMPORT_FAILED");
+        claimedAttempt = null;
+      }
+
       return errorResponse("IMPORT_FAILED", message, 500, {
         createdProjects: [],
         createdTasks: [],
@@ -707,15 +1035,36 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({
+    const successResult = {
       ok: true,
       createdProjects,
       createdTasks,
       duplicates: [],
       failedGroups: [],
-    });
+    };
+
+    if (claimedAttempt) {
+      try {
+        await commitProjectImportAttempt(claimedAttempt, successResult);
+      } catch (error) {
+        /*
+          The import writes already succeeded. Keep that server result
+          authoritative and leave the started attempt blocking unsafe replay.
+        */
+        console.error("Project import committed-result recording error:", error);
+      }
+
+      claimedAttempt = null;
+    }
+
+    return NextResponse.json(successResult);
   } catch (error) {
     console.error("Project import route error:", error);
+
+    if (claimedAttempt) {
+      await failProjectImportAttempt(claimedAttempt, "INTERNAL_ERROR");
+    }
+
     return errorResponse("INTERNAL_ERROR", "Failed to import projects", 500);
   }
 }

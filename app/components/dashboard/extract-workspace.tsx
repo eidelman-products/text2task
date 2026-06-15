@@ -300,6 +300,7 @@ export default function ExtractWorkspace({
 
   const previewIdRef = useRef(0);
   const saveSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const importAttemptIdRef = useRef<string | null>(null);
 
   const previewStats = getPreviewProjectStats(previewItems);
   const hasPreview = previewItems.length > 0;
@@ -326,11 +327,20 @@ export default function ExtractWorkspace({
   }
 
   function resetPreviewState() {
+    importAttemptIdRef.current = null;
     setPreviewItems([]);
     setPreviewAiMeta({});
     setHasTriedExtract(false);
     setInputText("");
     clearSelectedImage();
+  }
+
+  function getOrCreateImportAttemptId() {
+    if (!importAttemptIdRef.current) {
+      importAttemptIdRef.current = globalThis.crypto.randomUUID();
+    }
+
+    return importAttemptIdRef.current;
   }
 
   function mapTaskToPreview(task: any, source: string): PreviewItem {
@@ -506,6 +516,7 @@ export default function ExtractWorkspace({
     try {
       setIsExtracting(true);
       setHasTriedExtract(true);
+      importAttemptIdRef.current = null;
       setPreviewItems([]);
       setPreviewAiMeta({});
       setDuplicateSaveState(null);
@@ -551,6 +562,7 @@ export default function ExtractWorkspace({
     try {
       setIsExtracting(true);
       setHasTriedExtract(true);
+      importAttemptIdRef.current = null;
       setPreviewItems([]);
       setPreviewAiMeta({});
       setDuplicateSaveState(null);
@@ -775,6 +787,7 @@ export default function ExtractWorkspace({
 
   async function saveProjectBatch(
     projectGroups: PreviewProjectGroup[],
+    idempotencyKey: string,
     duplicateOverrideGroupIndexes: number[] = []
   ) {
     const res = await fetch("/api/projects/import", {
@@ -785,6 +798,7 @@ export default function ExtractWorkspace({
       body: JSON.stringify({
         projects: projectGroups.map((group) => buildProjectPayload(group)),
         duplicateOverrideGroupIndexes,
+        idempotencyKey,
       }),
     });
 
@@ -828,9 +842,31 @@ export default function ExtractWorkspace({
     }
 
     saveSuccessTimerRef.current = setTimeout(() => {
-      resetPreviewState();
-      onGoToTasks();
+      try {
+        onGoToTasks();
+        resetPreviewState();
+      } catch (error) {
+        console.error("Project import navigation error:", error);
+        toast.warning(
+          "Projects were saved, but Tasks could not open automatically."
+        );
+      }
     }, 500);
+  }
+
+  function synchronizeCommittedImport(savedRows: TaskRow[]) {
+    try {
+      if (savedRows.length > 0) {
+        onTasksSaved(savedRows);
+      }
+
+      finishSuccessfulSaveFlow();
+    } catch (error) {
+      console.error("Project import local synchronization error:", error);
+      toast.warning(
+        "Projects were saved, but the dashboard could not refresh. Please open Tasks to view them."
+      );
+    }
   }
 
   async function savePreviewToTasks() {
@@ -843,13 +879,13 @@ export default function ExtractWorkspace({
       setSaveSuccess(false);
       setDuplicateSaveState(null);
 
-      const allSavedRows = await saveProjectBatch(projectGroups);
+      const importAttemptId = getOrCreateImportAttemptId();
+      const allSavedRows = await saveProjectBatch(
+        projectGroups,
+        importAttemptId
+      );
 
-      if (allSavedRows.length > 0) {
-        onTasksSaved(allSavedRows);
-      }
-
-      finishSuccessfulSaveFlow();
+      synchronizeCommittedImport(allSavedRows);
     } catch (error: any) {
       console.error(error);
 
@@ -883,18 +919,15 @@ export default function ExtractWorkspace({
           duplicateSaveState.duplicateGroupIndex,
         ])
       );
+      const importAttemptId = getOrCreateImportAttemptId();
       const allSavedRows = await saveProjectBatch(
         duplicateSaveState.projectGroups,
+        importAttemptId,
         nextOverrideGroupIndexes
       );
 
       setDuplicateSaveState(null);
-
-      if (allSavedRows.length > 0) {
-        onTasksSaved(allSavedRows);
-      }
-
-      finishSuccessfulSaveFlow();
+      synchronizeCommittedImport(allSavedRows);
     } catch (error: any) {
       console.error(error);
 
@@ -926,6 +959,7 @@ export default function ExtractWorkspace({
 
   function cancelDuplicateSave() {
     if (isSavingDuplicateAnyway) return;
+    importAttemptIdRef.current = null;
     setDuplicateSaveState(null);
   }
 
@@ -933,6 +967,7 @@ export default function ExtractWorkspace({
     const existingTaskId = duplicateSaveState?.duplicate?.existing_task_id;
 
     if (existingTaskId) {
+      importAttemptIdRef.current = null;
       const path = `/dashboard?view=tasks&taskId=${encodeURIComponent(
         String(existingTaskId)
       )}`;
@@ -945,6 +980,7 @@ export default function ExtractWorkspace({
       return;
     }
 
+    importAttemptIdRef.current = null;
     setDuplicateSaveState(null);
     onGoToTasks();
   }
