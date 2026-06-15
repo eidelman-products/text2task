@@ -415,6 +415,7 @@ export async function POST(req: NextRequest) {
     }
 
     let updateData: Record<string, unknown> = {};
+    let transactionalStatus: "Done" | "In Progress" | null = null;
     const nowIso = new Date().toISOString();
 
     switch (field) {
@@ -460,6 +461,10 @@ export async function POST(req: NextRequest) {
           typeof value === "string" && value.trim() ? value.trim() : "New";
 
         updateData.status = nextStatus;
+        transactionalStatus =
+          nextStatus === "Done" || nextStatus === "In Progress"
+            ? nextStatus
+            : null;
 
         /*
           Lifetime completion:
@@ -491,6 +496,66 @@ export async function POST(req: NextRequest) {
           { error: "Unsupported field" },
           { status: 400 }
         );
+    }
+
+    if (transactionalStatus) {
+      const { error: transactionalStatusError } = await supabase.rpc(
+        "apply_task_bulk_status_transaction",
+        {
+          p_task_ids: [taskId],
+          p_status: transactionalStatus,
+        }
+      );
+
+      if (transactionalStatusError) {
+        console.error(
+          "Transactional single-task status update error:",
+          transactionalStatusError
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              transactionalStatusError.message || "Failed to update task",
+          },
+          { status: 500 }
+        );
+      }
+
+      try {
+        const cleanTask = await reloadTask({
+          supabase,
+          taskId,
+          userId: user.id,
+          fallbackClient: currentClient,
+        });
+
+        return NextResponse.json({
+          success: true,
+          task: cleanTask,
+        });
+      } catch (reloadError) {
+        console.warn(
+          "Task status updated transactionally, but task reload failed:",
+          reloadError
+        );
+
+        return NextResponse.json({
+          success: true,
+          task: cleanJoinedTask(
+            {
+              ...existingTask,
+              status: transactionalStatus,
+              updated_at: nowIso,
+              completed_at:
+                transactionalStatus === "Done"
+                  ? existingTask.completed_at || nowIso
+                  : existingTask.completed_at,
+            },
+            currentClient
+          ),
+        });
+      }
     }
 
     const { data, error } = await supabase
