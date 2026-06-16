@@ -1510,16 +1510,22 @@ export async function POST(request: NextRequest) {
 
     applyStage = "transactional_apply";
 
+    const updateId = loaded.update.id;
+    const applyAttemptId = claim.attemptId;
+    const acceptedItemIds = uniqueAcceptedIds;
+    const rejectedItemIds = uniqueRejectedIds;
+    const rpcArgs = {
+      p_update_id: updateId,
+      p_apply_attempt_id: applyAttemptId,
+      p_accepted_item_ids: acceptedItemIds,
+      p_rejected_item_ids: rejectedItemIds,
+      p_edited_items: normalizedEditedItems,
+      p_apply_payload: normalizedApplyPayload,
+    };
+
     const { data: rpcData, error: rpcError } = await supabase.rpc(
       "apply_project_update_transaction",
-      {
-        p_update_id: loaded.update.id,
-        p_apply_attempt_id: claim.attemptId,
-        p_accepted_item_ids: uniqueAcceptedIds,
-        p_rejected_item_ids: uniqueRejectedIds,
-        p_edited_items: normalizedEditedItems,
-        p_apply_payload: normalizedApplyPayload,
-      }
+      rpcArgs
     );
 
     let transactionalResult = parseTransactionalApplyResult(rpcData);

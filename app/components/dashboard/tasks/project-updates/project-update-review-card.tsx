@@ -16,6 +16,33 @@ import {
 
 const STATUS_OPTIONS = ["New", "In Progress", "Review", "Urgent", "Done"];
 const PRIORITY_OPTIONS = ["Low", "Medium", "High"];
+const CLIENT_DETAIL_FIELDS = [
+  {
+    key: "client_name",
+    label: "client name",
+    keys: ["client_name", "clientName", "name"],
+  },
+  {
+    key: "contact_name",
+    label: "contact name",
+    keys: ["contact_name", "contactName"],
+  },
+  {
+    key: "email",
+    label: "email",
+    keys: ["email"],
+  },
+  {
+    key: "phone",
+    label: "phone",
+    keys: ["phone"],
+  },
+  {
+    key: "notes",
+    label: "notes",
+    keys: ["notes", "client_notes", "clientNotes"],
+  },
+] as const;
 
 export default function ProjectUpdateReviewCard({
   form,
@@ -409,7 +436,64 @@ function EditableFields({
     );
   }
 
+  if (item.type === "client_detail_change") {
+    const visibleFields = CLIENT_DETAIL_FIELDS.filter((field) =>
+      hasClientDetailField(editedValue, field.keys) ||
+      hasClientDetailField(item.new_value, field.keys)
+    );
+
+    if (visibleFields.length === 0) {
+      return null;
+    }
+
+    return (
+      <div style={inlineEditStyle}>
+        {visibleFields.map((field) => {
+          const current =
+            getClientDetailStringValue(item.old_value, field.keys) || "Not set";
+          const next =
+            getClientDetailStringValue(editedValue, field.keys) ||
+            getClientDetailStringValue(item.new_value, field.keys) ||
+            "";
+
+          return (
+            <div
+              key={field.key}
+              className={ui.responsiveClassNames.reviewFields}
+              style={twoColumnStyle}
+            >
+              <ReadOnlyField label={`Current ${field.label}`} value={current} />
+
+              <TextField
+                label={`Suggested ${field.label}`}
+                value={next}
+                disabled={disabled}
+                onChange={(value) => onUpdate(field.key, value)}
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   return null;
+}
+
+function hasClientDetailField(
+  record: JsonRecord | null,
+  keys: readonly string[]
+) {
+  if (!record) return false;
+
+  return keys.some((key) => Object.prototype.hasOwnProperty.call(record, key));
+}
+
+function getClientDetailStringValue(
+  record: JsonRecord | null,
+  keys: ReadonlyArray<string>
+) {
+  return getStringValue(record, [...keys]);
 }
 
 function SecondaryFindings({

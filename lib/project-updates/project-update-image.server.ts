@@ -120,6 +120,21 @@ function uniqueNonEmpty(values: string[]) {
     });
 }
 
+function isWebsiteRoutingClientNote(value: string) {
+  const normalized = String(value || "").toLowerCase().replace(/\s+/g, " ");
+
+  return [
+    /\bcontact\s+form\b.{0,80}\b(?:send|sends|route|routes|forward|forwards|deliver|delivers|go|goes|email|message|messages|submission|submissions)\b/,
+    /\b(?:send|route|forward|deliver)\b.{0,80}\b(?:website\s+)?(?:inquiries|messages|submissions|contact\s+form\s+submissions)\b.{0,40}\bto\b/,
+    /\b(?:website\s+)?(?:inquiries|messages|submissions|contact\s+form\s+submissions)\b.{0,80}\b(?:send|route|forward|deliver|go)\b.{0,40}\bto\b/,
+    /\bform\s+(?:recipient|recipients|email|emails|destination|destinations|inbox|inboxes)\b/,
+    /\bwebsite\s+(?:contact\s+email|inquiry\s+email|inquiries\s+email|inquiry\s+inbox|inquiries\s+inbox|inquiry\s+recipient|inquiries\s+recipient)\b/,
+    /\bcontact\s+form\s+email\b/,
+    /\breply-?to\s+address\s+for\s+(?:the\s+)?form\b/,
+    /\bsupport\s+inbox(?:es)?\b/,
+  ].some((pattern) => pattern.test(normalized));
+}
+
 export function buildRawInputFromImageExtraction(
   extraction: ProjectUpdateImageExtraction
 ) {
@@ -128,7 +143,9 @@ export function buildRawInputFromImageExtraction(
   const deadlineMentions = uniqueNonEmpty(extraction.deadlineMentions);
   const priorityMentions = uniqueNonEmpty(extraction.priorityMentions);
   const budgetMentions = uniqueNonEmpty(extraction.budgetMentions);
-  const clientNotes = uniqueNonEmpty(extraction.clientNotes);
+  const clientNotes = uniqueNonEmpty(extraction.clientNotes).filter(
+    (note) => !isWebsiteRoutingClientNote(note)
+  );
   const lines = ["[Image update transcription]"];
 
   if (rawTranscription) {
@@ -202,8 +219,10 @@ export async function extractProjectUpdateImageInstructions(file: File) {
     "- deadlineMentions: deadline changes or deadline text only.",
     "- priorityMentions: urgency/priority clues only.",
     "- budgetMentions: budget/scope money mentions only.",
-    "- clientNotes: explicit client/contact record details only, such as client name, contact person, phone, email, or clearly labeled client/customer notes.",
-    "- Do not put general project instructions, tone, goals, or plain Note: lines into clientNotes.",
+    "- clientNotes: explicit saved client/contact record details only, such as client name, contact person, phone, email, or clearly labeled client/customer notes.",
+    "- Do not put general project instructions, tone, goals, website form routing, or plain Note: lines into clientNotes.",
+    "- Do not put website/contact-form recipient emails, support inboxes, website inquiry destinations, form recipients, contact form emails, or reply-to addresses for website forms into clientNotes.",
+    "- For text like contact form should send messages to X, requestedTasks should include: Update contact form to send messages to X, and clientNotes should be empty.",
     "- If there are no requested tasks but there are deadline/priority/budget/client detail changes, still return those fields.",
     "- If no useful client update text is visible, return empty strings/arrays.",
     "",

@@ -27,8 +27,10 @@ export function cleanSubtaskDuplicateTitle(value: string) {
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\bsigned\s+off\b/g, " ")
+    .replace(/\blooks?\s+good\b/g, " ")
     .replace(
-      /\b(the|a|an|please|need|needs|for|to|and|with|new|add|create|build|make|update|design|prepare)\b/g,
+      /\b(the|a|an|please|need|needs|for|to|and|with|new|add|create|build|make|update|design|prepare|approved|approve|approval|signed|off|done|completed|complete|looks|look|good|ready|now|is|are|was|were|be|been|being)\b/g,
       " "
     )
     .replace(/\s+/g, " ")

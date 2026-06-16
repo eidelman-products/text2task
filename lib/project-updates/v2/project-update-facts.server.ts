@@ -72,6 +72,129 @@ function isExplicitClientRecordNote(rawInput: string) {
   ].some((pattern) => pattern.test(normalized));
 }
 
+function hasExplicitClientRecordFieldIntent(
+  rawInput: string,
+  field:
+    | "clientName"
+    | "contactName"
+    | "phone"
+    | "email"
+    | "notes"
+) {
+  const normalized = String(rawInput || "").toLowerCase();
+
+  if (field === "notes") {
+    return isExplicitClientRecordNote(rawInput);
+  }
+
+  const fieldPatterns: Record<
+    "clientName" | "contactName" | "phone" | "email",
+    RegExp[]
+  > = {
+    clientName: [
+      /\b(?:update|change|set|replace)\s+(?:the\s+)?(?:client|customer)\s+(?:name|company|company\s+name)\b/,
+      /\b(?:client|customer)\s+(?:name|company|company\s+name)\s*(?:is|to|=|:)\b/,
+      /\b(?:company|business)\s+name\s*(?:is|to|=|:)\b/,
+    ],
+    contactName: [
+      /\b(?:update|change|set|replace)\s+(?:the\s+)?(?:client|customer)\s+contact\s+(?:name|person)\b/,
+      /\b(?:client|customer)\s+contact\s+(?:name|person)?\s*(?:is|to|=|:)\b/,
+      /\bcontact\s+person\s*(?:is|to|=|:)\b/,
+    ],
+    phone: [
+      /\b(?:update|change|set|replace)\s+(?:the\s+)?(?:client|customer|contact)\s+(?:phone|mobile|number)\b/,
+      /\b(?:client|customer|contact)\s+(?:phone|mobile|number)\s*(?:is|to|=|:)\b/,
+      /\b(?:phone|mobile)\s+(?:for|on)\s+(?:the\s+)?(?:client|customer|contact)\s+record\b/,
+    ],
+    email: [
+      /\b(?:update|change|set|replace)\s+(?:the\s+)?(?:client|customer|contact)\s+email\b/,
+      /\b(?:client|customer|contact)\s+email\s*(?:is|to|=|:)\b/,
+      /\bemail\s+(?:for|on)\s+(?:the\s+)?(?:client|customer|contact)\s+record\b/,
+    ],
+  };
+
+  return fieldPatterns[field].some((pattern) => pattern.test(normalized));
+}
+
+function hasFormRoutingEmailContext(value: string) {
+  const normalized = String(value || "").toLowerCase().replace(/\s+/g, " ");
+
+  return [
+    /\bcontact\s+form\b.{0,80}\b(?:send|sends|route|routes|forward|forwards|deliver|delivers|go|goes|email|message|messages|submission|submissions)\b/,
+    /\b(?:send|route|forward|deliver)\b.{0,80}\b(?:website\s+)?(?:inquiries|messages|submissions|contact\s+form\s+submissions)\b.{0,40}\bto\b/,
+    /\b(?:website\s+)?(?:inquiries|messages|submissions|contact\s+form\s+submissions)\b.{0,80}\b(?:send|route|forward|deliver|go)\b.{0,40}\bto\b/,
+    /\bform\s+(?:recipient|recipients|email|emails|destination|destinations|inbox|inboxes)\b/,
+    /\bwebsite\s+(?:contact\s+email|inquiry\s+email|inquiries\s+email|inquiry\s+inbox|inquiries\s+inbox|inquiry\s+recipient|inquiries\s+recipient)\b/,
+    /\bcontact\s+form\s+email\b/,
+    /\breply-?to\s+address\s+for\s+(?:the\s+)?form\b/,
+    /\bsupport\s+inbox(?:es)?\b/,
+  ].some((pattern) => pattern.test(normalized));
+}
+
+function isClientEmailSuppressedByRoutingContext(
+  rawInput: string,
+  email: string | null
+) {
+  if (!email) {
+    return false;
+  }
+
+  const raw = String(rawInput || "");
+  const lowerRaw = raw.toLowerCase();
+  const lowerEmail = email.toLowerCase();
+  const index = lowerRaw.indexOf(lowerEmail);
+
+  if (index === -1) {
+    return hasFormRoutingEmailContext(raw);
+  }
+
+  const start = Math.max(0, index - 160);
+  const end = Math.min(raw.length, index + email.length + 160);
+  const localContext = raw.slice(start, end);
+
+  return hasFormRoutingEmailContext(localContext);
+}
+
+function hasTaskCompletionCue(value: string | null) {
+  const normalized = String(value || "").toLowerCase().replace(/\s+/g, " ");
+
+  return [
+    /\b(?:is|are|was|were|be|been|being|has been|have been)\s+(?:approved|done|completed|complete|ready)\b/,
+    /\b(?:approved|done|completed|ready)\s+now\b/,
+    /\b(?:client|customer|they|he|she|we)\s+(?:approved|completed)\b/,
+    /\bsigned\s+off\b/,
+    /\blooks?\s+good\b/,
+    /\b(?:is|are|was|were|be|been|being|seems?|looks?)\s+ready\b/,
+  ].some((pattern) => pattern.test(normalized));
+}
+
+function cleanCompletionCueFromTitle(value: string) {
+  const cleaned = String(value || "")
+    .trim()
+    .replace(
+      /\b(?:is|are|was|were|be|been|being|has been|have been)\s+(?:approved|done|completed|complete)(?:\s+now)?\b/gi,
+      " "
+    )
+    .replace(/\b(?:approved|done|completed)(?:\s+now)?\b/gi, " ")
+    .replace(
+      /\b(?:is|are|was|were|be|been|being|has been|have been)\s+signed\s+off(?:\s+now)?\b/gi,
+      " "
+    )
+    .replace(/\bsigned\s+off(?:\s+now)?\b/gi, " ")
+    .replace(/\blooks?\s+good(?:\s+now)?\b/gi, " ")
+    .replace(
+      /\b(?:is|are|was|were|be|been|being|seems?|looks?)\s+ready(?:\s+now)?\b/gi,
+      " "
+    )
+    .replace(/\bready\s+now\b/gi, " ")
+    .replace(/\bnow\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .replace(/[.;]+$/g, "")
+    .trim();
+
+  return cleaned || value.trim();
+}
+
 function parseJsonFromModelOutput(rawText: string): unknown {
   const trimmed = rawText.trim();
 
@@ -167,6 +290,9 @@ function buildProjectUpdateFactsPrompt(input: {
     "- Keep titles short, professional, and action-oriented.",
     "- Preserve important words like add, create, update, replace, revise, design, prepare.",
     "- If the client says update X with new Y, keep that as a requested subtask title, for example: Update service area section with new locations.",
+    "- If the client says an existing deliverable is approved, signed off, done, completed, complete, looks good, or ready, extract that deliverable as a requestedSubtask with status \"Done\".",
+    "- For completion/approval language, keep the title focused on the deliverable itself and do not include status filler like approved now, signed off, done, completed, looks good, ready, or now in the title.",
+    "- Use requestedSubtasks[].status = \"Done\" for task-specific approval/completion. Only use projectChanges.status when the whole project status changed.",
     "- Do not decide whether it already exists. Just extract the requested work.",
     "",
     "2. Project-level changes",
@@ -177,9 +303,12 @@ function buildProjectUpdateFactsPrompt(input: {
     "- Do not create requestedSubtasks for deadline, budget, priority, or status alone.",
     "",
     "3. Client/contact changes",
-    "- Extract client/company, contact person, phone, email, and client notes only if they are present.",
+    "- Only use clientChanges when the update explicitly changes the saved client/customer/contact record.",
+    "- Do not use clientChanges just because a name, phone number, or email address appears.",
+    "- Valid client record examples: client email is X, change the client email to X, update client contact email to X, the client phone is X, update client contact name to X, customer notes should say X, client notes should say X.",
+    "- Website/contact-form recipient emails are project work, not client details. For example, contact form should send messages to X, send website inquiries to X, form recipient, website contact email, contact form email, reply-to address for the form, and form submissions should go to X should become requestedSubtasks, with clientChanges.email = null.",
     "- Only use clientChanges.notes for explicit client/customer record note changes, such as 'client note:', 'customer note:', 'update client notes', or 'change client notes'.",
-    "- Do not put general project instructions, goals, tone, screenshot summaries, or plain 'Note:' lines into clientChanges.notes.",
+    "- Do not put general project instructions, website form routing, goals, tone, screenshot summaries, or plain 'Note:' lines into clientChanges.",
     "- Do not invent contact details.",
     "",
     "4. Notes",
@@ -237,25 +366,116 @@ function buildProjectUpdateFactsPrompt(input: {
     '  "confidence": 0.94',
     "}",
     "",
+    "Form routing example input:",
+    "The contact form should send messages to support@example.com.",
+    "",
+    "Form routing example JSON:",
+    "{",
+    '  "summary": "Client requested the website contact form route messages to a support email address.",',
+    '  "requestedSubtasks": [',
+    "    {",
+    '      "title": "Update contact form to send messages to support@example.com",',
+    '      "description": "Client asked for the website contact form to route messages to this email address.",',
+    '      "deadlineText": null,',
+    '      "amount": null,',
+    '      "status": null,',
+    '      "priority": null',
+    "    }",
+    "  ],",
+    '  "projectChanges": {',
+    '    "deadlineText": null,',
+    '    "amount": null,',
+    '    "priority": null,',
+    '    "status": null',
+    "  },",
+    '  "clientChanges": {',
+    '    "clientName": null,',
+    '    "contactName": null,',
+    '    "phone": null,',
+    '    "email": null,',
+    '    "notes": null',
+    "  },",
+    '  "notes": [],',
+    '  "confidence": 0.94',
+    "}",
+    "",
+    "Completion example input:",
+    "The homepage hero headline and subheadline are approved now.",
+    "",
+    "Completion example JSON:",
+    "{",
+    '  "summary": "Client approved the homepage hero headline and subheadline.",',
+    '  "requestedSubtasks": [',
+    "    {",
+    '      "title": "Homepage hero headline and subheadline",',
+    '      "description": "Client approved this deliverable.",',
+    '      "deadlineText": null,',
+    '      "amount": null,',
+    '      "status": "Done",',
+    '      "priority": null',
+    "    }",
+    "  ],",
+    '  "projectChanges": {',
+    '    "deadlineText": null,',
+    '    "amount": null,',
+    '    "priority": null,',
+    '    "status": null',
+    "  },",
+    '  "clientChanges": {',
+    '    "clientName": null,',
+    '    "contactName": null,',
+    '    "phone": null,',
+    '    "email": null,',
+    '    "notes": null',
+    "  },",
+    '  "notes": [],',
+    '  "confidence": 0.94',
+    "}",
+    "",
     "Client update input:",
     input.rawInput,
   ].join("\n");
 }
 
 function repairFactsShape(value: ProjectUpdateExtractedFacts, rawInput: string) {
+  const clientName = value.clientChanges.clientName?.trim() || null;
+  const contactName = value.clientChanges.contactName?.trim() || null;
+  const phone = value.clientChanges.phone?.trim() || null;
+  const email = value.clientChanges.email?.trim() || null;
   const clientNotes = value.clientChanges.notes?.trim() || null;
+  const hasExplicitClientName =
+    clientName !== null &&
+    hasExplicitClientRecordFieldIntent(rawInput, "clientName");
+  const hasExplicitContactName =
+    contactName !== null &&
+    hasExplicitClientRecordFieldIntent(rawInput, "contactName");
+  const hasExplicitPhone =
+    phone !== null && hasExplicitClientRecordFieldIntent(rawInput, "phone");
+  const hasExplicitEmail =
+    email !== null &&
+    hasExplicitClientRecordFieldIntent(rawInput, "email") &&
+    !isClientEmailSuppressedByRoutingContext(rawInput, email);
   const hasExplicitClientRecordNote =
-    clientNotes !== null && isExplicitClientRecordNote(rawInput);
+    clientNotes !== null &&
+    hasExplicitClientRecordFieldIntent(rawInput, "notes");
 
   return {
     ...value,
-    requestedSubtasks: value.requestedSubtasks.map((subtask) => ({
-      ...subtask,
-      title: subtask.title.trim(),
-      description: subtask.description?.trim() || null,
-      deadlineText: subtask.deadlineText?.trim() || null,
-      amount: subtask.amount?.trim() || null,
-    })),
+    requestedSubtasks: value.requestedSubtasks.map((subtask) => {
+      const title = subtask.title.trim();
+      const description = subtask.description?.trim() || null;
+      const hasCompletionCue =
+        hasTaskCompletionCue(title) || hasTaskCompletionCue(description);
+
+      return {
+        ...subtask,
+        title: hasCompletionCue ? cleanCompletionCueFromTitle(title) : title,
+        description,
+        deadlineText: subtask.deadlineText?.trim() || null,
+        amount: subtask.amount?.trim() || null,
+        status: hasCompletionCue ? "Done" : subtask.status,
+      };
+    }),
     projectChanges: {
       deadlineText: value.projectChanges.deadlineText?.trim() || null,
       amount: value.projectChanges.amount?.trim() || null,
@@ -263,10 +483,10 @@ function repairFactsShape(value: ProjectUpdateExtractedFacts, rawInput: string) 
       status: value.projectChanges.status,
     },
     clientChanges: {
-      clientName: value.clientChanges.clientName?.trim() || null,
-      contactName: value.clientChanges.contactName?.trim() || null,
-      phone: value.clientChanges.phone?.trim() || null,
-      email: value.clientChanges.email?.trim() || null,
+      clientName: hasExplicitClientName ? clientName : null,
+      contactName: hasExplicitContactName ? contactName : null,
+      phone: hasExplicitPhone ? phone : null,
+      email: hasExplicitEmail ? email : null,
       notes: hasExplicitClientRecordNote ? clientNotes : null,
     },
     notes: value.notes

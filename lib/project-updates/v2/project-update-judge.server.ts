@@ -20,6 +20,7 @@ type ExistingSubtask = ExistingProjectUpdateContext["subtasks"][number];
 type DuplicateMatch = {
   existingTaskId: number;
   existingTitle: string;
+  existingStatus: string | null;
   proposedTitle: string;
   score: number;
   reason: string;
@@ -133,6 +134,16 @@ function judgeRequestedSubtask({
   });
 
   if (duplicate) {
+    const doneDecision = judgeCompletedExistingSubtask({
+      subtask,
+      match: duplicate,
+      index,
+    });
+
+    if (doneDecision) {
+      return doneDecision;
+    }
+
     const exact = isExactDuplicate(duplicate);
 
     return {
@@ -170,6 +181,16 @@ function judgeRequestedSubtask({
   });
 
   if (relatedSubtask) {
+    const doneDecision = judgeCompletedExistingSubtask({
+      subtask,
+      match: relatedSubtask,
+      index,
+    });
+
+    if (doneDecision) {
+      return doneDecision;
+    }
+
     return {
       id: `subtask-${index + 1}`,
       kind: "apply",
@@ -218,6 +239,71 @@ function judgeRequestedSubtask({
     confidence: 0.9,
     reason:
       "This requested work item does not match an existing subtask in the project.",
+    reviewLabel: "Apply",
+  };
+}
+
+function judgeCompletedExistingSubtask({
+  subtask,
+  match,
+  index,
+}: {
+  subtask: ProjectUpdateExtractedSubtaskFact;
+  match: DuplicateMatch;
+  index: number;
+}): ProjectUpdateJudgeDecision | null {
+  if (subtask.status !== "Done") {
+    return null;
+  }
+
+  const existingStatus = normalizeStatus(match.existingStatus);
+
+  if (existingStatus === "Done") {
+    return {
+      id: `subtask-${index + 1}`,
+      kind: "no_change",
+      itemType: "no_action",
+      title: "Subtask is already Done",
+      description:
+        "The client approved or completed this deliverable, and the matching subtask is already marked Done.",
+      targetTaskId: match.existingTaskId,
+      targetField: "status",
+      oldValue: {
+        existing_task_id: match.existingTaskId,
+        existing_title: match.existingTitle,
+        status: match.existingStatus,
+      },
+      newValue: {
+        status: "Done",
+      },
+      confidence: 0.95,
+      reason:
+        "The completion language matches an existing subtask that is already Done.",
+      reviewLabel: "No change",
+    };
+  }
+
+  return {
+    id: `subtask-${index + 1}`,
+    kind: "apply",
+    itemType: "update_subtask",
+    title: `Mark ${match.existingTitle} as Done`,
+    description:
+      subtask.description ||
+      "Client approval or completion language matches this existing subtask.",
+    targetTaskId: match.existingTaskId,
+    targetField: "status",
+    oldValue: {
+      existing_task_id: match.existingTaskId,
+      existing_title: match.existingTitle,
+      status: match.existingStatus,
+    },
+    newValue: {
+      status: "Done",
+    },
+    confidence: 0.92,
+    reason:
+      "The client approved or completed a deliverable that matches an existing subtask, so the subtask should be marked Done instead of treated as a duplicate.",
     reviewLabel: "Apply",
   };
 }
@@ -651,6 +737,7 @@ function findDuplicateSubtask({
     const match: DuplicateMatch = {
       existingTaskId: Number(subtask.id),
       existingTitle,
+      existingStatus: subtask.status,
       proposedTitle: candidateTitle,
       score: comparison.score,
       reason: comparison.reason,
@@ -707,6 +794,7 @@ function findRelatedSubtask({
     const match: DuplicateMatch = {
       existingTaskId: Number(subtask.id),
       existingTitle,
+      existingStatus: subtask.status,
       proposedTitle: candidateTitle,
       score: sharedScore,
       reason: "related title match",
@@ -730,6 +818,23 @@ function getRelationTokens(value: string): string[] {
     "with",
     "new",
     "update",
+    "approved",
+    "approve",
+    "approval",
+    "signed",
+    "off",
+    "done",
+    "complete",
+    "completed",
+    "looks",
+    "look",
+    "good",
+    "ready",
+    "now",
+    "is",
+    "are",
+    "was",
+    "were",
     "add",
     "create",
     "build",
