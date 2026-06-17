@@ -138,12 +138,6 @@ export default function MobileTaskCard({
                 {project.clientName}
               </div>
 
-              {project.contactName || project.contact_name ? (
-                <div style={mobileContactInlineStyle}>
-                  Contact: {project.contactName || project.contact_name}
-                </div>
-              ) : null}
-
               <div style={mobileCreatedStyle}>
                 {formatCreatedDate(project.created_at)}
               </div>
@@ -174,66 +168,6 @@ export default function MobileTaskCard({
 
       <div style={projectTitleBlockStyle}>
         <div style={projectTitleStyle}>{project.projectTitle}</div>
-      </div>
-
-      <div style={mobileMetricsGridStyle}>
-        <MobileMetric label="Amount" value={project.amount || "—"} />
-
-        <MobileMetric
-          label="Deadline"
-          value={project.deadline || "—"}
-          customValueStyle={deadlineStyle}
-        />
-      </div>
-
-      <div style={mobileMetricsGridStyle}>
-        <div style={mobileFieldStackStyle}>
-          <label style={mobileFieldLabelStyle}>Priority</label>
-          {actionMode === "archived" ? (
-            <div style={mobileReadOnlyMetaStyle}>
-              {project.priority || "Medium"}
-            </div>
-          ) : (
-            <select
-              value={project.priority || "Medium"}
-              onChange={(e) => updateProjectPriority(e.target.value)}
-              disabled={isBusy || !projectId}
-              style={{
-                ...mobileInputStyle,
-                ...getPrioritySelectStyle(project.priority),
-              }}
-            >
-              <option>Low</option>
-              <option>Medium</option>
-              <option>High</option>
-            </select>
-          )}
-        </div>
-
-        <div style={mobileFieldStackStyle}>
-          <label style={mobileFieldLabelStyle}>Status</label>
-          {actionMode === "archived" ? (
-            <div style={mobileReadOnlyMetaStyle}>{project.status || "New"}</div>
-          ) : (
-            <select
-              value={project.status || "New"}
-              onChange={(e) => updateProjectStatus(e.target.value)}
-              disabled={isBusy || !projectId}
-              style={{
-                ...mobileInputStyle,
-                color: statusStyle.color,
-                background: statusStyle.background,
-                borderColor: statusStyle.borderColor,
-              }}
-            >
-              <option value="New">New</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Review">Review</option>
-              <option value="Urgent">Urgent</option>
-              <option value="Done">Done</option>
-            </select>
-          )}
-        </div>
       </div>
 
       {projectState.kind === "done" ? (
@@ -274,56 +208,126 @@ export default function MobileTaskCard({
         </span>
       </button>
 
-      {onOpenProjectResources ||
-      onOpenProjectHistory ||
-      (actionMode !== "archived" && onOpenProjectUpdate && !isDeleting) ? (
-        <div style={mobileProjectActionsStyle}>
-          {onOpenProjectResources ? (
-            <button
-              type="button"
-              onClick={() => onOpenProjectResources(project)}
-              disabled={isDeleting}
-              style={mobileSharedActionButtonStyle}
-            >
-              Resources
-              {projectResourceCount > 0 ? (
-                <span style={mobileResourceCountStyle}>
-                  {projectResourceCount}
-                </span>
-              ) : null}
-            </button>
-          ) : null}
-
-          {actionMode !== "archived" &&
-          onOpenProjectUpdate &&
-          !isDeleting ? (
-            <button
-              type="button"
-              onClick={() => onOpenProjectUpdate(project)}
-              style={{
-                ...mobileSharedActionButtonStyle,
-                ...mobileUpdateActionButtonStyle,
-              }}
-            >
-              Add update
-            </button>
-          ) : null}
-
-          {onOpenProjectHistory ? (
-            <button
-              type="button"
-              onClick={() => onOpenProjectHistory(project)}
-              disabled={isDeleting}
-              style={mobileSharedActionButtonStyle}
-            >
-              History
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-
       {isOpen && (
         <div style={mobileDetailsPanelStyle}>
+          <div style={mobileDetailSectionStyle}>
+            <div style={mobileDetailHeaderStyle}>
+              <div>
+                <div style={mobileDetailTitleStyle}>Project details</div>
+              </div>
+            </div>
+
+            <div style={mobileMetricsGridStyle}>
+              <MobileMetric label="Amount" value={project.amount || "—"} />
+
+              <MobileMetric
+                label="Deadline"
+                value={project.deadline || "—"}
+                customValueStyle={deadlineStyle}
+              />
+            </div>
+
+            <div style={mobileMetricsGridStyle}>
+              <div style={mobileFieldStackStyle}>
+                <label style={mobileFieldLabelStyle}>Priority</label>
+                {actionMode === "archived" ? (
+                  <div style={mobileReadOnlyMetaStyle}>
+                    {project.priority || "Medium"}
+                  </div>
+                ) : (
+                  <select
+                    value={project.priority || "Medium"}
+                    onChange={(e) => updateProjectPriority(e.target.value)}
+                    disabled={isBusy || !projectId}
+                    style={{
+                      ...mobileInputStyle,
+                      ...getPrioritySelectStyle(project.priority),
+                    }}
+                  >
+                    <option>Low</option>
+                    <option>Medium</option>
+                    <option>High</option>
+                  </select>
+                )}
+              </div>
+
+              <div style={mobileFieldStackStyle}>
+                <label style={mobileFieldLabelStyle}>Status</label>
+                {actionMode === "archived" ? (
+                  <div style={mobileReadOnlyMetaStyle}>
+                    {project.status || "New"}
+                  </div>
+                ) : (
+                  <select
+                    value={project.status || "New"}
+                    onChange={(e) => updateProjectStatus(e.target.value)}
+                    disabled={isBusy || !projectId}
+                    style={{
+                      ...mobileInputStyle,
+                      color: statusStyle.color,
+                      background: statusStyle.background,
+                      borderColor: statusStyle.borderColor,
+                    }}
+                  >
+                    <option value="New">New</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Review">Review</option>
+                    <option value="Urgent">Urgent</option>
+                    <option value="Done">Done</option>
+                  </select>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {onOpenProjectResources ||
+          onOpenProjectHistory ||
+          (actionMode !== "archived" && onOpenProjectUpdate && !isDeleting) ? (
+            <div style={mobileProjectActionsStyle}>
+              {onOpenProjectResources ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenProjectResources(project)}
+                  disabled={isDeleting}
+                  style={mobileSharedActionButtonStyle}
+                >
+                  Resources
+                  {projectResourceCount > 0 ? (
+                    <span style={mobileResourceCountStyle}>
+                      {projectResourceCount}
+                    </span>
+                  ) : null}
+                </button>
+              ) : null}
+
+              {actionMode !== "archived" &&
+              onOpenProjectUpdate &&
+              !isDeleting ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenProjectUpdate(project)}
+                  style={{
+                    ...mobileSharedActionButtonStyle,
+                    ...mobileUpdateActionButtonStyle,
+                  }}
+                >
+                  Add update
+                </button>
+              ) : null}
+
+              {onOpenProjectHistory ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenProjectHistory(project)}
+                  disabled={isDeleting}
+                  style={mobileSharedActionButtonStyle}
+                >
+                  History
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
           <div style={mobileDetailSectionStyle}>
             <div style={mobileDetailHeaderStyle}>
               <div>
@@ -890,16 +894,6 @@ const mobileClientStyle: CSSProperties = {
   fontSize: 13,
   fontWeight: 950,
   lineHeight: 1.15,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-};
-
-const mobileContactInlineStyle: CSSProperties = {
-  marginTop: 2,
-  fontSize: 11,
-  fontWeight: 760,
-  color: "#667085",
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",

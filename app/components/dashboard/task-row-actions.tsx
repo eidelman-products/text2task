@@ -7,6 +7,7 @@ type TaskRowActionsProps = {
   isDeleting: boolean;
   isCopied: boolean;
   actionMode?: TaskActionMode;
+  showCopy?: boolean;
   onCopy: (taskId: number) => void;
   onArchive?: (taskId: number) => void | Promise<void>;
   onRestore?: (taskId: number) => void | Promise<void>;
@@ -20,6 +21,7 @@ export default function TaskRowActions({
   isDeleting,
   isCopied,
   actionMode = "active",
+  showCopy = true,
   onCopy,
   onArchive,
   onRestore,
@@ -33,22 +35,24 @@ export default function TaskRowActions({
     <div className="task-row-actions" style={containerStyle}>
       <style>{actionsCss}</style>
 
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onCopy(taskId);
-        }}
-        disabled={isDeleting}
-        className="task-row-action-button"
-        style={{
-          ...baseButtonStyle,
-          ...(isCopied ? copiedButtonStyle : copyButtonStyle),
-        }}
-      >
-        <span style={buttonDotStyle(isCopied ? "green" : "blue")} />
-        {isCopied ? "Copied" : "Copy"}
-      </button>
+      {showCopy ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onCopy(taskId);
+          }}
+          disabled={isDeleting}
+          className="task-row-action-button"
+          style={{
+            ...baseButtonStyle,
+            ...(isCopied ? copiedButtonStyle : copyButtonStyle),
+          }}
+        >
+          <span style={buttonDotStyle(isCopied ? "green" : "blue")} />
+          {isCopied ? "Copied" : "Copy"}
+        </button>
+      ) : null}
 
       {isArchivedMode ? (
         <>
@@ -59,7 +63,7 @@ export default function TaskRowActions({
               onRestore?.(taskId);
             }}
             disabled={isDeleting}
-            className="task-row-action-button"
+            className="task-row-action-button task-row-action-button-restore"
             style={{
               ...baseButtonStyle,
               ...restoreButtonStyle,
@@ -76,7 +80,7 @@ export default function TaskRowActions({
               onPermanentDelete?.(taskId);
             }}
             disabled={isDeleting}
-            className="task-row-action-button"
+            className="task-row-action-button task-row-action-button-danger"
             style={{
               ...baseButtonStyle,
               ...dangerButtonStyle,
@@ -149,7 +153,9 @@ const baseButtonStyle: CSSProperties = {
   minWidth: 0,
   padding: "0 11px",
   borderRadius: 999,
-  border: "1px solid rgba(226,232,240,0.92)",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "rgba(226,232,240,0.92)",
   fontSize: 11,
   fontWeight: 900,
   cursor: "pointer",
@@ -186,17 +192,17 @@ const archiveButtonStyle: CSSProperties = {
 };
 
 const restoreButtonStyle: CSSProperties = {
-  color: "#15803d",
-  borderColor: "rgba(187,247,208,0.96)",
+  color: "#047857",
+  borderColor: "rgba(74,222,128,0.58)",
   background:
-    "linear-gradient(135deg, rgba(240,253,244,0.98) 0%, rgba(255,255,255,0.96) 100%)",
+    "linear-gradient(135deg, rgba(240,253,244,0.98) 0%, rgba(220,252,231,0.76) 100%)",
 };
 
 const dangerButtonStyle: CSSProperties = {
-  color: "#dc2626",
-  borderColor: "rgba(254,202,202,0.96)",
+  color: "#b42318",
+  borderColor: "rgba(248,113,113,0.52)",
   background:
-    "linear-gradient(135deg, rgba(254,242,242,0.98) 0%, rgba(255,255,255,0.96) 100%)",
+    "linear-gradient(135deg, rgba(254,242,242,0.98) 0%, rgba(254,226,226,0.70) 100%)",
 };
 
 const actionsCss = `

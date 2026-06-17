@@ -327,86 +327,6 @@ export default function DesktopTasksTable({
                         </span>
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => onOpenProjectResources(project)}
-                        disabled={!canManageResources || isProjectBusy}
-                        className="crm-soft-button-v6"
-                        title={
-                          hasProjectResources
-                            ? `${projectResourceCount} resource${
-                                projectResourceCount === 1 ? "" : "s"
-                              } attached`
-                            : canManageResources
-                              ? "Add links, files, logos, banners, and notes to this project"
-                              : "Resources are available for saved projects"
-                        }
-                        style={{
-                          ...resourcesButtonStyle,
-                          ...(hasProjectResources
-                            ? resourcesButtonActiveStyle
-                            : {}),
-                          opacity:
-                            !canManageResources || isProjectBusy ? 0.55 : 1,
-                          cursor:
-                            !canManageResources || isProjectBusy
-                              ? "not-allowed"
-                              : "pointer",
-                        }}
-                      >
-                        Resources
-                        {hasProjectResources ? (
-                          <span style={resourcesCountPillStyle}>
-                            {projectResourceCount}
-                          </span>
-                        ) : null}
-                      </button>
-
-                      {actionMode !== "archived" ? (
-                        <ProjectUpdateButton
-                          project={project}
-                          isDeleting={isProjectBusy}
-                          onOpenModal={onOpenProjectUpdate}
-                        />
-                      ) : null}
-
-                      <button
-                        type="button"
-                        onClick={() => onOpenProjectHistory(project)}
-                        disabled={!canManageResources || isProjectBusy}
-                        onMouseEnter={() =>
-                          setHoveredHistoryProjectKey(project.key)
-                        }
-                        onMouseLeave={() => setHoveredHistoryProjectKey(null)}
-                        className="crm-soft-button-v6"
-                        title={
-                          canManageResources
-                            ? "Review previous client updates for this project"
-                            : "History is available for saved projects"
-                        }
-                        style={
-                          !canManageResources || isProjectBusy
-                            ? historyStyles.historyButtonDisabledStyle
-                            : hoveredHistoryProjectKey === project.key
-                              ? historyStyles.historyButtonHoverStyle
-                              : historyStyles.historyButtonStyle
-                        }
-                      >
-                        History
-                      </button>
-
-                      <TaskRowActions
-                        taskId={project.primaryTask.id}
-                        isDeleting={isProjectBusy}
-                        isCopied={isCopied}
-                        actionMode={actionMode}
-                        pendingAction={projectPendingAction}
-                        onCopy={copyTask}
-                        onArchive={() => onArchiveProject(project)}
-                        onRestore={() => onRestoreProject(project)}
-                        onPermanentDelete={() => onRequestProjectDelete(project)}
-                      />
-
                       {actionMode === "archived" ? (
                         <span style={archivedProjectIndicatorStyle}>
                           Archived project
@@ -461,6 +381,93 @@ export default function DesktopTasksTable({
                     }}
                   >
                     <div style={detailsGridStyle}>
+                      <div style={expandedProjectActionsStyle}>
+                        <button
+                          type="button"
+                          onClick={() => onOpenProjectResources(project)}
+                          disabled={!canManageResources || isProjectBusy}
+                          className="crm-soft-button-v6"
+                          title={
+                            hasProjectResources
+                              ? `${projectResourceCount} resource${
+                                  projectResourceCount === 1 ? "" : "s"
+                                } attached`
+                              : canManageResources
+                                ? "Add links, files, logos, banners, and notes to this project"
+                                : "Resources are available for saved projects"
+                          }
+                          style={{
+                            ...resourcesButtonStyle,
+                            ...(hasProjectResources
+                              ? resourcesButtonActiveStyle
+                              : {}),
+                            opacity:
+                              !canManageResources || isProjectBusy ? 0.55 : 1,
+                            cursor:
+                              !canManageResources || isProjectBusy
+                                ? "not-allowed"
+                                : "pointer",
+                          }}
+                        >
+                          Resources
+                          {hasProjectResources ? (
+                            <span style={resourcesCountPillStyle}>
+                              {projectResourceCount}
+                            </span>
+                          ) : null}
+                        </button>
+
+                        {actionMode !== "archived" ? (
+                          <ProjectUpdateButton
+                            project={project}
+                            isDeleting={isProjectBusy}
+                            onOpenModal={onOpenProjectUpdate}
+                          />
+                        ) : null}
+
+                        <button
+                          type="button"
+                          onClick={() => onOpenProjectHistory(project)}
+                          disabled={!canManageResources || isProjectBusy}
+                          onMouseEnter={() =>
+                            setHoveredHistoryProjectKey(project.key)
+                          }
+                          onMouseLeave={() => setHoveredHistoryProjectKey(null)}
+                          className="crm-soft-button-v6"
+                          title={
+                            canManageResources
+                              ? "Review previous client updates for this project"
+                              : "History is available for saved projects"
+                          }
+                          style={
+                            !canManageResources || isProjectBusy
+                              ? historyStyles.historyButtonDisabledStyle
+                              : hoveredHistoryProjectKey === project.key
+                                ? historyStyles.historyButtonHoverStyle
+                                : historyStyles.historyButtonStyle
+                          }
+                        >
+                          History
+                        </button>
+
+                        <TaskRowActions
+                          taskId={project.primaryTask.id}
+                          isDeleting={isProjectBusy}
+                          isCopied={isCopied}
+                          actionMode={actionMode}
+                          {...(actionMode === "archived"
+                            ? { showCopy: false }
+                            : {})}
+                          pendingAction={projectPendingAction}
+                          onCopy={copyTask}
+                          onArchive={() => onArchiveProject(project)}
+                          onRestore={() => onRestoreProject(project)}
+                          onPermanentDelete={() =>
+                            onRequestProjectDelete(project)
+                          }
+                        />
+                      </div>
+
                       <ClientContactEditor
                         project={project}
                         isDeleting={isProjectBusy}
@@ -878,7 +885,7 @@ const projectHeroStyle: CSSProperties = {
   zIndex: 1,
   display: "grid",
   gridTemplateColumns:
-    "24px minmax(610px, 1.18fr) minmax(520px, 0.82fr)",
+    "24px minmax(500px, 0.95fr) minmax(560px, 1.05fr)",
   gap: 14,
   alignItems: "center",
   padding: "14px 14px 13px 18px",
@@ -908,6 +915,15 @@ const projectQuickActionsStyle: CSSProperties = {
   minWidth: 0,
 };
 
+const expandedProjectActionsStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  flexWrap: "wrap",
+  minWidth: 0,
+  padding: "0 0 2px",
+};
+
 const archivedProjectIndicatorStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
@@ -922,8 +938,8 @@ const archivedProjectIndicatorStyle: CSSProperties = {
 const projectMetaWrapStyle: CSSProperties = {
   minWidth: 0,
   width: "100%",
-  maxWidth: 610,
-  justifySelf: "end",
+  maxWidth: 590,
+  justifySelf: "start",
 };
 
 const detailsButtonStyle: CSSProperties = {
@@ -934,7 +950,9 @@ const detailsButtonStyle: CSSProperties = {
   minHeight: 31,
   padding: "0 10px",
   borderRadius: 999,
-  border: "1px solid rgba(191,219,254,0.68)",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "rgba(191,219,254,0.68)",
   background: "rgba(239,246,255,0.70)",
   color: "#1d4ed8",
   fontSize: 11.5,
@@ -983,7 +1001,9 @@ const resourcesButtonStyle: CSSProperties = {
   minHeight: 31,
   padding: "0 10px",
   borderRadius: 999,
-  border: "1px solid rgba(203,213,225,0.64)",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "rgba(203,213,225,0.64)",
   background: "rgba(255,255,255,0.72)",
   color: "#1d4ed8",
   fontSize: 11.5,
@@ -1184,6 +1204,29 @@ const desktopTasksCss = `
     display: none !important;
   }
 
+  .crm-project-card-v6 .project-header-edit-shell-client {
+    width: min(310px, 100%) !important;
+  }
+
+  .crm-project-card-v6 .project-header-edit-shell-client::before {
+    content: "CLIENT";
+    flex: 0 0 auto;
+    margin-left: 7px;
+    color: #94a3b8;
+    font-size: 8.8px;
+    font-weight: 950;
+    letter-spacing: 0.12em;
+    line-height: 1;
+  }
+
+  .crm-project-card-v6 .project-header-editor-input-client {
+    color: #64748b !important;
+    font-size: 12.4px !important;
+    font-weight: 780 !important;
+    letter-spacing: 0 !important;
+    padding-left: 6px !important;
+  }
+
   .crm-project-card-v6:hover {
     background: #ffffff !important;
   }
@@ -1220,6 +1263,28 @@ const desktopTasksCss = `
   .crm-project-card-v6 .task-row-action-button span {
     background: #3b82f6 !important;
     box-shadow: 0 0 0 3px rgba(59,130,246,0.12) !important;
+  }
+
+  .crm-project-card-v6 .task-row-action-button-restore {
+    border-color: rgba(74,222,128,0.58) !important;
+    background: linear-gradient(135deg, rgba(240,253,244,0.98) 0%, rgba(220,252,231,0.76) 100%) !important;
+    color: #047857 !important;
+  }
+
+  .crm-project-card-v6 .task-row-action-button-restore span {
+    background: #22c55e !important;
+    box-shadow: 0 0 0 3px rgba(34,197,94,0.14) !important;
+  }
+
+  .crm-project-card-v6 .task-row-action-button-danger {
+    border-color: rgba(248,113,113,0.52) !important;
+    background: linear-gradient(135deg, rgba(254,242,242,0.98) 0%, rgba(254,226,226,0.70) 100%) !important;
+    color: #b42318 !important;
+  }
+
+  .crm-project-card-v6 .task-row-action-button-danger span {
+    background: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.14) !important;
   }
 
   .project-meta-compact-v6 input:focus,

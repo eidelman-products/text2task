@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type React from "react";
 import {
   dashboardColors,
@@ -109,12 +110,25 @@ function formatDashboardDate(value: string | null) {
   }).format(date);
 }
 
+function hasDisplayValue(value: string, missingLabels: string[]) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  if (!normalized) return false;
+  if (missingLabels.includes(normalized)) return false;
+  if (/^[\u2013\u2014-]+$/.test(normalized)) return false;
+  if (normalized === "\u00e2\u20ac\u201d") return false;
+
+  return true;
+}
+
 function WorkRow({
   project,
-  index,
+  isOpen,
+  onToggle,
 }: {
   project: ProjectSnapshotItem;
-  index: number;
+  isOpen: boolean;
+  onToggle: () => void;
 }) {
   const clientName = getSafeValue(project.clientName, "Unassigned client");
   const title = getSafeValue(project.title, "Untitled project");
@@ -122,71 +136,106 @@ function WorkRow({
     project.summary,
     "Recently added project from your CRM workspace."
   );
-  const amount = getSafeValue(project.amount, "No amount");
-  const deadline = getSafeValue(project.deadline, "No deadline");
+  const amount = String(project.amount || "").trim();
+  const deadline = String(project.deadline || "").trim();
   const priority = getSafeValue(project.priority, "Normal");
   const status = getSafeValue(project.status, "New");
   const createdDate = formatDashboardDate(project.createdAt);
-  const hasDeadline = deadline.toLowerCase() !== "no deadline";
-  const dueDate = hasDeadline ? formatDashboardDate(deadline) : "";
+  const dueDate = hasDisplayValue(deadline, ["no deadline"])
+    ? formatDashboardDate(deadline)
+    : "";
+  const amountLabel = hasDisplayValue(amount, ["no amount"]) ? amount : "";
   const showPriority = ["high", "urgent"].includes(priority.toLowerCase());
+  const showStatus = status.toLowerCase() !== "new";
   const progressLabel = `${project.completedTaskCount}/${project.taskCount} done`;
   const metadataItems = [
-    createdDate ? `Created ${createdDate}` : "",
-    dueDate ? `Due ${dueDate}` : "",
-    progressLabel,
-    amount,
-  ].filter(Boolean);
+    createdDate ? { label: "Created", value: createdDate } : null,
+    dueDate ? { label: "Due", value: dueDate } : null,
+    { label: "Progress", value: progressLabel },
+    amountLabel ? { label: "Amount", value: amountLabel } : null,
+  ].filter(
+    (item): item is { label: string; value: string } => Boolean(item)
+  );
 
   return (
-    <button
-      type="button"
-      onClick={() => openTaskInNewWindow(project.id)}
-      className="recent-work-row"
-      style={rowStyle}
-      aria-label={`Open ${title}`}
+    <article
+      className={`recent-work-card${isOpen ? " is-open" : ""}`}
+      style={cardStyle}
     >
-      <div style={rowNumberWrapStyle}>
-        <span style={rowNumberStyle}>{String(index + 1).padStart(2, "0")}</span>
-      </div>
-
-      <div style={rowMainStyle}>
-        <div className="recent-work-row-top" style={rowTopLineStyle}>
-          <div style={rowTitleWrapStyle}>
-            <div style={rowTitleStyle}>{title}</div>
-            <div style={rowSubtitleStyle}>{clientName}</div>
-          </div>
-
-          <div style={rowRightStyle}>
-            <span style={{ ...pillStyle, ...getStatusPillStyle(status) }}>
-              {status}
-            </span>
-
-            <span className="recent-work-arrow" style={rowArrowStyle}>
-              Open →
-            </span>
-          </div>
+      <div className="recent-work-card-header" style={cardHeaderStyle}>
+        <div style={cardTitleWrapStyle}>
+          <div style={cardTitleStyle}>{title}</div>
+          <div style={cardClientStyle}>{clientName}</div>
         </div>
 
-        <div style={rowSummaryStyle}>{summary}</div>
+        <button
+          type="button"
+          className="recent-work-toggle-button"
+          onClick={onToggle}
+          aria-expanded={isOpen}
+          aria-controls={`recent-work-details-${project.id}`}
+          style={detailsToggleButtonStyle}
+        >
+          <span className="recent-work-toggle-label-desktop">
+            {isOpen ? "Hide details" : "Open details"}
+          </span>
+          <span className="recent-work-toggle-label-mobile">
+            {isOpen ? "Hide details" : "Open details"}
+          </span>
+        </button>
+      </div>
 
-        <div style={rowMetaStyle}>
-          {metadataItems.map((item, itemIndex) => (
-            <span key={`${item}-${itemIndex}`} style={metaItemStyle}>
-              {itemIndex > 0 ? (
-                <span style={metaSeparatorStyle}>{"\u00b7"}</span>
+      {isOpen ? (
+        <div
+          id={`recent-work-details-${project.id}`}
+          style={expandedDetailsStyle}
+        >
+          <div style={detailsSeparatorStyle} />
+
+          <p style={detailsSummaryStyle}>{summary}</p>
+
+          <div className="recent-work-details-lower" style={detailsLowerStyle}>
+            <div style={detailsMetaStyle}>
+              {metadataItems.map((item) => (
+                <span key={item.label} style={detailsMetaItemStyle}>
+                  <span style={detailsMetaLabelStyle}>{item.label}</span>
+                  <span style={detailsMetaValueStyle}>{item.value}</span>
+                </span>
+              ))}
+
+              {showStatus ? (
+                <span style={{ ...pillStyle, ...getStatusPillStyle(status) }}>
+                  {status}
+                </span>
               ) : null}
-              <span style={metaTextStyle}>{item}</span>
-            </span>
-          ))}
-          {showPriority ? (
-            <span style={{ ...pillStyle, ...getPriorityPillStyle(priority) }}>
-              {priority}
-            </span>
-          ) : null}
+
+              {showPriority ? (
+                <span
+                  style={{ ...pillStyle, ...getPriorityPillStyle(priority) }}
+                >
+                  {priority}
+                </span>
+              ) : null}
+            </div>
+
+            <div
+              className="recent-work-details-footer"
+              style={detailsFooterStyle}
+            >
+              <button
+                type="button"
+                className="recent-work-open-button"
+                onClick={() => openTaskInNewWindow(project.id)}
+                aria-label={`Open project ${title}`}
+                style={openProjectButtonStyle}
+              >
+                Open project {"\u2192"}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </button>
+      ) : null}
+    </article>
   );
 }
 
@@ -195,8 +244,13 @@ export default function DashboardProjectsSnapshot({
   onGoToTasks,
   onGoToExtract,
 }: Props) {
+  const [openProjectId, setOpenProjectId] = useState<number | null>(null);
   const visibleProjects = projects.slice(0, 5);
   const hasProjects = visibleProjects.length > 0;
+
+  const toggleProjectDetails = (projectId: number) => {
+    setOpenProjectId((current) => (current === projectId ? null : projectId));
+  };
 
   return (
     <section className="projects-snapshot-root" style={shellStyle}>
@@ -216,7 +270,12 @@ export default function DashboardProjectsSnapshot({
             <span style={countTextStyle}>{visibleProjects.length} latest</span>
           ) : null}
 
-          <button type="button" onClick={onGoToTasks} style={viewAllButtonStyle}>
+          <button
+            type="button"
+            className="recent-work-view-all"
+            onClick={onGoToTasks}
+            style={viewAllButtonStyle}
+          >
             View all →
           </button>
         </div>
@@ -224,8 +283,13 @@ export default function DashboardProjectsSnapshot({
 
       {hasProjects ? (
         <div className="recent-work-list" style={listStyle}>
-          {visibleProjects.map((project, index) => (
-            <WorkRow key={project.id} project={project} index={index} />
+          {visibleProjects.map((project) => (
+            <WorkRow
+              key={project.id}
+              project={project}
+              isOpen={openProjectId === project.id}
+              onToggle={() => toggleProjectDetails(project.id)}
+            />
           ))}
         </div>
       ) : (
@@ -238,7 +302,11 @@ export default function DashboardProjectsSnapshot({
             </div>
           </div>
 
-          <button type="button" onClick={onGoToExtract} style={emptyButtonStyle}>
+          <button
+            type="button"
+            onClick={onGoToExtract}
+            style={emptyButtonStyle}
+          >
             Extract request →
           </button>
         </div>
@@ -257,23 +325,42 @@ const responsiveCss = `
     font-family: inherit;
   }
 
-  .recent-work-row {
+  .recent-work-toggle-label-mobile {
+    display: none;
+  }
+
+  .recent-work-card,
+  .recent-work-toggle-button,
+  .recent-work-open-button,
+  .recent-work-view-all {
     transition:
       transform 170ms ease,
       box-shadow 170ms ease,
       border-color 170ms ease,
-      background 170ms ease;
+      background 170ms ease,
+      color 170ms ease;
   }
 
-  .recent-work-row:hover {
+  .recent-work-card:hover {
     transform: translateY(-1px);
     border-color: rgba(37, 99, 235, 0.18) !important;
-    background: rgba(255, 255, 255, 0.98) !important;
+    background: #ffffff !important;
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.055) !important;
   }
 
-  .recent-work-row:hover .recent-work-arrow {
+  .recent-work-toggle-button:hover,
+  .recent-work-view-all:hover {
+    border-color: rgba(37, 99, 235, 0.28) !important;
+    background: #ffffff !important;
     color: #1d4ed8 !important;
+    transform: translateY(-1px);
+  }
+
+  .recent-work-open-button:hover {
+    background: #1e40af !important;
+    border-color: #1e40af !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
   }
 
   @media (max-width: 720px) {
@@ -281,17 +368,65 @@ const responsiveCss = `
       padding: 0 !important;
     }
 
-    .recent-work-row {
-      grid-template-columns: minmax(0, 1fr) !important;
+    .recent-work-card {
+      border-color: rgba(226, 232, 240, 0.9) !important;
+      background: #ffffff !important;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.035) !important;
+      padding: 12px 12px !important;
     }
 
-    .recent-work-row > div:first-child {
+    .recent-work-card:hover {
+      transform: translateY(-1px) !important;
+      border-color: rgba(203, 213, 225, 0.95) !important;
+      background: #ffffff !important;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.045) !important;
+    }
+
+    .recent-work-card-header {
+      align-items: stretch !important;
+      flex-direction: column !important;
+      gap: 6px !important;
+    }
+
+    .recent-work-details-lower {
+      align-items: stretch !important;
+      flex-direction: column !important;
+    }
+
+    .recent-work-toggle-button {
+      align-self: flex-start !important;
+      width: auto !important;
+      justify-content: center !important;
+      border-color: rgba(203, 213, 225, 0.9) !important;
+      background: rgba(248, 250, 252, 0.86) !important;
+      box-shadow: none !important;
+      color: #475569 !important;
+      padding: 7px 9px !important;
+      font-size: 11.5px !important;
+    }
+
+    .recent-work-toggle-button:hover {
+      border-color: rgba(148, 163, 184, 0.78) !important;
+      background: #ffffff !important;
+      color: #334155 !important;
+      transform: translateY(-1px) !important;
+    }
+
+    .recent-work-toggle-label-desktop {
       display: none !important;
     }
 
-    .recent-work-row-top {
-      align-items: stretch !important;
-      flex-direction: column !important;
+    .recent-work-toggle-label-mobile {
+      display: inline !important;
+    }
+
+    .recent-work-open-button {
+      width: 100% !important;
+      justify-content: center !important;
+    }
+
+    .recent-work-details-footer {
+      justify-content: stretch !important;
     }
   }
 `;
@@ -374,77 +509,48 @@ const listStyle: React.CSSProperties = {
   gap: dashboardSpacing[2],
 };
 
-const rowStyle: React.CSSProperties = {
+const cardStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 0,
-  minHeight: 70,
   borderRadius: dashboardRadii.lg,
-  padding: "11px 12px",
+  padding: "13px 14px",
   border: `1px solid ${dashboardColors.border.subtle}`,
-  background: "rgba(255, 255, 255, 0.78)",
-  boxShadow: "none",
-  cursor: "pointer",
-  textAlign: "left",
+  background: dashboardColors.background.surface,
+  boxShadow: dashboardShadows.xs,
   display: "grid",
-  gridTemplateColumns: "32px minmax(0, 1fr)",
-  gap: dashboardSpacing[3],
-  alignItems: "start",
+  gap: 0,
+  overflow: "hidden",
 };
 
-const rowNumberWrapStyle: React.CSSProperties = {
-  display: "grid",
-  justifyItems: "center",
-  gap: 6,
-  paddingTop: 2,
-};
-
-const rowNumberStyle: React.CSSProperties = {
-  width: 26,
-  height: 26,
-  borderRadius: dashboardRadii.full,
-  display: "grid",
-  placeItems: "center",
-  color: dashboardColors.primary[700],
-  background: dashboardColors.primary[50],
-  border: `1px solid ${dashboardColors.primary[100]}`,
-  fontSize: 10,
-  lineHeight: 1,
-  fontWeight: dashboardTypography.weight.black,
-};
-
-const rowMainStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 6,
-  minWidth: 0,
-};
-
-const rowTopLineStyle: React.CSSProperties = {
+const cardHeaderStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   gap: dashboardSpacing[3],
-  alignItems: "flex-start",
+  alignItems: "center",
   minWidth: 0,
 };
 
-const rowTitleWrapStyle: React.CSSProperties = {
+const cardTitleWrapStyle: React.CSSProperties = {
   minWidth: 0,
   display: "grid",
-  gap: 3,
+  gap: 4,
+  flex: "1 1 auto",
 };
 
-const rowTitleStyle: React.CSSProperties = {
+const cardTitleStyle: React.CSSProperties = {
   color: dashboardColors.text.primary,
   fontSize: 14,
   lineHeight: dashboardTypography.lineHeight.snug,
   fontWeight: dashboardTypography.weight.black,
-  letterSpacing: "-0.03em",
+  letterSpacing: 0,
   display: "-webkit-box",
-  WebkitLineClamp: 1,
+  WebkitLineClamp: 2,
   WebkitBoxOrient: "vertical",
   overflow: "hidden",
+  overflowWrap: "anywhere",
 };
 
-const rowSubtitleStyle: React.CSSProperties = {
+const cardClientStyle: React.CSSProperties = {
   color: dashboardColors.text.muted,
   fontSize: 11.5,
   lineHeight: dashboardTypography.lineHeight.snug,
@@ -454,11 +560,22 @@ const rowSubtitleStyle: React.CSSProperties = {
   whiteSpace: "nowrap",
 };
 
-const rowRightStyle: React.CSSProperties = {
+const detailsToggleButtonStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  gap: dashboardSpacing[2],
+  justifyContent: "center",
   flexShrink: 0,
+  border: `1px solid ${dashboardColors.border.default}`,
+  background: "rgba(255, 255, 255, 0.94)",
+  color: dashboardColors.primary[700],
+  borderRadius: dashboardRadii.full,
+  padding: "8px 11px",
+  fontSize: 11.5,
+  lineHeight: 1,
+  fontWeight: dashboardTypography.weight.black,
+  cursor: "pointer",
+  boxShadow: dashboardShadows.xs,
+  whiteSpace: "nowrap",
 };
 
 const pillStyle: React.CSSProperties = {
@@ -470,54 +587,98 @@ const pillStyle: React.CSSProperties = {
   whiteSpace: "nowrap",
 };
 
-const rowArrowStyle: React.CSSProperties = {
-  color: dashboardColors.primary[700],
-  fontSize: 11.5,
-  lineHeight: 1,
-  fontWeight: dashboardTypography.weight.black,
-  transition: "color 170ms ease",
-  whiteSpace: "nowrap",
+const expandedDetailsStyle: React.CSSProperties = {
+  display: "grid",
+  gap: dashboardSpacing[2],
+  minWidth: 0,
+  paddingTop: dashboardSpacing[3],
 };
 
-const rowSummaryStyle: React.CSSProperties = {
+const detailsSeparatorStyle: React.CSSProperties = {
+  width: "100%",
+  height: 1,
+  background: dashboardColors.border.subtle,
+};
+
+const detailsSummaryStyle: React.CSSProperties = {
+  margin: 0,
   color: dashboardColors.text.muted,
-  fontSize: 11.75,
+  fontSize: 12.25,
   lineHeight: dashboardTypography.lineHeight.normal,
   fontWeight: dashboardTypography.weight.medium,
   display: "-webkit-box",
-  WebkitLineClamp: 1,
+  WebkitLineClamp: 3,
   WebkitBoxOrient: "vertical",
   overflow: "hidden",
+  overflowWrap: "anywhere",
 };
 
-const rowMetaStyle: React.CSSProperties = {
+const detailsLowerStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-  columnGap: 9,
-  rowGap: 7,
-  flexWrap: "wrap",
-  paddingTop: 1,
+  justifyContent: "space-between",
+  gap: dashboardSpacing[3],
+  minWidth: 0,
 };
 
-const metaItemStyle: React.CSSProperties = {
-  display: "inline-flex",
+const detailsMetaStyle: React.CSSProperties = {
+  display: "flex",
   alignItems: "center",
-  gap: 9,
+  columnGap: dashboardSpacing[3],
+  rowGap: dashboardSpacing[3],
+  flexWrap: "wrap",
+  flex: "1 1 auto",
+  minWidth: 0,
 };
 
-const metaTextStyle: React.CSSProperties = {
-  color: dashboardColors.text.secondary,
-  fontSize: 11,
+const detailsMetaItemStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "baseline",
+  gap: 5,
+  minWidth: 0,
+};
+
+const detailsMetaLabelStyle: React.CSSProperties = {
+  color: dashboardColors.text.subtle,
+  fontSize: 10,
   lineHeight: 1.2,
-  fontWeight: dashboardTypography.weight.bold,
+  fontWeight: dashboardTypography.weight.black,
+  textTransform: "uppercase",
+  letterSpacing: 0,
   whiteSpace: "nowrap",
 };
 
-const metaSeparatorStyle: React.CSSProperties = {
-  color: dashboardColors.text.subtle,
-  fontSize: 10,
-  lineHeight: 1,
+const detailsMetaValueStyle: React.CSSProperties = {
+  color: dashboardColors.text.secondary,
+  fontSize: 11.5,
+  lineHeight: 1.2,
   fontWeight: dashboardTypography.weight.bold,
+  overflowWrap: "anywhere",
+};
+
+const detailsFooterStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "flex-end",
+  alignItems: "center",
+  flex: "0 0 auto",
+  minWidth: 0,
+};
+
+const openProjectButtonStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  border: `1px solid ${dashboardColors.primary[100]}`,
+  background: dashboardColors.primary[50],
+  color: dashboardColors.primary[700],
+  borderRadius: dashboardRadii.full,
+  padding: "9px 12px",
+  fontSize: 12,
+  lineHeight: 1,
+  fontWeight: dashboardTypography.weight.black,
+  cursor: "pointer",
+  boxShadow: dashboardShadows.xs,
+  whiteSpace: "nowrap",
 };
 
 const emptyStyle: React.CSSProperties = {

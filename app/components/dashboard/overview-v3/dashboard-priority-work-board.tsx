@@ -234,14 +234,11 @@ export default function DashboardPriorityWorkBoard({
   summary,
   onGoToTasks,
 }: Props) {
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [openGroupKey, setOpenGroupKey] = useState<string | null>(null);
   const hasGroups = summary.groups.length > 0;
 
   function toggleGroup(key: string) {
-    setOpenGroups((current) => ({
-      ...current,
-      [key]: !current[key],
-    }));
+    setOpenGroupKey((current) => (current === key ? null : key));
   }
 
   return (
@@ -268,7 +265,7 @@ export default function DashboardPriorityWorkBoard({
             <PriorityProjectCard
               key={group.key}
               group={group}
-              isOpen={Boolean(openGroups[group.key])}
+              isOpen={openGroupKey === group.key}
               onToggle={() => toggleGroup(group.key)}
             />
           ))}
@@ -346,8 +343,29 @@ const responsiveCss = `
       gap: 12px !important;
     }
 
+    .priority-project-card {
+      background: #ffffff !important;
+      border-color: rgba(226, 232, 240, 0.9) !important;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.035) !important;
+    }
+
     .priority-details-button {
+      width: auto !important;
       justify-self: start !important;
+      border-color: rgba(203, 213, 225, 0.9) !important;
+      background: rgba(248, 250, 252, 0.86) !important;
+      color: #475569 !important;
+      box-shadow: none !important;
+      padding: 7px 10px !important;
+      font-size: 11.5px !important;
+    }
+
+    .priority-details-button:hover {
+      border-color: rgba(148, 163, 184, 0.78) !important;
+      background: #ffffff !important;
+      color: #334155 !important;
+      box-shadow: none !important;
+      transform: translateY(-1px) !important;
     }
   }
 

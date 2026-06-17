@@ -432,6 +432,8 @@ const countTextStyle: React.CSSProperties = {
 
 const listStyle: React.CSSProperties = {
   width: "100%",
+  maxWidth: 820,
+  justifySelf: "start",
   display: "grid",
   gap: dashboardSpacing[2],
 };
