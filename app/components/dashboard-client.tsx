@@ -13,6 +13,7 @@ import ExtractWorkspace from "./dashboard/extract-workspace";
 import DashboardShell from "./dashboard/dashboard-shell";
 import DashboardSidebarProfile from "./dashboard/dashboard-sidebar-profile";
 import DashboardHeader from "./dashboard/dashboard-header";
+import FirstRunDashboard from "./dashboard/first-run-dashboard";
 import DashboardOverviewV3 from "./dashboard/overview-v3/dashboard-overview-v3";
 import {
   buildFilteredGroupedTasks,
@@ -44,6 +45,13 @@ type TasksSnapshot = {
   activeTasks: TaskRow[];
   archivedTasks: TaskRow[];
   statsTasks: TaskRow[];
+  savedWork: SavedWorkState | null;
+};
+
+type SavedWorkState = {
+  projectCount: number;
+  taskCount: number;
+  hasSavedWork: boolean;
 };
 
 type ProjectUpdateAppliedResult = {
@@ -311,6 +319,7 @@ export default function DashboardClient({
 
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [allTasksForStats, setAllTasksForStats] = useState<TaskRow[]>([]);
+  const [savedWork, setSavedWork] = useState<SavedWorkState | null>(null);
   const [archiveView, setArchiveView] = useState<TaskArchiveView>("active");
 
   const [isLoadingTasks, setIsLoadingTasks] = useState(true);
@@ -484,12 +493,27 @@ export default function DashboardClient({
 
     const normalizeRows = (rows: unknown) =>
       Array.isArray(rows) ? rows.map(normalizeTaskFromApi) : [];
+    const rawSavedWork =
+      data.savedWork && typeof data.savedWork === "object"
+        ? data.savedWork
+        : null;
+    const projectCount = Number(rawSavedWork?.projectCount);
+    const taskCount = Number(rawSavedWork?.taskCount);
+    const normalizedSavedWork =
+      Number.isFinite(projectCount) && Number.isFinite(taskCount)
+        ? {
+            projectCount,
+            taskCount,
+            hasSavedWork: projectCount > 0 || taskCount > 0,
+          }
+        : null;
 
     return {
       tasks: normalizeRows(data.tasks),
       activeTasks: normalizeRows(data.activeTasks),
       archivedTasks: normalizeRows(data.archivedTasks),
       statsTasks: normalizeRows(data.statsTasks),
+      savedWork: normalizedSavedWork,
     };
   }
 
@@ -502,6 +526,7 @@ export default function DashboardClient({
       statsTasks: mappedStatsTasks,
       activeTasks: mappedActiveTasks,
       archivedTasks: mappedArchivedTasks,
+      savedWork: mappedSavedWork,
     } = await fetchTasksSnapshot(viewOverride);
 
     const pendingDashboardSnapshot = dashboardTaskSnapshotRef.current;
@@ -545,6 +570,7 @@ export default function DashboardClient({
 
     setTasks(nextTasks);
     setAllTasksForStats(nextStatsTasks);
+    setSavedWork(mappedSavedWork);
 
     if (pendingDashboardSnapshot) {
       dashboardTaskSnapshotRef.current = null;
@@ -625,6 +651,7 @@ export default function DashboardClient({
       statsTasks: mappedStatsTasks,
       activeTasks: mappedActiveTasks,
       archivedTasks: mappedArchivedTasks,
+      savedWork: mappedSavedWork,
     } = await fetchTasksSnapshot(archiveView);
 
     setAllTasksForStats(
@@ -634,6 +661,7 @@ export default function DashboardClient({
         archivedTasks: mappedArchivedTasks,
       })
     );
+    setSavedWork(mappedSavedWork);
   }
 
   async function handleBilling() {
@@ -791,6 +819,11 @@ export default function DashboardClient({
         ),
       })
     );
+    setSavedWork((current) => ({
+      projectCount: Math.max(current?.projectCount ?? 0, 1),
+      taskCount: (current?.taskCount ?? 0) + cleanRows.length,
+      hasSavedWork: true,
+    }));
 
     toast.success("Tasks saved", {
       description:
@@ -1685,28 +1718,36 @@ export default function DashboardClient({
   }
 
   function renderDashboard() {
+    const showFirstRunDashboard =
+      !isLoadingTasks && savedWork?.hasSavedWork === false;
+
     return (
       <div className="dashboard-page-root" style={dashboardPageRootStyle}>
         <style>{dashboardResponsiveCss}</style>
 
-        
-
-        <DashboardOverviewV3
-          openTasks={stats.open}
-          highPriority={stats.high}
-          doneTasks={stats.done}
-          progress={progressStats}
-          urgentTasks={urgentPreviewTasks}
-          overdueCount={dashboardAlerts.counts.overdue}
-          dueTodayCount={dashboardAlerts.counts.dueToday}
-          dueTomorrowCount={dashboardAlerts.counts.dueTomorrow}
-          dueSoonCount={dashboardAlerts.counts.dueSoon}
-          activeTasks={activeTasksForStats}
-          analytics={incomeAnalytics}
-          userEmail={email}
-          onGoToExtract={() => handleNavChange("extract")}
-          onGoToTasks={() => handleNavChange("tasks")}
-        />
+        {showFirstRunDashboard ? (
+          <FirstRunDashboard
+            onExtractFirstRequest={() => handleNavChange("extract")}
+            onTryExample={() => handleNavChange("extract")}
+          />
+        ) : (
+          <DashboardOverviewV3
+            openTasks={stats.open}
+            highPriority={stats.high}
+            doneTasks={stats.done}
+            progress={progressStats}
+            urgentTasks={urgentPreviewTasks}
+            overdueCount={dashboardAlerts.counts.overdue}
+            dueTodayCount={dashboardAlerts.counts.dueToday}
+            dueTomorrowCount={dashboardAlerts.counts.dueTomorrow}
+            dueSoonCount={dashboardAlerts.counts.dueSoon}
+            activeTasks={activeTasksForStats}
+            analytics={incomeAnalytics}
+            userEmail={email}
+            onGoToExtract={() => handleNavChange("extract")}
+            onGoToTasks={() => handleNavChange("tasks")}
+          />
+        )}
       </div>
     );
   }

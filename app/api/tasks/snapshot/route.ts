@@ -11,6 +11,28 @@ export const revalidate = 0;
 
 type SnapshotTasksView = Exclude<DashboardTasksView, "stats">;
 
+async function countSavedWorkRows({
+  supabase,
+  userId,
+  table,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  table: "projects" | "tasks";
+}) {
+  const { count, error } = await supabase
+    .from(table)
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .is("deleted_at", null);
+
+  if (error) {
+    throw new Error(error.message || `Failed to count ${table}.`);
+  }
+
+  return count ?? 0;
+}
+
 function normalizeSnapshotView(value: string | null): SnapshotTasksView {
   if (value === "archived") return "archived";
   if (value === "all") return "all";
@@ -33,7 +55,14 @@ export async function GET(req: NextRequest) {
     }
 
     const view = normalizeSnapshotView(new URL(req.url).searchParams.get("view"));
-    const [activeTasks, archivedTasks, statsTasks, allTasks] = await Promise.all([
+    const [
+      activeTasks,
+      archivedTasks,
+      statsTasks,
+      allTasks,
+      projectCount,
+      taskCount,
+    ] = await Promise.all([
       loadDashboardTasksForUser({
         supabase,
         userId: user.id,
@@ -56,6 +85,16 @@ export async function GET(req: NextRequest) {
             view: "all",
           })
         : Promise.resolve(null),
+      countSavedWorkRows({
+        supabase,
+        userId: user.id,
+        table: "projects",
+      }),
+      countSavedWorkRows({
+        supabase,
+        userId: user.id,
+        table: "tasks",
+      }),
     ]);
     const tasks =
       view === "active"
@@ -63,6 +102,11 @@ export async function GET(req: NextRequest) {
         : view === "archived"
           ? archivedTasks
           : allTasks ?? [];
+    const savedWork = {
+      projectCount,
+      taskCount,
+      hasSavedWork: projectCount > 0 || taskCount > 0,
+    };
 
     return NextResponse.json(
       {
@@ -72,6 +116,7 @@ export async function GET(req: NextRequest) {
         activeTasks,
         archivedTasks,
         statsTasks,
+        savedWork,
       },
       {
         headers: dashboardTasksNoStoreHeaders,
