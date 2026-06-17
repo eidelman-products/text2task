@@ -5,6 +5,7 @@ import type React from "react";
 
 type SearchParams = {
   error?: string;
+  email?: string;
   confirmed?: string;
   reset?: string;
 };
@@ -17,6 +18,8 @@ function getErrorMessage(error?: string) {
   switch (error) {
     case "invalid_credentials":
       return "Invalid login credentials.";
+    case "email_not_confirmed":
+      return "Please confirm your email before logging in. We sent you a confirmation link.";
     case "invalid_confirmation_link":
       return "The confirmation link is invalid or incomplete.";
     case "confirmation_failed":
@@ -36,11 +39,26 @@ function getErrorMessage(error?: string) {
   }
 }
 
+function getSafeEmailParam(email?: string) {
+  const value = email?.trim() ?? "";
+
+  if (!value || value.length > 140) {
+    return "";
+  }
+
+  return value;
+}
+
 export default async function LoginPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {};
   const errorMessage = getErrorMessage(params.error);
   const confirmed = params.confirmed === "1";
   const reset = params.reset === "1";
+  const email = getSafeEmailParam(params.email);
+  const checkEmailHref = email
+    ? `/check-email?email=${encodeURIComponent(email)}`
+    : "/check-email";
+  const showCheckEmailLink = params.error === "email_not_confirmed";
 
   return (
     <main className="login-page" style={pageStyle}>
@@ -83,6 +101,12 @@ export default async function LoginPage({ searchParams }: PageProps) {
 
         {errorMessage ? <div style={errorStyle}>{errorMessage}</div> : null}
 
+        {showCheckEmailLink ? (
+          <Link href={checkEmailHref} style={confirmationLinkStyle}>
+            Open confirmation instructions
+          </Link>
+        ) : null}
+
         <GoogleAuthButton label="Continue with Google" next="/dashboard" />
 
         <div style={dividerStyle}>
@@ -109,6 +133,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
               required
               autoComplete="email"
               placeholder="you@example.com"
+              defaultValue={email}
               style={inputStyle}
             />
           </div>
@@ -340,6 +365,23 @@ const errorStyle: React.CSSProperties = {
   fontWeight: 800,
   lineHeight: 1.5,
   textAlign: "center",
+};
+
+const confirmationLinkStyle: React.CSSProperties = {
+  width: "100%",
+  minHeight: 48,
+  borderRadius: 14,
+  border: "1px solid #bfdbfe",
+  background: "#eff6ff",
+  color: "#1d4ed8",
+  fontSize: 14,
+  fontWeight: 850,
+  textDecoration: "none",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "0 14px",
+  boxSizing: "border-box",
 };
 
 const dividerStyle: React.CSSProperties = {

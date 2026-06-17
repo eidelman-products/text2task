@@ -14,12 +14,23 @@ function getSafeNextPath(next: string | null) {
   return next;
 }
 
+function isPasswordResetNextPath(next: string) {
+  return next === "/reset-password" || next.startsWith("/reset-password?");
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = getSafeNextPath(requestUrl.searchParams.get("next"));
+  const isPasswordReset = isPasswordResetNextPath(next);
 
   if (!code) {
+    if (!isPasswordReset) {
+      return NextResponse.redirect(
+        new URL("/check-email?error=invalid_link", request.url)
+      );
+    }
+
     return NextResponse.redirect(
       new URL("/login?error=invalid_confirmation_link", request.url)
     );
@@ -32,6 +43,12 @@ export async function GET(request: NextRequest) {
 
   if (exchangeError) {
     console.error("auth confirm exchangeCodeForSession error:", exchangeError);
+
+    if (!isPasswordReset) {
+      return NextResponse.redirect(
+        new URL("/check-email?error=confirmation_failed", request.url)
+      );
+    }
 
     return NextResponse.redirect(
       new URL("/login?error=confirmation_failed", request.url)

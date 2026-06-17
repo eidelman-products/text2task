@@ -2,23 +2,81 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 function CheckEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const error = searchParams.get("error");
+  const hasConfirmationLinkError =
+    error === "confirmation_failed" || error === "invalid_link";
 
-  const email = useMemo(() => {
+  const queryEmail = useMemo(() => {
     const rawEmail = searchParams.get("email")?.trim();
 
-    if (!rawEmail || rawEmail.length > 140) {
-      return "your email";
+    if (!rawEmail || rawEmail.length > 140 || !isValidEmail(rawEmail)) {
+      return "";
     }
 
     return rawEmail;
   }, [searchParams]);
+  const [resendEmail, setResendEmail] = useState(queryEmail);
+  const [resendStatus, setResendStatus] = useState<
+    "idle" | "sending" | "success" | "error"
+  >("idle");
+  const [resendMessage, setResendMessage] = useState("");
+  const [coolingDown, setCoolingDown] = useState(false);
+
+  const displayEmail = queryEmail || "your email";
+  const shouldShowEmailInput = !queryEmail;
+
+  async function handleResendConfirmation() {
+    const email = (queryEmail || resendEmail).trim().toLowerCase();
+
+    if (!email || !isValidEmail(email)) {
+      setResendStatus("error");
+      setResendMessage("Enter a valid email address.");
+      return;
+    }
+
+    setResendStatus("sending");
+    setResendMessage("");
+
+    try {
+      const response = await fetch("/api/auth/resend-confirmation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to resend confirmation email.");
+      }
+
+      setResendStatus("success");
+      setResendMessage(
+        "If this email still needs confirmation, we sent a new link."
+      );
+      setCoolingDown(true);
+
+      window.setTimeout(() => {
+        setCoolingDown(false);
+      }, 60000);
+    } catch {
+      setResendStatus("error");
+      setResendMessage(
+        "We couldn\u2019t send a new confirmation email. Please try again."
+      );
+    }
+  }
 
   return (
     <main className="check-email-page" style={styles.page}>
@@ -60,15 +118,70 @@ function CheckEmailContent() {
         </div>
 
         <div style={styles.copy}>
-          <h1 style={styles.title}>Check your email</h1>
+          <h1 style={styles.title}>
+            {hasConfirmationLinkError ? "Confirmation link expired" : "Check your email"}
+          </h1>
 
-          <p style={styles.description}>
-            We sent a confirmation link to <strong>{email}</strong>.
-          </p>
+          {hasConfirmationLinkError ? (
+            <p style={styles.description}>
+              This confirmation link is invalid or expired. Send a new
+              confirmation email.
+            </p>
+          ) : (
+            <p style={styles.description}>
+              We sent a confirmation link to <strong>{displayEmail}</strong>.
+            </p>
+          )}
 
           <p style={styles.secondary}>
-            Open the email and click the confirmation link before logging in.
+            Check your inbox and click the confirmation link to activate your
+            account.
           </p>
+        </div>
+
+        <div style={styles.resendBox}>
+          {shouldShowEmailInput ? (
+            <label style={styles.resendField}>
+              <span style={styles.resendLabel}>Email address</span>
+              <input
+                type="email"
+                value={resendEmail}
+                onChange={(event) => {
+                  setResendEmail(event.target.value);
+                  if (resendStatus === "error") {
+                    setResendStatus("idle");
+                    setResendMessage("");
+                  }
+                }}
+                placeholder="you@example.com"
+                autoComplete="email"
+                style={styles.resendInput}
+              />
+            </label>
+          ) : null}
+
+          <button
+            type="button"
+            style={styles.resendButton}
+            disabled={resendStatus === "sending" || coolingDown}
+            onClick={handleResendConfirmation}
+          >
+            {resendStatus === "sending"
+              ? "Sending..."
+              : "Resend confirmation email"}
+          </button>
+
+          {resendMessage ? (
+            <p
+              style={
+                resendStatus === "success"
+                  ? styles.resendSuccess
+                  : styles.resendError
+              }
+            >
+              {resendMessage}
+            </p>
+          ) : null}
         </div>
 
         <div style={styles.actions}>
@@ -211,6 +324,67 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 800,
     cursor: "pointer",
   },
+  resendBox: {
+    width: "100%",
+    display: "grid",
+    gap: "10px",
+  },
+  resendField: {
+    width: "100%",
+    display: "grid",
+    gap: "8px",
+    textAlign: "left",
+  },
+  resendLabel: {
+    color: "#0f172a",
+    fontSize: "13px",
+    fontWeight: 850,
+  },
+  resendInput: {
+    width: "100%",
+    height: 50,
+    padding: "0 14px",
+    borderRadius: 14,
+    border: "1px solid #cbd5e1",
+    background: "#ffffff",
+    color: "#0f172a",
+    outline: "none",
+    fontSize: 15,
+    boxSizing: "border-box",
+  },
+  resendButton: {
+    width: "100%",
+    border: "1px solid #bfdbfe",
+    borderRadius: "14px",
+    background: "#eff6ff",
+    color: "#1d4ed8",
+    padding: "12px 16px",
+    fontSize: "14px",
+    fontWeight: 850,
+    cursor: "pointer",
+  },
+  resendSuccess: {
+    margin: 0,
+    padding: "10px 12px",
+    borderRadius: 14,
+    border: "1px solid #bbf7d0",
+    background: "#f0fdf4",
+    color: "#166534",
+    fontSize: 13,
+    fontWeight: 750,
+    lineHeight: 1.5,
+  },
+  resendError: {
+    margin: 0,
+    padding: "10px 12px",
+    borderRadius: 14,
+    border: "1px solid #fecaca",
+    background: "#fff1f2",
+    color: "#b91c1c",
+    fontSize: 13,
+    fontWeight: 750,
+    lineHeight: 1.5,
+  },
   helpText: {
     margin: "2px 0 0",
     color: "#64748b",
@@ -233,8 +407,20 @@ const responsiveCss = `
     transform: translateY(-1px);
   }
 
+  .check-email-card button:disabled {
+    cursor: not-allowed !important;
+    opacity: 0.72;
+    transform: none !important;
+  }
+
+  .check-email-card input:focus {
+    border-color: #93c5fd !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10);
+  }
+
   .check-email-card button:focus-visible,
-  .check-email-page a:focus-visible {
+  .check-email-page a:focus-visible,
+  .check-email-card input:focus-visible {
     outline: 3px solid rgba(37, 99, 235, 0.28);
     outline-offset: 3px;
   }

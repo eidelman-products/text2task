@@ -6,6 +6,17 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function isEmailNotConfirmedError(error: { code?: string; message?: string }) {
+  const code = error.code?.toLowerCase() ?? "";
+  const message = error.message?.toLowerCase() ?? "";
+
+  return (
+    code === "email_not_confirmed" ||
+    message.includes("email not confirmed") ||
+    message.includes("not confirmed")
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -32,6 +43,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (error || !data.user) {
+      if (error && isEmailNotConfirmedError(error)) {
+        const redirectUrl = new URL("/login", request.url);
+        redirectUrl.searchParams.set("error", "email_not_confirmed");
+        redirectUrl.searchParams.set("email", email);
+
+        return NextResponse.redirect(redirectUrl);
+      }
+
       return NextResponse.redirect(
         new URL("/login?error=invalid_credentials", request.url)
       );
