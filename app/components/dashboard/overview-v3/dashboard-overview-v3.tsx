@@ -11,20 +11,15 @@ import {
 import DashboardBusinessPulse from "./dashboard-business-pulse";
 import DashboardProjectsSnapshot from "./dashboard-projects-snapshot";
 import DashboardRecentActivity from "./dashboard-recent-activity";
-import DashboardUrgentBoard from "./dashboard-urgent-board";
+import DashboardPriorityWorkBoard from "./dashboard-priority-work-board";
 import type { DashboardOverviewV3Props } from "./dashboard-overview-types";
 import {
   getRecentActiveProjects,
   getUserDisplayName,
-  mapUrgentTasksToNotes,
 } from "./dashboard-overview-utils";
 
 export default function DashboardOverviewV3({
-  urgentTasks,
-  overdueCount,
-  dueTodayCount,
-  dueTomorrowCount,
-  dueSoonCount,
+  priorityWork,
   activeTasks,
   analytics,
   userEmail,
@@ -32,7 +27,6 @@ export default function DashboardOverviewV3({
   onGoToTasks,
 }: DashboardOverviewV3Props) {
   const displayName = getUserDisplayName(userEmail);
-  const urgentNotes = mapUrgentTasksToNotes(urgentTasks);
   const recentWork = getRecentActiveProjects(activeTasks);
 
   return (
@@ -62,12 +56,8 @@ export default function DashboardOverviewV3({
       </header>
 
       <div className="dashboard-v3-priority-section">
-        <DashboardUrgentBoard
-          notes={urgentNotes}
-          overdueCount={overdueCount}
-          dueTodayCount={dueTodayCount}
-          dueTomorrowCount={dueTomorrowCount}
-          dueSoonCount={dueSoonCount}
+        <DashboardPriorityWorkBoard
+          summary={priorityWork}
           onGoToTasks={onGoToTasks}
         />
       </div>

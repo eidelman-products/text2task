@@ -1,20 +1,14 @@
 import type { TaskRow } from "../tasks-view";
-import type {
-  PaidCompletedProgress,
-  UrgentPreviewTask,
-} from "../dashboard-helpers";
+import type { PaidCompletedProgress } from "../dashboard-helpers";
 import { getIncomeAnalytics } from "@/lib/tasks/get-income-analytics";
+import type { PriorityProjectSummary } from "./dashboard-priority-work-utils";
 
 export type DashboardOverviewV3Props = {
   openTasks: number;
   highPriority: number;
   doneTasks: number;
   progress: PaidCompletedProgress;
-  urgentTasks: UrgentPreviewTask[];
-  overdueCount: number;
-  dueTodayCount: number;
-  dueTomorrowCount: number;
-  dueSoonCount: number;
+  priorityWork: PriorityProjectSummary;
   activeTasks: TaskRow[];
   analytics: ReturnType<typeof getIncomeAnalytics>;
   userEmail: string;

@@ -21,11 +21,10 @@ import {
   type TaskSortOption,
   type TaskStatusFilter,
 } from "./dashboard/task-filters";
-import { getDashboardAlerts } from "@/lib/tasks/get-dashboard-alerts";
 import { getIncomeAnalytics } from "@/lib/tasks/get-income-analytics";
+import { buildPriorityProjectSummary } from "./dashboard/overview-v3/dashboard-priority-work-utils";
 import {
   buildTaskCopyText,
-  buildUrgentPreviewTasks,
   escapeCsvValue,
   getPaidCompletedProgress,
   normalizeTaskFromApi,
@@ -393,11 +392,6 @@ export default function DashboardClient({
     return { total, high, open, done };
   }, [activeTasksForStats, completedTasksForStats]);
 
-  const dashboardAlerts = useMemo(
-    () => getDashboardAlerts(activeTasksForStats),
-    [activeTasksForStats]
-  );
-
   const incomeAnalytics = useMemo(
     () => getIncomeAnalytics(visibleStatsTasks),
     [visibleStatsTasks]
@@ -408,8 +402,8 @@ export default function DashboardClient({
     [visibleStatsTasks]
   );
 
-  const urgentPreviewTasks = useMemo(() => {
-    return buildUrgentPreviewTasks(activeTasksForStats).slice(0, 4);
+  const priorityWork = useMemo(() => {
+    return buildPriorityProjectSummary(activeTasksForStats);
   }, [activeTasksForStats]);
 
   const groupedTasks = useMemo<TaskGroup[]>(() => {
@@ -1736,11 +1730,7 @@ export default function DashboardClient({
             highPriority={stats.high}
             doneTasks={stats.done}
             progress={progressStats}
-            urgentTasks={urgentPreviewTasks}
-            overdueCount={dashboardAlerts.counts.overdue}
-            dueTodayCount={dashboardAlerts.counts.dueToday}
-            dueTomorrowCount={dashboardAlerts.counts.dueTomorrow}
-            dueSoonCount={dashboardAlerts.counts.dueSoon}
+            priorityWork={priorityWork}
             activeTasks={activeTasksForStats}
             analytics={incomeAnalytics}
             userEmail={email}
