@@ -2,6 +2,8 @@
 
 import Script from "next/script";
 
+import { useAnalyticsConsentAccepted } from "@/lib/analytics/analytics-consent";
+
 const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
@@ -27,7 +29,9 @@ declare global {
  * - NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
  */
 export function GoogleAdsTag() {
-  if (!GOOGLE_ADS_ID) {
+  const hasConsent = useAnalyticsConsentAccepted();
+
+  if (!GOOGLE_ADS_ID || !hasConsent) {
     return null;
   }
 

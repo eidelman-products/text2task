@@ -152,7 +152,7 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
               fontWeight: 750,
             }}
           >
-            <span style={pillStyle}>Last updated: April 27, 2026</span>
+            <span style={pillStyle}>Last updated: June 19, 2026</span>
             <span style={pillStyle}>Applies to text2task.com</span>
             <span style={pillStyle}>AI + SaaS product</span>
           </div>
@@ -247,7 +247,15 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
             </p>
           </TermsBlock>
 
-          <TermsBlock title="8. Service availability">
+          <TermsBlock title="8. Analytics and similar technologies">
+            <p>
+              Text2Task may use analytics, cookies, localStorage, and similar
+              technologies to operate, protect, improve, and measure the service,
+              subject to the Privacy Policy and your available consent choices.
+            </p>
+          </TermsBlock>
+
+          <TermsBlock title="9. Service availability">
             <p>
               We aim to keep Text2Task reliable and available, but we do not
               guarantee uninterrupted access, error-free operation, or permanent
@@ -259,7 +267,7 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
             </p>
           </TermsBlock>
 
-          <TermsBlock title="9. User responsibility">
+          <TermsBlock title="10. User responsibility">
             <p>
               You are responsible for how you use Text2Task and for any business
               decisions, client communication, deadlines, pricing, or work
@@ -272,7 +280,7 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
             </p>
           </TermsBlock>
 
-          <TermsBlock title="10. Limitation of liability">
+          <TermsBlock title="11. Limitation of liability">
             <p>
               Text2Task is provided “as is” and “as available.” We are not
               responsible for missed deadlines, incorrect AI output, lost
@@ -281,7 +289,7 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
             </p>
           </TermsBlock>
 
-          <TermsBlock title="11. Termination">
+          <TermsBlock title="12. Termination">
             <p>
               We may suspend or terminate access to Text2Task if an account
               violates these Terms, abuses the service, creates security risks,
@@ -289,7 +297,7 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
             </p>
           </TermsBlock>
 
-          <TermsBlock title="12. Changes to these Terms">
+          <TermsBlock title="13. Changes to these Terms">
             <p>
               We may update these Terms of Service from time to time. When we
               make changes, we will update the “Last updated” date above.
@@ -300,7 +308,7 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
             </p>
           </TermsBlock>
 
-          <TermsBlock title="13. Contact us">
+          <TermsBlock title="14. Contact us">
             <p>
               If you have questions about these Terms of Service, contact us at:
             </p>

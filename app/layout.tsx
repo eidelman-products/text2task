@@ -2,8 +2,9 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { AttributionCapture } from "./components/analytics/attribution-capture";
+import { ConsentAwareVercelAnalytics } from "./components/analytics/consent-aware-vercel-analytics";
+import { CookieConsentBanner } from "./components/analytics/cookie-consent-banner";
 import { GoogleAdsTag } from "./components/analytics/google-ads-tag";
 import { MicrosoftClarity } from "./components/analytics/microsoft-clarity";
 
@@ -99,13 +100,15 @@ export default function RootLayout({
       <body className={inter.className}>
         <GoogleAdsTag />
         <MicrosoftClarity />
+        <AttributionCapture />
 
         {children}
 
+        <CookieConsentBanner />
+
         <Toaster position="top-right" richColors closeButton />
 
-        <Analytics />
-        <SpeedInsights />
+        <ConsentAwareVercelAnalytics />
       </body>
     </html>
   );

@@ -2,10 +2,13 @@
 
 import Script from "next/script";
 
+import { useAnalyticsConsentAccepted } from "@/lib/analytics/analytics-consent";
+
 export function MicrosoftClarity() {
   const clarityId = process.env.NEXT_PUBLIC_MICROSOFT_CLARITY_ID;
+  const hasConsent = useAnalyticsConsentAccepted();
 
-  if (!clarityId) {
+  if (!clarityId || !hasConsent) {
     return null;
   }
 

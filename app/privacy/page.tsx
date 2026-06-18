@@ -149,7 +149,7 @@ export default async function PrivacyPage({ searchParams }: PrivacyPageProps) {
               fontWeight: 750,
             }}
           >
-            <span style={pillStyle}>Last updated: April 27, 2026</span>
+            <span style={pillStyle}>Last updated: June 19, 2026</span>
             <span style={pillStyle}>Applies to text2task.com</span>
             <span style={pillStyle}>AI + SaaS product</span>
           </div>
@@ -166,9 +166,11 @@ export default async function PrivacyPage({ searchParams }: PrivacyPageProps) {
             </p>
             <p>
               We also collect basic technical information such as browser type,
-              device information, IP-related metadata, usage events, page views,
-              authentication activity, and subscription-related events needed to
-              operate and secure the service.
+              device information, IP-related metadata, pages visited, referral
+              source, campaign parameters, approximate country or region, usage
+              events, page views, timestamps, authentication activity, and
+              subscription-related events needed to operate, secure, measure, and
+              improve the service.
             </p>
           </PolicyBlock>
 
@@ -181,8 +183,8 @@ export default async function PrivacyPage({ searchParams }: PrivacyPageProps) {
             </p>
             <p>
               We may also use aggregated or anonymized information to understand
-              product usage, improve onboarding, improve user experience, and
-              make the product better.
+              traffic, referrals, signup and product usage, improve onboarding,
+              improve user experience, and make the product better.
             </p>
           </PolicyBlock>
 
@@ -215,11 +217,38 @@ export default async function PrivacyPage({ searchParams }: PrivacyPageProps) {
             </p>
           </PolicyBlock>
 
-          <PolicyBlock title="5. Cookies and authentication">
+          <PolicyBlock title="5. Cookies, analytics, and attribution">
             <p>
               Text2Task uses cookies and similar technologies to keep you signed
               in, secure your session, remember authentication state, and operate
               the dashboard. Some cookies are necessary for the service to work.
+            </p>
+            <p>
+              Text2Task may use non-essential analytics to understand traffic,
+              referral sources, signup and product usage, and product
+              performance. Analytics may include pages visited, referral source,
+              campaign parameters, approximate country or region, signup and
+              product usage events, device and browser information, and
+              timestamps.
+            </p>
+            <p>
+              Text2Task uses Google Analytics / Google tag. Text2Task also uses
+              Microsoft Clarity for behavior analytics such as session
+              recordings, heatmaps, clicks, scrolls, and usage patterns. These
+              tools help us understand how people use the site and where the
+              product can be clearer or more reliable.
+            </p>
+            <p>
+              Text2Task may use first-party cookies and localStorage for
+              attribution and anonymous visitor identification. You can accept or
+              reject non-essential analytics through the cookie banner or any
+              available consent settings.
+            </p>
+            <p>
+              Internal analytics events are designed not to store raw client
+              messages, uploaded screenshots, project content, task text,
+              summaries, files, notes, resources, passwords, tokens, or private
+              client data.
             </p>
             <p>
               <strong>Google sign-in.</strong> If you choose to sign in with
