@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
+import { shouldSkipAnalyticsPath } from "@/lib/analytics/analytics-paths";
 import { useAnalyticsConsentAccepted } from "@/lib/analytics/analytics-consent";
 
 const ATTRIBUTION_STORAGE_KEY = "text2task:first_touch_attribution";
@@ -195,9 +197,15 @@ function captureAttribution() {
 
 function sendPageView(attribution: AttributionData) {
   try {
+    const pagePath = getSafePath();
+
+    if (shouldSkipAnalyticsPath(pagePath)) {
+      return;
+    }
+
     const payload = JSON.stringify({
       event_name: "page_view",
-      page_path: getSafePath(),
+      page_path: pagePath,
       attribution,
     });
 
@@ -268,7 +276,9 @@ function ConsentGatedAttributionCapture() {
 }
 
 export function AttributionCapture() {
-  if (!INTERNAL_ANALYTICS_ENABLED) {
+  const pathname = usePathname();
+
+  if (!INTERNAL_ANALYTICS_ENABLED || shouldSkipAnalyticsPath(pathname)) {
     return null;
   }
 

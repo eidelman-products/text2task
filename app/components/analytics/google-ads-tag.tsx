@@ -1,7 +1,9 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import Script from "next/script";
 
+import { shouldSkipAnalyticsPath } from "@/lib/analytics/analytics-paths";
 import { useAnalyticsConsentAccepted } from "@/lib/analytics/analytics-consent";
 
 const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
@@ -29,9 +31,10 @@ declare global {
  * - NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
  */
 export function GoogleAdsTag() {
+  const pathname = usePathname();
   const hasConsent = useAnalyticsConsentAccepted();
 
-  if (!GOOGLE_ADS_ID || !hasConsent) {
+  if (!GOOGLE_ADS_ID || !hasConsent || shouldSkipAnalyticsPath(pathname)) {
     return null;
   }
 

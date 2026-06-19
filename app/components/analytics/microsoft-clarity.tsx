@@ -1,14 +1,17 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import Script from "next/script";
 
+import { shouldSkipAnalyticsPath } from "@/lib/analytics/analytics-paths";
 import { useAnalyticsConsentAccepted } from "@/lib/analytics/analytics-consent";
 
 export function MicrosoftClarity() {
   const clarityId = process.env.NEXT_PUBLIC_MICROSOFT_CLARITY_ID;
+  const pathname = usePathname();
   const hasConsent = useAnalyticsConsentAccepted();
 
-  if (!clarityId || !hasConsent) {
+  if (!clarityId || !hasConsent || shouldSkipAnalyticsPath(pathname)) {
     return null;
   }
 
