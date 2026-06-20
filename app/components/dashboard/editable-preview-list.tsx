@@ -6,6 +6,7 @@ import type {
   HybridAppliedChange,
   HybridPreviewMeta,
 } from "@/lib/preview/hybrid-preview";
+import { parseAmount } from "@/lib/tasks/parse-amount";
 
 type PreviewItem = ExtractedPreview & {
   contact_name?: string;
@@ -477,27 +478,15 @@ function getGroupAmount(previews: PreviewItem[]) {
 }
 
 function parseAmountLikeValue(value: string) {
-  const clean = String(value || "").trim();
-  if (!clean) return null;
+  const parsed = parsePreviewAmount(value);
 
-  const normalized = clean.replace(/,/g, "");
-  const numberMatch = normalized.match(/-?\d+(\.\d+)?/);
-  if (!numberMatch) return null;
-
-  const numberValue = Number(numberMatch[0]);
-  if (Number.isNaN(numberValue)) return null;
-
-  let suffix = clean.replace(numberMatch[0], "").replace(/[$,]/g, "").trim();
-
-  if (clean.includes("$")) {
-    suffix = "USD";
-  }
-
-  return {
-    value: numberValue,
-    suffix,
-    raw: normalizeAmountDisplay(clean),
-  };
+  return parsed
+    ? {
+        value: parsed.value,
+        suffix: parsed.suffix,
+        raw: parsed.display,
+      }
+    : null;
 }
 
 function hasMoneyEvidence(value: string) {
@@ -573,22 +562,26 @@ function normalizeAmountDisplay(value: string) {
 
   if (!clean) return "";
 
-  const numberMatch = clean.replace(/,/g, "").match(/-?\d+(\.\d+)?/);
-  if (!numberMatch) return clean;
+  return parsePreviewAmount(clean)?.display || clean;
+}
 
-  const numberValue = Number(numberMatch[0]);
-  const formattedNumber = formatNumber(numberValue);
+function parsePreviewAmount(value: string) {
+  const parsed = parseAmount(value);
 
-  if (clean.includes("$")) {
-    return `${formattedNumber} USD`;
+  if (!parsed.matched || parsed.amountValue === null) {
+    return null;
   }
 
-  const suffix = clean
-    .replace(numberMatch[0], "")
-    .replace(/[$,]/g, "")
-    .trim();
+  const suffix = parsed.currencyCode?.trim().toUpperCase() || "";
+  const display = `${formatNumber(parsed.amountValue)}${
+    suffix ? ` ${suffix}` : ""
+  }`;
 
-  return `${formattedNumber}${suffix ? ` ${suffix}` : ""}`;
+  return {
+    value: parsed.amountValue,
+    suffix,
+    display,
+  };
 }
 
 function formatNumber(value: number) {
