@@ -49,15 +49,28 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const TRAFFIC_ROWS_LIMIT = 5000;
 const RECENT_USERS_LIMIT = 25;
 const SIGNUP_ATTRIBUTION_LIMIT = 200;
+const OWNER_ANALYTICS_TIME_ZONE = "Asia/Jerusalem";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const numberFormatter = new Intl.NumberFormat("en-US");
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
+const analyticsTimestampFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: OWNER_ANALYTICS_TIME_ZONE,
   month: "short",
   day: "numeric",
   hour: "2-digit",
   minute: "2-digit",
+  hourCycle: "h23",
+});
+const ownerTimeZonePartsFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: OWNER_ANALYTICS_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
 });
 
 function getOwnerEmails() {
@@ -109,6 +122,87 @@ function parseTimestamp(value: string | null | undefined) {
 
 function parseEventDate(row: AnalyticsEventRow) {
   return parseTimestamp(row.occurred_at) ?? 0;
+}
+
+function getDateTimePart(parts: Intl.DateTimeFormatPart[], type: string) {
+  return parts.find((part) => part.type === type)?.value ?? "";
+}
+
+function getOwnerTimeZoneDateParts(timestamp: number) {
+  const parts = ownerTimeZonePartsFormatter.formatToParts(new Date(timestamp));
+  const year = Number(getDateTimePart(parts, "year"));
+  const month = Number(getDateTimePart(parts, "month"));
+  const day = Number(getDateTimePart(parts, "day"));
+  const hour = Number(getDateTimePart(parts, "hour"));
+  const minute = Number(getDateTimePart(parts, "minute"));
+  const second = Number(getDateTimePart(parts, "second"));
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    !Number.isInteger(second)
+  ) {
+    return null;
+  }
+
+  return {
+    year,
+    month,
+    day,
+    hour,
+    minute,
+    second,
+  };
+}
+
+function getOwnerTimeZoneOffsetMs(timestamp: number) {
+  const parts = getOwnerTimeZoneDateParts(timestamp);
+
+  if (!parts) {
+    return 0;
+  }
+
+  return (
+    Date.UTC(
+      parts.year,
+      parts.month - 1,
+      parts.day,
+      parts.hour,
+      parts.minute,
+      parts.second
+    ) - timestamp
+  );
+}
+
+function getStartOfOwnerAnalyticsDay(timestamp: number) {
+  const parts = getOwnerTimeZoneDateParts(timestamp);
+
+  if (!parts) {
+    const fallback = new Date(timestamp);
+    fallback.setUTCHours(0, 0, 0, 0);
+
+    return fallback.getTime();
+  }
+
+  const localMidnightAsUtc = Date.UTC(parts.year, parts.month - 1, parts.day);
+  let startOfDay =
+    localMidnightAsUtc - getOwnerTimeZoneOffsetMs(localMidnightAsUtc);
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const adjusted =
+      localMidnightAsUtc - getOwnerTimeZoneOffsetMs(startOfDay);
+
+    if (adjusted === startOfDay) {
+      return startOfDay;
+    }
+
+    startOfDay = adjusted;
+  }
+
+  return startOfDay;
 }
 
 function buildPeriodStats(
@@ -312,9 +406,9 @@ function parseProductActivationData(
   };
 }
 
-async function loadTrafficRows() {
+async function loadTrafficRows(now: number) {
   try {
-    const since = new Date(Date.now() - 30 * DAY_MS).toISOString();
+    const since = new Date(now - 30 * DAY_MS).toISOString();
     const { data, error } = await supabaseAdmin
       .from("analytics_events")
       .select(
@@ -436,17 +530,23 @@ function formatPercentage(value: number) {
 }
 
 function formatDate(value: string | null | undefined) {
-  if (!value) {
+  const timestamp = parseTimestamp(value);
+
+  if (timestamp === null) {
     return "Unknown";
   }
 
-  const date = new Date(value);
+  const parts = analyticsTimestampFormatter.formatToParts(new Date(timestamp));
+  const month = getDateTimePart(parts, "month");
+  const day = getDateTimePart(parts, "day");
+  const hour = getDateTimePart(parts, "hour");
+  const minute = getDateTimePart(parts, "minute");
 
-  if (Number.isNaN(date.getTime())) {
+  if (!month || !day || !hour || !minute) {
     return "Unknown";
   }
 
-  return dateFormatter.format(date);
+  return `${month} ${day}, ${hour}:${minute}`;
 }
 
 function formatOptionalDate(value: string | null | undefined) {
@@ -525,8 +625,10 @@ function UnavailablePanel({ message }: { message: string }) {
 export default async function AdminAnalyticsPage() {
   await requireOwner();
 
+  const now = Date.now();
+
   const [trafficRows, productData] = await Promise.all([
-    loadTrafficRows(),
+    loadTrafficRows(now),
     loadProductActivationData(),
   ]);
   const signupAttributionRows = productData
@@ -551,13 +653,11 @@ export default async function AdminAnalyticsPage() {
     );
   }
 
-  const now = Date.now();
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
+  const startOfToday = getStartOfOwnerAnalyticsDay(now);
 
   const periodStats = trafficRows
     ? [
-        buildPeriodStats("Today", trafficRows, startOfToday.getTime()),
+        buildPeriodStats("Today", trafficRows, startOfToday),
         buildPeriodStats("Last 7 days", trafficRows, now - 7 * DAY_MS),
         buildPeriodStats("Last 30 days", trafficRows, now - 30 * DAY_MS),
       ]
@@ -579,7 +679,9 @@ export default async function AdminAnalyticsPage() {
             <p className="admin-eyebrow">Owner analytics</p>
             <h1>Text2Task analytics</h1>
           </div>
-          <p className="admin-muted">Private internal view</p>
+          <p className="admin-muted">
+            Private internal view. Times shown in Israel time (24-hour).
+          </p>
         </div>
 
         <section className="admin-section">
