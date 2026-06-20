@@ -123,6 +123,49 @@ function buildSaveDeadlineValue(preview: PreviewItem) {
   return preview.deadline.trim();
 }
 
+function formatDateOnly(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function buildSaveDeadlineDate(deadlineDate?: string | null) {
+  const raw = deadlineDate?.trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (dateOnlyMatch) {
+    const year = Number(dateOnlyMatch[1]);
+    const month = Number(dateOnlyMatch[2]);
+    const day = Number(dateOnlyMatch[3]);
+    const date = new Date(year, month - 1, day, 12, 0, 0, 0);
+
+    if (
+      date.getFullYear() === year &&
+      date.getMonth() === month - 1 &&
+      date.getDate() === day
+    ) {
+      return raw;
+    }
+
+    return null;
+  }
+
+  const parsed = new Date(raw);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return formatDateOnly(parsed);
+}
+
 function getGroupRawInput(group: PreviewProjectGroup) {
   return (
     group.items
@@ -746,6 +789,7 @@ export default function ExtractWorkspace({
         summary: group.projectSummary || "",
         amount: group.amount || "",
         deadline_text: group.deadline || "",
+        deadline_date: buildSaveDeadlineDate(group.deadlineDate),
         priority: group.priority || "Medium",
         status: getProjectStatusFromGroup(group),
         source: group.source || "Project extraction",

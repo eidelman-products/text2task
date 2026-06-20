@@ -2,7 +2,10 @@ import type {
   ExistingProjectUpdateContext,
   JsonRecord,
 } from "@/lib/project-updates/project-update-types";
-import { parseDeadline } from "@/lib/tasks/parse-deadline";
+import {
+  normalizeProjectUpdateBudget,
+  resolveProjectUpdateDeadline,
+} from "@/lib/project-updates/project-update-field-normalizers";
 import { compareSubtaskTitles } from "@/lib/tasks/task-title-similarity";
 
 import type {
@@ -317,7 +320,11 @@ function judgeProjectDeadlineChange({
 }): ProjectUpdateJudgeDecision | null {
   if (!deadlineText) return null;
 
-  const requestedDeadlineDate = parseDeadline(deadlineText).deadlineDate;
+  const requestedDeadline = resolveProjectUpdateDeadline({
+    deadlineText,
+    currentDeadlineDate: context.project.deadline_date,
+  });
+  const requestedDeadlineDate = requestedDeadline.deadline_date;
   const currentDeadlineDate = context.project.deadline_date?.trim() || null;
 
   if (requestedDeadlineDate) {
@@ -339,7 +346,7 @@ function judgeProjectDeadlineChange({
           deadline_date: context.project.deadline_date,
         },
         newValue: {
-          deadline_text: deadlineText,
+          deadline_text: requestedDeadline.deadline_text,
           deadline_date: requestedDeadlineDate,
         },
         confidence: 0.95,
@@ -361,10 +368,7 @@ function judgeProjectDeadlineChange({
         deadline_text: context.project.deadline_text,
         deadline_date: context.project.deadline_date,
       },
-      newValue: {
-        deadline_text: deadlineText,
-        deadline_date: requestedDeadlineDate,
-      },
+      newValue: requestedDeadline,
       confidence: 0.9,
       reason:
         "The client update includes a project-wide deadline date that differs from the current project deadline date.",
@@ -389,9 +393,7 @@ function judgeProjectDeadlineChange({
         deadline_text: context.project.deadline_text,
         deadline_date: context.project.deadline_date,
       },
-      newValue: {
-        deadline_text: deadlineText,
-      },
+      newValue: requestedDeadline,
       confidence: 0.95,
       reason:
         "The requested deadline normalizes to the same value as the current project deadline.",
@@ -411,9 +413,7 @@ function judgeProjectDeadlineChange({
       deadline_text: context.project.deadline_text,
       deadline_date: context.project.deadline_date,
     },
-    newValue: {
-      deadline_text: deadlineText,
-    },
+    newValue: requestedDeadline,
     confidence: 0.9,
     reason:
       "The client update includes a project-wide deadline that differs from the current project deadline.",
@@ -429,6 +429,13 @@ function judgeProjectAmountChange({
   context: ExistingProjectUpdateContext;
 }): ProjectUpdateJudgeDecision | null {
   if (!amount) return null;
+
+  const normalizedBudget = normalizeProjectUpdateBudget({
+    amountText: amount,
+    existingCurrencyCode: context.project.currency_code,
+    existingAmountText: context.project.amount,
+  });
+  const newValue = normalizedBudget ?? { amount };
 
   const currentAmount =
     context.project.amount ||
@@ -451,9 +458,7 @@ function judgeProjectAmountChange({
         amount_value: context.project.amount_value,
         currency_code: context.project.currency_code,
       },
-      newValue: {
-        amount,
-      },
+      newValue,
       confidence: 0.95,
       reason:
         "The requested budget normalizes to the same value as the current project budget.",
@@ -474,9 +479,7 @@ function judgeProjectAmountChange({
       amount_value: context.project.amount_value,
       currency_code: context.project.currency_code,
     },
-    newValue: {
-      amount,
-    },
+    newValue,
     confidence: 0.9,
     reason:
       "The client update includes a project-wide budget that differs from the current project budget.",

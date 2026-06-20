@@ -7,7 +7,10 @@ import {
   findDuplicateSubtaskInProject,
   type DuplicateSubtaskMatch,
 } from "@/lib/tasks/subtask-duplicate-detection";
-import { parseDeadline } from "@/lib/tasks/parse-deadline";
+import {
+  normalizeProjectUpdateBudget,
+  resolveProjectUpdateDeadline,
+} from "@/lib/project-updates/project-update-field-normalizers";
 import {
   dashboardTasksNoStoreHeaders,
   loadDashboardTasksForUser,
@@ -468,6 +471,106 @@ function applyEditedOverridesToItems(input: {
   });
 }
 
+function normalizeProjectFieldItemForApply(input: {
+  project: ProjectRow;
+  item: ProjectUpdateItemRow;
+}): ProjectUpdateItemRow {
+  const { project, item } = input;
+  const nextValue = asJsonRecord(item.new_value);
+
+  if (item.type === "deadline_change") {
+    const deadlineText = getStringValue(nextValue, [
+      "deadline_text",
+      "deadline",
+      "value",
+    ]);
+
+    if (!deadlineText) {
+      throw new Error("Deadline edits require a suggested deadline.");
+    }
+
+    return {
+      ...item,
+      new_value: resolveProjectUpdateDeadline({
+        deadlineText,
+        currentDeadlineDate: project.deadline_date,
+      }),
+    };
+  }
+
+  if (item.type === "budget_change") {
+    const amountText = getStringValue(nextValue, [
+      "amount",
+      "budget",
+      "price",
+      "cost",
+      "value",
+    ]);
+
+    if (!amountText) {
+      throw new Error("Budget edits require a suggested amount.");
+    }
+
+    const normalizedBudget = normalizeProjectUpdateBudget({
+      amountText,
+      existingCurrencyCode: project.currency_code,
+      existingAmountText: project.amount,
+    });
+
+    if (!normalizedBudget) {
+      throw new Error("Budget edits require a numeric suggested amount.");
+    }
+
+    return {
+      ...item,
+      new_value: normalizedBudget,
+    };
+  }
+
+  return item;
+}
+
+function normalizeAcceptedProjectFieldItemsForApply(input: {
+  project: ProjectRow;
+  items: ProjectUpdateItemRow[];
+  acceptedItemIds: Set<string>;
+}) {
+  return input.items.map((item) => {
+    if (!input.acceptedItemIds.has(item.id)) {
+      return item;
+    }
+
+    return normalizeProjectFieldItemForApply({
+      project: input.project,
+      item,
+    });
+  });
+}
+
+function buildNormalizedEditedItemsForApply(input: {
+  editedOverrides: Map<string, JsonRecord>;
+  acceptedItems: ProjectUpdateItemRow[];
+}) {
+  const normalizedEditedItems = new Map(input.editedOverrides);
+
+  input.acceptedItems.forEach((item) => {
+    if (item.type !== "deadline_change" && item.type !== "budget_change") {
+      return;
+    }
+
+    const nextValue = asJsonRecord(item.new_value);
+
+    if (nextValue) {
+      normalizedEditedItems.set(item.id, nextValue);
+    }
+  });
+
+  return Array.from(normalizedEditedItems, ([itemId, newValue]) => ({
+    itemId,
+    newValue,
+  }));
+}
+
 function getProjectUpdateItemEventTitle(item: ProjectUpdateItemRow): string {
   if (item.title?.trim()) {
     return item.title.trim();
@@ -838,25 +941,48 @@ function buildTransactionalApplyPayloadItem(input: {
 
     if (item.type === "deadline_change") {
       const deadlineText = getStringValue(nextValue, ["deadline_text", "deadline"]);
-      const deadlineDate =
-        getStringValue(nextValue, ["deadline_date"]) ||
-        (deadlineText ? parseDeadline(deadlineText).deadlineDate : null);
 
-      if (deadlineText !== null) updates.deadline_text = deadlineText;
-      if (deadlineDate !== null) updates.deadline_date = deadlineDate;
+      if (!deadlineText) {
+        throw new Error("Deadline edits require a suggested deadline.");
+      }
+
+      const normalizedDeadline = resolveProjectUpdateDeadline({
+        deadlineText,
+        currentDeadlineDate: project.deadline_date,
+      });
+
+      updates.deadline_text = normalizedDeadline.deadline_text;
+      updates.deadline_date = normalizedDeadline.deadline_date;
       eventType = "deadline_updated";
       eventTitle = "Deadline updated";
       targetField = targetField ?? "deadline";
     }
 
     if (item.type === "budget_change") {
-      const amount = getStringValue(nextValue, ["amount", "budget", "price", "cost"]);
-      const amountValue = getNumberValue(nextValue, ["amount_value", "budget_value"]);
-      const currencyCode = getStringValue(nextValue, ["currency_code", "currency"]);
+      const amountText = getStringValue(nextValue, [
+        "amount",
+        "budget",
+        "price",
+        "cost",
+      ]);
 
-      if (amount !== null) updates.amount = amount;
-      if (amountValue !== null) updates.amount_value = amountValue;
-      if (currencyCode !== null) updates.currency_code = currencyCode;
+      if (!amountText) {
+        throw new Error("Budget edits require a suggested amount.");
+      }
+
+      const normalizedBudget = normalizeProjectUpdateBudget({
+        amountText,
+        existingCurrencyCode: project.currency_code,
+        existingAmountText: project.amount,
+      });
+
+      if (!normalizedBudget) {
+        throw new Error("Budget edits require a numeric suggested amount.");
+      }
+
+      updates.amount = normalizedBudget.amount;
+      updates.amount_value = normalizedBudget.amount_value;
+      updates.currency_code = normalizedBudget.currency_code;
       eventType = "budget_updated";
       eventTitle = "Budget updated";
       targetField = targetField ?? "budget";
@@ -1424,13 +1550,33 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const preflightItemsForApply = applyEditedOverridesToItems({
-    items: loaded.items,
-    overrides: editedOverrides,
-  });
-  const preflightAcceptedItems = preflightItemsForApply.filter((item) =>
-    uniqueAcceptedIds.includes(item.id)
-  );
+  let preflightItemsForApply: ProjectUpdateItemRow[];
+  let preflightAcceptedItems: ProjectUpdateItemRow[];
+
+  try {
+    preflightItemsForApply = normalizeAcceptedProjectFieldItemsForApply({
+      project: loaded.project,
+      items: applyEditedOverridesToItems({
+        items: loaded.items,
+        overrides: editedOverrides,
+      }),
+      acceptedItemIds: new Set(uniqueAcceptedIds),
+    });
+    preflightAcceptedItems = preflightItemsForApply.filter((item) =>
+      uniqueAcceptedIds.includes(item.id)
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Invalid project update values.";
+
+    return NextResponse.json<ApplyProjectUpdateResponse>(
+      {
+        ok: false,
+        error: message,
+      },
+      { status: 400, headers: dashboardTasksNoStoreHeaders }
+    );
+  }
 
   try {
     const duplicateSubtask = await findDuplicateAcceptedNewSubtask({
@@ -1490,10 +1636,7 @@ export async function POST(request: NextRequest) {
   let applyStage = "build_transactional_payload";
 
   try {
-    const itemsForApply = applyEditedOverridesToItems({
-      items: loaded.items,
-      overrides: editedOverrides,
-    });
+    const itemsForApply = preflightItemsForApply;
     const acceptedItemsForApply = itemsForApply.filter((item) =>
       uniqueAcceptedIds.includes(item.id)
     );
@@ -1503,10 +1646,10 @@ export async function POST(request: NextRequest) {
         item,
       })
     );
-    const normalizedEditedItems = Array.from(
+    const normalizedEditedItems = buildNormalizedEditedItemsForApply({
       editedOverrides,
-      ([itemId, newValue]) => ({ itemId, newValue })
-    );
+      acceptedItems: acceptedItemsForApply,
+    });
 
     applyStage = "transactional_apply";
 
