@@ -1,303 +1,281 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import Image from "next/image";
-import { getAllUseCases } from "@/app/lib/use-cases";
+import Link from "next/link";
+import LandingFooter from "@/app/components/landing/landing-footer";
+import LandingHeader from "@/app/components/landing/landing-header";
+import UseCaseLightbox from "@/app/components/use-cases/use-case-lightbox";
+import {
+  getAllUseCases,
+  getUseCaseCategoryGroups,
+} from "@/app/lib/use-cases";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://text2task.com";
 
 export const metadata: Metadata = {
-  title: "Text2Task Use Cases | AI Task Manager for Freelancers",
+  title: "Use Cases for Freelancers & Agencies | Text2Task",
   description:
-    "Explore how Text2Task helps web designers, WordPress freelancers, Webflow freelancers, graphic designers, social media managers, video editors, virtual assistants, and small agencies turn messy client messages into organized tasks.",
+    "See how freelancers and agencies use Text2Task to turn client messages into organized projects and tasks without manual task entry.",
   alternates: {
     canonical: `${siteUrl}/use-cases`,
   },
   openGraph: {
-    title: "Text2Task Use Cases | AI Task Manager for Freelancers",
+    title: "Use Cases for Freelancers & Agencies | Text2Task",
     description:
-      "Explore how Text2Task helps freelancers and service providers turn messy client messages, screenshots, notes, and work requests into structured tasks.",
+      "See how freelancers and agencies turn client messages into organized projects and tasks without manual task entry.",
     url: `${siteUrl}/use-cases`,
     siteName: "Text2Task",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Text2Task Use Cases | AI Task Manager for Freelancers",
+    title: "Use Cases for Freelancers & Agencies | Text2Task",
     description:
-      "Explore Text2Task use cases for freelancers, designers, social media managers, video editors, virtual assistants, and small agencies.",
+      "Turn client messages into organized projects and tasks without manual task entry.",
   },
 };
 
 export default function UseCasesPage() {
   const useCases = getAllUseCases();
+  const categoryGroups = getUseCaseCategoryGroups();
 
   const collectionJsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: "Text2Task Use Cases",
     description:
-      "Use cases for Text2Task, an AI task manager that turns messy client messages and screenshots into structured tasks.",
+      "Use cases for freelancers and agencies organizing client messages into projects and tasks with Text2Task.",
     url: `${siteUrl}/use-cases`,
     mainEntity: useCases.map((useCase) => ({
       "@type": "WebPage",
-      name: useCase.title,
+      name: useCase.listing.label,
       url: `${siteUrl}/use-cases/${useCase.slug}`,
-      description: useCase.metaDescription,
+      description: useCase.listing.description,
+    })),
+  };
+
+  const itemListJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "@id": `${siteUrl}/use-cases#item-list`,
+    name: "Text2Task use cases for freelancers and agencies",
+    numberOfItems: useCases.length,
+    itemListElement: useCases.map((useCase, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: useCase.listing.label,
+      url: `${siteUrl}/use-cases/${useCase.slug}`,
     })),
   };
 
   return (
-    <main className="min-h-screen bg-[#f8f7ff] text-slate-950">
+    <div className="min-h-screen bg-[#fbfcfe] text-slate-950">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
       />
       <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            document.addEventListener("click", function (event) {
-              var trigger = event.target.closest("[data-use-case-lightbox-src]");
-              var lightbox = document.getElementById("use-cases-lightbox");
-              if (!lightbox) return;
-
-              if (trigger) {
-                event.preventDefault();
-                var image = lightbox.querySelector("[data-use-case-lightbox-image]");
-                if (!image) return;
-                image.setAttribute("src", trigger.getAttribute("data-use-case-lightbox-src") || "");
-                image.setAttribute("alt", trigger.getAttribute("data-use-case-lightbox-alt") || "");
-                lightbox.removeAttribute("hidden");
-                document.documentElement.style.overflow = "hidden";
-                return;
-              }
-
-              if (
-                event.target.closest("[data-use-case-lightbox-close]") ||
-                event.target === lightbox
-              ) {
-                lightbox.setAttribute("hidden", "");
-                document.documentElement.style.overflow = "";
-              }
-            });
-
-            document.addEventListener("keydown", function (event) {
-              if (event.key !== "Escape") return;
-              var lightbox = document.getElementById("use-cases-lightbox");
-              if (!lightbox || lightbox.hasAttribute("hidden")) return;
-              lightbox.setAttribute("hidden", "");
-              document.documentElement.style.overflow = "";
-            });
-          `,
-        }}
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
       />
 
-      <section className="relative overflow-hidden border-b border-indigo-100 bg-[radial-gradient(circle_at_top_left,_#eef2ff,_transparent_34%),linear-gradient(135deg,_#ffffff_0%,_#f8f7ff_52%,_#eef2ff_100%)]">
-        <div className="absolute left-[8%] top-8 h-72 w-72 rounded-full bg-indigo-200/30 blur-3xl" />
-        <div className="absolute bottom-0 right-[12%] h-64 w-64 rounded-full bg-violet-200/25 blur-3xl" />
+      <LandingHeader />
 
-        <div className="relative mx-auto grid max-w-7xl gap-12 px-6 py-16 sm:py-20 lg:grid-cols-[0.94fr_1.06fr] lg:px-8 lg:py-24">
-          <div className="flex flex-col justify-center">
-            <h1 className="max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-              AI task extraction for real client workflows.
-            </h1>
-
-            <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600 sm:text-xl">
-              Text2Task turns messy client messages, screenshots, notes, and
-              work requests into structured tasks. Choose the workflow closest
-              to your work.
-            </p>
-
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/signup"
-                className="inline-flex min-w-[150px] items-center justify-center rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-black text-white shadow-xl shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-indigo-700"
-              >
-                <span className="text-white">Try Text2Task</span>
-              </Link>
-
-              <Link
-                href="/"
-                className="inline-flex min-w-[150px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-3.5 text-sm font-black text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:text-indigo-700"
-              >
-                <span>Back to home</span>
-              </Link>
-            </div>
-          </div>
-
-          <div className="flex items-center">
-            <button
-              type="button"
-              data-use-case-lightbox-src="/landing/text2task-client-gmail-web-designers.png"
-              data-use-case-lightbox-alt="Client email request with website edits, budget, and deadline."
-              className="group w-full cursor-pointer rounded-3xl border border-white bg-white/80 p-3 text-left shadow-2xl shadow-indigo-200/40 backdrop-blur transition duration-300 hover:-translate-y-1 hover:shadow-indigo-200/60 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
-            >
-              <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
-                <Image
-                  src="/landing/text2task-client-gmail-web-designers.png"
-                  alt="Client email request with website edits, budget, and deadline."
-                  width={1586}
-                  height={992}
-                  priority
-                  className="h-auto w-full object-cover transition duration-500 group-hover:scale-[1.02]"
-                  sizes="(min-width: 1024px) 48vw, 100vw"
-                />
-              </div>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-6 py-14 sm:py-16 lg:px-8">
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
-            <h2 className="max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              Choose the use case closest to your work.
-            </h2>
-          </div>
-          <Link
-            href="/signup"
-            className="text-sm font-black text-indigo-700 transition hover:text-indigo-950"
-          >
-            Start free -&gt;
-          </Link>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {useCases.map((useCase) => (
-            <Link
-              key={useCase.slug}
-              href={`/use-cases/${useCase.slug}`}
-              className="group flex min-h-[315px] flex-col rounded-3xl border border-slate-200/80 bg-white/90 p-5 shadow-sm shadow-slate-200/50 transition duration-300 hover:-translate-y-1 hover:border-indigo-200 hover:bg-white hover:shadow-2xl hover:shadow-indigo-100/80"
-            >
-              <div className="mb-5 inline-flex w-fit rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-indigo-700">
-                {useCase.audienceLabel}
-              </div>
-
-              <h3 className="text-xl font-black tracking-tight text-slate-950">
-                {useCase.title}
-              </h3>
-
-              <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">
-                {useCase.metaDescription}
+      <main>
+        <section className="border-b border-slate-200 bg-white">
+          <div className="mx-auto max-w-7xl px-6 py-16 sm:py-20 lg:px-8 lg:py-24">
+            <div className="max-w-4xl">
+              <h1 className="text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl lg:leading-[1.04]">
+                Stop manually turning client messages into projects and tasks.
+              </h1>
+              <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600 sm:text-xl">
+                Paste an email, WhatsApp message, screenshot, note, or client
+                request. Text2Task turns it into a structured project with
+                tasks, then lets you review the result before anything is
+                saved.
               </p>
 
-              <div className="mt-5 flex flex-wrap gap-2">
-                {useCase.specificTasks.slice(0, 4).map((task) => (
-                  <span
-                    key={task}
-                    className="rounded-full border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-600"
-                  >
-                    {task}
-                  </span>
-                ))}
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/signup"
+                  className="inline-flex min-w-[145px] items-center justify-center rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-600/15 transition hover:-translate-y-0.5 hover:bg-blue-700"
+                >
+                  Start free
+                </Link>
+                <Link
+                  href="#use-case-categories"
+                  className="inline-flex min-w-[145px] items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-black text-slate-900 transition hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700"
+                >
+                  Explore use cases
+                </Link>
+              </div>
+            </div>
+
+            <div className="mt-12 grid gap-5 lg:grid-cols-[1.12fr_auto_0.88fr] lg:items-center">
+              <div>
+                <p className="mb-3 text-sm font-black text-slate-700">
+                  Client request
+                </p>
+                <button
+                  type="button"
+                  data-image-lightbox-trigger
+                  data-image-lightbox-src="/landing/text2task-client-gmail-request.png"
+                  data-image-lightbox-alt="Client email containing homepage revisions, a deadline, budget, and attached logo."
+                  data-image-lightbox-label="Client email request"
+                  data-image-lightbox-width="1672"
+                  data-image-lightbox-height="941"
+                  aria-label="Open preview: client email request"
+                  className="block w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-left shadow-sm transition hover:border-blue-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-100"
+                >
+                  <Image
+                    src="/landing/text2task-client-gmail-request.png"
+                    alt="Client email containing homepage revisions, a deadline, budget, and attached logo."
+                    width={1672}
+                    height={941}
+                    priority
+                    className="h-auto w-full rounded-xl border border-slate-100 object-contain"
+                    sizes="(min-width: 1024px) 58vw, 100vw"
+                  />
+                </button>
               </div>
 
-              <div className="mt-auto pt-7">
-                <span className="text-sm font-black text-slate-950 transition group-hover:text-indigo-700">
-                  View use case -&gt;
+              <div className="flex items-center justify-center gap-2 py-1 text-center text-sm font-black text-blue-700 lg:flex-col lg:px-1">
+                <span>Text2Task organizes it</span>
+                <span className="text-xl lg:hidden" aria-hidden="true">
+                  {"\u2193"}
+                </span>
+                <span className="hidden text-xl lg:inline" aria-hidden="true">
+                  {"\u2192"}
                 </span>
               </div>
-            </Link>
-          ))}
-        </div>
-      </section>
 
-      <section className="border-y border-indigo-100 bg-[radial-gradient(circle_at_top,_rgba(199,210,254,0.28),_transparent_36%),#ffffff]">
-        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 sm:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:px-8">
-          <div>
-            <h2 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              Real client requests arrive messy. Text2Task makes them usable.
-            </h2>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-              Every workflow starts the same way: a client sends a long email,
-              a WhatsApp message, a screenshot, or scattered notes. Text2Task
-              helps turn that intake into clear work you can review, save, and
-              manage.
-            </p>
-
-            <div className="mt-7 grid gap-3">
-              {[
-                "Works with email, WhatsApp, notes, and screenshots",
-                "Extracts tasks, deadlines, budgets, and client details",
-                "Keeps the final plan editable before saving",
-              ].map((point) => (
-                <div
-                  key={point}
-                  className="flex items-center gap-3 text-sm font-bold text-slate-700"
+              <div>
+                <p className="mb-3 text-sm font-black text-slate-700">
+                  Structured project and tasks
+                </p>
+                <button
+                  type="button"
+                  data-image-lightbox-trigger
+                  data-image-lightbox-src="/landing/text2task-ai-project-preview.png"
+                  data-image-lightbox-alt="Text2Task preview of an organized website project with extracted tasks, budget, deadline, and client details."
+                  data-image-lightbox-label="Structured project preview"
+                  data-image-lightbox-width="959"
+                  data-image-lightbox-height="909"
+                  aria-label="Open preview: structured project and tasks"
+                  className="block w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-left shadow-sm transition hover:border-blue-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-100"
                 >
-                  <span className="h-2 w-2 rounded-full bg-indigo-500 shadow-sm shadow-indigo-300" />
-                  {point}
-                </div>
-              ))}
+                  <Image
+                    src="/landing/text2task-ai-project-preview.png"
+                    alt="Text2Task preview of an organized website project with extracted tasks, budget, deadline, and client details."
+                    width={959}
+                    height={909}
+                    priority
+                    className="h-auto w-full rounded-xl border border-slate-100 object-contain"
+                    sizes="(min-width: 1024px) 38vw, 100vw"
+                  />
+                </button>
+              </div>
             </div>
           </div>
+        </section>
 
-          <div className="relative min-h-[420px]">
-            <button
-              type="button"
-              data-use-case-lightbox-src="/landing/text2task-client-whatsapp-video-editors.png"
-              data-use-case-lightbox-alt="Client WhatsApp request with video revision notes."
-              className="group absolute right-0 top-0 w-[82%] cursor-pointer rounded-3xl border border-white bg-white/80 p-3 text-left shadow-2xl shadow-indigo-100/70 backdrop-blur transition duration-300 hover:-translate-y-1 hover:shadow-indigo-200/70 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
-            >
-              <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
-                <Image
-                  src="/landing/text2task-client-whatsapp-video-editors.png"
-                  alt="Client WhatsApp request with video revision notes."
-                  width={1448}
-                  height={1086}
-                  className="h-auto w-full object-cover transition duration-500 group-hover:scale-[1.02]"
-                  sizes="(min-width: 1024px) 45vw, 100vw"
-                />
-              </div>
-            </button>
+        <section
+          id="use-case-categories"
+          className="scroll-mt-6 bg-[#fbfcfe]"
+        >
+          <div className="mx-auto max-w-7xl px-6 py-14 sm:py-16 lg:px-8 lg:py-20">
+            {categoryGroups.map(({ category, useCases: categoryUseCases }) => (
+              <section
+                key={category.id}
+                className="grid gap-8 border-t border-slate-200 py-10 first:pt-0 lg:grid-cols-[0.7fr_1.3fr] lg:gap-14 lg:py-14"
+              >
+                <div>
+                  <h2 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+                    {category.heading}
+                  </h2>
+                  <p className="mt-4 max-w-md leading-7 text-slate-600">
+                    {category.description}
+                  </p>
+                </div>
 
-            <button
-              type="button"
-              data-use-case-lightbox-src="/landing/text2task-ai-project-preview.png"
-              data-use-case-lightbox-alt="Text2Task AI project preview with extracted tasks, deadline, budget, and client details."
-              className="group absolute bottom-0 left-0 w-[78%] cursor-pointer rounded-3xl border border-white bg-white/90 p-3 text-left shadow-2xl shadow-slate-200/80 backdrop-blur transition duration-300 hover:-translate-y-1 hover:shadow-indigo-100/80 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
-            >
-              <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
-                <Image
-                  src="/landing/text2task-ai-project-preview.png"
-                  alt="Text2Task AI project preview with extracted tasks, deadline, budget, and client details."
-                  width={1380}
-                  height={564}
-                  className="h-auto w-full object-cover transition duration-500 group-hover:scale-[1.02]"
-                  sizes="(min-width: 1024px) 42vw, 100vw"
-                />
-              </div>
-            </button>
+                <div className="divide-y divide-slate-200 border-y border-slate-200">
+                  {categoryUseCases.map((useCase) => (
+                    <Link
+                      key={useCase.slug}
+                      href={`/use-cases/${useCase.slug}`}
+                      className="group grid gap-4 py-6 transition sm:grid-cols-[1fr_auto] sm:items-center"
+                    >
+                      <div>
+                        <p className="text-sm font-bold text-blue-700">
+                          {useCase.listing.label}
+                        </p>
+                        <h3 className="mt-2 text-xl font-black tracking-tight text-slate-950 transition group-hover:text-blue-700">
+                          {useCase.listing.title}
+                        </h3>
+                        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                          {useCase.listing.description}
+                        </p>
+                      </div>
+                      <span className="text-sm font-black text-blue-700">
+                        Explore {useCase.listing.label} {"\u2192"}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <div
-        id="use-cases-lightbox"
-        hidden
-        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Use case image preview"
-      >
-        <div className="relative w-full max-w-6xl">
-          <button
-            type="button"
-            data-use-case-lightbox-close
-            className="absolute -top-12 right-0 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white shadow-xl backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20 focus:outline-none focus-visible:ring-4 focus-visible:ring-white/30"
-          >
-            Close
-          </button>
-          <div className="overflow-hidden rounded-[2rem] border border-white/15 bg-white p-2 shadow-2xl shadow-slate-950/40">
-            <img
-              data-use-case-lightbox-image
-              src=""
-              alt=""
-              className="h-auto max-h-[82vh] w-full rounded-[1.5rem] object-contain"
-            />
+        <section className="border-y border-slate-200 bg-white">
+          <div className="mx-auto max-w-7xl px-6 py-14 sm:py-16 lg:px-8 lg:py-20">
+            <div className="max-w-3xl">
+              <h2 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+                One workspace for new requests and project updates
+              </h2>
+              <p className="mt-5 text-lg leading-8 text-slate-600">
+                Start a project from a new request, or compare a follow-up with
+                work that is already saved. In both workflows, you review and
+                approve the result.
+              </p>
+            </div>
+
+            <div className="mt-10 grid divide-y divide-slate-200 border-y border-slate-200 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+              <div className="py-7 lg:pr-10">
+                <h3 className="text-xl font-black text-slate-950">
+                  New client request
+                </h3>
+                <ol className="mt-5 space-y-4 text-sm leading-6 text-slate-600">
+                  <li>1. Paste or upload the request.</li>
+                  <li>2. Review the extracted project and tasks.</li>
+                  <li>3. Save the work only after it is approved.</li>
+                </ol>
+              </div>
+
+              <div className="py-7 lg:pl-10">
+                <h3 className="text-xl font-black text-slate-950">
+                  Existing project update
+                </h3>
+                <ol className="mt-5 space-y-4 text-sm leading-6 text-slate-600">
+                  <li>1. Analyze a follow-up against the saved project.</li>
+                  <li>2. Separate new work from requests already handled.</li>
+                  <li>3. Approve only the changes that should be applied.</li>
+                </ol>
+              </div>
+            </div>
+
+            <Link
+              href="/signup"
+              className="mt-8 inline-flex items-center text-sm font-black text-blue-700 transition hover:text-slate-950"
+            >
+              Start organizing client work {"\u2192"}
+            </Link>
           </div>
-        </div>
-      </div>
-    </main>
+        </section>
+      </main>
+
+      <LandingFooter />
+
+      <UseCaseLightbox />
+    </div>
   );
 }

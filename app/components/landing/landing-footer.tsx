@@ -2,14 +2,15 @@ import Image from "next/image";
 import Link from "next/link";
 
 const productLinks = [
-  { label: "How it works", href: "#how-it-works" },
-  { label: "Demo", href: "#demo" },
-  { label: "Features", href: "#features" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "How it works", href: "/#how-it-works" },
+  { label: "Demo", href: "/#demo" },
+  { label: "Features", href: "/#features" },
+  { label: "Pricing", href: "/#pricing" },
   { label: "About", href: "/about" },
 ];
 
 const useCaseLinks = [
+  { label: "All use cases", href: "/use-cases" },
   { label: "Web designers", href: "/use-cases/web-designers" },
   { label: "WordPress freelancers", href: "/use-cases/wordpress-freelancers" },
   { label: "Graphic designers", href: "/use-cases/graphic-designers" },
@@ -102,8 +103,8 @@ function FooterColumn({
 
 const footerStyles = `
   .t2t-footer {
-    width: min(1180px, calc(100% - 40px));
-    margin: 54px auto 0;
+    width: 100%;
+    margin: 0;
     border-top: 1px solid rgba(203, 213, 225, 0.8);
     background: #ffffff;
   }
@@ -115,10 +116,12 @@ const footerStyles = `
   }
 
   .t2t-footer-inner {
+    width: min(1180px, calc(100% - 40px));
+    margin: 0 auto;
     display: grid;
     grid-template-columns: 1.05fr 1.95fr;
     gap: 52px;
-    padding: 34px 4px 30px;
+    padding: 38px 0 32px;
     align-items: start;
   }
 
@@ -212,8 +215,10 @@ const footerStyles = `
   }
 
   .t2t-footer-bottom {
+    width: min(1180px, calc(100% - 40px));
+    margin: 0 auto;
     border-top: 1px solid rgba(226,232,240,0.9);
-    padding: 16px 4px;
+    padding: 16px 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -246,10 +251,6 @@ const footerStyles = `
   }
 
   @media (max-width: 980px) {
-    .t2t-footer {
-      width: min(100% - 40px, 1180px);
-    }
-
     .t2t-footer-inner {
       grid-template-columns: 1fr;
       gap: 34px;
@@ -261,9 +262,9 @@ const footerStyles = `
   }
 
   @media (max-width: 640px) {
-    .t2t-footer {
+    .t2t-footer-inner,
+    .t2t-footer-bottom {
       width: min(100% - 24px, 1180px);
-      margin-top: 42px;
     }
 
     .t2t-footer-inner {

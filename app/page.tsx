@@ -98,9 +98,7 @@ export default function HomePage() {
 
       <HeroSection />
 
-      <div className="mx-auto max-w-7xl px-6 pb-12 lg:px-8">
-        <LandingFooter />
-      </div>
+      <LandingFooter />
     </main>
   );
 }

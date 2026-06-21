@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import UseCasePage from "@/app/components/use-cases/use-case-page";
+import UseCaseDetailPage from "@/app/components/use-cases/use-case-detail-page";
 import { getUseCaseBySlug, getUseCaseSlugs } from "@/app/lib/use-cases";
 
 type PageProps = {
@@ -36,22 +36,22 @@ export async function generateMetadata({
   const canonicalUrl = `${siteUrl}/use-cases/${useCase.slug}`;
 
   return {
-    title: useCase.seoTitle,
-    description: useCase.metaDescription,
+    title: useCase.seo.title,
+    description: useCase.seo.description,
     alternates: {
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: useCase.seoTitle,
-      description: useCase.metaDescription,
+      title: useCase.seo.title,
+      description: useCase.seo.description,
       url: canonicalUrl,
       siteName: "Text2Task",
       type: "website",
     },
     twitter: {
       card: "summary_large_image",
-      title: useCase.seoTitle,
-      description: useCase.metaDescription,
+      title: useCase.seo.title,
+      description: useCase.seo.description,
     },
   };
 }
@@ -64,5 +64,5 @@ export default async function Page({ params }: PageProps) {
     notFound();
   }
 
-  return <UseCasePage useCase={useCase} />;
+  return <UseCaseDetailPage useCase={useCase} />;
 }

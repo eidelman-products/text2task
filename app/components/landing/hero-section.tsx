@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import CustomerStoriesSection from "./customer-stories-section";
+import LandingHeader from "./landing-header";
 
 const proofSteps = [
   {
@@ -90,30 +91,7 @@ export default function HeroSection() {
     <div className="t2t-page">
       <style>{styles}</style>
 
-      <header className="t2t-header">
-        <Link href="/" className="t2t-logo" aria-label="Text2Task home">
-          <Image
-            src="/text2task-logo.png"
-            alt="Text2Task"
-            width={176}
-            height={48}
-            priority
-          />
-        </Link>
-
-        <nav className="t2t-nav" aria-label="Main navigation">
-          <a href="#how-it-works">How it works</a>
-          <a href="#demo">Demo</a>
-          <a href="#features">Features</a>
-          <a href="#pricing">Pricing</a>
-          <Link href="/about">About</Link>
-          <Link href="/login">Log in</Link>
-        </nav>
-
-        <Link href="/signup" className="t2t-nav-cta">
-          Try Text2Task
-        </Link>
-      </header>
+      <LandingHeader />
 
       <main className="t2t-main">
         <section className="t2t-hero">

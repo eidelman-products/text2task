@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import LandingFooter from "../components/landing/landing-footer";
+import UseCaseLightbox from "../components/use-cases/use-case-lightbox";
 import AboutReturnLink from "./about-return-link";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://text2task.com";
@@ -140,44 +141,6 @@ export default function AboutPage() {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutJsonLd) }}
         />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              document.addEventListener("click", function (event) {
-                var trigger = event.target.closest("[data-about-lightbox-src]");
-                var lightbox = document.getElementById("about-lightbox");
-                if (!lightbox) return;
-
-                if (trigger) {
-                  event.preventDefault();
-                  var image = lightbox.querySelector("[data-about-lightbox-image]");
-                  if (!image) return;
-                  image.setAttribute("src", trigger.getAttribute("data-about-lightbox-src") || "");
-                  image.setAttribute("alt", trigger.getAttribute("data-about-lightbox-alt") || "");
-                  lightbox.removeAttribute("hidden");
-                  document.documentElement.style.overflow = "hidden";
-                  return;
-                }
-
-                if (
-                  event.target.closest("[data-about-lightbox-close]") ||
-                  event.target === lightbox
-                ) {
-                  lightbox.setAttribute("hidden", "");
-                  document.documentElement.style.overflow = "";
-                }
-              });
-
-              document.addEventListener("keydown", function (event) {
-                if (event.key !== "Escape") return;
-                var lightbox = document.getElementById("about-lightbox");
-                if (!lightbox || lightbox.hasAttribute("hidden")) return;
-                lightbox.setAttribute("hidden", "");
-                document.documentElement.style.overflow = "";
-              });
-            `,
-          }}
-        />
 
         <section className="relative overflow-hidden border-b border-indigo-100 bg-[radial-gradient(circle_at_16%_12%,_rgba(199,210,254,0.62),_transparent_31%),radial-gradient(circle_at_88%_14%,_rgba(221,214,254,0.54),_transparent_30%),linear-gradient(135deg,_#ffffff_0%,_#fafaff_52%,_#eef2ff_100%)]">
           <div className="absolute left-[8%] top-8 h-72 w-72 rounded-full bg-indigo-200/30 blur-3xl" />
@@ -221,8 +184,12 @@ export default function AboutPage() {
             <div className="relative min-h-[500px] lg:min-h-[560px]">
               <button
                 type="button"
-                data-about-lightbox-src="/landing/text2task-client-gmail-web-designers.png"
-                data-about-lightbox-alt="Client email request with website edits, budget, and deadline."
+                data-image-lightbox-trigger
+                data-image-lightbox-src="/landing/text2task-client-gmail-web-designers.png"
+                data-image-lightbox-alt="Client email request with website edits, budget, and deadline."
+                data-image-lightbox-label="Client email request"
+                data-image-lightbox-width="1586"
+                data-image-lightbox-height="992"
                 aria-label="Open client email request screenshot preview"
                 className="group absolute right-0 top-0 w-[84%] cursor-pointer rounded-3xl border border-white bg-white/80 p-3 text-left shadow-2xl shadow-indigo-200/50 backdrop-blur transition duration-300 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
               >
@@ -244,8 +211,12 @@ export default function AboutPage() {
 
               <button
                 type="button"
-                data-about-lightbox-src="/landing/text2task-ai-project-preview.png"
-                data-about-lightbox-alt="Text2Task AI project preview with extracted tasks, deadline, budget, and client details."
+                data-image-lightbox-trigger
+                data-image-lightbox-src="/landing/text2task-ai-project-preview.png"
+                data-image-lightbox-alt="Text2Task AI project preview with extracted tasks, deadline, budget, and client details."
+                data-image-lightbox-label="AI project preview"
+                data-image-lightbox-width="959"
+                data-image-lightbox-height="909"
                 aria-label="Open Text2Task AI project preview screenshot"
                 className="group absolute bottom-0 left-0 w-[78%] cursor-pointer rounded-3xl border border-white bg-white/90 p-3 text-left shadow-2xl shadow-slate-200/80 backdrop-blur transition duration-300 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
               >
@@ -293,8 +264,12 @@ export default function AboutPage() {
               <div className="absolute -right-8 top-0 h-40 w-40 rounded-full bg-indigo-200/30 blur-3xl" />
               <button
                 type="button"
-                data-about-lightbox-src="/landing/text2task-client-whatsapp-request.png"
-                data-about-lightbox-alt="Client WhatsApp request before extraction."
+                data-image-lightbox-trigger
+                data-image-lightbox-src="/landing/text2task-client-whatsapp-request.png"
+                data-image-lightbox-alt="Client WhatsApp request before extraction."
+                data-image-lightbox-label="Client WhatsApp request"
+                data-image-lightbox-width="760"
+                data-image-lightbox-height="760"
                 aria-label="Open client WhatsApp request screenshot preview"
                 className="group absolute left-0 top-0 w-[52%] cursor-pointer rounded-[1.75rem] border border-white bg-white/80 p-3 text-left shadow-2xl shadow-slate-200/70 backdrop-blur transition duration-300 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
               >
@@ -315,8 +290,12 @@ export default function AboutPage() {
 
               <button
                 type="button"
-                data-about-lightbox-src="/landing/text2task-client-update-review.png"
-                data-about-lightbox-alt="Text2Task client update review showing extracted changes before saving."
+                data-image-lightbox-trigger
+                data-image-lightbox-src="/landing/text2task-client-update-review.png"
+                data-image-lightbox-alt="Text2Task client update review showing extracted changes before saving."
+                data-image-lightbox-label="Client update review"
+                data-image-lightbox-width="1400"
+                data-image-lightbox-height="840"
                 aria-label="Open Text2Task client update review screenshot preview"
                 className="group absolute bottom-0 right-0 w-[68%] cursor-pointer rounded-[1.75rem] border border-white bg-white/90 p-3 text-left shadow-2xl shadow-indigo-100/80 backdrop-blur transition duration-300 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
               >
@@ -470,8 +449,12 @@ export default function AboutPage() {
 
                 <button
                   type="button"
-                  data-about-lightbox-src={image.src}
-                  data-about-lightbox-alt={image.alt}
+                  data-image-lightbox-trigger
+                  data-image-lightbox-src={image.src}
+                  data-image-lightbox-alt={image.alt}
+                  data-image-lightbox-label={image.label}
+                  data-image-lightbox-width="1400"
+                  data-image-lightbox-height="900"
                   aria-label={`Open screenshot preview: ${image.alt}`}
                   className="group relative w-full cursor-pointer rounded-3xl border border-white bg-white/85 p-3 text-left shadow-lg shadow-slate-200/60 backdrop-blur transition duration-300 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
                 >
@@ -531,35 +514,10 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <div
-          id="about-lightbox"
-          hidden
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md"
-          role="dialog"
-          aria-modal="true"
-          aria-label="About page image preview"
-        >
-          <div className="relative w-full max-w-6xl">
-            <button
-              type="button"
-              data-about-lightbox-close
-              className="absolute -top-12 right-0 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white shadow-xl backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20 focus:outline-none focus-visible:ring-4 focus-visible:ring-white/30"
-            >
-              Close
-            </button>
-            <div className="overflow-hidden rounded-[2rem] border border-white/15 bg-white p-2 shadow-2xl shadow-slate-950/40">
-              <img
-                data-about-lightbox-image
-                src=""
-                alt=""
-                className="h-auto max-h-[82vh] w-full rounded-[1.5rem] object-contain"
-              />
-            </div>
-          </div>
-        </div>
       </main>
 
       <LandingFooter />
+      <UseCaseLightbox />
     </div>
   );
 }
