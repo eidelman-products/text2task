@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import type { UseCasePageData } from "@/app/lib/seo/use-cases";
-import { getRelatedUseCases } from "@/app/lib/seo/use-cases";
+import type { UseCasePageData } from "@/app/lib/use-cases";
+import { getRelatedUseCases } from "@/app/lib/use-cases";
 
 type UseCasePageProps = {
   useCase: UseCasePageData;

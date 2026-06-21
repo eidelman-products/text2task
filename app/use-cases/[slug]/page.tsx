@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import UseCasePage from "@/app/components/use-cases/use-case-page";
-import { getUseCaseBySlug, getUseCaseSlugs } from "@/app/lib/seo/use-cases";
+import { getUseCaseBySlug, getUseCaseSlugs } from "@/app/lib/use-cases";
 
 type PageProps = {
   params: Promise<{

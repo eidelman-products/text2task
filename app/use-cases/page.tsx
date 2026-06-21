@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { getAllUseCases } from "@/app/lib/seo/use-cases";
+import { getAllUseCases } from "@/app/lib/use-cases";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://text2task.com";
 

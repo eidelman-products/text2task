@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getAllUseCases } from "@/app/lib/seo/use-cases";
+import { getAllUseCases } from "@/app/lib/use-cases";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.text2task.com";
 
