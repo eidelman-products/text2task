@@ -1,9 +1,13 @@
 import { webDesignersUseCase } from "./cases/web-designers";
 import { wordpressFreelancersUseCase } from "./cases/wordpress-freelancers";
 import { webflowFreelancersUseCase } from "./cases/webflow-freelancers";
+import { shopifyFreelancersUseCase } from "./cases/shopify-freelancers";
+import { freelanceDevelopersUseCase } from "./cases/freelance-developers";
+import { seoFreelancersUseCase } from "./cases/seo-freelancers";
 import { graphicDesignersUseCase } from "./cases/graphic-designers";
 import { socialMediaManagersUseCase } from "./cases/social-media-managers";
 import { videoEditorsUseCase } from "./cases/video-editors";
+import { projectManagersUseCase } from "./cases/project-managers";
 import { virtualAssistantsUseCase } from "./cases/virtual-assistants";
 import { smallAgenciesUseCase } from "./cases/small-agencies";
 import type {
@@ -62,9 +66,13 @@ export const useCases = [
   webDesignersUseCase,
   wordpressFreelancersUseCase,
   webflowFreelancersUseCase,
+  shopifyFreelancersUseCase,
+  freelanceDevelopersUseCase,
+  seoFreelancersUseCase,
   graphicDesignersUseCase,
   socialMediaManagersUseCase,
   videoEditorsUseCase,
+  projectManagersUseCase,
   virtualAssistantsUseCase,
   smallAgenciesUseCase,
 ] as const satisfies readonly UseCase[];
