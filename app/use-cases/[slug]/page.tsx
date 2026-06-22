@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import UseCaseDetailPage from "@/app/components/use-cases/use-case-detail-page";
+import { absoluteUrl } from "@/app/lib/site-config";
 import { getUseCaseBySlug, getUseCaseSlugs } from "@/app/lib/use-cases";
 
 type PageProps = {
@@ -8,8 +9,6 @@ type PageProps = {
     slug: string;
   }>;
 };
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://text2task.com";
 
 export async function generateStaticParams() {
   return getUseCaseSlugs().map((slug) => ({
@@ -33,13 +32,14 @@ export async function generateMetadata({
     };
   }
 
-  const canonicalUrl = `${siteUrl}/use-cases/${useCase.slug}`;
+  const canonicalPath = `/use-cases/${useCase.slug}`;
+  const canonicalUrl = absoluteUrl(canonicalPath);
 
   return {
     title: useCase.seo.title,
     description: useCase.seo.description,
     alternates: {
-      canonical: canonicalUrl,
+      canonical: canonicalPath,
     },
     openGraph: {
       title: useCase.seo.title,

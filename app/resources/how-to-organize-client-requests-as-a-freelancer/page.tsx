@@ -1,13 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { absoluteUrl } from "@/app/lib/site-config";
 
 export const metadata: Metadata = {
   title: "How to Organize Client Requests as a Freelancer",
   description:
     "Learn how freelancers can organize messy client requests, screenshots, messages, deadlines, budgets, and notes into clear tasks.",
   alternates: {
-    canonical:
-      "https://www.text2task.com/resources/how-to-organize-client-requests-as-a-freelancer",
+    canonical: "/resources/how-to-organize-client-requests-as-a-freelancer",
+  },
+  openGraph: {
+    title: "How to Organize Client Requests as a Freelancer",
+    description:
+      "Learn how freelancers can organize messy client requests, screenshots, messages, deadlines, budgets, and notes into clear tasks.",
+    url: absoluteUrl(
+      "/resources/how-to-organize-client-requests-as-a-freelancer"
+    ),
+    siteName: "Text2Task",
+    type: "article",
   },
 };
 

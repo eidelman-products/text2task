@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://text2task.com";
+import { absoluteUrl, SITE_ORIGIN } from "@/app/lib/site-config";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -29,7 +28,7 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: `${siteUrl}/sitemap.xml`,
-    host: siteUrl,
+    sitemap: absoluteUrl("/sitemap.xml"),
+    host: SITE_ORIGIN,
   };
 }

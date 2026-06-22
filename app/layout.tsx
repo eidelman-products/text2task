@@ -7,16 +7,15 @@ import { ConsentAwareVercelAnalytics } from "./components/analytics/consent-awar
 import { CookieConsentBanner } from "./components/analytics/cookie-consent-banner";
 import { GoogleAdsTag } from "./components/analytics/google-ads-tag";
 import { MicrosoftClarity } from "./components/analytics/microsoft-clarity";
+import { SITE_ORIGIN } from "./lib/site-config";
 
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
 });
 
-const siteUrl = "https://www.text2task.com";
-
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_ORIGIN),
 
   title: {
     default: "Text2Task | Turn Client Messages Into Tasks",
@@ -58,7 +57,7 @@ export const metadata: Metadata = {
     title: "Text2Task | Turn Client Messages Into Tasks",
     description:
       "Turn messy client messages, emails, notes, and screenshots into clean structured tasks with deadlines, budgets, client details, and priorities.",
-    url: siteUrl,
+    url: SITE_ORIGIN,
     siteName: "Text2Task",
     type: "website",
     locale: "en_US",

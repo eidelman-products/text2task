@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
+import { absoluteUrl } from "@/app/lib/site-config";
 import { getAllUseCases } from "@/app/lib/use-cases";
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.text2task.com";
 
 const resourceRoutes = [
   {
@@ -31,43 +30,43 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const publicRoutes: MetadataRoute.Sitemap = [
     {
-      url: `${siteUrl}`,
+      url: absoluteUrl("/"),
       lastModified: now,
       changeFrequency: "weekly",
       priority: 1,
     },
     {
-      url: `${siteUrl}/pricing`,
+      url: absoluteUrl("/pricing"),
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.85,
     },
     {
-      url: `${siteUrl}/use-cases`,
+      url: absoluteUrl("/use-cases"),
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
-      url: `${siteUrl}/contact`,
+      url: absoluteUrl("/contact"),
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.65,
     },
     {
-      url: `${siteUrl}/about`,
+      url: absoluteUrl("/about"),
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.7,
     },
     {
-      url: `${siteUrl}/privacy`,
+      url: absoluteUrl("/privacy"),
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.35,
     },
     {
-      url: `${siteUrl}/terms`,
+      url: absoluteUrl("/terms"),
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.35,
@@ -76,7 +75,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const useCaseRoutes: MetadataRoute.Sitemap = getAllUseCases().map(
     (useCase) => ({
-      url: `${siteUrl}/use-cases/${useCase.slug}`,
+      url: absoluteUrl(`/use-cases/${useCase.slug}`),
       lastModified: now,
       changeFrequency: "monthly",
       priority: useCase.slug === "web-designers" ? 0.9 : 0.78,
@@ -84,7 +83,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   );
 
   const resources: MetadataRoute.Sitemap = resourceRoutes.map((route) => ({
-    url: `${siteUrl}${route.path}`,
+    url: absoluteUrl(route.path),
     lastModified: now,
     changeFrequency: route.changeFrequency,
     priority: route.priority,

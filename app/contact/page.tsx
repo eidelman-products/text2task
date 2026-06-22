@@ -2,11 +2,23 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import type React from "react";
+import { absoluteUrl } from "@/app/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Contact",
   description:
     "Contact Text2Task for support, billing questions, privacy requests, partnerships, and product feedback.",
+  alternates: {
+    canonical: "/contact",
+  },
+  openGraph: {
+    title: "Contact",
+    description:
+      "Contact Text2Task for support, billing questions, privacy requests, partnerships, and product feedback.",
+    url: absoluteUrl("/contact"),
+    siteName: "Text2Task",
+    type: "website",
+  },
 };
 
 type ContactPageProps = {

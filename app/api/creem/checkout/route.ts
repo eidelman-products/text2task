@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { SITE_ORIGIN } from "@/app/lib/site-config";
 
-const PRODUCTION_APP_URL = "https://text2task.com";
+const PRODUCTION_APP_URL = SITE_ORIGIN;
 
 async function getAuthenticatedUser() {
   const cookieStore = await cookies();

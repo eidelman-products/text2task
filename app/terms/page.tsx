@@ -1,11 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { absoluteUrl } from "@/app/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
     "Terms of Service for Text2Task — rules, subscriptions, acceptable use, AI output, and user responsibilities.",
+  alternates: {
+    canonical: "/terms",
+  },
+  openGraph: {
+    title: "Terms of Service",
+    description:
+      "Terms of Service for Text2Task — rules, subscriptions, acceptable use, AI output, and user responsibilities.",
+    url: absoluteUrl("/terms"),
+    siteName: "Text2Task",
+    type: "website",
+  },
 };
 
 type TermsPageProps = {

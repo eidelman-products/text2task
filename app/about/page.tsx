@@ -4,22 +4,21 @@ import Link from "next/link";
 import { Suspense } from "react";
 import LandingFooter from "../components/landing/landing-footer";
 import UseCaseLightbox from "../components/use-cases/use-case-lightbox";
+import { absoluteUrl } from "../lib/site-config";
 import AboutReturnLink from "./about-return-link";
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://text2task.com";
 
 export const metadata: Metadata = {
   title: "About Text2Task | AI Task Extraction for Client Work",
   description:
     "Learn how Text2Task helps freelancers and small teams turn messy client messages, emails, screenshots, and notes into organized tasks, deadlines, budgets, and client details.",
   alternates: {
-    canonical: `${siteUrl}/about`,
+    canonical: "/about",
   },
   openGraph: {
     title: "About Text2Task | AI Task Extraction for Client Work",
     description:
       "Learn how Text2Task helps freelancers and small teams turn messy client communication into organized work.",
-    url: `${siteUrl}/about`,
+    url: absoluteUrl("/about"),
     siteName: "Text2Task",
     type: "website",
   },
@@ -120,11 +119,11 @@ export default function AboutPage() {
     name: "About Text2Task",
     description:
       "Text2Task helps freelancers and small teams turn messy client messages, emails, screenshots, and notes into organized tasks, deadlines, budgets, and client details.",
-    url: `${siteUrl}/about`,
+    url: absoluteUrl("/about"),
     isPartOf: {
       "@type": "WebSite",
       name: "Text2Task",
-      url: siteUrl,
+      url: absoluteUrl("/"),
     },
     about: {
       "@type": "SoftwareApplication",

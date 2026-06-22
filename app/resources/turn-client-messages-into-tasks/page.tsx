@@ -1,13 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { absoluteUrl } from "@/app/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Turn Client Messages Into Tasks: A Simple Workflow for Freelancers",
   description:
     "Learn a simple workflow for turning messy client messages, screenshots, budgets, deadlines, and notes into organized tasks.",
   alternates: {
-    canonical:
-      "https://www.text2task.com/resources/turn-client-messages-into-tasks",
+    canonical: "/resources/turn-client-messages-into-tasks",
+  },
+  openGraph: {
+    title: "Turn Client Messages Into Tasks: A Simple Workflow for Freelancers",
+    description:
+      "Learn a simple workflow for turning messy client messages, screenshots, budgets, deadlines, and notes into organized tasks.",
+    url: absoluteUrl("/resources/turn-client-messages-into-tasks"),
+    siteName: "Text2Task",
+    type: "article",
   },
 };
 

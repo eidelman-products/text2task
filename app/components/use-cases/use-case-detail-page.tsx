@@ -2,6 +2,7 @@ import LandingFooter from "@/app/components/landing/landing-footer";
 import LandingHeader from "@/app/components/landing/landing-header";
 import type { UseCase } from "@/app/lib/use-cases";
 import { getRelatedUseCases } from "@/app/lib/use-cases";
+import { absoluteUrl } from "@/app/lib/site-config";
 import UseCaseCapabilities from "./use-case-capabilities";
 import UseCaseClientUpdates from "./use-case-client-updates";
 import UseCaseFaq from "./use-case-faq";
@@ -41,11 +42,11 @@ export default function UseCaseDetailPage({ useCase }: UseCaseDetailPageProps) {
     "@type": "WebPage",
     name: useCase.seo.title,
     description: useCase.seo.description,
-    url: `https://text2task.com/use-cases/${useCase.slug}`,
+    url: absoluteUrl(`/use-cases/${useCase.slug}`),
     isPartOf: {
       "@type": "WebSite",
       name: "Text2Task",
-      url: "https://text2task.com",
+      url: absoluteUrl("/"),
     },
     about: {
       "@type": "SoftwareApplication",

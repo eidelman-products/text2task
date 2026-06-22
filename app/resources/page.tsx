@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { absoluteUrl } from "@/app/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Resources for Freelancers",
   description:
     "Practical guides for freelancers and small service providers on organizing client requests, revisions, messages, screenshots, deadlines, and tasks.",
   alternates: {
-    canonical: "https://www.text2task.com/resources",
+    canonical: "/resources",
   },
   openGraph: {
     title: "Text2Task Resources",
     description:
       "Guides for freelancers who want to turn messy client messages into organized tasks.",
-    url: "https://www.text2task.com/resources",
+    url: absoluteUrl("/resources"),
     type: "website",
   },
 };

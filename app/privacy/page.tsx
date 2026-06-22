@@ -1,11 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { absoluteUrl } from "@/app/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
     "Privacy Policy for Text2Task — how we collect, use, protect, and manage your information.",
+  alternates: {
+    canonical: "/privacy",
+  },
+  openGraph: {
+    title: "Privacy Policy",
+    description:
+      "Privacy Policy for Text2Task — how we collect, use, protect, and manage your information.",
+    url: absoluteUrl("/privacy"),
+    siteName: "Text2Task",
+    type: "website",
+  },
 };
 
 type PrivacyPageProps = {

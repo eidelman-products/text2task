@@ -1,13 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { absoluteUrl } from "@/app/lib/site-config";
 
 export const metadata: Metadata = {
   title: "How Web Designers Can Manage Client Revisions Faster",
   description:
     "A practical guide for web designers who want to organize client revisions, screenshots, website edits, deadlines, and feedback faster.",
   alternates: {
-    canonical:
-      "https://www.text2task.com/resources/manage-client-revisions-web-designers",
+    canonical: "/resources/manage-client-revisions-web-designers",
+  },
+  openGraph: {
+    title: "How Web Designers Can Manage Client Revisions Faster",
+    description:
+      "A practical guide for web designers who want to organize client revisions, screenshots, website edits, deadlines, and feedback faster.",
+    url: absoluteUrl(
+      "/resources/manage-client-revisions-web-designers"
+    ),
+    siteName: "Text2Task",
+    type: "article",
   },
 };
 

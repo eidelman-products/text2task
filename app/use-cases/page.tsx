@@ -4,25 +4,24 @@ import Link from "next/link";
 import LandingFooter from "@/app/components/landing/landing-footer";
 import LandingHeader from "@/app/components/landing/landing-header";
 import UseCaseLightbox from "@/app/components/use-cases/use-case-lightbox";
+import { absoluteUrl } from "@/app/lib/site-config";
 import {
   getAllUseCases,
   getUseCaseCategoryGroups,
 } from "@/app/lib/use-cases";
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://text2task.com";
 
 export const metadata: Metadata = {
   title: "Use Cases for Freelancers & Agencies | Text2Task",
   description:
     "See how freelancers and agencies use Text2Task to turn client messages into organized projects and tasks without manual task entry.",
   alternates: {
-    canonical: `${siteUrl}/use-cases`,
+    canonical: "/use-cases",
   },
   openGraph: {
     title: "Use Cases for Freelancers & Agencies | Text2Task",
     description:
       "See how freelancers and agencies turn client messages into organized projects and tasks without manual task entry.",
-    url: `${siteUrl}/use-cases`,
+    url: absoluteUrl("/use-cases"),
     siteName: "Text2Task",
     type: "website",
   },
@@ -44,11 +43,11 @@ export default function UseCasesPage() {
     name: "Text2Task Use Cases",
     description:
       "Use cases for freelancers and agencies organizing client messages into projects and tasks with Text2Task.",
-    url: `${siteUrl}/use-cases`,
+    url: absoluteUrl("/use-cases"),
     mainEntity: useCases.map((useCase) => ({
       "@type": "WebPage",
       name: useCase.listing.label,
-      url: `${siteUrl}/use-cases/${useCase.slug}`,
+      url: absoluteUrl(`/use-cases/${useCase.slug}`),
       description: useCase.listing.description,
     })),
   };
@@ -56,14 +55,14 @@ export default function UseCasesPage() {
   const itemListJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    "@id": `${siteUrl}/use-cases#item-list`,
+    "@id": absoluteUrl("/use-cases#item-list"),
     name: "Text2Task use cases for freelancers and agencies",
     numberOfItems: useCases.length,
     itemListElement: useCases.map((useCase, index) => ({
       "@type": "ListItem",
       position: index + 1,
       name: useCase.listing.label,
-      url: `${siteUrl}/use-cases/${useCase.slug}`,
+      url: absoluteUrl(`/use-cases/${useCase.slug}`),
     })),
   };
 
