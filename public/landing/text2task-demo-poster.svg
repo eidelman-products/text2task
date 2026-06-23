@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title description">
+  <title id="title">Text2Task demo</title>
+  <desc id="description">Client request to review draft to organized project, with a central play button.</desc>
+  <rect width="1280" height="720" fill="#f8fbff" />
+  <rect x="64" y="56" width="1152" height="608" rx="32" fill="#ffffff" stroke="#dbeafe" stroke-width="2" />
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="112" y="116" fill="#2563eb" font-size="24" font-weight="700">Text2Task</text>
+    <text x="640" y="214" fill="#0f172a" font-size="42" font-weight="700" text-anchor="middle">Watch the demo</text>
+    <text x="640" y="260" fill="#64748b" font-size="22" font-weight="500" text-anchor="middle">See one client message become work you can review and save.</text>
+
+    <g transform="translate(112 384)">
+      <rect width="252" height="96" rx="18" fill="#eff6ff" stroke="#bfdbfe" stroke-width="2" />
+      <circle cx="44" cy="48" r="18" fill="#dbeafe" />
+      <path d="M35 40h18M35 48h14M35 56h10" stroke="#2563eb" stroke-width="3" stroke-linecap="round" />
+      <text x="78" y="56" fill="#0f172a" font-size="21" font-weight="700">Client request</text>
+    </g>
+
+    <text x="399" y="442" fill="#60a5fa" font-size="32" font-weight="700">&#8594;</text>
+
+    <g transform="translate(452 384)">
+      <rect width="252" height="96" rx="18" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2" />
+      <circle cx="44" cy="48" r="18" fill="#e2e8f0" />
+      <path d="m35 48 6 6 12-14" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="78" y="56" fill="#0f172a" font-size="21" font-weight="700">Review draft</text>
+    </g>
+
+    <text x="739" y="442" fill="#60a5fa" font-size="32" font-weight="700">&#8594;</text>
+
+    <g transform="translate(792 384)">
+      <rect width="376" height="96" rx="18" fill="#eff6ff" stroke="#bfdbfe" stroke-width="2" />
+      <circle cx="44" cy="48" r="18" fill="#dbeafe" />
+      <path d="M35 40h18v17H35zM39 36v8M49 36v8" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="78" y="56" fill="#0f172a" font-size="21" font-weight="700">Organized project</text>
+    </g>
+  </g>
+
+  <g transform="translate(640 326)">
+    <circle r="45" fill="#2563eb" />
+    <circle r="44" fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="2" />
+    <path d="M-9-16 19 0-9 16Z" fill="#ffffff" />
+  </g>
+</svg>

@@ -24,7 +24,7 @@ const legalLinks = [
 
 const accountLinks = [
   { label: "Log in", href: "/login" },
-  { label: "Start free", href: "/signup" },
+  { label: "Start for free", href: "/signup" },
 ];
 
 export default function LandingFooter() {
@@ -44,14 +44,29 @@ export default function LandingFooter() {
           </Link>
 
           <p>
-            Turn messy client messages, screenshots, and notes into structured
-            work with AI.
+            Turn client messages, screenshots, and notes into organized projects
+            and tasks—without retyping.
           </p>
 
           <a className="t2t-footer-support" href="mailto:support@text2task.com">
             <span>Support</span>
             <strong>support@text2task.com</strong>
           </a>
+
+          <div className="t2t-footer-follow">
+            <span>FOLLOW</span>
+            <a
+              className="t2t-footer-social"
+              href="https://www.facebook.com/profile.php?id=61588954785433"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Text2Task on Facebook"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M13.7 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5H17V4a22 22 0 0 0-2.4-.1c-2.4 0-4.1 1.5-4.1 4.2V10H8v3h2.5v8h3.2Z" />
+              </svg>
+            </a>
+          </div>
         </div>
 
         <nav className="t2t-footer-nav" aria-label="Footer navigation">
@@ -179,6 +194,50 @@ const footerStyles = `
     font-size: 13px;
     font-weight: 850;
     overflow-wrap: anywhere;
+  }
+
+  .t2t-footer-follow {
+    margin-top: 18px;
+    display: grid;
+    justify-items: start;
+    gap: 8px;
+  }
+
+  .t2t-footer-follow > span {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+  }
+
+  .t2t-footer-social {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #1d4ed8;
+    background: #ffffff;
+    text-decoration: none;
+    transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+  }
+
+  .t2t-footer-social svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+
+  .t2t-footer-social:hover {
+    border-color: #60a5fa;
+    color: #2563eb;
+    background: #eff6ff;
+  }
+
+  .t2t-footer-social:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.25);
+    outline-offset: 3px;
   }
 
   .t2t-footer-nav {

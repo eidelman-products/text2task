@@ -7,6 +7,44 @@ import { useState } from "react";
 import { GoogleAuthButton } from "../components/auth/google-auth-button";
 import type React from "react";
 
+function getSafeImmediateSignupDestination(destination: unknown) {
+  if (
+    destination === "/dashboard" ||
+    destination === "/api/billing/continue"
+  ) {
+    return destination;
+  }
+
+  return "/dashboard";
+}
+
+function getSignupErrorMessage(data: unknown) {
+  if (!data || typeof data !== "object" || !("error" in data)) {
+    return "Signup failed";
+  }
+
+  const error = data.error;
+
+  return typeof error === "string" && error.trim()
+    ? error
+    : "Signup failed";
+}
+
+function getImmediateSignupDestination(data: unknown) {
+  if (
+    !data ||
+    typeof data !== "object" ||
+    !("needsEmailConfirmation" in data) ||
+    data.needsEmailConfirmation !== false
+  ) {
+    return null;
+  }
+
+  return getSafeImmediateSignupDestination(
+    "destination" in data ? data.destination : null
+  );
+}
+
 export default function SignupPage() {
   const router = useRouter();
 
@@ -36,10 +74,22 @@ export default function SignupPage() {
         }),
       });
 
-      const data = await res.json();
+      const data: unknown = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Signup failed");
+        setError(getSignupErrorMessage(data));
+        return;
+      }
+
+      const immediateDestination = getImmediateSignupDestination(data);
+
+      if (immediateDestination) {
+        if (immediateDestination === "/api/billing/continue") {
+          window.location.assign(immediateDestination);
+          return;
+        }
+
+        router.push("/dashboard");
         return;
       }
 

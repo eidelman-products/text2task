@@ -1,4 +1,10 @@
+
 import { NextRequest, NextResponse } from "next/server";
+import { getDestinationForProPurchaseIntent } from "@/lib/auth/post-auth-destination";
+import {
+  isProPurchaseIntent,
+  PRO_PURCHASE_INTENT_COOKIE_NAME,
+} from "@/lib/billing/pro-purchase-intent";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUser } from "@/lib/supabase/ensureUser";
 
@@ -6,7 +12,10 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function isEmailNotConfirmedError(error: { code?: string; message?: string }) {
+function isEmailNotConfirmedError(error: {
+  code?: string;
+  message?: string;
+}) {
   const code = error.code?.toLowerCase() ?? "";
   const message = error.message?.toLowerCase() ?? "";
 
@@ -31,7 +40,8 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password || !isValidEmail(email)) {
       return NextResponse.redirect(
-        new URL("/login?error=invalid_credentials", request.url)
+        new URL("/login?error=invalid_credentials", request.url),
+        { status: 303 }
       );
     }
 
@@ -48,11 +58,12 @@ export async function POST(request: NextRequest) {
         redirectUrl.searchParams.set("error", "email_not_confirmed");
         redirectUrl.searchParams.set("email", email);
 
-        return NextResponse.redirect(redirectUrl);
+        return NextResponse.redirect(redirectUrl, { status: 303 });
       }
 
       return NextResponse.redirect(
-        new URL("/login?error=invalid_credentials", request.url)
+        new URL("/login?error=invalid_credentials", request.url),
+        { status: 303 }
       );
     }
 
@@ -61,7 +72,17 @@ export async function POST(request: NextRequest) {
       email: data.user.email ?? email,
     });
 
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    const hasProPurchaseIntent = isProPurchaseIntent(
+      request.cookies.get(PRO_PURCHASE_INTENT_COOKIE_NAME)?.value
+    );
+
+    const postAuthDestination =
+      getDestinationForProPurchaseIntent(hasProPurchaseIntent);
+
+    return NextResponse.redirect(
+      new URL(postAuthDestination, request.url),
+      { status: 303 }
+    );
   } catch (error) {
     console.error("login route error:", error);
 

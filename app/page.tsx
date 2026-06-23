@@ -1,6 +1,15 @@
 import type { Metadata } from "next";
+import HomepageDemoSection from "./components/landing/homepage-demo-section";
+import HomepageFaqSection from "./components/landing/homepage-faq-section";
+import HomepageFinalCtaSection from "./components/landing/homepage-final-cta-section";
+import HomepageHero from "./components/landing/homepage-hero";
+import HomepagePostExtractionSection from "./components/landing/homepage-post-extraction-section";
+import HomepagePricingSection from "./components/landing/homepage-pricing-section";
+import HomepageTrustStrip from "./components/landing/homepage-trust-strip";
+import HomepageUseCasesSection from "./components/landing/homepage-use-cases-section";
 import HeroSection from "./components/landing/hero-section";
 import LandingFooter from "./components/landing/landing-footer";
+import LandingHeader from "./components/landing/landing-header";
 import { absoluteUrl } from "./lib/site-config";
 
 export const metadata: Metadata = {
@@ -44,7 +53,9 @@ const structuredData = {
       name: "Text2Task",
       url: absoluteUrl("/"),
       logo: absoluteUrl("/text2task-logo.png"),
-      sameAs: [],
+      sameAs: [
+        "https://www.facebook.com/profile.php?id=61588954785433",
+      ],
     },
     {
       "@type": "WebSite",
@@ -87,17 +98,29 @@ const structuredData = {
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-white">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(structuredData),
-        }}
-      />
+    <div className="min-h-screen bg-white">
+      <LandingHeader />
 
-      <HeroSection />
+      <main>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData),
+          }}
+        />
+
+        <HomepageHero />
+        <HomepageTrustStrip />
+        <HomepageDemoSection />
+        <HomepagePostExtractionSection />
+        <HomepageUseCasesSection />
+        <HeroSection />
+        <HomepagePricingSection />
+        <HomepageFaqSection />
+        <HomepageFinalCtaSection />
+      </main>
 
       <LandingFooter />
-    </main>
+    </div>
   );
 }

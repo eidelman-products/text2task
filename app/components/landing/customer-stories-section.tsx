@@ -6,11 +6,7 @@ type CustomerStory = {
   id: string;
   displayName: string;
   roleOrBusinessType: string | null;
-  rating: number | null;
   feedbackText: string;
-  isFeatured?: boolean;
-  approvedAt?: string | null;
-  createdAt?: string | null;
 };
 
 type CustomerStoriesResponse = {
@@ -79,9 +75,11 @@ export default function CustomerStoriesSection() {
 
   const visibleStories = stories.slice(0, 3);
   const gridClassName =
-    visibleStories.length >= 3
-      ? "t2t-customer-stories-grid t2t-customer-stories-grid-three"
-      : "t2t-customer-stories-grid t2t-customer-stories-grid-two";
+    visibleStories.length === 1
+      ? "t2t-customer-stories-grid mx-auto grid max-w-md grid-cols-1 gap-6"
+      : visibleStories.length === 2
+        ? "t2t-customer-stories-grid mx-auto grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2"
+        : "t2t-customer-stories-grid mx-auto grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3";
 
   return (
     <section className="t2t-customer-stories" aria-labelledby="customer-stories-title">
@@ -89,21 +87,24 @@ export default function CustomerStoriesSection() {
 
       <div className="t2t-customer-stories-shell">
         <div className="t2t-customer-stories-header">
-          <h2 id="customer-stories-title">What our users are saying</h2>
-          <p>Real feedback from people organizing client work with Text2Task.</p>
+          <h2 id="customer-stories-title" className="homepage-heading">
+            What early users say
+          </h2>
+          <p>Early feedback from people using Text2Task.</p>
         </div>
 
         <div className={gridClassName}>
           {visibleStories.map((story) => (
             <article key={story.id} className="t2t-customer-story-card">
-              <div className="t2t-customer-story-quote" aria-hidden="true">
-                "
-              </div>
-
-              <p className="t2t-customer-story-text">{story.feedbackText}</p>
+              <span className="t2t-customer-story-quote" aria-hidden="true">
+                “
+              </span>
+              <blockquote className="t2t-customer-story-text">
+                <p>{story.feedbackText}</p>
+              </blockquote>
 
               <div className="t2t-customer-story-footer">
-                <div className="t2t-customer-story-avatar">
+                <div className="t2t-customer-story-avatar" aria-hidden="true">
                   {getInitials(story.displayName)}
                 </div>
 
@@ -112,21 +113,12 @@ export default function CustomerStoriesSection() {
                     {story.displayName}
                   </div>
 
-                  {story.roleOrBusinessType ? (
-                    <div className="t2t-customer-story-role">
-                      {story.roleOrBusinessType}
-                    </div>
-                  ) : null}
-                </div>
-
-                {typeof story.rating === "number" ? (
-                  <div
-                    className="t2t-customer-story-rating"
-                    aria-label={`${story.rating} out of 5 rating`}
-                  >
-                    {story.rating}/5
+                  <div className="t2t-customer-story-role">
+                    {story.roleOrBusinessType?.trim()
+                      ? `${story.roleOrBusinessType} \u00b7 Early user`
+                      : "Early user"}
                   </div>
-                ) : null}
+                </div>
               </div>
             </article>
           ))}
@@ -139,30 +131,37 @@ export default function CustomerStoriesSection() {
 function getInitials(displayName: string) {
   const cleanName = String(displayName || "").trim();
 
-  if (!cleanName) return "TT";
+  if (!cleanName) return "EU";
 
-  const parts = cleanName.split(/\s+/).filter(Boolean);
+  const parts = cleanName.match(/[\p{L}\p{N}]+/gu) ?? [];
+  const [firstPart, secondPart] = parts;
+  const initials = `${getFirstUnicodeCharacter(firstPart)}${getFirstUnicodeCharacter(
+    secondPart
+  )}`.toUpperCase();
 
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
+  return initials || "EU";
+}
 
-  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+function getFirstUnicodeCharacter(value: string | undefined): string {
+  if (!value) return "";
+
+  return Array.from(value)[0] ?? "";
 }
 
 const customerStoriesCss = `
   .t2t-customer-stories {
-    padding: 34px 0 36px;
+    background: #f5f9ff;
+    padding: 56px 0;
   }
 
   .t2t-customer-stories-shell {
-    max-width: 940px;
+    max-width: 1024px;
     margin: 0 auto;
   }
 
   .t2t-customer-stories-header {
     max-width: 620px;
-    margin: 0 auto 22px;
+    margin: 0 auto 34px;
     text-align: center;
   }
 
@@ -170,9 +169,7 @@ const customerStoriesCss = `
     margin: 0;
     color: #0f172a;
     font-size: clamp(25px, 2.8vw, 34px);
-    line-height: 1.08;
-    letter-spacing: -0.038em;
-    font-weight: 950;
+    font-weight: 600;
   }
 
   .t2t-customer-stories-header p {
@@ -181,97 +178,80 @@ const customerStoriesCss = `
     color: #64748b;
     font-size: 13px;
     line-height: 1.5;
-    font-weight: 680;
+    font-weight: 500;
   }
 
   .t2t-customer-stories-grid {
-    display: grid;
-    gap: 16px;
     align-items: stretch;
-    margin: 0 auto;
-  }
-
-  .t2t-customer-stories-grid-two {
-    max-width: 760px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .t2t-customer-stories-grid-three {
-    max-width: 920px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .t2t-customer-story-card {
     position: relative;
+    display: flex;
+    height: 100%;
+    flex-direction: column;
     min-width: 0;
     overflow: hidden;
-    border-radius: 16px;
-    border: 1px solid rgba(226, 232, 240, 0.92);
-    background:
-      linear-gradient(90deg, rgba(96, 165, 250, 0.72), rgba(191, 219, 254, 0.18)) 0 0 / 100% 2px no-repeat,
-      #ffffff;
-    box-shadow: 0 7px 24px rgba(15, 23, 42, 0.04);
-    padding: 16px 16px 14px;
-    transition:
-      transform 180ms ease,
-      border-color 180ms ease,
-      box-shadow 180ms ease;
+    border: 1px solid #d7e6ff;
+    border-radius: 18px;
+    background: #ffffff;
+    padding: 22px;
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.055);
   }
 
-  .t2t-customer-story-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(147, 197, 253, 0.88);
-    box-shadow: 0 12px 32px rgba(37, 99, 235, 0.07);
+  .t2t-customer-story-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    background: #2563eb;
+    opacity: 0.72;
   }
 
   .t2t-customer-story-quote {
-    width: auto;
-    height: 20px;
-    margin-bottom: 9px;
-    display: grid;
-    justify-content: start;
-    color: #60a5fa;
-    background: transparent;
-    border: 0;
-    font-size: 24px;
+    height: 30px;
+    margin-bottom: 6px;
+    color: #2563eb;
+    font-family: Georgia, serif;
+    font-size: 42px;
     line-height: 1;
-    font-weight: 950;
   }
 
   .t2t-customer-story-text {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    min-height: 58px;
+    flex: 1;
     margin: 0;
     color: #1e293b;
-    font-size: 13px;
-    line-height: 1.52;
-    font-weight: 610;
+    font-size: 15px;
+    line-height: 1.7;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+
+  .t2t-customer-story-text p {
+    margin: 0;
   }
 
   .t2t-customer-story-footer {
     display: grid;
-    grid-template-columns: 30px minmax(0, 1fr) auto;
-    gap: 9px;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 11px;
     align-items: center;
-    margin-top: 10px;
-    padding-top: 9px;
-    border-top: 1px solid rgba(226,232,240,0.58);
+    margin-top: auto;
+    padding-top: 20px;
   }
 
   .t2t-customer-story-avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 9px;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
     display: grid;
     place-items: center;
-    color: #ffffff;
-    background: #2563eb;
-    font-size: 10px;
-    font-weight: 950;
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.14);
+    color: #1d4ed8;
+    background: #eaf2ff;
+    border: 1px solid #d7e6ff;
+    font-size: 11px;
+    font-weight: 700;
   }
 
   .t2t-customer-story-person {
@@ -280,51 +260,32 @@ const customerStoriesCss = `
 
   .t2t-customer-story-name {
     color: #0f172a;
-    font-size: 12.5px;
-    line-height: 1.18;
-    font-weight: 950;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 13px;
+    line-height: 1.3;
+    font-weight: 700;
+    overflow-wrap: anywhere;
   }
 
   .t2t-customer-story-role {
     margin-top: 2px;
     color: #64748b;
     font-size: 11px;
-    line-height: 1.3;
-    font-weight: 740;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.45;
+    font-weight: 600;
+    overflow-wrap: anywhere;
   }
 
-  .t2t-customer-story-rating {
-    min-width: 32px;
-    height: 22px;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #475569;
-    background: #f8fafc;
-    border: 1px solid rgba(203, 213, 225, 0.82);
-    font-size: 10px;
-    font-weight: 900;
-  }
-
-  @media (max-width: 760px) {
-    .t2t-customer-stories-grid,
-    .t2t-customer-stories-grid-two,
-    .t2t-customer-stories-grid-three {
-      max-width: 520px;
-      grid-template-columns: 1fr;
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .t2t-customer-stories-grid > :last-child:nth-child(odd) {
+      width: min(100%, 360px);
+      grid-column: 1 / -1;
+      justify-self: center;
     }
   }
 
   @media (max-width: 560px) {
     .t2t-customer-stories {
-      padding: 28px 0 30px;
+      padding: 44px 0;
     }
 
     .t2t-customer-stories-header h2 {
@@ -332,8 +293,7 @@ const customerStoriesCss = `
     }
 
     .t2t-customer-story-card {
-      padding: 15px;
-      border-radius: 15px;
+      padding: 20px;
     }
   }
 `;

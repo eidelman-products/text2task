@@ -1,4 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  buildEmailConfirmationRedirect,
+  getDestinationForProPurchaseIntent,
+} from "@/lib/auth/post-auth-destination";
+import {
+  isProPurchaseIntent,
+  PRO_PURCHASE_INTENT_COOKIE_NAME,
+} from "@/lib/billing/pro-purchase-intent";
 import { createClient } from "@/lib/supabase/server";
 
 function isValidEmail(email: string) {
@@ -33,12 +41,20 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createClient();
   const origin = request.nextUrl.origin;
+  const hasProPurchaseIntent = isProPurchaseIntent(
+    request.cookies.get(PRO_PURCHASE_INTENT_COOKIE_NAME)?.value
+  );
+  const postAuthDestination =
+    getDestinationForProPurchaseIntent(hasProPurchaseIntent);
 
   const { error } = await supabase.auth.resend({
     type: "signup",
     email,
     options: {
-      emailRedirectTo: `${origin}/auth/confirm?next=/dashboard`,
+      emailRedirectTo: buildEmailConfirmationRedirect(
+        origin,
+        postAuthDestination
+      ),
     },
   });
 

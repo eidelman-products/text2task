@@ -1,23 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  getDestinationForProPurchaseIntent,
+  getSafeDashboardDestination,
+} from "@/lib/auth/post-auth-destination";
+import {
+  isProPurchaseIntent,
+  PRO_PURCHASE_INTENT_COOKIE_NAME,
+} from "@/lib/billing/pro-purchase-intent";
 import { createClient } from "@/lib/supabase/server";
-
-function getSafeNextPath(next: string | null) {
-  if (!next) {
-    return "/dashboard";
-  }
-
-  if (next === "/dashboard" || next.startsWith("/dashboard?")) {
-    return next;
-  }
-
-  return "/dashboard";
-}
 
 export async function GET(request: NextRequest) {
   try {
     const requestUrl = new URL(request.url);
     const origin = requestUrl.origin;
-    const next = getSafeNextPath(requestUrl.searchParams.get("next"));
+    const hasProPurchaseIntent = isProPurchaseIntent(
+      request.cookies.get(PRO_PURCHASE_INTENT_COOKIE_NAME)?.value
+    );
+    const next = hasProPurchaseIntent
+      ? getDestinationForProPurchaseIntent(true)
+      : getSafeDashboardDestination(requestUrl.searchParams.get("next"));
 
     const supabase = await createClient();
 

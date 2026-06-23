@@ -1,6 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { DM_Sans, Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { AttributionCapture } from "./components/analytics/attribution-capture";
 import { ConsentAwareVercelAnalytics } from "./components/analytics/consent-aware-vercel-analytics";
@@ -12,6 +12,13 @@ import { SITE_ORIGIN } from "./lib/site-config";
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
+  variable: "--font-heading",
 });
 
 export const metadata: Metadata = {
@@ -96,7 +103,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} ${dmSans.variable}`}>
         <GoogleAdsTag />
         <MicrosoftClarity />
         <AttributionCapture />

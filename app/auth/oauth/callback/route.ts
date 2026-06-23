@@ -1,18 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSafePostAuthDestination } from "@/lib/auth/post-auth-destination";
 import { ensureUser } from "@/lib/supabase/ensureUser";
 import { createClient } from "@/lib/supabase/server";
-
-function getSafeNextPath(next: string | null) {
-  if (!next) {
-    return "/dashboard";
-  }
-
-  if (next === "/dashboard" || next.startsWith("/dashboard?")) {
-    return next;
-  }
-
-  return "/dashboard";
-}
 
 function loginRedirect(request: NextRequest, error: string) {
   return NextResponse.redirect(new URL(`/login?error=${error}`, request.url));
@@ -22,7 +11,7 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const oauthError = requestUrl.searchParams.get("error");
-  const next = getSafeNextPath(requestUrl.searchParams.get("next"));
+  const next = getSafePostAuthDestination(requestUrl.searchParams.get("next"));
 
   if (oauthError) {
     console.error("Google OAuth provider returned error:", oauthError);

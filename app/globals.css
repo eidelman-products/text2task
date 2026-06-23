@@ -55,6 +55,14 @@ select {
   color: #0f172a;
 }
 
+.homepage-heading {
+  font-family: var(--font-heading), Arial, Helvetica, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
 .project-update-primary-button {
   will-change: transform, box-shadow, filter;
 }

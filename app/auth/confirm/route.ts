@@ -1,28 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  getSafeEmailConfirmationDestination,
+  isPasswordResetDestination,
+} from "@/lib/auth/post-auth-destination";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUser } from "@/lib/supabase/ensureUser";
-
-function getSafeNextPath(next: string | null) {
-  if (!next) {
-    return "/dashboard";
-  }
-
-  if (!next.startsWith("/") || next.startsWith("//")) {
-    return "/dashboard";
-  }
-
-  return next;
-}
-
-function isPasswordResetNextPath(next: string) {
-  return next === "/reset-password" || next.startsWith("/reset-password?");
-}
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = getSafeNextPath(requestUrl.searchParams.get("next"));
-  const isPasswordReset = isPasswordResetNextPath(next);
+  const next = getSafeEmailConfirmationDestination(
+    requestUrl.searchParams.get("next")
+  );
+  const isPasswordReset = isPasswordResetDestination(next);
 
   if (!code) {
     if (!isPasswordReset) {

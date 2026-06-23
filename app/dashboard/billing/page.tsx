@@ -10,12 +10,48 @@ type AccountInfo = {
   hasBillingPortal: boolean;
 };
 
+type BillingRecoveryNotice = {
+  message: string;
+  kind: "error" | "status";
+};
+
+function getBillingRecoveryNotice(search: string): BillingRecoveryNotice | null {
+  const params = new URLSearchParams(search);
+
+  switch (params.get("checkout_error")) {
+    case "checkout_unavailable":
+      return {
+        message: "We couldn’t open checkout automatically. You can try again.",
+        kind: "error",
+      };
+    case "intent_expired":
+      return {
+        message:
+          "Your Pro checkout request expired. Start the upgrade again to continue.",
+        kind: "error",
+      };
+    default:
+      break;
+  }
+
+  if (params.get("checkout_status") === "pending") {
+    return {
+      message: "Checkout is already being prepared. Wait a moment, then try again.",
+      kind: "status",
+    };
+  }
+
+  return null;
+}
+
 export default function BillingPage() {
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [recoveryNotice, setRecoveryNotice] =
+    useState<BillingRecoveryNotice | null>(null);
 
   useEffect(() => {
     async function loadAccount() {
@@ -47,6 +83,10 @@ export default function BillingPage() {
     }
 
     void loadAccount();
+  }, []);
+
+  useEffect(() => {
+    setRecoveryNotice(getBillingRecoveryNotice(window.location.search));
   }, []);
 
   async function startCheckout() {
@@ -175,6 +215,16 @@ export default function BillingPage() {
           <Feature title="Dashboard analytics" enabled />
           <Feature title="CSV export" enabled={isPro} />
         </div>
+
+        {recoveryNotice ? (
+          <div
+            role={recoveryNotice.kind === "status" ? "status" : "alert"}
+            aria-live="polite"
+            style={styles.recoveryBox}
+          >
+            {recoveryNotice.message}
+          </div>
+        ) : null}
 
         {actionError ? (
           <div role="alert" style={styles.errorBox}>
@@ -475,6 +525,18 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: "wrap",
     alignItems: "center",
     gap: 12,
+  },
+
+  recoveryBox: {
+    marginTop: 18,
+    borderRadius: 16,
+    border: "1px solid rgba(147,197,253,0.58)",
+    background: "rgba(239,246,255,0.86)",
+    color: "#1e3a8a",
+    padding: "12px 14px",
+    fontSize: 13,
+    lineHeight: 1.5,
+    fontWeight: 800,
   },
 
   errorBox: {
