@@ -33,10 +33,10 @@ export default function HomepageTrustStrip() {
 
         <div className="min-w-0 text-center">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-700">
-            REAL SUPPORT
+            CUSTOMER SUPPORT
           </p>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Get help at{" "}
+            Get help from a real person at{" "}
             <a
               href="mailto:support@text2task.com"
               className="font-bold text-blue-700 underline decoration-blue-200 underline-offset-4 transition hover:text-blue-800 focus:outline-none focus-visible:rounded-sm focus-visible:ring-4 focus-visible:ring-blue-100"

@@ -120,8 +120,8 @@ const footerStyles = `
   .t2t-footer {
     width: 100%;
     margin: 0;
-    border-top: 1px solid rgba(203, 213, 225, 0.8);
-    background: #ffffff;
+    border-top: 1px solid rgba(226, 232, 240, 0.58);
+    background: rgba(255, 255, 255, 0.92);
   }
 
   .t2t-footer,
@@ -134,14 +134,14 @@ const footerStyles = `
     width: min(1180px, calc(100% - 40px));
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 1.05fr 1.95fr;
-    gap: 52px;
-    padding: 38px 0 32px;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.95fr);
+    gap: 64px;
+    padding: 42px 4px 36px;
     align-items: start;
   }
 
   .t2t-footer-brand {
-    max-width: 390px;
+    max-width: 370px;
   }
 
   .t2t-footer-logo {
@@ -159,16 +159,16 @@ const footerStyles = `
   }
 
   .t2t-footer-brand p {
-    margin: 15px 0 0;
+    margin: 17px 0 0;
     max-width: 360px;
-    color: #475569;
+    color: #64748b;
     font-size: 13px;
     line-height: 1.65;
-    font-weight: 600;
+    font-weight: 560;
   }
 
   .t2t-footer-support {
-    margin-top: 18px;
+    margin-top: 21px;
     display: inline-grid;
     gap: 4px;
     max-width: 100%;
@@ -182,18 +182,23 @@ const footerStyles = `
   }
 
   .t2t-footer-support span {
-    color: #64748b;
+    color: #94a3b8;
     font-size: 10px;
-    font-weight: 950;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.15em;
   }
 
   .t2t-footer-support strong {
-    color: #1d4ed8;
+    color: #2563eb;
     font-size: 13px;
-    font-weight: 850;
+    font-weight: 750;
+    transition: color 160ms ease;
     overflow-wrap: anywhere;
+  }
+
+  .t2t-footer-support:hover strong {
+    color: #1d4ed8;
   }
 
   .t2t-footer-follow {
@@ -243,80 +248,81 @@ const footerStyles = `
   .t2t-footer-nav {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 30px;
-    padding-top: 8px;
+    gap: 36px;
+    padding-top: 5px;
   }
 
   .t2t-footer-column h3 {
-    margin: 0 0 14px;
-    color: #0f172a;
+    margin: 0 0 16px;
+    color: #334155;
     font-size: 12px;
-    font-weight: 850;
+    font-weight: 750;
     letter-spacing: -0.01em;
   }
 
   .t2t-footer-column div {
     display: grid;
-    gap: 10px;
+    gap: 11px;
   }
 
   .t2t-footer-column a {
-    color: #475569;
+    color: #64748b;
     text-decoration: none;
     font-size: 12.5px;
     line-height: 1.35;
-    font-weight: 650;
+    font-weight: 560;
     transition: color 160ms ease;
   }
 
   .t2t-footer-column a:hover {
-    color: #2563eb;
+    color: #1d4ed8;
   }
 
   .t2t-footer-bottom {
     width: min(1180px, calc(100% - 40px));
     margin: 0 auto;
-    border-top: 1px solid rgba(226,232,240,0.9);
-    padding: 16px 0;
+    border-top: 1px solid rgba(226, 232, 240, 0.58);
+    padding: 20px 4px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 18px;
-    color: #64748b;
+    color: #94a3b8;
     font-size: 12px;
-    font-weight: 650;
+    font-weight: 560;
   }
 
   .t2t-footer-bottom div {
     display: flex;
     align-items: center;
-    gap: 9px;
+    gap: 11px;
     flex-wrap: wrap;
   }
 
   .t2t-footer-bottom a {
-    color: #334155;
+    color: #64748b;
     text-decoration: none;
-    font-weight: 750;
+    font-weight: 650;
     transition: color 160ms ease;
   }
 
   .t2t-footer-bottom a:hover {
-    color: #2563eb;
+    color: #1d4ed8;
   }
 
   .t2t-footer-bottom div span {
-    color: #93c5fd;
+    color: #cbd5e1;
   }
 
   @media (max-width: 980px) {
     .t2t-footer-inner {
       grid-template-columns: 1fr;
-      gap: 34px;
+      gap: 42px;
     }
 
     .t2t-footer-nav {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 34px 28px;
     }
   }
 
@@ -326,9 +332,13 @@ const footerStyles = `
       width: min(100% - 24px, 1180px);
     }
 
+    .t2t-footer {
+      margin-top: 50px;
+    }
+
     .t2t-footer-inner {
-      padding: 28px 0;
-      gap: 28px;
+      padding: 32px 0;
+      gap: 34px;
     }
 
     .t2t-footer-logo img {
@@ -337,7 +347,7 @@ const footerStyles = `
 
     .t2t-footer-nav {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 24px 18px;
+      gap: 30px 20px;
     }
 
     .t2t-footer-column {
@@ -346,9 +356,10 @@ const footerStyles = `
     }
 
     .t2t-footer-bottom {
-      padding: 18px 0;
+      padding: 22px 0;
       align-items: flex-start;
       flex-direction: column;
+      gap: 16px;
       font-size: 12px;
     }
   }

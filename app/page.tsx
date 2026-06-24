@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import HomepageDemoSection from "./components/landing/homepage-demo-section";
+import HomepageCustomerStoriesSection from "./components/landing/homepage-customer-stories-section";
 import HomepageFaqSection from "./components/landing/homepage-faq-section";
 import HomepageFinalCtaSection from "./components/landing/homepage-final-cta-section";
 import HomepageHero from "./components/landing/homepage-hero";
@@ -7,7 +8,6 @@ import HomepagePostExtractionSection from "./components/landing/homepage-post-ex
 import HomepagePricingSection from "./components/landing/homepage-pricing-section";
 import HomepageTrustStrip from "./components/landing/homepage-trust-strip";
 import HomepageUseCasesSection from "./components/landing/homepage-use-cases-section";
-import HeroSection from "./components/landing/hero-section";
 import LandingFooter from "./components/landing/landing-footer";
 import LandingHeader from "./components/landing/landing-header";
 import { absoluteUrl } from "./lib/site-config";
@@ -111,10 +111,10 @@ export default function HomePage() {
 
         <HomepageHero />
         <HomepageTrustStrip />
+        <HomepageCustomerStoriesSection />
         <HomepageDemoSection />
         <HomepagePostExtractionSection />
         <HomepageUseCasesSection />
-        <HeroSection />
         <HomepagePricingSection />
         <HomepageFaqSection />
         <HomepageFinalCtaSection />

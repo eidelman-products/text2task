@@ -1,75 +1,19 @@
-"use client";
+import {
+  getPublicCustomerStories,
+  type PublicCustomerStory,
+} from "@/lib/customer-stories/public-customer-stories.server";
 
-import { useEffect, useState } from "react";
+export default async function HomepageCustomerStoriesSection() {
+  let stories: PublicCustomerStory[];
 
-type CustomerStory = {
-  id: string;
-  displayName: string;
-  roleOrBusinessType: string | null;
-  feedbackText: string;
-};
+  try {
+    stories = await getPublicCustomerStories(3);
+  } catch (error) {
+    console.error("Homepage customer stories unavailable:", error);
+    return null;
+  }
 
-type CustomerStoriesResponse = {
-  stories?: CustomerStory[];
-};
-
-export default function CustomerStoriesSection() {
-  const [stories, setStories] = useState<CustomerStory[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadStories() {
-      try {
-        const response = await fetch("/api/customer-stories/public", {
-          method: "GET",
-          cache: "no-store",
-        });
-
-        if (!response.ok) {
-          if (isMounted) {
-            setStories([]);
-            setIsLoaded(true);
-          }
-
-          return;
-        }
-
-        const data = (await response.json()) as CustomerStoriesResponse;
-
-        if (!isMounted) return;
-
-        const safeStories = Array.isArray(data.stories)
-          ? data.stories.filter(
-              (story) =>
-                story &&
-                typeof story.id === "string" &&
-                typeof story.displayName === "string" &&
-                typeof story.feedbackText === "string"
-            )
-          : [];
-
-        setStories(safeStories);
-        setIsLoaded(true);
-      } catch (error) {
-        console.error("Failed to load customer stories:", error);
-
-        if (isMounted) {
-          setStories([]);
-          setIsLoaded(true);
-        }
-      }
-    }
-
-    void loadStories();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  if (!isLoaded || stories.length === 0) {
+  if (stories.length === 0) {
     return null;
   }
 
@@ -82,15 +26,20 @@ export default function CustomerStoriesSection() {
         : "t2t-customer-stories-grid mx-auto grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3";
 
   return (
-    <section className="t2t-customer-stories" aria-labelledby="customer-stories-title">
+    <section
+      className="t2t-customer-stories"
+      aria-labelledby="homepage-customer-stories-heading"
+    >
       <style>{customerStoriesCss}</style>
 
       <div className="t2t-customer-stories-shell">
         <div className="t2t-customer-stories-header">
-          <h2 id="customer-stories-title" className="homepage-heading">
+          <p className="t2t-customer-stories-eyebrow">
             What early users say
+          </p>
+          <h2 id="homepage-customer-stories-heading" className="homepage-heading">
+            Early feedback from people using Text2Task.
           </h2>
-          <p>Early feedback from people using Text2Task.</p>
         </div>
 
         <div className={gridClassName}>
@@ -114,9 +63,7 @@ export default function CustomerStoriesSection() {
                   </div>
 
                   <div className="t2t-customer-story-role">
-                    {story.roleOrBusinessType?.trim()
-                      ? `${story.roleOrBusinessType} \u00b7 Early user`
-                      : "Early user"}
+                    {formatRoleLine(story.roleOrBusinessType)}
                   </div>
                 </div>
               </div>
@@ -126,6 +73,12 @@ export default function CustomerStoriesSection() {
       </div>
     </section>
   );
+}
+
+function formatRoleLine(roleOrBusinessType: string | null) {
+  const cleanRole = roleOrBusinessType?.trim();
+
+  return cleanRole ? `${cleanRole} \u00b7 Early user` : "Early user";
 }
 
 function getInitials(displayName: string) {
@@ -151,12 +104,18 @@ function getFirstUnicodeCharacter(value: string | undefined): string {
 const customerStoriesCss = `
   .t2t-customer-stories {
     background: #f5f9ff;
-    padding: 56px 0;
+    color: #0f172a;
+  }
+
+  .t2t-customer-stories,
+  .t2t-customer-stories * {
+    box-sizing: border-box;
   }
 
   .t2t-customer-stories-shell {
-    max-width: 1024px;
+    width: min(1180px, calc(100% - 40px));
     margin: 0 auto;
+    padding: 44px 0 28px;
   }
 
   .t2t-customer-stories-header {
@@ -165,20 +124,19 @@ const customerStoriesCss = `
     text-align: center;
   }
 
+  .t2t-customer-stories-eyebrow {
+    margin: 0 0 8px;
+    color: #2563eb;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 700;
+  }
+
   .t2t-customer-stories-header h2 {
     margin: 0;
     color: #0f172a;
     font-size: clamp(25px, 2.8vw, 34px);
     font-weight: 600;
-  }
-
-  .t2t-customer-stories-header p {
-    margin: 8px auto 0;
-    max-width: 440px;
-    color: #64748b;
-    font-size: 13px;
-    line-height: 1.5;
-    font-weight: 500;
   }
 
   .t2t-customer-stories-grid {
@@ -283,11 +241,18 @@ const customerStoriesCss = `
     }
   }
 
-  @media (max-width: 560px) {
-    .t2t-customer-stories {
-      padding: 44px 0;
+  @media (max-width: 640px) {
+    .t2t-customer-stories-shell {
+      width: min(100% - 24px, 1180px);
+      padding: 38px 0 24px;
     }
 
+    .t2t-customer-stories-grid {
+      gap: 20px;
+    }
+  }
+
+  @media (max-width: 560px) {
     .t2t-customer-stories-header h2 {
       font-size: 28px;
     }
