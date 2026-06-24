@@ -26,48 +26,34 @@ const resourceRoutes = [
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date();
-
   const publicRoutes: MetadataRoute.Sitemap = [
     {
       url: absoluteUrl("/"),
-      lastModified: now,
       changeFrequency: "weekly",
       priority: 1,
     },
     {
-      url: absoluteUrl("/pricing"),
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.85,
-    },
-    {
       url: absoluteUrl("/use-cases"),
-      lastModified: now,
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
       url: absoluteUrl("/contact"),
-      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.65,
     },
     {
       url: absoluteUrl("/about"),
-      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.7,
     },
     {
       url: absoluteUrl("/privacy"),
-      lastModified: now,
       changeFrequency: "yearly",
       priority: 0.35,
     },
     {
       url: absoluteUrl("/terms"),
-      lastModified: now,
       changeFrequency: "yearly",
       priority: 0.35,
     },
@@ -76,7 +62,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const useCaseRoutes: MetadataRoute.Sitemap = getAllUseCases().map(
     (useCase) => ({
       url: absoluteUrl(`/use-cases/${useCase.slug}`),
-      lastModified: now,
       changeFrequency: "monthly",
       priority: useCase.slug === "web-designers" ? 0.9 : 0.78,
     }),
@@ -84,7 +69,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const resources: MetadataRoute.Sitemap = resourceRoutes.map((route) => ({
     url: absoluteUrl(route.path),
-    lastModified: now,
     changeFrequency: route.changeFrequency,
     priority: route.priority,
   }));
