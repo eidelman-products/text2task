@@ -7,6 +7,8 @@ export const ANALYTICS_ACCEPTED_CONSENT_VALUE = "accepted";
 export const ATTRIBUTION_COOKIE = "t2t_attribution";
 export const ANONYMOUS_COOKIE = "t2t_anon_id";
 
+const MAX_ATTRIBUTION_COOKIE_CHARS = 4096;
+
 type UnknownRecord = Record<string, unknown>;
 
 export type RequestAttributionSnapshot = Readonly<{
@@ -140,18 +142,62 @@ export function sanitizeAttributionFields(
   });
 }
 
-export function readAttributionCookie(request: NextRequest) {
-  const cookieValue = readCookie(request, ATTRIBUTION_COOKIE);
+function getAttributionCookieCandidate(value: string | undefined) {
+  if (!value) {
+    return null;
+  }
 
-  if (!cookieValue) {
-    return sanitizeAttributionFields(null);
+  const trimmed = value.trim();
+
+  if (!trimmed || trimmed.length > MAX_ATTRIBUTION_COOKIE_CHARS) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function parseJsonCandidate(candidate: string): unknown | null {
+  try {
+    const parsed: unknown = JSON.parse(candidate);
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function parseAttributionCookie(rawValue: string | undefined) {
+  const rawCandidate = getAttributionCookieCandidate(rawValue);
+
+  if (!rawCandidate) {
+    return null;
+  }
+
+  const rawParsed = parseJsonCandidate(rawCandidate);
+
+  if (rawParsed !== null) {
+    return rawParsed;
   }
 
   try {
-    return sanitizeAttributionFields(JSON.parse(cookieValue));
+    const decodedCandidate = getAttributionCookieCandidate(
+      decodeURIComponent(rawCandidate)
+    );
+
+    if (!decodedCandidate || decodedCandidate === rawCandidate) {
+      return null;
+    }
+
+    return parseJsonCandidate(decodedCandidate);
   } catch {
-    return sanitizeAttributionFields(null);
+    return null;
   }
+}
+
+export function readAttributionCookie(request: NextRequest) {
+  return sanitizeAttributionFields(
+    parseAttributionCookie(request.cookies.get(ATTRIBUTION_COOKIE)?.value)
+  );
 }
 
 export function readAnonymousIdCookie(request: NextRequest) {
