@@ -12,7 +12,7 @@ import {
 const SIGNUP_ATTRIBUTION_CAPTURED_EVENT = "signup_attribution_captured";
 const SIGNUP_SUCCESS_EVENT = "signup_success";
 const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const AUTH_FLOWS = new Set([
   "email_signup",
   "email_confirmation",
