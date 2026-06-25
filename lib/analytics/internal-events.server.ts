@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { PostgrestError } from "@supabase/supabase-js";
+
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const ALLOWED_EVENT_NAMES = new Set([
@@ -17,6 +19,7 @@ const MAX_METADATA_BYTES = 2000;
 const MAX_METADATA_DEPTH = 3;
 const MAX_OBJECT_KEYS = 25;
 const MAX_ARRAY_ITEMS = 20;
+const ANALYTICS_INSERT_TIMEOUT_MS = 1250;
 
 const SENSITIVE_KEY_PATTERN =
   /(password|token|secret|authorization|cookie|message|raw|screenshot|task_text|project_summary|resource|content|private|client_message)/i;
@@ -37,6 +40,19 @@ type AnalyticsAttribution = {
 };
 
 type AnalyticsMetadata = Record<string, unknown>;
+type InsertAttemptResult =
+  | {
+      status: "completed";
+      error: PostgrestError | null;
+    }
+  | {
+      status: "failed";
+      error: unknown;
+    };
+type InsertTimeoutResult = {
+  status: "timed_out";
+};
+type InsertAnalyticsEventResult = InsertAttemptResult | InsertTimeoutResult;
 
 export type LogAnalyticsEventInput = {
   eventName: string;
@@ -176,20 +192,67 @@ function sanitizeMetadata(metadata: AnalyticsMetadata | null | undefined) {
   };
 }
 
+function isDuplicateIdempotencyKeyError(
+  error: { code?: string; message?: string } | null | undefined,
+  idempotencyKey: string | null
+) {
+  return Boolean(idempotencyKey && error?.code === "23505");
+}
+
+async function insertAnalyticsEventWithTimeout(
+  event: Record<string, unknown>
+): Promise<InsertAnalyticsEventResult> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const insertPromise = (async (): Promise<InsertAttemptResult> => {
+    try {
+      const { error } = await supabaseAdmin
+        .from("analytics_events")
+        .insert(event);
+
+      return {
+        status: "completed",
+        error,
+      };
+    } catch (error) {
+      return {
+        status: "failed",
+        error,
+      };
+    }
+  })();
+
+  const timeoutPromise = new Promise<InsertTimeoutResult>((resolve) => {
+    timeoutId = setTimeout(
+      () => resolve({ status: "timed_out" }),
+      ANALYTICS_INSERT_TIMEOUT_MS
+    );
+  });
+
+  const result = await Promise.race([insertPromise, timeoutPromise]);
+
+  if (timeoutId) {
+    clearTimeout(timeoutId);
+  }
+
+  return result;
+}
+
 export async function logAnalyticsEventSafe(
   input: LogAnalyticsEventInput
-): Promise<void> {
+): Promise<boolean> {
   try {
     if (!isAllowedEventName(input.eventName)) {
-      return;
+      return false;
     }
 
     const attribution = input.attribution ?? {};
     const anonymousId =
       clampText(input.anonymousId, 120) ??
       clampText(attribution.anonymous_id, 120);
+    const idempotencyKey = clampText(input.idempotencyKey, 180);
 
-    const { error } = await supabaseAdmin.from("analytics_events").insert({
+    const result = await insertAnalyticsEventWithTimeout({
       event_name: input.eventName,
       occurred_at: sanitizeOccurredAt(input.occurredAt),
       user_id: sanitizeUuid(input.userId),
@@ -204,19 +267,49 @@ export async function logAnalyticsEventSafe(
         clampText(input.pagePath, 500) ?? clampText(attribution.page_path, 500),
       country_code: sanitizeCountryCode(input.countryCode),
       metadata: sanitizeMetadata(input.metadata),
-      idempotency_key: clampText(input.idempotencyKey, 180),
+      idempotency_key: idempotencyKey,
     });
 
-    if (error) {
+    if (result.status === "timed_out") {
+      console.warn("Analytics event insert timed out:", {
+        eventName: input.eventName,
+      });
+
+      return false;
+    }
+
+    if (result.status === "failed") {
       console.warn("Analytics event insert failed:", {
         eventName: input.eventName,
-        message: error.message,
+        message:
+          result.error instanceof Error
+            ? result.error.message
+            : "Unknown analytics error",
       });
+
+      return false;
     }
+
+    if (isDuplicateIdempotencyKeyError(result.error, idempotencyKey)) {
+      return false;
+    }
+
+    if (result.error) {
+      console.warn("Analytics event insert failed:", {
+        eventName: input.eventName,
+        message: result.error.message,
+      });
+
+      return false;
+    }
+
+    return true;
   } catch (error) {
     console.warn("Analytics event logging failed:", {
       eventName: input.eventName,
       message: error instanceof Error ? error.message : "Unknown analytics error",
     });
+
+    return false;
   }
 }

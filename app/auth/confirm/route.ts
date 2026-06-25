@@ -3,6 +3,7 @@ import {
   getSafeEmailConfirmationDestination,
   isPasswordResetDestination,
 } from "@/lib/auth/post-auth-destination";
+import { scheduleSignupAttribution } from "@/lib/analytics/signup-attribution.server";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUser } from "@/lib/supabase/ensureUser";
 
@@ -59,10 +60,18 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    await ensureUser({
+    const appUser = await ensureUser({
       id: user.id,
       email: user.email,
     });
+
+    if (!isPasswordReset) {
+      scheduleSignupAttribution({
+        request,
+        userId: appUser.id,
+        authFlow: "email_confirmation",
+      });
+    }
   } catch (error) {
     console.error("auth confirm ensureUser error:", error);
 

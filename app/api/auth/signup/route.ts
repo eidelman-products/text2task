@@ -7,6 +7,7 @@ import {
   isProPurchaseIntent,
   PRO_PURCHASE_INTENT_COOKIE_NAME,
 } from "@/lib/billing/pro-purchase-intent";
+import { scheduleSignupAttribution } from "@/lib/analytics/signup-attribution.server";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUser } from "@/lib/supabase/ensureUser";
 
@@ -58,9 +59,15 @@ export async function POST(req: NextRequest) {
     const needsEmailConfirmation = !data.session;
 
     if (!needsEmailConfirmation && data.user?.email) {
-      await ensureUser({
+      const appUser = await ensureUser({
         id: data.user.id,
         email: data.user.email,
+      });
+
+      scheduleSignupAttribution({
+        request: req,
+        userId: appUser.id,
+        authFlow: "email_signup",
       });
     }
 

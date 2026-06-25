@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSafePostAuthDestination } from "@/lib/auth/post-auth-destination";
+import { scheduleSignupAttribution } from "@/lib/analytics/signup-attribution.server";
 import { ensureUser } from "@/lib/supabase/ensureUser";
 import { createClient } from "@/lib/supabase/server";
 
@@ -48,9 +49,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    await ensureUser({
+    const appUser = await ensureUser({
       id: user.id,
       email: user.email,
+    });
+
+    scheduleSignupAttribution({
+      request,
+      userId: appUser.id,
+      authFlow: "google_oauth",
     });
   } catch (error) {
     console.error("Google OAuth ensureUser error:", error);
