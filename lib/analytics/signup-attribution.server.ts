@@ -9,6 +9,7 @@ import {
   toAnalyticsAttributionPayload,
 } from "@/lib/analytics/request-attribution.server";
 
+const SIGNUP_ATTRIBUTION_CAPTURED_EVENT = "signup_attribution_captured";
 const SIGNUP_SUCCESS_EVENT = "signup_success";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
@@ -29,6 +30,21 @@ type ScheduleSignupAttributionInput = {
   authFlow: SignupAttributionAuthFlow;
 };
 
+type ScheduleEmailSignupAttributionCaptureInput = {
+  request: NextRequest;
+  userId: string | null | undefined;
+  authFlow: "email_signup";
+};
+
+type ScheduleSignupAnalyticsEventInput = {
+  request: NextRequest;
+  userId: string | null | undefined;
+  authFlow: SignupAttributionAuthFlow;
+  eventName:
+    | typeof SIGNUP_ATTRIBUTION_CAPTURED_EVENT
+    | typeof SIGNUP_SUCCESS_EVENT;
+};
+
 function sanitizeUserId(userId: string | null | undefined) {
   const text = typeof userId === "string" ? userId.trim() : "";
 
@@ -41,11 +57,12 @@ function isSignupAttributionAuthFlow(
   return AUTH_FLOWS.has(value as SignupAttributionAuthFlow);
 }
 
-export function scheduleSignupAttribution({
+function scheduleSignupAnalyticsEvent({
   request,
   userId,
   authFlow,
-}: ScheduleSignupAttributionInput): void {
+  eventName,
+}: ScheduleSignupAnalyticsEventInput): void {
   try {
     const safeUserId = sanitizeUserId(userId);
 
@@ -61,11 +78,11 @@ export function scheduleSignupAttribution({
 
     const analyticsAttribution = toAnalyticsAttributionPayload(attribution);
     const countryCode = attribution.countryCode;
-    const idempotencyKey = `${SIGNUP_SUCCESS_EVENT}:${safeUserId}`;
+    const idempotencyKey = `${eventName}:${safeUserId}`;
 
     after(async () => {
       await logAnalyticsEventSafe({
-        eventName: SIGNUP_SUCCESS_EVENT,
+        eventName,
         userId: safeUserId,
         anonymousId: attribution.anonymousId,
         attribution: analyticsAttribution,
@@ -80,4 +97,30 @@ export function scheduleSignupAttribution({
   } catch {
     // Signup attribution is optional and must never affect auth responses.
   }
+}
+
+export function scheduleEmailSignupAttributionCapture({
+  request,
+  userId,
+  authFlow,
+}: ScheduleEmailSignupAttributionCaptureInput): void {
+  scheduleSignupAnalyticsEvent({
+    request,
+    userId,
+    authFlow,
+    eventName: SIGNUP_ATTRIBUTION_CAPTURED_EVENT,
+  });
+}
+
+export function scheduleSignupAttribution({
+  request,
+  userId,
+  authFlow,
+}: ScheduleSignupAttributionInput): void {
+  scheduleSignupAnalyticsEvent({
+    request,
+    userId,
+    authFlow,
+    eventName: SIGNUP_SUCCESS_EVENT,
+  });
 }

@@ -7,7 +7,10 @@ import {
   isProPurchaseIntent,
   PRO_PURCHASE_INTENT_COOKIE_NAME,
 } from "@/lib/billing/pro-purchase-intent";
-import { scheduleSignupAttribution } from "@/lib/analytics/signup-attribution.server";
+import {
+  scheduleEmailSignupAttributionCapture,
+  scheduleSignupAttribution,
+} from "@/lib/analytics/signup-attribution.server";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUser } from "@/lib/supabase/ensureUser";
 
@@ -54,6 +57,14 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    if (data.user?.id) {
+      scheduleEmailSignupAttributionCapture({
+        request: req,
+        userId: data.user.id,
+        authFlow: "email_signup",
+      });
     }
 
     const needsEmailConfirmation = !data.session;

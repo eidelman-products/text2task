@@ -14,10 +14,16 @@ type AnalyticsEventRow = {
 };
 
 type SignupAttributionRow = {
+  event_name: "signup_attribution_captured" | "signup_success";
   user_id: string | null;
   occurred_at: string;
+  anonymous_id: string | null;
   utm_source: string | null;
+  utm_medium: string | null;
   utm_campaign: string | null;
+  utm_content: string | null;
+  referrer: string | null;
+  landing_page: string | null;
   country_code: string | null;
   page_path: string | null;
 };
@@ -49,6 +55,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const TRAFFIC_ROWS_LIMIT = 5000;
 const RECENT_USERS_LIMIT = 25;
 const SIGNUP_ATTRIBUTION_LIMIT = 200;
+const SIGNUP_ATTRIBUTION_EVENTS = [
+  "signup_attribution_captured",
+  "signup_success",
+] as const;
 const OWNER_ANALYTICS_TIME_ZONE = "Asia/Jerusalem";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -443,9 +453,9 @@ async function loadSignupAttributionRows(userIds: string[]) {
     const { data, error } = await supabaseAdmin
       .from("analytics_events")
       .select(
-        "user_id, occurred_at, utm_source, utm_campaign, country_code, page_path"
+        "event_name, user_id, occurred_at, anonymous_id, utm_source, utm_medium, utm_campaign, utm_content, referrer, landing_page, country_code, page_path"
       )
-      .eq("event_name", "signup_success")
+      .in("event_name", SIGNUP_ATTRIBUTION_EVENTS)
       .in("user_id", userIds)
       .order("occurred_at", { ascending: true })
       .limit(SIGNUP_ATTRIBUTION_LIMIT);
@@ -497,18 +507,62 @@ async function loadProductActivationData() {
   }
 }
 
+function hasSignupAttributionText(value: string | null | undefined) {
+  return Boolean(value?.trim());
+}
+
+function hasValidSignupAttribution(row: SignupAttributionRow) {
+  return Boolean(
+    hasSignupAttributionText(row.anonymous_id) ||
+      hasSignupAttributionText(row.utm_source) ||
+      hasSignupAttributionText(row.utm_medium) ||
+      hasSignupAttributionText(row.utm_campaign) ||
+      hasSignupAttributionText(row.utm_content) ||
+      hasSignupAttributionText(row.referrer) ||
+      hasSignupAttributionText(row.landing_page) ||
+      hasSignupAttributionText(row.page_path) ||
+      hasSignupAttributionText(row.country_code)
+  );
+}
+
 function buildSignupAttributionByUser(rows: SignupAttributionRow[]) {
+  const candidatesByUser = new Map<
+    string,
+    {
+      captured?: SignupAttributionRow;
+      success?: SignupAttributionRow;
+    }
+  >();
   const attributionByUser = new Map<string, SignupAttributionRow>();
 
   for (const row of rows) {
     const userId = row.user_id?.trim();
 
-    if (!userId) {
+    if (!userId || !hasValidSignupAttribution(row)) {
       continue;
     }
 
-    if (!attributionByUser.has(userId)) {
-      attributionByUser.set(userId, row);
+    const candidates = candidatesByUser.get(userId) ?? {};
+
+    if (
+      row.event_name === "signup_attribution_captured" &&
+      !candidates.captured
+    ) {
+      candidates.captured = row;
+    }
+
+    if (row.event_name === "signup_success" && !candidates.success) {
+      candidates.success = row;
+    }
+
+    candidatesByUser.set(userId, candidates);
+  }
+
+  for (const [userId, candidates] of candidatesByUser) {
+    const attribution = candidates.captured ?? candidates.success;
+
+    if (attribution) {
+      attributionByUser.set(userId, attribution);
     }
   }
 

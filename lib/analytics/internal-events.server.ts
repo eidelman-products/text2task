@@ -6,6 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const ALLOWED_EVENT_NAMES = new Set([
   "page_view",
+  "signup_attribution_captured",
   "signup_success",
   "email_confirmed",
   "login_success",
