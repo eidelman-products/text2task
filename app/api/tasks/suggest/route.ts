@@ -1,26 +1,37 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 
-import { openai } from "@/lib/openai";
+import { createClient } from "@/lib/supabase/server";
 import {
-  buildTaskSuggestionsUserPrompt,
-  TASK_SUGGESTIONS_SYSTEM_PROMPT,
-  type TaskSuggestionInput,
-} from "@/lib/ai/task-suggestions-prompt";
-import { parseTaskSuggestionsResponse } from "@/lib/ai/task-suggestions-schema";
+  suggestTaskImprovements,
+  TaskSuggestionError,
+} from "@/lib/task-suggestions/task-suggestion.server";
+import type { TaskSuggestionInput } from "@/lib/task-suggestions/schemas";
 
 export async function POST(req: Request) {
-  try {
-    const body = (await req.json()) as TaskSuggestionInput;
+  const startedAt = Date.now();
 
-    const input: TaskSuggestionInput = {
-      client_name: body?.client_name ?? "",
-      task_title: body?.task_title ?? "",
-      amount: body?.amount ?? "",
-      deadline_text: body?.deadline_text ?? "",
-      priority: body?.priority ?? "",
-      source: body?.source ?? "",
-    };
+  try {
+    const isAuthenticated = await hasAuthenticatedUser();
+
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    let body: unknown;
+
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        {
+          error: "Invalid request body",
+          suggestions: [],
+        },
+        { status: 400 }
+      );
+    }
+
+    const input = normalizeTaskSuggestionInput(body);
 
     if (!input.task_title || !String(input.task_title).trim()) {
       return NextResponse.json(
@@ -29,47 +40,86 @@ export async function POST(req: Request) {
       );
     }
 
-    const userPrompt = buildTaskSuggestionsUserPrompt(input);
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [
-        {
-          role: "system",
-          content: TASK_SUGGESTIONS_SYSTEM_PROMPT,
-        },
-        {
-          role: "user",
-          content: userPrompt,
-        },
-      ],
-    });
-
-    const rawContent = getTextFromResponse(response);
-    const suggestions = parseTaskSuggestionsResponse(rawContent);
+    const suggestions = await suggestTaskImprovements(input);
 
     return NextResponse.json({ suggestions });
   } catch (error) {
-    console.error("Task suggestions API error:", error);
+    logSuggestionRouteFailure({
+      route: "single",
+      error,
+      startedAt,
+    });
 
     return NextResponse.json(
       {
         error: "Failed to generate task suggestions",
         suggestions: [],
       },
-      { status: 500 }
+      { status: getSuggestionErrorStatus(error) }
     );
   }
 }
 
-function getTextFromResponse(
-  response: OpenAI.Chat.Completions.ChatCompletion
-): string {
-  const content = response.choices?.[0]?.message?.content;
+async function hasAuthenticatedUser(): Promise<boolean> {
+  const supabase = await createClient();
 
-  if (typeof content === "string") {
-    return content;
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  return !error && Boolean(user?.id);
+}
+
+function normalizeTaskSuggestionInput(body: unknown): TaskSuggestionInput {
+  const record: Record<string, unknown> = isRecord(body) ? body : {};
+
+  return {
+    client_name: normalizeTextInput(record.client_name),
+    task_title: normalizeTextInput(record.task_title),
+    amount: normalizeTextInput(record.amount),
+    deadline_text: normalizeTextInput(record.deadline_text),
+    priority: normalizeTextInput(record.priority),
+    source: normalizeTextInput(record.source),
+  };
+}
+
+function normalizeTextInput(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "";
   }
 
-  return "[]";
+  return String(value).trim();
+}
+
+function getSuggestionErrorStatus(error: unknown) {
+  if (
+    error instanceof TaskSuggestionError &&
+    error.code === "suggestion_timeout"
+  ) {
+    return 504;
+  }
+
+  return 500;
+}
+
+function logSuggestionRouteFailure({
+  route,
+  error,
+  startedAt,
+}: {
+  route: "single";
+  error: unknown;
+  startedAt: number;
+}) {
+  console.error("Task suggestion route failed", {
+    route,
+    category:
+      error instanceof TaskSuggestionError ? error.code : "unexpected_error",
+    elapsedMs: Date.now() - startedAt,
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
