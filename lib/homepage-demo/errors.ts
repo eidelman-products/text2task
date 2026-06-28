@@ -10,6 +10,10 @@ export type HomepageDemoRepositoryErrorCode =
   | "draft_conflict"
   | "failure_conflict"
   | "block_conflict"
+  | "review_access_denied"
+  | "review_expired"
+  | "review_not_ready"
+  | "review_edit_conflict"
   | "repository_response_invalid"
   | "repository_unavailable";
 
@@ -28,6 +32,10 @@ const HOMEPAGE_DEMO_REPOSITORY_ERROR_MESSAGES: Record<
   draft_conflict: "Homepage demo draft conflict.",
   failure_conflict: "Homepage demo failure conflict.",
   block_conflict: "Homepage demo block conflict.",
+  review_access_denied: "Homepage demo review access was denied.",
+  review_expired: "Homepage demo review has expired.",
+  review_not_ready: "Homepage demo review is not ready.",
+  review_edit_conflict: "Homepage demo review edit conflict.",
   repository_response_invalid: "Homepage demo repository response was invalid.",
   repository_unavailable: "Homepage demo repository is unavailable.",
 };
