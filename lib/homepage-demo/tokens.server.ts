@@ -58,6 +58,10 @@ export function createHomepageDemoSessionToken(): HomepageDemoTokenPair {
   return createHomepageDemoToken("homepage-demo-session");
 }
 
+export function createHomepageDemoDeviceToken(): HomepageDemoTokenPair {
+  return createHomepageDemoToken("homepage-demo-device");
+}
+
 export function createHomepageDemoIdempotencyToken(): HomepageDemoTokenPair {
   return createHomepageDemoToken("homepage-demo-idempotency");
 }

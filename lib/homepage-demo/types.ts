@@ -41,6 +41,7 @@ export type HomepageDemoDraftStatus =
 export const HOMEPAGE_DEMO_TOKEN_PURPOSES = [
   "homepage-demo-public",
   "homepage-demo-session",
+  "homepage-demo-device",
   "homepage-demo-idempotency",
 ] as const;
 

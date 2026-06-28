@@ -17,6 +17,11 @@ export type HomepageDemoRepositoryErrorCode =
   | "repository_response_invalid"
   | "repository_unavailable";
 
+export type HomepageDemoIdentityErrorCode =
+  | "identity_unavailable"
+  | "identity_input_invalid"
+  | "identity_configuration_invalid";
+
 const HOMEPAGE_DEMO_REPOSITORY_ERROR_MESSAGES: Record<
   HomepageDemoRepositoryErrorCode,
   string
@@ -40,6 +45,16 @@ const HOMEPAGE_DEMO_REPOSITORY_ERROR_MESSAGES: Record<
   repository_unavailable: "Homepage demo repository is unavailable.",
 };
 
+const HOMEPAGE_DEMO_IDENTITY_ERROR_MESSAGES: Record<
+  HomepageDemoIdentityErrorCode,
+  string
+> = {
+  identity_unavailable: "Homepage demo identity is unavailable.",
+  identity_input_invalid: "Homepage demo identity input is invalid.",
+  identity_configuration_invalid:
+    "Homepage demo identity configuration is invalid.",
+};
+
 export class HomepageDemoRepositoryError extends Error {
   readonly code: HomepageDemoRepositoryErrorCode;
 
@@ -54,4 +69,20 @@ export function isHomepageDemoRepositoryError(
   error: unknown
 ): error is HomepageDemoRepositoryError {
   return error instanceof HomepageDemoRepositoryError;
+}
+
+export class HomepageDemoIdentityError extends Error {
+  readonly code: HomepageDemoIdentityErrorCode;
+
+  constructor(code: HomepageDemoIdentityErrorCode) {
+    super(HOMEPAGE_DEMO_IDENTITY_ERROR_MESSAGES[code]);
+    this.name = "HomepageDemoIdentityError";
+    this.code = code;
+  }
+}
+
+export function isHomepageDemoIdentityError(
+  error: unknown
+): error is HomepageDemoIdentityError {
+  return error instanceof HomepageDemoIdentityError;
 }
