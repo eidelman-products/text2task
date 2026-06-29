@@ -65,3 +65,14 @@ export function createHomepageDemoDeviceToken(): HomepageDemoTokenPair {
 export function createHomepageDemoIdempotencyToken(): HomepageDemoTokenPair {
   return createHomepageDemoToken("homepage-demo-idempotency");
 }
+
+export function hashHomepageDemoCapacityLeaseToken(token: string): string {
+  return hashHomepageDemoToken({
+    token,
+    purpose: "homepage-demo-capacity-lease",
+  });
+}
+
+export function createHomepageDemoCapacityLeaseToken(): HomepageDemoTokenPair {
+  return createHomepageDemoToken("homepage-demo-capacity-lease");
+}

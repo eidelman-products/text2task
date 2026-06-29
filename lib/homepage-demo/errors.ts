@@ -10,6 +10,13 @@ export type HomepageDemoRepositoryErrorCode =
   | "draft_conflict"
   | "failure_conflict"
   | "block_conflict"
+  | "admission_config_missing"
+  | "admission_state_conflict"
+  | "processing_attempt_not_found"
+  | "processing_lease_invalid"
+  | "processing_lease_expired"
+  | "processing_state_conflict"
+  | "processing_completion_conflict"
   | "review_access_denied"
   | "review_expired"
   | "review_not_ready"
@@ -37,6 +44,15 @@ const HOMEPAGE_DEMO_REPOSITORY_ERROR_MESSAGES: Record<
   draft_conflict: "Homepage demo draft conflict.",
   failure_conflict: "Homepage demo failure conflict.",
   block_conflict: "Homepage demo block conflict.",
+  admission_config_missing: "Homepage demo admission config is missing.",
+  admission_state_conflict: "Homepage demo admission state conflict.",
+  processing_attempt_not_found:
+    "Homepage demo processing attempt was not found.",
+  processing_lease_invalid: "Homepage demo processing lease is invalid.",
+  processing_lease_expired: "Homepage demo processing lease has expired.",
+  processing_state_conflict: "Homepage demo processing state conflict.",
+  processing_completion_conflict:
+    "Homepage demo processing completion conflict.",
   review_access_denied: "Homepage demo review access was denied.",
   review_expired: "Homepage demo review has expired.",
   review_not_ready: "Homepage demo review is not ready.",
