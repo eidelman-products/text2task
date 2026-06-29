@@ -42,6 +42,10 @@ export type HomepageDemoChallengeErrorCode =
   | "challenge_verification_timeout"
   | "challenge_verification_unavailable";
 
+export type HomepageDemoOrchestrationErrorCode =
+  | "orchestration_unavailable"
+  | "processing_cleanup_unavailable";
+
 const HOMEPAGE_DEMO_REPOSITORY_ERROR_MESSAGES: Record<
   HomepageDemoRepositoryErrorCode,
   string
@@ -110,6 +114,15 @@ const HOMEPAGE_DEMO_CHALLENGE_ERROR_MESSAGES: Record<
     "Homepage demo challenge verification is unavailable.",
 };
 
+const HOMEPAGE_DEMO_ORCHESTRATION_ERROR_MESSAGES: Record<
+  HomepageDemoOrchestrationErrorCode,
+  string
+> = {
+  orchestration_unavailable: "Homepage demo orchestration is unavailable.",
+  processing_cleanup_unavailable:
+    "Homepage demo processing cleanup is unavailable.",
+};
+
 export class HomepageDemoRepositoryError extends Error {
   readonly code: HomepageDemoRepositoryErrorCode;
 
@@ -172,4 +185,20 @@ export function isHomepageDemoChallengeError(
   error: unknown
 ): error is HomepageDemoChallengeError {
   return error instanceof HomepageDemoChallengeError;
+}
+
+export class HomepageDemoOrchestrationError extends Error {
+  readonly code: HomepageDemoOrchestrationErrorCode;
+
+  constructor(code: HomepageDemoOrchestrationErrorCode) {
+    super(HOMEPAGE_DEMO_ORCHESTRATION_ERROR_MESSAGES[code]);
+    this.name = "HomepageDemoOrchestrationError";
+    this.code = code;
+  }
+}
+
+export function isHomepageDemoOrchestrationError(
+  error: unknown
+): error is HomepageDemoOrchestrationError {
+  return error instanceof HomepageDemoOrchestrationError;
 }
