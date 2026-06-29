@@ -29,6 +29,13 @@ export type HomepageDemoIdentityErrorCode =
   | "identity_input_invalid"
   | "identity_configuration_invalid";
 
+export type HomepageDemoExtractionErrorCode =
+  | "invalid_text_input"
+  | "text_input_too_large"
+  | "text_extraction_timeout"
+  | "text_extraction_invalid_result"
+  | "text_extraction_unavailable";
+
 const HOMEPAGE_DEMO_REPOSITORY_ERROR_MESSAGES: Record<
   HomepageDemoRepositoryErrorCode,
   string
@@ -71,6 +78,19 @@ const HOMEPAGE_DEMO_IDENTITY_ERROR_MESSAGES: Record<
     "Homepage demo identity configuration is invalid.",
 };
 
+const HOMEPAGE_DEMO_EXTRACTION_ERROR_MESSAGES: Record<
+  HomepageDemoExtractionErrorCode,
+  string
+> = {
+  invalid_text_input: "Homepage demo text input is invalid.",
+  text_input_too_large: "Homepage demo text input is too large.",
+  text_extraction_timeout: "Homepage demo text extraction timed out.",
+  text_extraction_invalid_result:
+    "Homepage demo text extraction result was invalid.",
+  text_extraction_unavailable:
+    "Homepage demo text extraction is unavailable.",
+};
+
 export class HomepageDemoRepositoryError extends Error {
   readonly code: HomepageDemoRepositoryErrorCode;
 
@@ -101,4 +121,20 @@ export function isHomepageDemoIdentityError(
   error: unknown
 ): error is HomepageDemoIdentityError {
   return error instanceof HomepageDemoIdentityError;
+}
+
+export class HomepageDemoExtractionError extends Error {
+  readonly code: HomepageDemoExtractionErrorCode;
+
+  constructor(code: HomepageDemoExtractionErrorCode) {
+    super(HOMEPAGE_DEMO_EXTRACTION_ERROR_MESSAGES[code]);
+    this.name = "HomepageDemoExtractionError";
+    this.code = code;
+  }
+}
+
+export function isHomepageDemoExtractionError(
+  error: unknown
+): error is HomepageDemoExtractionError {
+  return error instanceof HomepageDemoExtractionError;
 }

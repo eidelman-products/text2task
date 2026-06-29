@@ -1,3 +1,10 @@
+import type { HomepageDemoJsonObject } from "@/lib/homepage-demo/json-validation";
+
+export type {
+  HomepageDemoJsonObject,
+  HomepageDemoJsonValue,
+} from "@/lib/homepage-demo/json-validation";
+
 export const HOMEPAGE_DEMO_TRIAL_INPUT_TYPES = ["text", "image"] as const;
 
 export type HomepageDemoTrialInputType =
@@ -140,4 +147,10 @@ export type HomepageDemoProcessingFailureResult = Readonly<{
   providerCallCompletedAt: Date | null;
   leaseExpiresAt: Date;
   idempotent: boolean;
+}>;
+
+export type HomepageDemoTextExtractionArtifact = Readonly<{
+  normalizedResult: HomepageDemoJsonObject;
+  schemaVersion: string;
+  engineVersion: string;
 }>;
