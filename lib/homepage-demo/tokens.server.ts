@@ -7,6 +7,9 @@ import type { HomepageDemoTokenPurpose } from "@/lib/homepage-demo/types";
 const TOKEN_RANDOM_BYTES = 32;
 const TOKEN_HASH_ALGORITHM = "sha256";
 const HASH_DOMAIN = "text2task.homepage-demo.token.v1";
+const TOKEN_BASE64URL_LENGTH = 43;
+const TOKEN_BASE64URL_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const TOKEN_CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F-\u009F]/u;
 
 export type HomepageDemoTokenPair = Readonly<{
   token: string;
@@ -16,6 +19,16 @@ export type HomepageDemoTokenPair = Readonly<{
 
 export function generateHomepageDemoToken(): string {
   return randomBytes(TOKEN_RANDOM_BYTES).toString("base64url");
+}
+
+export function isValidHomepageDemoToken(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length === TOKEN_BASE64URL_LENGTH &&
+    value.trim() === value &&
+    !TOKEN_CONTROL_CHARACTER_PATTERN.test(value) &&
+    TOKEN_BASE64URL_PATTERN.test(value)
+  );
 }
 
 export function hashHomepageDemoToken({

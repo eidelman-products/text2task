@@ -46,6 +46,14 @@ export type HomepageDemoOrchestrationErrorCode =
   | "orchestration_unavailable"
   | "processing_cleanup_unavailable";
 
+export type HomepageDemoPublicRequestErrorCode =
+  | "homepage_demo_disabled"
+  | "invalid_request_origin"
+  | "invalid_request_content_type"
+  | "unsupported_request_encoding"
+  | "request_body_too_large"
+  | "invalid_request_body";
+
 const HOMEPAGE_DEMO_REPOSITORY_ERROR_MESSAGES: Record<
   HomepageDemoRepositoryErrorCode,
   string
@@ -121,6 +129,20 @@ const HOMEPAGE_DEMO_ORCHESTRATION_ERROR_MESSAGES: Record<
   orchestration_unavailable: "Homepage demo orchestration is unavailable.",
   processing_cleanup_unavailable:
     "Homepage demo processing cleanup is unavailable.",
+};
+
+const HOMEPAGE_DEMO_PUBLIC_REQUEST_ERROR_MESSAGES: Record<
+  HomepageDemoPublicRequestErrorCode,
+  string
+> = {
+  homepage_demo_disabled: "Homepage demo is disabled.",
+  invalid_request_origin: "Homepage demo request origin is invalid.",
+  invalid_request_content_type:
+    "Homepage demo request content type is invalid.",
+  unsupported_request_encoding:
+    "Homepage demo request encoding is unsupported.",
+  request_body_too_large: "Homepage demo request body is too large.",
+  invalid_request_body: "Homepage demo request body is invalid.",
 };
 
 export class HomepageDemoRepositoryError extends Error {
@@ -201,4 +223,20 @@ export function isHomepageDemoOrchestrationError(
   error: unknown
 ): error is HomepageDemoOrchestrationError {
   return error instanceof HomepageDemoOrchestrationError;
+}
+
+export class HomepageDemoPublicRequestError extends Error {
+  readonly code: HomepageDemoPublicRequestErrorCode;
+
+  constructor(code: HomepageDemoPublicRequestErrorCode) {
+    super(HOMEPAGE_DEMO_PUBLIC_REQUEST_ERROR_MESSAGES[code]);
+    this.name = "HomepageDemoPublicRequestError";
+    this.code = code;
+  }
+}
+
+export function isHomepageDemoPublicRequestError(
+  error: unknown
+): error is HomepageDemoPublicRequestError {
+  return error instanceof HomepageDemoPublicRequestError;
 }
