@@ -36,6 +36,12 @@ export type HomepageDemoExtractionErrorCode =
   | "text_extraction_invalid_result"
   | "text_extraction_unavailable";
 
+export type HomepageDemoChallengeErrorCode =
+  | "invalid_challenge_input"
+  | "challenge_configuration_error"
+  | "challenge_verification_timeout"
+  | "challenge_verification_unavailable";
+
 const HOMEPAGE_DEMO_REPOSITORY_ERROR_MESSAGES: Record<
   HomepageDemoRepositoryErrorCode,
   string
@@ -91,6 +97,19 @@ const HOMEPAGE_DEMO_EXTRACTION_ERROR_MESSAGES: Record<
     "Homepage demo text extraction is unavailable.",
 };
 
+const HOMEPAGE_DEMO_CHALLENGE_ERROR_MESSAGES: Record<
+  HomepageDemoChallengeErrorCode,
+  string
+> = {
+  invalid_challenge_input: "Homepage demo challenge input is invalid.",
+  challenge_configuration_error:
+    "Homepage demo challenge verification is not configured.",
+  challenge_verification_timeout:
+    "Homepage demo challenge verification timed out.",
+  challenge_verification_unavailable:
+    "Homepage demo challenge verification is unavailable.",
+};
+
 export class HomepageDemoRepositoryError extends Error {
   readonly code: HomepageDemoRepositoryErrorCode;
 
@@ -137,4 +156,20 @@ export function isHomepageDemoExtractionError(
   error: unknown
 ): error is HomepageDemoExtractionError {
   return error instanceof HomepageDemoExtractionError;
+}
+
+export class HomepageDemoChallengeError extends Error {
+  readonly code: HomepageDemoChallengeErrorCode;
+
+  constructor(code: HomepageDemoChallengeErrorCode) {
+    super(HOMEPAGE_DEMO_CHALLENGE_ERROR_MESSAGES[code]);
+    this.name = "HomepageDemoChallengeError";
+    this.code = code;
+  }
+}
+
+export function isHomepageDemoChallengeError(
+  error: unknown
+): error is HomepageDemoChallengeError {
+  return error instanceof HomepageDemoChallengeError;
 }
