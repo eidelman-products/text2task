@@ -11,6 +11,7 @@ import HomepageUseCasesSection from "./components/landing/homepage-use-cases-sec
 import LandingFooter from "./components/landing/landing-footer";
 import LandingHeader from "./components/landing/landing-header";
 import { absoluteUrl } from "./lib/site-config";
+import { HOMEPAGE_DEMO_CONFIG } from "@/lib/homepage-demo/config.server";
 
 export const metadata: Metadata = {
   title: "Text2Task | Turn Client Messages Into Organized Work",
@@ -97,6 +98,13 @@ const structuredData = {
 };
 
 export default function HomePage() {
+  const homepageDemoTurnstileSiteKey =
+    process.env.HOMEPAGE_DEMO_TURNSTILE_SITE_KEY?.trim() ?? "";
+  const homepageDemoLiveDemo =
+    HOMEPAGE_DEMO_CONFIG.enabled && homepageDemoTurnstileSiteKey.length > 0
+      ? { turnstileSiteKey: homepageDemoTurnstileSiteKey }
+      : null;
+
   return (
     <div className="min-h-screen bg-white">
       <LandingHeader />
@@ -112,7 +120,7 @@ export default function HomePage() {
         <HomepageHero />
         <HomepageTrustStrip />
         <HomepageCustomerStoriesSection />
-        <HomepageDemoSection />
+        <HomepageDemoSection liveDemo={homepageDemoLiveDemo} />
         <HomepagePostExtractionSection />
         <HomepageUseCasesSection />
         <HomepagePricingSection />
