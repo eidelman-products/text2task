@@ -1,13 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import {
   useAnalyticsConsentChoice,
   writeAnalyticsConsentChoice,
 } from "@/lib/analytics/analytics-consent";
 
+const HOMEPAGE_DEMO_REVIEW_PATH = "/homepage-demo/review";
+
 export function CookieConsentBanner() {
+  const pathname = usePathname();
+
+  if (pathname === HOMEPAGE_DEMO_REVIEW_PATH) {
+    return null;
+  }
+
+  return <CookieConsentBannerContent />;
+}
+
+function CookieConsentBannerContent() {
   const consentChoice = useAnalyticsConsentChoice();
 
   if (consentChoice) {

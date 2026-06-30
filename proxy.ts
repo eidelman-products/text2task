@@ -1,6 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const HOMEPAGE_DEMO_REVIEW_PAGE_HEADERS = [
+  ["Cache-Control", "no-store, no-cache, max-age=0, must-revalidate"],
+  ["Pragma", "no-cache"],
+  ["Expires", "0"],
+  ["X-Content-Type-Options", "nosniff"],
+  ["Referrer-Policy", "no-referrer"],
+  ["X-Robots-Tag", "noindex, nofollow, noarchive"],
+] as const;
+
 function cleanPathname(pathname: string) {
   return pathname
     .replace(/%5C/gi, "")
@@ -11,6 +20,16 @@ function cleanPathname(pathname: string) {
 export async function proxy(request: NextRequest) {
   if (request.nextUrl.pathname === "/api/homepage-demo/review") {
     return NextResponse.next();
+  }
+
+  if (request.nextUrl.pathname === "/homepage-demo/review") {
+    const response = NextResponse.next();
+
+    for (const [name, value] of HOMEPAGE_DEMO_REVIEW_PAGE_HEADERS) {
+      response.headers.set(name, value);
+    }
+
+    return response;
   }
 
   const originalPathname = request.nextUrl.pathname;
