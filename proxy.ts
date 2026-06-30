@@ -9,6 +9,10 @@ function cleanPathname(pathname: string) {
 }
 
 export async function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname === "/api/homepage-demo/review") {
+    return NextResponse.next();
+  }
+
   const originalPathname = request.nextUrl.pathname;
   const cleanedPathname = cleanPathname(originalPathname);
 
