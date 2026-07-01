@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import HomepageLiveDemoClient from "./components/landing/HomepageLiveDemoClient";
 import HomepageDemoSection from "./components/landing/homepage-demo-section";
 import HomepageCustomerStoriesSection from "./components/landing/homepage-customer-stories-section";
 import HomepageFaqSection from "./components/landing/homepage-faq-section";
@@ -119,8 +120,18 @@ export default function HomePage() {
 
         <HomepageHero />
         <HomepageTrustStrip />
-        <HomepageCustomerStoriesSection />
-        <HomepageDemoSection liveDemo={homepageDemoLiveDemo} />
+        {homepageDemoLiveDemo ? (
+          <HomepageLiveDemoClient
+            turnstileSiteKey={homepageDemoLiveDemo.turnstileSiteKey}
+          />
+        ) : (
+          <HomepageCustomerStoriesSection />
+        )}
+        <HomepageDemoSection
+          testimonials={
+            homepageDemoLiveDemo ? <HomepageCustomerStoriesSection /> : null
+          }
+        />
         <HomepagePostExtractionSection />
         <HomepageUseCasesSection />
         <HomepagePricingSection />

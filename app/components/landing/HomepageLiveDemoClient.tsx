@@ -405,84 +405,98 @@ export default function HomepageLiveDemoClient({
   const errorCopy = state.status === "error" ? getErrorCopy(state.code) : null;
 
   return (
-    <form className={styles.shell} onSubmit={handleSubmit} noValidate>
-      <div className={styles.header}>
-        <p className={styles.kicker}>Live demo</p>
-        <h3 className={styles.title}>Turn a client request into a review draft</h3>
-        <p className={styles.description}>
-          Paste a short request and preview the structured draft before signup.
-        </p>
-      </div>
-
-      <div className={styles.fieldGroup}>
-        <label className={styles.label} htmlFor={textAreaId}>
-          Client request
-        </label>
-        <textarea
-          ref={textAreaRef}
-          id={textAreaId}
-          className={styles.textarea}
-          value={text}
-          onChange={(event) => handleTextChange(event.target.value)}
-          aria-describedby={`${helpTextId} ${countTextId}`}
-          aria-invalid={isTextError}
-          disabled={isWorking}
-          placeholder="Example: Create a homepage for a bookkeeping studio and send the first draft by Friday."
-          rows={7}
-        />
-        <div className={styles.fieldMeta}>
-          <p id={helpTextId} className={styles.helpText}>
-            Text only. Tabs and line breaks are supported.
+    <section
+      className={styles.shell}
+      aria-labelledby="homepage-live-demo-heading"
+    >
+      <div className={styles.inner}>
+        <div className={styles.header}>
+          <p className={styles.kicker}>Live preview</p>
+          <h2 id="homepage-live-demo-heading" className={styles.title}>
+            Turn a client message into an organized project
+          </h2>
+          <p className={styles.description}>
+            Paste a short request. Text2Task opens a temporary review so you can
+            see the tasks, deadline, budget, and client details it finds.
           </p>
-          <p
-            id={countTextId}
-            className={
-              characterCount > TEXT_INPUT_MAX_CHARACTERS
-                ? styles.countOverLimit
-                : styles.countText
-            }
-          >
-            {characterCount}/{TEXT_INPUT_MAX_CHARACTERS}
+          <p className={styles.trustLine}>
+            Text only · Temporary review · Nothing is saved to your account
           </p>
         </div>
+
+        <form className={styles.composer} onSubmit={handleSubmit} noValidate>
+          <div className={styles.fieldGroup}>
+            <label className={styles.label} htmlFor={textAreaId}>
+              Client message
+            </label>
+            <textarea
+              ref={textAreaRef}
+              id={textAreaId}
+              className={styles.textarea}
+              value={text}
+              onChange={(event) => handleTextChange(event.target.value)}
+              aria-describedby={`${helpTextId} ${countTextId}`}
+              aria-invalid={isTextError}
+              disabled={isWorking}
+              maxLength={TEXT_INPUT_MAX_CHARACTERS}
+              placeholder="Example: Build a homepage for a bookkeeping studio and send the first version by Friday."
+              rows={7}
+            />
+            <div className={styles.fieldMeta}>
+              <p id={helpTextId} className={styles.helpText}>
+                Text only for now. Tabs and line breaks are fine.
+              </p>
+              <p
+                id={countTextId}
+                className={
+                  characterCount > TEXT_INPUT_MAX_CHARACTERS
+                    ? styles.countOverLimit
+                    : styles.countText
+                }
+              >
+                {characterCount}/{TEXT_INPUT_MAX_CHARACTERS}
+              </p>
+            </div>
+          </div>
+
+          <div ref={turnstileContainerRef} className={styles.challengeMount} />
+
+          {statusCopy !== null ? (
+            <div
+              id={statusTextId}
+              className={styles.status}
+              role="status"
+              aria-live="polite"
+            >
+              <p className={styles.statusTitle}>{statusCopy.title}</p>
+              <p className={styles.statusText}>{statusCopy.body}</p>
+            </div>
+          ) : null}
+
+          {errorCopy !== null ? (
+            <div
+              ref={alertRef}
+              className={styles.error}
+              role="alert"
+              tabIndex={-1}
+            >
+              <p className={styles.errorTitle}>{errorCopy.title}</p>
+              <p className={styles.errorText}>{errorCopy.body}</p>
+            </div>
+          ) : null}
+
+          <div className={styles.actions}>
+            <button
+              type="submit"
+              className={styles.primaryButton}
+              disabled={isWorking}
+            >
+              {isWorking ? "Creating preview…" : "Preview my project"}
+            </button>
+          </div>
+        </form>
       </div>
-
-      <div ref={turnstileContainerRef} className={styles.challengeMount} />
-
-      {statusCopy !== null ? (
-        <div
-          id={statusTextId}
-          className={styles.status}
-          role="status"
-          aria-live="polite"
-        >
-          <p className={styles.statusTitle}>{statusCopy.title}</p>
-          <p className={styles.statusText}>{statusCopy.body}</p>
-        </div>
-      ) : null}
-
-      {errorCopy !== null ? (
-        <div
-          ref={alertRef}
-          className={styles.error}
-          role="alert"
-          tabIndex={-1}
-        >
-          <p className={styles.errorTitle}>{errorCopy.title}</p>
-          <p className={styles.errorText}>{errorCopy.body}</p>
-        </div>
-      ) : null}
-
-      <div className={styles.actions}>
-        <button
-          type="submit"
-          className={styles.primaryButton}
-          disabled={isWorking}
-        >
-          {isWorking ? "Preparing draft" : "Create demo draft"}
-        </button>
-      </div>
-    </form>
+    </section>
   );
 }
 
@@ -692,7 +706,7 @@ function getWorkingCopy(step: LiveDemoStep): Readonly<{
   switch (step) {
     case "bootstrapping":
       return {
-        title: "Preparing a private demo session",
+        title: "Preparing a private preview",
         body: "This usually takes a moment.",
       };
     case "verifying_challenge":
@@ -702,13 +716,13 @@ function getWorkingCopy(step: LiveDemoStep): Readonly<{
       };
     case "extracting":
       return {
-        title: "Creating the draft",
-        body: "The review page will open when the draft is ready.",
+        title: "Creating your project preview",
+        body: "The review page will open when it is ready.",
       };
     case "opening_review":
       return {
         title: "Opening the review",
-        body: "Your temporary draft is ready.",
+        body: "Your temporary preview is ready.",
       };
   }
 }

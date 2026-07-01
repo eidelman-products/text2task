@@ -1,10 +1,9 @@
-import HomepageLiveDemoClient from "./HomepageLiveDemoClient";
+import type { ReactNode } from "react";
+
 import HomepageDemoVideo from "./homepage-demo-video";
 
 type HomepageDemoSectionProps = Readonly<{
-  liveDemo?: Readonly<{
-    turnstileSiteKey: string;
-  }> | null;
+  testimonials?: ReactNode | null;
 }>;
 
 const demoSteps = [
@@ -25,7 +24,7 @@ const demoSteps = [
 ] as const;
 
 export default function HomepageDemoSection({
-  liveDemo = null,
+  testimonials = null,
 }: HomepageDemoSectionProps) {
   return (
     <section
@@ -74,11 +73,7 @@ export default function HomepageDemoSection({
           ))}
         </ol>
 
-        {liveDemo !== null ? (
-          <div className="mx-auto mt-10 max-w-3xl sm:mt-12">
-            <HomepageLiveDemoClient turnstileSiteKey={liveDemo.turnstileSiteKey} />
-          </div>
-        ) : null}
+        {testimonials}
 
         <div className="mx-auto mt-10 max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:mt-12">
           <HomepageDemoVideo />
