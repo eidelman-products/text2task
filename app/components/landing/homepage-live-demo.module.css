@@ -2,9 +2,9 @@
   width: 100%;
   scroll-margin-top: 5.5rem;
   color: #0f172a;
-  background: #f6faff;
+  background: #ffffff;
   border-bottom: 1px solid #dbeafe;
-  padding: 3rem 1.25rem 2.75rem;
+  padding: 1.85rem 1.25rem 1.45rem;
 }
 
 .shell,
@@ -12,126 +12,72 @@
   box-sizing: border-box;
 }
 
-.inner {
+.container {
   display: grid;
-  width: min(1180px, 100%);
+  width: min(1040px, 100%);
   margin: 0 auto;
-  gap: 1.6rem;
-  align-items: center;
-}
-
-.header {
-  display: grid;
-  max-width: 33rem;
-  gap: 0.85rem;
-}
-
-.kicker {
-  margin: 0;
-  color: #2563eb;
-  font-size: 0.82rem;
-  font-weight: 750;
-  letter-spacing: 0.08em;
-  line-height: 1.4;
-  text-transform: uppercase;
-}
-
-.title {
-  margin: 0;
-  color: #0f172a;
-  font-size: 2rem;
-  font-weight: 750;
-  letter-spacing: 0;
-  line-height: 1.12;
-}
-
-.description {
-  margin: 0;
-  color: #475569;
-  font-size: 1rem;
-  line-height: 1.65;
-}
-
-.trustLine {
-  margin: 0.2rem 0 0;
-  color: #1e3a8a;
-  font-size: 0.9rem;
-  font-weight: 700;
-  line-height: 1.55;
 }
 
 .composer {
   display: grid;
+  width: 100%;
   min-width: 0;
-  gap: 1rem;
-  padding: 1.15rem;
+  gap: 0.85rem;
+  padding: 0;
   color: #0f172a;
-  background: #ffffff;
-  border: 1px solid #cfe0ff;
-  border-radius: 8px;
-  box-shadow: 0 20px 44px rgb(15 23 42 / 0.1);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
-.examplePanel {
+.inputSurface {
   display: grid;
-  gap: 0.75rem;
-  min-width: 0;
-  padding: 0.9rem;
-  background: #f8fbff;
-  border: 1px solid #dbeafe;
-  border-radius: 8px;
-}
-
-.exampleIntro {
-  display: grid;
-  gap: 0.25rem;
-}
-
-.exampleTitle {
-  margin: 0;
-  color: #0f172a;
-  font-size: 0.94rem;
-  font-weight: 750;
-  line-height: 1.35;
-}
-
-.exampleDescription {
-  margin: 0;
-  color: #64748b;
-  font-size: 0.84rem;
-  line-height: 1.55;
-}
-
-.exampleText {
-  margin: 0;
-  color: #1e293b;
+  width: 100%;
+  gap: 0;
+  padding: 1rem 1.25rem 1rem;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.8rem 0.85rem;
-  font-size: 0.86rem;
-  line-height: 1.58;
-  overflow-wrap: anywhere;
+  border: 1px solid #b8c6d9;
+  border-radius: 22px;
+  box-shadow:
+    0 20px 50px rgb(15 23 42 / 0.08),
+    0 4px 14px rgb(15 23 42 / 0.04);
 }
 
-.exampleActions {
+.inputSurface:focus-within {
+  border-color: #2563eb;
+  box-shadow:
+    0 0 0 3px rgb(37 99 235 / 0.1),
+    0 22px 55px rgb(15 23 42 / 0.1);
+}
+
+.inputToolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.55rem;
+  min-width: 0;
 }
 
-.exampleUseButton,
-.exampleNextButton {
+.anotherExampleButton {
   display: inline-flex;
-  min-height: 2.75rem;
+  width: auto;
+  min-height: 2.25rem;
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  padding: 0.65rem 0.9rem;
+  padding: 0.4rem 0.7rem;
+  color: #1e40af;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  box-shadow: none;
   font: inherit;
-  font-size: 0.84rem;
-  font-weight: 750;
-  line-height: 1.2;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color 150ms ease,
@@ -140,47 +86,25 @@
     color 150ms ease;
 }
 
-.exampleUseButton {
+.anotherExampleButton:hover:not(:disabled) {
   color: #1d4ed8;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-}
-
-.exampleNextButton {
-  color: #334155;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-}
-
-.exampleUseButton:hover:not(:disabled) {
-  color: #1e40af;
-  background: #dbeafe;
-  border-color: #93c5fd;
-}
-
-.exampleNextButton:hover:not(:disabled) {
-  color: #1e293b;
   background: #f8fafc;
-  border-color: #94a3b8;
+  border-color: #bfdbfe;
 }
 
-.exampleUseButton:focus-visible,
-.exampleNextButton:focus-visible {
+.anotherExampleButton:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.2);
+  color: #1d4ed8;
+  background: #ffffff;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 2px rgb(37 99 235 / 0.14);
 }
 
-.exampleUseButton:disabled,
-.exampleNextButton:disabled {
+.anotherExampleButton:disabled {
   color: #94a3b8;
   background: #f1f5f9;
   border-color: #cbd5e1;
   cursor: not-allowed;
-}
-
-.fieldGroup {
-  display: grid;
-  gap: 0.55rem;
 }
 
 .label {
@@ -193,13 +117,15 @@
 .textarea {
   width: 100%;
   min-width: 0;
-  min-height: 10rem;
+  height: 7.5rem;
+  min-height: 7.5rem;
   resize: vertical;
-  padding: 0.9rem 0.95rem;
+  padding: 0.7rem 0 0.6rem;
   color: #0f172a;
-  background: #fbfdff;
-  border: 1px solid #b6c5d8;
-  border-radius: 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   font: inherit;
   font-size: 0.98rem;
   line-height: 1.6;
@@ -215,19 +141,16 @@
 }
 
 .textarea:hover:not(:disabled) {
-  border-color: #7ea0cf;
-  background: #ffffff;
+  background: transparent;
 }
 
 .textarea:focus {
-  background: #ffffff;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.18);
+  background: transparent;
+  box-shadow: none;
 }
 
 .textarea[aria-invalid="true"] {
-  border-color: #dc2626;
-  box-shadow: 0 0 0 3px rgb(220 38 38 / 0.12);
+  box-shadow: none;
 }
 
 .textarea:disabled {
@@ -241,30 +164,24 @@
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.35rem 0.85rem;
+  justify-content: flex-end;
+  gap: 0.25rem 0.8rem;
+  margin-top: 0.35rem;
 }
 
-.helpText,
-.countText,
-.countOverLimit {
+.counter,
+.counterOverLimit {
   margin: 0;
   font-size: 0.8rem;
   line-height: 1.45;
 }
 
-.helpText {
-  min-width: min(100%, 18rem);
-  flex: 1 1 auto;
-  color: #64748b;
-}
-
-.countText {
+.counter {
   flex: 0 0 auto;
   color: #64748b;
 }
 
-.countOverLimit {
+.counterOverLimit {
   flex: 0 0 auto;
   color: #991b1b;
   font-weight: 750;
@@ -274,6 +191,7 @@
   display: flex;
   max-width: 100%;
   min-height: 1px;
+  margin-top: 0.8rem;
   justify-content: flex-start;
   overflow-x: auto;
   scrollbar-width: thin;
@@ -283,6 +201,7 @@
 .error {
   display: grid;
   gap: 0.25rem;
+  margin-top: 0.7rem;
   padding: 0.85rem 0.9rem;
   border-radius: 8px;
   outline: none;
@@ -322,24 +241,36 @@
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
+  gap: 0.55rem 1rem;
+  margin-top: 0.7rem;
+}
+
+.actionHelper {
+  min-width: min(100%, 18rem);
+  flex: 1 1 18rem;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 
 .primaryButton {
   display: inline-flex;
   width: min(100%, 13rem);
-  min-height: 2.9rem;
+  min-height: 2.45rem;
   align-items: center;
   justify-content: center;
-  padding: 0.82rem 1.2rem;
+  padding: 0.62rem 1rem;
   color: #ffffff;
   background: #2563eb;
   border: 1px solid #2563eb;
   border-radius: 8px;
   font: inherit;
-  font-size: 0.94rem;
-  font-weight: 750;
+  font-size: 0.88rem;
+  font-weight: 725;
   line-height: 1.2;
   cursor: pointer;
   transition:
@@ -370,72 +301,54 @@
 
 @media (min-width: 900px) {
   .shell {
-    padding: 3.25rem 1.5rem 3rem;
+    padding: 2rem 1.5rem 1.5rem;
   }
 
-  .inner {
-    grid-template-columns: minmax(0, 0.44fr) minmax(0, 0.56fr);
-    gap: 2.4rem;
-  }
-
-  .title {
-    font-size: 2.35rem;
-  }
-
-  .composer {
-    padding: 1.25rem;
+  .textarea {
+    height: 7.5rem;
+    min-height: 7.5rem;
   }
 }
 
 @media (max-width: 640px) {
   .shell {
     scroll-margin-top: 4.75rem;
-    padding: 2.25rem 0.875rem 2rem;
-  }
-
-  .inner {
-    gap: 1.3rem;
-  }
-
-  .title {
-    font-size: 1.7rem;
-  }
-
-  .description {
-    font-size: 0.96rem;
+    padding: 1.65rem 0.875rem 1.25rem;
   }
 
   .composer {
-    gap: 0.9rem;
-    padding: 0.95rem;
+    gap: 0.85rem;
   }
 
-  .examplePanel {
-    padding: 0.85rem;
+  .inputSurface {
+    padding: 0.9rem 1rem;
   }
 
-  .exampleActions {
-    flex-direction: column;
+  .inputToolbar {
+    align-items: stretch;
   }
 
-  .exampleUseButton,
-  .exampleNextButton {
+  .anotherExampleButton {
     width: 100%;
   }
 
   .textarea {
-    min-height: 9.5rem;
+    height: 8.75rem;
+    min-height: 8.75rem;
   }
 
   .primaryButton {
     width: 100%;
-    min-height: 2.9rem;
+    min-height: 2.55rem;
+  }
+
+  .actionHelper {
+    flex-basis: 100%;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .exampleUseButton,
-  .exampleNextButton,
+  .anotherExampleButton,
   .textarea,
   .primaryButton {
     transition: none;

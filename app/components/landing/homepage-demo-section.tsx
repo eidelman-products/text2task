@@ -43,27 +43,30 @@ export default function HomepageDemoSection() {
 
         <ol
           id="how-it-works"
-          className="mx-auto mt-8 grid max-w-5xl gap-5 lg:grid-cols-3 lg:gap-6"
+          className="mx-auto mt-8 grid max-w-5xl gap-7 lg:grid-cols-3 lg:gap-10"
         >
           {demoSteps.map((step, index) => (
             <li
               key={step.title}
-              className="flex min-w-0 items-start gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+              className="relative min-w-0 border-t border-slate-200 pt-5"
             >
-              <span
-                aria-hidden="true"
-                className="flex size-9 shrink-0 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-sm font-bold text-blue-700"
-              >
-                {index + 1}
-              </span>
-              <div>
-                <h3 className="text-base font-semibold text-slate-950">
-                  {step.title}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {step.description}
-                </p>
+              <div className="text-sm font-bold tracking-[0.18em] text-blue-600">
+                {String(index + 1).padStart(2, "0")}
               </div>
+              <h3 className="mt-3 text-base font-semibold text-slate-950">
+                {step.title}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {step.description}
+              </p>
+              {index < demoSteps.length - 1 ? (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-[-1.6rem] top-5 hidden text-2xl font-light leading-none text-blue-300 lg:block"
+                >
+                  &rarr;
+                </span>
+              ) : null}
             </li>
           ))}
         </ol>

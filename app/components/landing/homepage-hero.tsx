@@ -1,12 +1,4 @@
-import Image from "next/image";
 import Link from "next/link";
-
-const heroImage = {
-  src: "/landing/use-cases/project-managers/project-manager-stakeholder-request-project-flow.png",
-  alt: "Text2Task workflow showing a client request becoming an organized project draft for review before the work is saved.",
-  width: 1672,
-  height: 941,
-} as const;
 
 type HomepageHeroProps = Readonly<{
   liveDemoEnabled?: boolean;
@@ -16,8 +8,8 @@ export default function HomepageHero({
   liveDemoEnabled = false,
 }: HomepageHeroProps) {
   return (
-    <section className="overflow-hidden border-b border-slate-200/80 bg-slate-50">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-[4.5rem]">
+    <section className="overflow-hidden border-b border-slate-200/80 bg-white">
+      <div className="mx-auto max-w-7xl px-4 pb-10 pt-12 sm:px-6 sm:pb-12 sm:pt-16 lg:px-8 lg:pb-14 lg:pt-[4.5rem]">
         <div className="mx-auto max-w-5xl text-center">
           <h1 className="homepage-heading text-[2.5rem] text-slate-950 sm:text-[3rem] lg:text-[3.35rem] xl:text-[3.55rem]">
             Turn client messages into organized projects and tasks—without
@@ -43,18 +35,6 @@ export default function HomepageHero({
               {liveDemoEnabled ? "Try the live preview" : "Watch demo"}
             </Link>
           </div>
-        </div>
-
-        <div className="mx-auto mt-9 max-w-6xl overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm sm:mt-10">
-          <Image
-            src={heroImage.src}
-            alt={heroImage.alt}
-            width={heroImage.width}
-            height={heroImage.height}
-            priority
-            className="h-auto w-full"
-            sizes="(min-width: 1280px) 1152px, (min-width: 1024px) calc(100vw - 64px), (min-width: 640px) calc(100vw - 48px), calc(100vw - 32px)"
-          />
         </div>
       </div>
     </section>

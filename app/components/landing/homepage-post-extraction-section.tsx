@@ -27,7 +27,7 @@ export default function HomepagePostExtractionSection() {
     <section
       id="features"
       aria-labelledby="homepage-post-extraction-heading"
-      className="border-b border-slate-200/80 bg-slate-50"
+      className="border-b border-slate-200/80 bg-white"
     >
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
         <div className="grid items-center gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:gap-14">

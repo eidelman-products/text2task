@@ -111,7 +111,9 @@ export default function HomepageLiveDemoClient({
   const helpTextId = useId();
   const countTextId = useId();
   const statusTextId = useId();
-  const [text, setText] = useState("");
+  const [text, setText] = useState<string>(
+    HOMEPAGE_LIVE_DEMO_EXAMPLES[0]
+  );
   const [exampleIndex, setExampleIndex] = useState(0);
   const [state, setState] = useState<LiveDemoState>({ status: "idle" });
   const activeControllerRef = useRef<AbortController | null>(null);
@@ -129,8 +131,6 @@ export default function HomepageLiveDemoClient({
   const turnstileExecutionConsumedRef = useRef(false);
 
   const isWorking = state.status === "working";
-  const currentExample =
-    HOMEPAGE_LIVE_DEMO_EXAMPLES[exampleIndex] ?? HOMEPAGE_LIVE_DEMO_EXAMPLES[0];
   const isTextError =
     state.status === "error" &&
     (state.code === "invalid_text_input" || state.code === "request_too_large");
@@ -170,24 +170,20 @@ export default function HomepageLiveDemoClient({
     }
   }
 
-  function handleUseExample(): void {
+  function handleAnotherExample(): void {
     if (isWorking) {
       return;
     }
 
-    setText(currentExample);
-    textAreaRef.current?.focus({ preventScroll: true });
-  }
+    const nextExampleIndex =
+      (exampleIndex + 1) % HOMEPAGE_LIVE_DEMO_EXAMPLES.length;
 
-  function handleShowAnotherExample(): void {
-    if (isWorking) {
-      return;
-    }
-
-    setExampleIndex(
-      (currentIndex) =>
-        (currentIndex + 1) % HOMEPAGE_LIVE_DEMO_EXAMPLES.length
+    setExampleIndex(nextExampleIndex);
+    setText(
+      HOMEPAGE_LIVE_DEMO_EXAMPLES[nextExampleIndex] ??
+        HOMEPAGE_LIVE_DEMO_EXAMPLES[0]
     );
+    textAreaRef.current?.focus({ preventScroll: true });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -439,57 +435,24 @@ export default function HomepageLiveDemoClient({
     <section
       id="homepage-live-demo"
       className={styles.shell}
-      aria-labelledby="homepage-live-demo-heading"
+      aria-label="Live preview"
     >
-      <div className={styles.inner}>
-        <div className={styles.header}>
-          <p className={styles.kicker}>Try it now</p>
-          <h2 id="homepage-live-demo-heading" className={styles.title}>
-            Try Text2Task with a real client message
-          </h2>
-          <p className={styles.description}>
-            Paste a client request and see the project, tasks, deadline, budget,
-            and client details Text2Task finds.
-          </p>
-          <p className={styles.trustLine}>
-            One free preview · No account needed · Text only for now
-          </p>
-        </div>
-
+      <div className={styles.container}>
         <form className={styles.composer} onSubmit={handleSubmit} noValidate>
-          <div className={styles.examplePanel}>
-            <div className={styles.exampleIntro}>
-              <p className={styles.exampleTitle}>Need something to try?</p>
-              <p className={styles.exampleDescription}>
-                Load a realistic client request, then edit it or preview it
-                as-is.
-              </p>
-            </div>
-            <p className={styles.exampleText}>{currentExample}</p>
-            <div className={styles.exampleActions}>
+          <div className={styles.inputSurface}>
+            <div className={styles.inputToolbar}>
+              <label className={styles.label} htmlFor={textAreaId}>
+                Client message
+              </label>
               <button
                 type="button"
-                className={styles.exampleUseButton}
+                className={styles.anotherExampleButton}
                 disabled={isWorking}
-                onClick={handleUseExample}
+                onClick={handleAnotherExample}
               >
-                Use this example
-              </button>
-              <button
-                type="button"
-                className={styles.exampleNextButton}
-                disabled={isWorking}
-                onClick={handleShowAnotherExample}
-              >
-                Show another example
+                Try another example
               </button>
             </div>
-          </div>
-
-          <div className={styles.fieldGroup}>
-            <label className={styles.label} htmlFor={textAreaId}>
-              Client message
-            </label>
             <textarea
               ref={textAreaRef}
               id={textAreaId}
@@ -500,61 +463,60 @@ export default function HomepageLiveDemoClient({
               aria-invalid={isTextError}
               disabled={isWorking}
               maxLength={TEXT_INPUT_MAX_CHARACTERS}
-              placeholder="Example: Build a homepage for a bookkeeping studio and send the first version by Friday."
+              placeholder="Paste a client request here…"
               rows={7}
             />
             <div className={styles.fieldMeta}>
-              <p id={helpTextId} className={styles.helpText}>
-                Paste text from an email, WhatsApp message, note, or project
-                brief.
-              </p>
               <p
                 id={countTextId}
                 className={
                   characterCount > TEXT_INPUT_MAX_CHARACTERS
-                    ? styles.countOverLimit
-                    : styles.countText
+                    ? styles.counterOverLimit
+                    : styles.counter
                 }
               >
                 {characterCount}/{TEXT_INPUT_MAX_CHARACTERS}
               </p>
             </div>
-          </div>
 
-          <div ref={turnstileContainerRef} className={styles.challengeMount} />
+            <div ref={turnstileContainerRef} className={styles.challengeMount} />
 
-          {statusCopy !== null ? (
-            <div
-              id={statusTextId}
-              className={styles.status}
-              role="status"
-              aria-live="polite"
-            >
-              <p className={styles.statusTitle}>{statusCopy.title}</p>
-              <p className={styles.statusText}>{statusCopy.body}</p>
+            {statusCopy !== null ? (
+              <div
+                id={statusTextId}
+                className={styles.status}
+                role="status"
+                aria-live="polite"
+              >
+                <p className={styles.statusTitle}>{statusCopy.title}</p>
+                <p className={styles.statusText}>{statusCopy.body}</p>
+              </div>
+            ) : null}
+
+            {errorCopy !== null ? (
+              <div
+                ref={alertRef}
+                className={styles.error}
+                role="alert"
+                tabIndex={-1}
+              >
+                <p className={styles.errorTitle}>{errorCopy.title}</p>
+                <p className={styles.errorText}>{errorCopy.body}</p>
+              </div>
+            ) : null}
+
+            <div className={styles.actions}>
+              <p id={helpTextId} className={styles.actionHelper}>
+                Paste from email, WhatsApp, notes, or a project brief.
+              </p>
+              <button
+                type="submit"
+                className={styles.primaryButton}
+                disabled={isWorking}
+              >
+                {isWorking ? "Creating preview…" : "Preview my project"}
+              </button>
             </div>
-          ) : null}
-
-          {errorCopy !== null ? (
-            <div
-              ref={alertRef}
-              className={styles.error}
-              role="alert"
-              tabIndex={-1}
-            >
-              <p className={styles.errorTitle}>{errorCopy.title}</p>
-              <p className={styles.errorText}>{errorCopy.body}</p>
-            </div>
-          ) : null}
-
-          <div className={styles.actions}>
-            <button
-              type="submit"
-              className={styles.primaryButton}
-              disabled={isWorking}
-            >
-              {isWorking ? "Creating preview…" : "Preview my project"}
-            </button>
           </div>
         </form>
       </div>

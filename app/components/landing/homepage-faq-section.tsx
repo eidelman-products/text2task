@@ -33,7 +33,7 @@ const faqs = [
 
 export default function HomepageFaqSection() {
   return (
-    <section id="faq" aria-labelledby="homepage-faq-heading" className="border-y border-slate-200 bg-slate-50">
+    <section id="faq" aria-labelledby="homepage-faq-heading" className="border-y border-slate-200 bg-white">
       <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20 lg:px-8">
         <div className="max-w-3xl">
           <h2

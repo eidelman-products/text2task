@@ -7,6 +7,7 @@ import HomepageFinalCtaSection from "./components/landing/homepage-final-cta-sec
 import HomepageHero from "./components/landing/homepage-hero";
 import HomepagePostExtractionSection from "./components/landing/homepage-post-extraction-section";
 import HomepagePricingSection from "./components/landing/homepage-pricing-section";
+import HomepageProductVisual from "./components/landing/homepage-product-visual";
 import HomepageTrustStrip from "./components/landing/homepage-trust-strip";
 import HomepageUseCasesSection from "./components/landing/homepage-use-cases-section";
 import LandingFooter from "./components/landing/landing-footer";
@@ -126,13 +127,12 @@ export default function HomePage() {
           />
         ) : null}
         <HomepageTrustStrip />
-        <HomepageCustomerStoriesSection
-          variant={homepageLiveDemoEnabled ? "compact" : "default"}
-        />
+        <HomepageProductVisual />
         <HomepageDemoSection />
         <HomepagePostExtractionSection />
         <HomepageUseCasesSection />
         <HomepagePricingSection />
+        <HomepageCustomerStoriesSection />
         <HomepageFaqSection />
         <HomepageFinalCtaSection />
       </main>
