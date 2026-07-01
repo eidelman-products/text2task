@@ -1,10 +1,4 @@
-import type { ReactNode } from "react";
-
 import HomepageDemoVideo from "./homepage-demo-video";
-
-type HomepageDemoSectionProps = Readonly<{
-  testimonials?: ReactNode | null;
-}>;
 
 const demoSteps = [
   {
@@ -13,7 +7,7 @@ const demoSteps = [
       "Text2Task reads the request and identifies the work.",
   },
   {
-    title: "Review the project draft",
+    title: "Review the project",
     description:
       "Check the tasks, budget, deadline, priority, and client details.",
   },
@@ -23,9 +17,7 @@ const demoSteps = [
   },
 ] as const;
 
-export default function HomepageDemoSection({
-  testimonials = null,
-}: HomepageDemoSectionProps) {
+export default function HomepageDemoSection() {
   return (
     <section
       id="demo"
@@ -38,23 +30,26 @@ export default function HomepageDemoSection({
             id="homepage-demo-heading"
             className="homepage-heading text-3xl text-slate-950 sm:text-4xl"
           >
-            See Text2Task in action
+            See the complete workflow
           </h2>
           <p
             id="homepage-demo-description"
             className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-slate-600"
           >
-            See how Text2Task turns a client request into an organized project
-            you can review and save.
+            Watch a client request move from message to reviewed project and
+            organized tasks.
           </p>
         </div>
 
         <ol
           id="how-it-works"
-          className="mx-auto mt-8 grid max-w-5xl gap-6 lg:grid-cols-3 lg:gap-8"
+          className="mx-auto mt-8 grid max-w-5xl gap-5 lg:grid-cols-3 lg:gap-6"
         >
           {demoSteps.map((step, index) => (
-            <li key={step.title} className="flex min-w-0 items-start gap-4">
+            <li
+              key={step.title}
+              className="flex min-w-0 items-start gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+            >
               <span
                 aria-hidden="true"
                 className="flex size-9 shrink-0 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-sm font-bold text-blue-700"
@@ -73,9 +68,7 @@ export default function HomepageDemoSection({
           ))}
         </ol>
 
-        {testimonials}
-
-        <div className="mx-auto mt-10 max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:mt-12">
+        <div className="mx-auto mt-8 max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:mt-10">
           <HomepageDemoVideo />
         </div>
       </div>

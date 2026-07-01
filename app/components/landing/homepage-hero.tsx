@@ -8,7 +8,13 @@ const heroImage = {
   height: 941,
 } as const;
 
-export default function HomepageHero() {
+type HomepageHeroProps = Readonly<{
+  liveDemoEnabled?: boolean;
+}>;
+
+export default function HomepageHero({
+  liveDemoEnabled = false,
+}: HomepageHeroProps) {
   return (
     <section className="overflow-hidden border-b border-slate-200/80 bg-slate-50">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-[4.5rem]">
@@ -31,10 +37,10 @@ export default function HomepageHero() {
               <span className="text-white">START FOR FREE</span>
             </Link>
             <Link
-              href="#demo"
+              href={liveDemoEnabled ? "#homepage-live-demo" : "#demo"}
               className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 bg-white px-7 py-3 text-sm font-bold text-slate-700 transition-colors hover:border-blue-300 hover:text-blue-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-100"
             >
-              Watch demo
+              {liveDemoEnabled ? "Try the live preview" : "Watch demo"}
             </Link>
           </div>
         </div>

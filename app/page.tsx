@@ -105,6 +105,7 @@ export default function HomePage() {
     HOMEPAGE_DEMO_CONFIG.enabled && homepageDemoTurnstileSiteKey.length > 0
       ? { turnstileSiteKey: homepageDemoTurnstileSiteKey }
       : null;
+  const homepageLiveDemoEnabled = homepageDemoLiveDemo !== null;
 
   return (
     <div className="min-h-screen bg-white">
@@ -118,20 +119,17 @@ export default function HomePage() {
           }}
         />
 
-        <HomepageHero />
-        <HomepageTrustStrip />
+        <HomepageHero liveDemoEnabled={homepageLiveDemoEnabled} />
         {homepageDemoLiveDemo ? (
           <HomepageLiveDemoClient
             turnstileSiteKey={homepageDemoLiveDemo.turnstileSiteKey}
           />
-        ) : (
-          <HomepageCustomerStoriesSection />
-        )}
-        <HomepageDemoSection
-          testimonials={
-            homepageDemoLiveDemo ? <HomepageCustomerStoriesSection /> : null
-          }
+        ) : null}
+        <HomepageTrustStrip />
+        <HomepageCustomerStoriesSection
+          variant={homepageLiveDemoEnabled ? "compact" : "default"}
         />
+        <HomepageDemoSection />
         <HomepagePostExtractionSection />
         <HomepageUseCasesSection />
         <HomepagePricingSection />

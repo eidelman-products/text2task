@@ -39,6 +39,14 @@ const TEXT_INPUT_MAX_CHARACTERS = 8000;
 const TEXT_INPUT_MAX_UTF8_BYTES = TEXT_INPUT_MAX_CHARACTERS * 4;
 const DISALLOWED_CONTROL_CHARACTER_PATTERN =
   /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/u;
+const HOMEPAGE_LIVE_DEMO_EXAMPLES = [
+  "Hi, can you build a simple homepage for my bookkeeping studio? I need sections for services, pricing, testimonials, and a contact form. Please send the first version by Friday. Budget is around $900.",
+  "Can you revise the brochure design for Greenline Cafe? The logo feels too small, the menu page needs cleaner spacing, and the weekend offer should stand out. We need final files by Tuesday morning.",
+  "Please plan next week's Instagram posts for our dog grooming salon. Include three service posts, one customer story, and one reminder about Saturday appointments. Keep it friendly and schedule everything before Thursday.",
+  "Following up on the office move project: please confirm the vendor list, book the movers, prepare a checklist for staff, and send me the timeline today. The move date is August 14 and this is high priority.",
+  "A client wants a landing page for a new coaching offer. They need headline options, a signup section, FAQ copy, and a first draft by next Wednesday. Budget is $1,500 and the contact is Maya from Northstar Coaching.",
+  "Can you package the final logo files for the photographer client, write a short delivery note, and include PNG, SVG, and social profile versions? They asked to receive everything before 5 PM tomorrow.",
+] as const;
 
 type LiveDemoStep = "bootstrapping" | "verifying_challenge" | "extracting" | "opening_review";
 
@@ -104,6 +112,7 @@ export default function HomepageLiveDemoClient({
   const countTextId = useId();
   const statusTextId = useId();
   const [text, setText] = useState("");
+  const [exampleIndex, setExampleIndex] = useState(0);
   const [state, setState] = useState<LiveDemoState>({ status: "idle" });
   const activeControllerRef = useRef<AbortController | null>(null);
   const adapterPromiseRef = useRef<Promise<HomepageDemoTurnstileAdapter> | null>(
@@ -120,6 +129,8 @@ export default function HomepageLiveDemoClient({
   const turnstileExecutionConsumedRef = useRef(false);
 
   const isWorking = state.status === "working";
+  const currentExample =
+    HOMEPAGE_LIVE_DEMO_EXAMPLES[exampleIndex] ?? HOMEPAGE_LIVE_DEMO_EXAMPLES[0];
   const isTextError =
     state.status === "error" &&
     (state.code === "invalid_text_input" || state.code === "request_too_large");
@@ -157,6 +168,26 @@ export default function HomepageLiveDemoClient({
     if (state.status === "error") {
       setState({ status: "idle" });
     }
+  }
+
+  function handleUseExample(): void {
+    if (isWorking) {
+      return;
+    }
+
+    setText(currentExample);
+    textAreaRef.current?.focus({ preventScroll: true });
+  }
+
+  function handleShowAnotherExample(): void {
+    if (isWorking) {
+      return;
+    }
+
+    setExampleIndex(
+      (currentIndex) =>
+        (currentIndex + 1) % HOMEPAGE_LIVE_DEMO_EXAMPLES.length
+    );
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -406,25 +437,55 @@ export default function HomepageLiveDemoClient({
 
   return (
     <section
+      id="homepage-live-demo"
       className={styles.shell}
       aria-labelledby="homepage-live-demo-heading"
     >
       <div className={styles.inner}>
         <div className={styles.header}>
-          <p className={styles.kicker}>Live preview</p>
+          <p className={styles.kicker}>Try it now</p>
           <h2 id="homepage-live-demo-heading" className={styles.title}>
-            Turn a client message into an organized project
+            Try Text2Task with a real client message
           </h2>
           <p className={styles.description}>
-            Paste a short request. Text2Task opens a temporary review so you can
-            see the tasks, deadline, budget, and client details it finds.
+            Paste a client request and see the project, tasks, deadline, budget,
+            and client details Text2Task finds.
           </p>
           <p className={styles.trustLine}>
-            Text only · Temporary review · Nothing is saved to your account
+            One free preview · No account needed · Text only for now
           </p>
         </div>
 
         <form className={styles.composer} onSubmit={handleSubmit} noValidate>
+          <div className={styles.examplePanel}>
+            <div className={styles.exampleIntro}>
+              <p className={styles.exampleTitle}>Need something to try?</p>
+              <p className={styles.exampleDescription}>
+                Load a realistic client request, then edit it or preview it
+                as-is.
+              </p>
+            </div>
+            <p className={styles.exampleText}>{currentExample}</p>
+            <div className={styles.exampleActions}>
+              <button
+                type="button"
+                className={styles.exampleUseButton}
+                disabled={isWorking}
+                onClick={handleUseExample}
+              >
+                Use this example
+              </button>
+              <button
+                type="button"
+                className={styles.exampleNextButton}
+                disabled={isWorking}
+                onClick={handleShowAnotherExample}
+              >
+                Show another example
+              </button>
+            </div>
+          </div>
+
           <div className={styles.fieldGroup}>
             <label className={styles.label} htmlFor={textAreaId}>
               Client message
@@ -444,7 +505,8 @@ export default function HomepageLiveDemoClient({
             />
             <div className={styles.fieldMeta}>
               <p id={helpTextId} className={styles.helpText}>
-                Text only for now. Tabs and line breaks are fine.
+                Paste text from an email, WhatsApp message, note, or project
+                brief.
               </p>
               <p
                 id={countTextId}

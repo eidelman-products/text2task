@@ -3,7 +3,13 @@ import {
   type PublicCustomerStory,
 } from "@/lib/customer-stories/public-customer-stories.server";
 
-export default async function HomepageCustomerStoriesSection() {
+type HomepageCustomerStoriesSectionProps = Readonly<{
+  variant?: "default" | "compact";
+}>;
+
+export default async function HomepageCustomerStoriesSection({
+  variant = "default",
+}: HomepageCustomerStoriesSectionProps) {
   let stories: PublicCustomerStory[];
 
   try {
@@ -17,28 +23,41 @@ export default async function HomepageCustomerStoriesSection() {
     return null;
   }
 
-  const visibleStories = stories.slice(0, 3);
+  const isCompact = variant === "compact";
+  const visibleStories = isCompact ? stories.slice(0, 2) : stories.slice(0, 3);
   const gridClassName =
-    visibleStories.length === 1
-      ? "t2t-customer-stories-grid mx-auto grid max-w-md grid-cols-1 gap-6"
-      : visibleStories.length === 2
-        ? "t2t-customer-stories-grid mx-auto grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2"
-        : "t2t-customer-stories-grid mx-auto grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3";
+    isCompact
+      ? visibleStories.length === 1
+        ? "t2t-customer-stories-grid t2t-customer-stories-grid--compact mx-auto grid max-w-md grid-cols-1 gap-4"
+        : "t2t-customer-stories-grid t2t-customer-stories-grid--compact mx-auto grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2"
+      : visibleStories.length === 1
+        ? "t2t-customer-stories-grid mx-auto grid max-w-md grid-cols-1 gap-6"
+        : visibleStories.length === 2
+          ? "t2t-customer-stories-grid mx-auto grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2"
+          : "t2t-customer-stories-grid mx-auto grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3";
 
   return (
     <section
-      className="t2t-customer-stories"
+      className={
+        isCompact
+          ? "t2t-customer-stories t2t-customer-stories--compact"
+          : "t2t-customer-stories"
+      }
       aria-labelledby="homepage-customer-stories-heading"
     >
       <style>{customerStoriesCss}</style>
 
       <div className="t2t-customer-stories-shell">
         <div className="t2t-customer-stories-header">
-          <p className="t2t-customer-stories-eyebrow">
-            What early users say
-          </p>
+          {isCompact ? null : (
+            <p className="t2t-customer-stories-eyebrow">
+              What early users say
+            </p>
+          )}
           <h2 id="homepage-customer-stories-heading" className="homepage-heading">
-            Early feedback from people using Text2Task.
+            {isCompact
+              ? "What early users say"
+              : "Early feedback from people using Text2Task."}
           </h2>
         </div>
 
@@ -233,6 +252,58 @@ const customerStoriesCss = `
     overflow-wrap: anywhere;
   }
 
+  .t2t-customer-stories--compact {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .t2t-customer-stories--compact .t2t-customer-stories-shell {
+    padding: 52px 0 44px;
+  }
+
+  .t2t-customer-stories--compact .t2t-customer-stories-header {
+    max-width: 520px;
+    margin-bottom: 18px;
+  }
+
+  .t2t-customer-stories--compact .t2t-customer-stories-header h2 {
+    font-size: clamp(28px, 2.4vw, 34px);
+    font-weight: 600;
+  }
+
+  .t2t-customer-stories--compact .t2t-customer-stories-grid {
+    align-items: stretch;
+  }
+
+  .t2t-customer-stories--compact .t2t-customer-story-card {
+    border-color: #dbe6f6;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: none;
+  }
+
+  .t2t-customer-stories--compact .t2t-customer-story-card::before {
+    opacity: 0.5;
+  }
+
+  .t2t-customer-stories--compact .t2t-customer-story-quote {
+    height: 24px;
+    margin-bottom: 4px;
+    font-size: 34px;
+  }
+
+  .t2t-customer-stories--compact .t2t-customer-story-footer {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 10px;
+    padding-top: 16px;
+  }
+
+  .t2t-customer-stories--compact .t2t-customer-story-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 10px;
+  }
+
   @media (min-width: 640px) and (max-width: 1023px) {
     .t2t-customer-stories-grid > :last-child:nth-child(odd) {
       width: min(100%, 360px);
@@ -258,6 +329,20 @@ const customerStoriesCss = `
     }
 
     .t2t-customer-story-card {
+      padding: 20px;
+    }
+
+    .t2t-customer-stories--compact .t2t-customer-stories-header h2 {
+      font-size: 28px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .t2t-customer-stories--compact .t2t-customer-stories-shell {
+      padding: 38px 0 34px;
+    }
+
+    .t2t-customer-stories--compact .t2t-customer-story-card {
       padding: 20px;
     }
   }
