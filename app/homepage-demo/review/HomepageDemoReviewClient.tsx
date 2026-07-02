@@ -720,10 +720,16 @@ export default function HomepageDemoReviewClient() {
         ? authPreparationState.destination
         : null;
     const isPreparing = preparingDestination !== null;
-
-    return (
-      <div ref={focusTargetRef} tabIndex={-1} className={styles.focusRegion}>
-        <HomepageDemoReviewPanel draft={state.draft} />
+    const notice = (
+      <div className={styles.previewNotice}>
+        <p className={styles.previewNoticeLabel}>Temporary preview</p>
+        <p className={styles.previewNoticeText}>
+          This preview has not been saved to an account.
+        </p>
+      </div>
+    );
+    const footer = (
+      <div className={styles.previewFooter}>
         <div className={styles.actionRow} aria-label="Review actions">
           <button
             type="button"
@@ -745,9 +751,7 @@ export default function HomepageDemoReviewClient() {
             }}
             disabled={isPreparing}
           >
-            {preparingDestination === "login"
-              ? "Preparing..."
-              : "Log in"}
+            {preparingDestination === "login" ? "Preparing..." : "Log in"}
           </button>
           <Link href="/" prefetch={false} className={styles.secondaryAction}>
             Back to homepage
@@ -763,6 +767,16 @@ export default function HomepageDemoReviewClient() {
             We couldn't prepare your project. Please try again.
           </p>
         ) : null}
+      </div>
+    );
+
+    return (
+      <div ref={focusTargetRef} tabIndex={-1} className={styles.focusRegion}>
+        <HomepageDemoReviewPanel
+          draft={state.draft}
+          notice={notice}
+          footer={footer}
+        />
       </div>
     );
   }
