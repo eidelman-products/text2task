@@ -8,20 +8,43 @@ import { HOMEPAGE_DEMO_CLAIM_LOGIN_PATH } from "@/lib/auth/homepage-demo-auth-in
 import { readHomepageDemoClientJsonResponse } from "@/lib/homepage-demo/client-response-reader";
 
 const CLAIM_SAVE_ENDPOINT = "/api/homepage-demo/claim/save" as const;
+const CLAIM_SAVE_ANYWAY_ENDPOINT =
+  "/api/homepage-demo/claim/save-anyway" as const;
 const DASHBOARD_DESTINATION = "/dashboard" as const;
 const CLAIM_RESPONSE_MAX_BYTES = 16 * 1024;
 
+type DuplicateNotice = "default" | "confirm_again" | "save_failed";
+type FailedClaimOperation = "normal_save" | "save_anyway";
+
 type ClaimContinuationState =
   | Readonly<{ status: "claiming" }>
-  | Readonly<{ status: "duplicate_detected" }>
+  | Readonly<{
+      status: "duplicate_detected";
+      notice: DuplicateNotice;
+    }>
+  | Readonly<{ status: "saving_anyway" }>
   | Readonly<{ status: "expired" }>
   | Readonly<{ status: "claim_unavailable" }>
-  | Readonly<{ status: "temporarily_unavailable" }>;
+  | Readonly<{
+      status: "temporarily_unavailable";
+      failedOperation: FailedClaimOperation;
+    }>;
 
 type ClaimSaveResult =
   | "saved"
   | "already_claimed"
   | "duplicate_detected"
+  | "expired"
+  | "claim_unavailable"
+  | "unauthorized"
+  | "temporarily_unavailable";
+
+type ClaimSaveAnywayResult =
+  | "saved"
+  | "already_claimed"
+  | "duplicate_detected"
+  | "duplicate_authority_unavailable"
+  | "duplicate_authority_expired"
   | "expired"
   | "claim_unavailable"
   | "unauthorized"
@@ -36,28 +59,53 @@ export default function HomepageDemoClaimContinuationClient() {
   });
   const hasStartedRef = useRef(false);
   const requestInFlightRef = useRef(false);
+  const requestRunIdRef = useRef(0);
+  const mountedRef = useRef(true);
 
-  const attemptClaimSave = useCallback(async () => {
+  const beginRequest = useCallback(() => {
+    if (requestInFlightRef.current) {
+      return null;
+    }
+
+    requestInFlightRef.current = true;
+    requestRunIdRef.current += 1;
+
+    return requestRunIdRef.current;
+  }, []);
+
+  const isActiveRequest = useCallback((requestRunId: number) => {
+    return mountedRef.current && requestRunIdRef.current === requestRunId;
+  }, []);
+
+  const finishRequest = useCallback((requestRunId: number) => {
+    if (requestRunIdRef.current === requestRunId) {
+      requestInFlightRef.current = false;
+    }
+  }, []);
+
+  const goToDashboard = useCallback(() => {
     if (requestInFlightRef.current) {
       return;
     }
 
-    requestInFlightRef.current = true;
+    window.location.replace(DASHBOARD_DESTINATION);
+  }, []);
+
+  const attemptClaimSave = useCallback(async () => {
+    const requestRunId = beginRequest();
+
+    if (requestRunId === null) {
+      return;
+    }
+
     setState({ status: "claiming" });
 
     try {
-      const response = await fetch(CLAIM_SAVE_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: "{}",
-        cache: "no-store",
-        credentials: "same-origin",
-        redirect: "error",
-        referrerPolicy: "no-referrer",
-      });
-      const result = await parseClaimSaveResponse(response);
+      const result = await requestClaimSave();
+
+      if (!isActiveRequest(requestRunId)) {
+        return;
+      }
 
       switch (result) {
         case "saved":
@@ -65,7 +113,7 @@ export default function HomepageDemoClaimContinuationClient() {
           window.location.replace(DASHBOARD_DESTINATION);
           return;
         case "duplicate_detected":
-          setState({ status: "duplicate_detected" });
+          setState({ status: "duplicate_detected", notice: "default" });
           return;
         case "expired":
           setState({ status: "expired" });
@@ -77,14 +125,142 @@ export default function HomepageDemoClaimContinuationClient() {
           window.location.replace(HOMEPAGE_DEMO_CLAIM_LOGIN_PATH);
           return;
         case "temporarily_unavailable":
-          setState({ status: "temporarily_unavailable" });
+          setState({
+            status: "temporarily_unavailable",
+            failedOperation: "normal_save",
+          });
           return;
       }
     } catch {
-      setState({ status: "temporarily_unavailable" });
+      if (isActiveRequest(requestRunId)) {
+        setState({
+          status: "temporarily_unavailable",
+          failedOperation: "normal_save",
+        });
+      }
     } finally {
-      requestInFlightRef.current = false;
+      finishRequest(requestRunId);
     }
+  }, [beginRequest, finishRequest, isActiveRequest]);
+
+  const attemptSaveAnyway = useCallback(async () => {
+    const requestRunId = beginRequest();
+
+    if (requestRunId === null) {
+      return;
+    }
+
+    setState({ status: "saving_anyway" });
+
+    try {
+      const result = await requestClaimSaveAnyway();
+
+      if (!isActiveRequest(requestRunId)) {
+        return;
+      }
+
+      switch (result) {
+        case "saved":
+        case "already_claimed":
+          window.location.replace(DASHBOARD_DESTINATION);
+          return;
+        case "duplicate_authority_unavailable":
+        case "duplicate_authority_expired": {
+          let refreshResult: ClaimSaveResult;
+
+          try {
+            refreshResult = await requestClaimSave();
+          } catch {
+            if (isActiveRequest(requestRunId)) {
+              setState({
+                status: "temporarily_unavailable",
+                failedOperation: "normal_save",
+              });
+            }
+
+            return;
+          }
+
+          if (!isActiveRequest(requestRunId)) {
+            return;
+          }
+
+          switch (refreshResult) {
+            case "saved":
+            case "already_claimed":
+              window.location.replace(DASHBOARD_DESTINATION);
+              return;
+            case "duplicate_detected":
+              setState({
+                status: "duplicate_detected",
+                notice: "confirm_again",
+              });
+              return;
+            case "expired":
+              setState({ status: "expired" });
+              return;
+            case "claim_unavailable":
+              setState({ status: "claim_unavailable" });
+              return;
+            case "unauthorized":
+              window.location.replace(HOMEPAGE_DEMO_CLAIM_LOGIN_PATH);
+              return;
+            case "temporarily_unavailable":
+              setState({
+                status: "temporarily_unavailable",
+                failedOperation: "normal_save",
+              });
+              return;
+          }
+        }
+        case "duplicate_detected":
+          setState({
+            status: "duplicate_detected",
+            notice: "confirm_again",
+          });
+          return;
+        case "expired":
+          setState({ status: "expired" });
+          return;
+        case "claim_unavailable":
+          setState({ status: "claim_unavailable" });
+          return;
+        case "unauthorized":
+          window.location.replace(HOMEPAGE_DEMO_CLAIM_LOGIN_PATH);
+          return;
+        case "temporarily_unavailable":
+          setState({
+            status: "temporarily_unavailable",
+            failedOperation: "save_anyway",
+          });
+          return;
+      }
+    } catch {
+      if (isActiveRequest(requestRunId)) {
+        setState({
+          status: "temporarily_unavailable",
+          failedOperation: "save_anyway",
+        });
+      }
+    } finally {
+      finishRequest(requestRunId);
+    }
+  }, [beginRequest, finishRequest, isActiveRequest]);
+
+  const returnToDuplicateConfirmation = useCallback(() => {
+    if (requestInFlightRef.current) {
+      return;
+    }
+
+    setState({ status: "duplicate_detected", notice: "save_failed" });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      requestRunIdRef.current += 1;
+      requestInFlightRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -104,7 +280,11 @@ export default function HomepageDemoClaimContinuationClient() {
       {renderState({
         state,
         onRetry: attemptClaimSave,
-        retryDisabled: state.status === "claiming",
+        onSaveAnyway: attemptSaveAnyway,
+        onBackToConfirmation: returnToDuplicateConfirmation,
+        onGoToDashboard: goToDashboard,
+        retryDisabled:
+          state.status === "claiming" || state.status === "saving_anyway",
       })}
     </section>
   );
@@ -113,10 +293,16 @@ export default function HomepageDemoClaimContinuationClient() {
 function renderState({
   state,
   onRetry,
+  onSaveAnyway,
+  onBackToConfirmation,
+  onGoToDashboard,
   retryDisabled,
 }: {
   state: ClaimContinuationState;
   onRetry: () => void;
+  onSaveAnyway: () => void;
+  onBackToConfirmation: () => void;
+  onGoToDashboard: () => void;
   retryDisabled: boolean;
 }) {
   switch (state.status) {
@@ -135,6 +321,21 @@ function renderState({
           </p>
         </div>
       );
+    case "saving_anyway":
+      return (
+        <div role="status" aria-live="polite" style={contentStyle}>
+          <p style={kickerStyle}>Text2Task</p>
+          <h1
+            id="homepage-demo-claim-continuation-heading"
+            style={titleStyle}
+          >
+            Saving another copy...
+          </h1>
+          <p style={bodyStyle}>
+            We are saving this prepared project to your workspace.
+          </p>
+        </div>
+      );
     case "duplicate_detected":
       return (
         <div role="alert" style={contentStyle}>
@@ -147,11 +348,27 @@ function renderState({
           </h1>
           <p style={bodyStyle}>
             Text2Task found a potentially similar project in your account.
-            Review the choice before saving another copy.
+            You can return to your dashboard or save another copy.
           </p>
-          <Link href={DASHBOARD_DESTINATION} style={secondaryLinkStyle}>
-            Go to dashboard
-          </Link>
+          {renderDuplicateNotice(state.notice)}
+          <div style={actionsStyle}>
+            <button
+              type="button"
+              onClick={onSaveAnyway}
+              disabled={retryDisabled}
+              style={primaryButtonStyle}
+            >
+              Save anyway
+            </button>
+            <button
+              type="button"
+              onClick={onGoToDashboard}
+              disabled={retryDisabled}
+              style={secondaryButtonStyle}
+            >
+              Go to dashboard
+            </button>
+          </div>
         </div>
       );
     case "expired":
@@ -191,6 +408,29 @@ function renderState({
         </div>
       );
     case "temporarily_unavailable":
+      if (state.failedOperation === "save_anyway") {
+        return (
+          <div role="alert" style={contentStyle}>
+            <p style={kickerStyle}>Try again</p>
+            <h1
+              id="homepage-demo-claim-continuation-heading"
+              style={titleStyle}
+            >
+              We couldn&apos;t save another copy right now.
+            </h1>
+            <p style={bodyStyle}>Please try again.</p>
+            <button
+              type="button"
+              onClick={onBackToConfirmation}
+              disabled={retryDisabled}
+              style={primaryButtonStyle}
+            >
+              Back to confirmation
+            </button>
+          </div>
+        );
+      }
+
       return (
         <div role="alert" style={contentStyle}>
           <p style={kickerStyle}>Try again</p>
@@ -207,11 +447,43 @@ function renderState({
             disabled={retryDisabled}
             style={primaryButtonStyle}
           >
-            Retry
+            Try again
           </button>
         </div>
       );
   }
+}
+
+async function requestClaimSave(): Promise<ClaimSaveResult> {
+  const response = await fetch(CLAIM_SAVE_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+    cache: "no-store",
+    credentials: "same-origin",
+    redirect: "error",
+    referrerPolicy: "no-referrer",
+  });
+
+  return parseClaimSaveResponse(response);
+}
+
+async function requestClaimSaveAnyway(): Promise<ClaimSaveAnywayResult> {
+  const response = await fetch(CLAIM_SAVE_ANYWAY_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+    cache: "no-store",
+    credentials: "same-origin",
+    redirect: "error",
+    referrerPolicy: "no-referrer",
+  });
+
+  return parseClaimSaveAnywayResponse(response);
 }
 
 async function parseClaimSaveResponse(
@@ -271,6 +543,82 @@ async function parseClaimSaveResponse(
   return "temporarily_unavailable";
 }
 
+async function parseClaimSaveAnywayResponse(
+  response: Response
+): Promise<ClaimSaveAnywayResult> {
+  if (response.redirected) {
+    return "temporarily_unavailable";
+  }
+
+  if (!hasJsonContentType(response.headers)) {
+    return "temporarily_unavailable";
+  }
+
+  const body = await readHomepageDemoClientJsonResponse(
+    response,
+    CLAIM_RESPONSE_MAX_BYTES
+  );
+
+  if (!isJsonRecord(body)) {
+    return "temporarily_unavailable";
+  }
+
+  if (response.status === 200) {
+    return parseSuccessResponse(body);
+  }
+
+  if (response.status === 401) {
+    return hasExactStringCode(body, "unauthorized")
+      ? "unauthorized"
+      : "temporarily_unavailable";
+  }
+
+  if (response.status === 404) {
+    return hasExactStringCode(body, "claim_unavailable")
+      ? "claim_unavailable"
+      : "temporarily_unavailable";
+  }
+
+  if (response.status === 409) {
+    if (hasExactStringCode(body, "duplicate_authority_unavailable")) {
+      return "duplicate_authority_unavailable";
+    }
+
+    return hasExactStringCode(body, "duplicate_detected")
+      ? "duplicate_detected"
+      : "temporarily_unavailable";
+  }
+
+  if (response.status === 410) {
+    if (hasExactStringCode(body, "duplicate_authority_expired")) {
+      return "duplicate_authority_expired";
+    }
+
+    return hasExactStringCode(body, "expired")
+      ? "expired"
+      : "temporarily_unavailable";
+  }
+
+  if (response.status === 503) {
+    return hasExactStringCode(body, "temporarily_unavailable")
+      ? "temporarily_unavailable"
+      : "temporarily_unavailable";
+  }
+
+  if (
+    response.status === 400 ||
+    response.status === 403 ||
+    response.status === 413 ||
+    response.status === 415
+  ) {
+    return hasExactStringCode(body, "invalid_request")
+      ? "temporarily_unavailable"
+      : "temporarily_unavailable";
+  }
+
+  return "temporarily_unavailable";
+}
+
 function hasJsonContentType(headers: Headers): boolean {
   const contentType = headers.get("content-type");
 
@@ -305,10 +653,32 @@ function parseSuccessResponse(body: JsonRecord): ClaimSaveResult {
   return "temporarily_unavailable";
 }
 
-function hasExactStringCode(body: JsonRecord, code: ClaimSaveResult): boolean {
+function hasExactStringCode(
+  body: JsonRecord,
+  code: ClaimSaveResult | ClaimSaveAnywayResult | "invalid_request"
+): boolean {
   const record = readExactPlainRecord(body, ["code"]);
 
   return record.code === code;
+}
+
+function renderDuplicateNotice(notice: DuplicateNotice) {
+  switch (notice) {
+    case "default":
+      return null;
+    case "confirm_again":
+      return (
+        <p style={noticeStyle}>
+          Please confirm again before saving another copy.
+        </p>
+      );
+    case "save_failed":
+      return (
+        <p style={noticeStyle}>
+          We couldn&apos;t save another copy. Please try again.
+        </p>
+      );
+  }
 }
 
 function readExactPlainRecord(
@@ -390,6 +760,13 @@ const contentStyle: CSSProperties = {
   textAlign: "center",
 };
 
+const actionsStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "center",
+  flexWrap: "wrap",
+  gap: 10,
+};
+
 const kickerStyle: CSSProperties = {
   margin: 0,
   color: "#2563eb",
@@ -413,6 +790,14 @@ const bodyStyle: CSSProperties = {
   color: "#475569",
   fontSize: 15,
   lineHeight: 1.65,
+};
+
+const noticeStyle: CSSProperties = {
+  margin: 0,
+  color: "#1d4ed8",
+  fontSize: 14,
+  fontWeight: 800,
+  lineHeight: 1.5,
 };
 
 const primaryButtonStyle: CSSProperties = {
@@ -443,7 +828,7 @@ const primaryLinkStyle: CSSProperties = {
   boxShadow: "0 18px 38px rgba(15, 23, 42, 0.22)",
 };
 
-const secondaryLinkStyle: CSSProperties = {
+const secondaryButtonStyle: CSSProperties = {
   minHeight: 46,
   borderRadius: 14,
   border: "1px solid #cbd5e1",
@@ -452,8 +837,5 @@ const secondaryLinkStyle: CSSProperties = {
   padding: "0 18px",
   fontSize: 14,
   fontWeight: 850,
-  textDecoration: "none",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
+  cursor: "pointer",
 };
