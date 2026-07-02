@@ -183,7 +183,11 @@ function SignupPageContent() {
           </p>
         </div>
 
-        <GoogleAuthButton label="Continue with Google" next="/dashboard" />
+        <GoogleAuthButton
+          label="Continue with Google"
+          next="/dashboard"
+          homepageDemoClaimIntent={homepageDemoClaimIntent}
+        />
 
         <div style={dividerStyle}>
           <span style={dividerLineStyle} />

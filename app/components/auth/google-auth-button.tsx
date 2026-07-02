@@ -2,9 +2,16 @@
 
 import type React from "react";
 
+import {
+  HOMEPAGE_DEMO_CLAIM_AUTH_INTENT,
+  parseHomepageDemoClaimAuthIntent,
+  type HomepageDemoClaimAuthIntent,
+} from "@/lib/auth/homepage-demo-auth-intent";
+
 type GoogleAuthButtonProps = {
   label?: string;
   next?: string;
+  homepageDemoClaimIntent?: HomepageDemoClaimAuthIntent | null;
 };
 
 function getSafeNextPath(next?: string) {
@@ -22,9 +29,18 @@ function getSafeNextPath(next?: string) {
 export function GoogleAuthButton({
   label = "Continue with Google",
   next = "/dashboard",
+  homepageDemoClaimIntent = null,
 }: GoogleAuthButtonProps) {
+  const validHomepageDemoClaimIntent = parseHomepageDemoClaimAuthIntent(
+    homepageDemoClaimIntent
+  );
   const safeNext = getSafeNextPath(next);
-  const href = `/api/auth/google?next=${encodeURIComponent(safeNext)}`;
+  const href =
+    validHomepageDemoClaimIntent === null
+      ? `/api/auth/google?next=${encodeURIComponent(safeNext)}`
+      : `/api/auth/google?intent=${encodeURIComponent(
+          HOMEPAGE_DEMO_CLAIM_AUTH_INTENT
+        )}`;
 
   return (
     <a href={href} style={buttonStyle} aria-label={label}>

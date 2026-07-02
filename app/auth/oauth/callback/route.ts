@@ -1,26 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSafePostAuthDestination } from "@/lib/auth/post-auth-destination";
+import {
+  HOMEPAGE_DEMO_CLAIM_AUTH_INTENT,
+  HOMEPAGE_DEMO_CLAIM_CONTINUATION_PATH,
+  parseHomepageDemoClaimAuthIntent,
+  type HomepageDemoClaimAuthIntent,
+} from "@/lib/auth/homepage-demo-auth-intent";
 import { scheduleSignupAttribution } from "@/lib/analytics/signup-attribution.server";
 import { ensureUser } from "@/lib/supabase/ensureUser";
 import { createClient } from "@/lib/supabase/server";
 
-function loginRedirect(request: NextRequest, error: string) {
-  return NextResponse.redirect(new URL(`/login?error=${error}`, request.url));
+function loginRedirect(
+  request: NextRequest,
+  error: string,
+  homepageDemoClaimIntent: HomepageDemoClaimAuthIntent | null
+) {
+  const redirectUrl = new URL("/login", request.url);
+  redirectUrl.searchParams.set("error", error);
+
+  if (homepageDemoClaimIntent !== null) {
+    redirectUrl.searchParams.set("intent", HOMEPAGE_DEMO_CLAIM_AUTH_INTENT);
+  }
+
+  return NextResponse.redirect(redirectUrl);
 }
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const oauthError = requestUrl.searchParams.get("error");
-  const next = getSafePostAuthDestination(requestUrl.searchParams.get("next"));
+  const homepageDemoClaimIntent = parseHomepageDemoClaimAuthIntent(
+    requestUrl.searchParams.getAll("intent")
+  );
+  const next =
+    homepageDemoClaimIntent === null
+      ? getSafePostAuthDestination(requestUrl.searchParams.get("next"))
+      : HOMEPAGE_DEMO_CLAIM_CONTINUATION_PATH;
 
   if (oauthError) {
-    console.error("Google OAuth provider returned error:", oauthError);
-    return loginRedirect(request, "oauth_cancelled");
+    return loginRedirect(request, "oauth_cancelled", homepageDemoClaimIntent);
   }
 
   if (!code) {
-    return loginRedirect(request, "oauth_callback_failed");
+    return loginRedirect(
+      request,
+      "oauth_callback_failed",
+      homepageDemoClaimIntent
+    );
   }
 
   const supabase = await createClient();
@@ -29,8 +55,11 @@ export async function GET(request: NextRequest) {
     await supabase.auth.exchangeCodeForSession(code);
 
   if (exchangeError) {
-    console.error("Google OAuth exchangeCodeForSession error:", exchangeError);
-    return loginRedirect(request, "oauth_callback_failed");
+    return loginRedirect(
+      request,
+      "oauth_callback_failed",
+      homepageDemoClaimIntent
+    );
   }
 
   const {
@@ -39,13 +68,19 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    console.error("Google OAuth getUser error:", userError);
-    return loginRedirect(request, "oauth_callback_failed");
+    return loginRedirect(
+      request,
+      "oauth_callback_failed",
+      homepageDemoClaimIntent
+    );
   }
 
   if (!user.email) {
-    console.error("Google OAuth user has no email:", user.id);
-    return loginRedirect(request, "oauth_missing_email");
+    return loginRedirect(
+      request,
+      "oauth_missing_email",
+      homepageDemoClaimIntent
+    );
   }
 
   try {
@@ -60,15 +95,21 @@ export async function GET(request: NextRequest) {
       authFlow: "google_oauth",
     });
   } catch (error) {
-    console.error("Google OAuth ensureUser error:", error);
-
     const message = error instanceof Error ? error.message : "";
 
     if (message.includes("already linked to another auth identity")) {
-      return loginRedirect(request, "account_link_conflict");
+      return loginRedirect(
+        request,
+        "account_link_conflict",
+        homepageDemoClaimIntent
+      );
     }
 
-    return loginRedirect(request, "oauth_callback_failed");
+    return loginRedirect(
+      request,
+      "oauth_callback_failed",
+      homepageDemoClaimIntent
+    );
   }
 
   return NextResponse.redirect(new URL(next, request.url));

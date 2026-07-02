@@ -154,7 +154,11 @@ export default async function LoginPage({ searchParams }: PageProps) {
           </Link>
         ) : null}
 
-        <GoogleAuthButton label="Continue with Google" next="/dashboard" />
+        <GoogleAuthButton
+          label="Continue with Google"
+          next="/dashboard"
+          homepageDemoClaimIntent={homepageDemoClaimIntent}
+        />
 
         <div style={dividerStyle}>
           <span style={dividerLineStyle} />
