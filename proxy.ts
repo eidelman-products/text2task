@@ -1,6 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import {
+  HOMEPAGE_DEMO_CLAIM_CONTINUATION_PATH,
+  parseHomepageDemoClaimAuthIntent,
+} from "@/lib/auth/homepage-demo-auth-intent";
+
 const HOMEPAGE_DEMO_REVIEW_PAGE_HEADERS = [
   ["Cache-Control", "no-store, no-cache, max-age=0, must-revalidate"],
   ["Pragma", "no-cache"],
@@ -85,7 +90,15 @@ export async function proxy(request: NextRequest) {
 
   // מחובר → אל תיתן להיכנס ל-login/signup
   if (user && isAuthPage) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    const homepageDemoClaimIntent = parseHomepageDemoClaimAuthIntent(
+      request.nextUrl.searchParams.getAll("intent")
+    );
+    const destination =
+      homepageDemoClaimIntent === null
+        ? "/dashboard"
+        : HOMEPAGE_DEMO_CLAIM_CONTINUATION_PATH;
+
+    return NextResponse.redirect(new URL(destination, request.url));
   }
 
   return response;

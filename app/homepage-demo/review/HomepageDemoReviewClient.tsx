@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import {
+  HOMEPAGE_DEMO_CLAIM_AUTH_INTENT,
+  HOMEPAGE_DEMO_CLAIM_LOGIN_PATH,
+} from "@/lib/auth/homepage-demo-auth-intent";
+
 import HomepageDemoReviewPanel, {
   type HomepageDemoPublicReviewDraft,
   type HomepageDemoPublicReviewSubtask,
@@ -12,6 +17,8 @@ import styles from "./homepage-demo-review.module.css";
 
 const REVIEW_PAGE_PATH = "/homepage-demo/review";
 const REVIEW_API_PATH = "/api/homepage-demo/review";
+const CLAIM_PREPARE_API_PATH = "/api/homepage-demo/claim/prepare";
+const CLAIM_SIGNUP_PATH = `/signup?intent=${HOMEPAGE_DEMO_CLAIM_AUTH_INTENT}`;
 const PUBLIC_REVIEW_FRAGMENT_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const HOMEPAGE_DEMO_REVIEW_RESPONSE_MAX_BYTES = 256 * 1024;
 const MAX_POLL_ATTEMPTS = 18;
@@ -29,6 +36,19 @@ type ReviewState =
 type ReviewApiResult =
   | { status: "review_ready"; draft: HomepageDemoPublicReviewDraft }
   | { status: "review_not_ready" }
+  | { status: "review_unavailable" }
+  | { status: "review_expired" }
+  | { status: "temporarily_unavailable" };
+
+type AuthPreparationDestination = "signup" | "login";
+
+type AuthPreparationState =
+  | { status: "idle" }
+  | { status: "preparing"; destination: AuthPreparationDestination }
+  | { status: "temporarily_unavailable" };
+
+type ClaimPrepareResult =
+  | { status: "prepared" }
   | { status: "review_unavailable" }
   | { status: "review_expired" }
   | { status: "temporarily_unavailable" };
@@ -242,6 +262,16 @@ function isAbortError(error: unknown): boolean {
   );
 }
 
+function hasJsonContentType(response: Response): boolean {
+  const contentType = response.headers.get("content-type");
+
+  if (contentType === null) {
+    return false;
+  }
+
+  return contentType.split(";")[0]?.trim().toLowerCase() === "application/json";
+}
+
 async function readBoundedJsonResponse(response: Response): Promise<unknown | null> {
   const contentLengthState = parseContentLength(response.headers.get("content-length"));
 
@@ -369,11 +399,61 @@ async function parseReviewApiResponse(response: Response): Promise<ReviewApiResu
   return { status: "temporarily_unavailable" };
 }
 
+async function parseClaimPrepareResponse(response: Response): Promise<ClaimPrepareResult> {
+  if (response.redirected || !hasJsonContentType(response)) {
+    return { status: "temporarily_unavailable" };
+  }
+
+  const body = await readBoundedJsonResponse(response);
+
+  if (!isJsonRecord(body)) {
+    return { status: "temporarily_unavailable" };
+  }
+
+  if (response.status === 200) {
+    return hasExactKeys(body, ["code", "authenticated"]) &&
+      body.code === "claim_prepared" &&
+      typeof body.authenticated === "boolean"
+      ? { status: "prepared" }
+      : { status: "temporarily_unavailable" };
+  }
+
+  if (response.status === 404) {
+    return hasExactKeys(body, ["code"]) &&
+      (body.code === "draft_unavailable" || body.code === "not_found")
+      ? { status: "review_unavailable" }
+      : { status: "temporarily_unavailable" };
+  }
+
+  if (response.status === 410) {
+    return hasExactKeys(body, ["code"]) && body.code === "expired"
+      ? { status: "review_expired" }
+      : { status: "temporarily_unavailable" };
+  }
+
+  if (response.status === 409) {
+    return hasExactKeys(body, ["code", "authenticated"]) &&
+      (body.code === "claim_in_progress" || body.code === "already_claimed") &&
+      typeof body.authenticated === "boolean"
+      ? { status: "temporarily_unavailable" }
+      : { status: "temporarily_unavailable" };
+  }
+
+  return { status: "temporarily_unavailable" };
+}
+
+function getClaimAuthDestinationPath(destination: AuthPreparationDestination): string {
+  return destination === "signup" ? CLAIM_SIGNUP_PATH : HOMEPAGE_DEMO_CLAIM_LOGIN_PATH;
+}
+
 export default function HomepageDemoReviewClient() {
   const [state, setState] = useState<ReviewState>({ status: "waiting_for_extraction" });
+  const [authPreparationState, setAuthPreparationState] =
+    useState<AuthPreparationState>({ status: "idle" });
   const [retryInProgress, setRetryInProgress] = useState(false);
   const publicTokenRef = useRef<string | null>(null);
   const activeRequestRef = useRef<AbortController | null>(null);
+  const authPreparationInFlightRef = useRef(false);
   const pollingTimerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
   const pollStartedAtRef = useRef(0);
   const pollAttemptsRef = useRef(0);
@@ -412,6 +492,7 @@ export default function HomepageDemoReviewClient() {
     if (!options.retry) {
       setRetryInProgress(false);
     }
+    setAuthPreparationState({ status: "idle" });
     publicTokenRef.current = publicToken;
     pollStartedAtRef.current = Date.now();
     pollAttemptsRef.current = 0;
@@ -559,6 +640,51 @@ export default function HomepageDemoReviewClient() {
     startReviewLoad(publicToken, { retry: true });
   }
 
+  async function prepareClaimAndNavigate(destination: AuthPreparationDestination) {
+    if (authPreparationInFlightRef.current) {
+      return;
+    }
+
+    const publicToken = publicTokenRef.current;
+
+    if (publicToken === null) {
+      setState({ status: "review_unavailable" });
+      return;
+    }
+
+    authPreparationInFlightRef.current = true;
+    setAuthPreparationState({ status: "preparing", destination });
+
+    try {
+      const response = await fetch(CLAIM_PREPARE_API_PATH, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicToken }),
+        cache: "no-store",
+        credentials: "same-origin",
+        redirect: "error",
+        referrerPolicy: "no-referrer",
+      });
+      const result = await parseClaimPrepareResponse(response);
+
+      if (result.status === "prepared") {
+        window.location.assign(getClaimAuthDestinationPath(destination));
+        return;
+      }
+
+      if (result.status === "review_expired" || result.status === "review_unavailable") {
+        setState({ status: result.status });
+        return;
+      }
+
+      setAuthPreparationState({ status: "temporarily_unavailable" });
+    } catch {
+      setAuthPreparationState({ status: "temporarily_unavailable" });
+    } finally {
+      authPreparationInFlightRef.current = false;
+    }
+  }
+
   useEffect(() => {
     processCurrentFragment();
 
@@ -589,20 +715,54 @@ export default function HomepageDemoReviewClient() {
   }, [state.status]);
 
   if (state.status === "review_ready") {
+    const preparingDestination =
+      authPreparationState.status === "preparing"
+        ? authPreparationState.destination
+        : null;
+    const isPreparing = preparingDestination !== null;
+
     return (
       <div ref={focusTargetRef} tabIndex={-1} className={styles.focusRegion}>
         <HomepageDemoReviewPanel draft={state.draft} />
         <div className={styles.actionRow} aria-label="Review actions">
-          <Link href="/signup" prefetch={false} className={styles.primaryAction}>
-            Start for free
-          </Link>
-          <Link href="/login" prefetch={false} className={styles.secondaryAction}>
-            Log in
-          </Link>
+          <button
+            type="button"
+            className={styles.primaryAction}
+            onClick={() => {
+              void prepareClaimAndNavigate("signup");
+            }}
+            disabled={isPreparing}
+          >
+            {preparingDestination === "signup"
+              ? "Preparing..."
+              : "Start for free"}
+          </button>
+          <button
+            type="button"
+            className={styles.secondaryAction}
+            onClick={() => {
+              void prepareClaimAndNavigate("login");
+            }}
+            disabled={isPreparing}
+          >
+            {preparingDestination === "login"
+              ? "Preparing..."
+              : "Log in"}
+          </button>
           <Link href="/" prefetch={false} className={styles.secondaryAction}>
             Back to homepage
           </Link>
         </div>
+        {authPreparationState.status === "preparing" ? (
+          <p className={styles.statusText} role="status" aria-live="polite">
+            Preparing your project...
+          </p>
+        ) : null}
+        {authPreparationState.status === "temporarily_unavailable" ? (
+          <p className={styles.statusText} role="alert">
+            We couldn't prepare your project. Please try again.
+          </p>
+        ) : null}
       </div>
     );
   }

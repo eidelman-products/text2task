@@ -4,6 +4,10 @@ import {
   getDestinationForProPurchaseIntent,
 } from "@/lib/auth/post-auth-destination";
 import {
+  HOMEPAGE_DEMO_CLAIM_AUTH_INTENT,
+  parseHomepageDemoClaimAuthIntent,
+} from "@/lib/auth/homepage-demo-auth-intent";
+import {
   isProPurchaseIntent,
   PRO_PURCHASE_INTENT_COOKIE_NAME,
 } from "@/lib/billing/pro-purchase-intent";
@@ -11,6 +15,17 @@ import { createClient } from "@/lib/supabase/server";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function buildHomepageDemoClaimEmailConfirmationRedirect(origin: string) {
+  const redirectUrl = new URL("/auth/confirm", origin);
+  redirectUrl.searchParams.set("intent", HOMEPAGE_DEMO_CLAIM_AUTH_INTENT);
+
+  return redirectUrl.toString();
 }
 
 export async function POST(request: NextRequest) {
@@ -26,11 +41,19 @@ export async function POST(request: NextRequest) {
   }
 
   const emailValue =
-    body && typeof body === "object" && "email" in body
-      ? (body as { email?: unknown }).email
+    isJsonRecord(body) && "email" in body
+      ? body.email
+      : null;
+  const intentValue =
+    isJsonRecord(body) && "intent" in body
+      ? body.intent
       : null;
   const email =
     typeof emailValue === "string" ? emailValue.trim().toLowerCase() : "";
+  const homepageDemoClaimIntent =
+    typeof intentValue === "string"
+      ? parseHomepageDemoClaimAuthIntent(intentValue)
+      : null;
 
   if (!email || !isValidEmail(email)) {
     return NextResponse.json(
@@ -46,21 +69,18 @@ export async function POST(request: NextRequest) {
   );
   const postAuthDestination =
     getDestinationForProPurchaseIntent(hasProPurchaseIntent);
+  const emailRedirectTo =
+    homepageDemoClaimIntent === null
+      ? buildEmailConfirmationRedirect(origin, postAuthDestination)
+      : buildHomepageDemoClaimEmailConfirmationRedirect(origin);
 
-  const { error } = await supabase.auth.resend({
+  await supabase.auth.resend({
     type: "signup",
     email,
     options: {
-      emailRedirectTo: buildEmailConfirmationRedirect(
-        origin,
-        postAuthDestination
-      ),
+      emailRedirectTo,
     },
   });
-
-  if (error) {
-    console.error("resend confirmation route error:", error);
-  }
 
   return NextResponse.json({
     success: true,

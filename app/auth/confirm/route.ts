@@ -3,22 +3,53 @@ import {
   getSafeEmailConfirmationDestination,
   isPasswordResetDestination,
 } from "@/lib/auth/post-auth-destination";
+import {
+  HOMEPAGE_DEMO_CLAIM_AUTH_INTENT,
+  HOMEPAGE_DEMO_CLAIM_CONTINUATION_PATH,
+  parseHomepageDemoClaimAuthIntent,
+  type HomepageDemoClaimAuthIntent,
+} from "@/lib/auth/homepage-demo-auth-intent";
 import { scheduleSignupAttribution } from "@/lib/analytics/signup-attribution.server";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUser } from "@/lib/supabase/ensureUser";
 
+function createConfirmationFailureRedirect(
+  request: NextRequest,
+  path: "/check-email" | "/login",
+  error: string,
+  homepageDemoClaimIntent: HomepageDemoClaimAuthIntent | null
+) {
+  const redirectUrl = new URL(path, request.url);
+  redirectUrl.searchParams.set("error", error);
+
+  if (homepageDemoClaimIntent !== null) {
+    redirectUrl.searchParams.set("intent", HOMEPAGE_DEMO_CLAIM_AUTH_INTENT);
+  }
+
+  return redirectUrl;
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
+  const homepageDemoClaimIntent = parseHomepageDemoClaimAuthIntent(
+    requestUrl.searchParams.getAll("intent")
+  );
   const next = getSafeEmailConfirmationDestination(
     requestUrl.searchParams.get("next")
   );
-  const isPasswordReset = isPasswordResetDestination(next);
+  const isPasswordReset =
+    homepageDemoClaimIntent === null && isPasswordResetDestination(next);
 
   if (!code) {
     if (!isPasswordReset) {
       return NextResponse.redirect(
-        new URL("/check-email?error=invalid_link", request.url)
+        createConfirmationFailureRedirect(
+          request,
+          "/check-email",
+          "invalid_link",
+          homepageDemoClaimIntent
+        )
       );
     }
 
@@ -33,11 +64,14 @@ export async function GET(request: NextRequest) {
     await supabase.auth.exchangeCodeForSession(code);
 
   if (exchangeError) {
-    console.error("auth confirm exchangeCodeForSession error:", exchangeError);
-
     if (!isPasswordReset) {
       return NextResponse.redirect(
-        new URL("/check-email?error=confirmation_failed", request.url)
+        createConfirmationFailureRedirect(
+          request,
+          "/check-email",
+          "confirmation_failed",
+          homepageDemoClaimIntent
+        )
       );
     }
 
@@ -52,10 +86,13 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (userError || !user?.email) {
-    console.error("auth confirm getUser error:", userError);
-
     return NextResponse.redirect(
-      new URL("/login?error=confirmation_failed", request.url)
+      createConfirmationFailureRedirect(
+        request,
+        "/login",
+        "confirmation_failed",
+        homepageDemoClaimIntent
+      )
     );
   }
 
@@ -72,13 +109,21 @@ export async function GET(request: NextRequest) {
         authFlow: "email_confirmation",
       });
     }
-  } catch (error) {
-    console.error("auth confirm ensureUser error:", error);
-
+  } catch {
     return NextResponse.redirect(
-      new URL("/login?error=confirmation_failed", request.url)
+      createConfirmationFailureRedirect(
+        request,
+        "/login",
+        "confirmation_failed",
+        homepageDemoClaimIntent
+      )
     );
   }
 
-  return NextResponse.redirect(new URL(next, request.url));
+  const destination =
+    homepageDemoClaimIntent === null
+      ? next
+      : HOMEPAGE_DEMO_CLAIM_CONTINUATION_PATH;
+
+  return NextResponse.redirect(new URL(destination, request.url));
 }

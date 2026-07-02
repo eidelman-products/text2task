@@ -4,6 +4,11 @@ import {
   getDestinationForProPurchaseIntent,
 } from "@/lib/auth/post-auth-destination";
 import {
+  HOMEPAGE_DEMO_CLAIM_AUTH_INTENT,
+  HOMEPAGE_DEMO_CLAIM_CONTINUATION_PATH,
+  parseHomepageDemoClaimAuthIntent,
+} from "@/lib/auth/homepage-demo-auth-intent";
+import {
   isProPurchaseIntent,
   PRO_PURCHASE_INTENT_COOKIE_NAME,
 } from "@/lib/billing/pro-purchase-intent";
@@ -14,19 +19,61 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { ensureUser } from "@/lib/supabase/ensureUser";
 
+type SignupRequestBody = Readonly<{
+  email: unknown;
+  password: unknown;
+  intent?: unknown;
+}>;
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseSignupRequestBody(value: unknown): SignupRequestBody | null {
+  if (!isJsonRecord(value)) {
+    return null;
+  }
+
+  return {
+    email: value.email,
+    password: value.password,
+    intent: value.intent,
+  };
+}
+
+function buildHomepageDemoClaimEmailConfirmationRedirect(origin: string) {
+  const redirectUrl = new URL("/auth/confirm", origin);
+  redirectUrl.searchParams.set("intent", HOMEPAGE_DEMO_CLAIM_AUTH_INTENT);
+
+  return redirectUrl.toString();
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    let requestBody: SignupRequestBody | null;
 
-    if (!email || !password) {
+    try {
+      requestBody = parseSignupRequestBody(await req.json());
+    } catch {
       return NextResponse.json(
         { error: "Missing email or password" },
         { status: 400 }
       );
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const normalizedPassword = String(password);
+    if (!requestBody?.email || !requestBody.password) {
+      return NextResponse.json(
+        { error: "Missing email or password" },
+        { status: 400 }
+      );
+    }
+
+    const normalizedEmail = String(requestBody.email).trim().toLowerCase();
+    const normalizedPassword = String(requestBody.password);
+    const homepageDemoClaimIntent =
+      typeof requestBody.intent === "string"
+        ? parseHomepageDemoClaimAuthIntent(requestBody.intent)
+        : null;
 
     if (normalizedPassword.length < 6) {
       return NextResponse.json(
@@ -42,16 +89,19 @@ export async function POST(req: NextRequest) {
       req.cookies.get(PRO_PURCHASE_INTENT_COOKIE_NAME)?.value
     );
     const postAuthDestination =
-      getDestinationForProPurchaseIntent(hasProPurchaseIntent);
+      homepageDemoClaimIntent === null
+        ? getDestinationForProPurchaseIntent(hasProPurchaseIntent)
+        : HOMEPAGE_DEMO_CLAIM_CONTINUATION_PATH;
+    const emailRedirectTo =
+      homepageDemoClaimIntent === null
+        ? buildEmailConfirmationRedirect(origin, postAuthDestination)
+        : buildHomepageDemoClaimEmailConfirmationRedirect(origin);
 
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password: normalizedPassword,
       options: {
-        emailRedirectTo: buildEmailConfirmationRedirect(
-          origin,
-          postAuthDestination
-        ),
+        emailRedirectTo,
       },
     });
 

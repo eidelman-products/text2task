@@ -2,15 +2,23 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { GoogleAuthButton } from "../components/auth/google-auth-button";
 import type React from "react";
+import {
+  HOMEPAGE_DEMO_CLAIM_AUTH_INTENT,
+  HOMEPAGE_DEMO_CLAIM_CONTINUATION_PATH,
+  HOMEPAGE_DEMO_CLAIM_LOGIN_PATH,
+  parseHomepageDemoClaimAuthIntent,
+  type HomepageDemoClaimAuthIntent,
+} from "@/lib/auth/homepage-demo-auth-intent";
 
 function getSafeImmediateSignupDestination(destination: unknown) {
   if (
     destination === "/dashboard" ||
-    destination === "/api/billing/continue"
+    destination === "/api/billing/continue" ||
+    destination === HOMEPAGE_DEMO_CLAIM_CONTINUATION_PATH
   ) {
     return destination;
   }
@@ -45,8 +53,29 @@ function getImmediateSignupDestination(data: unknown) {
   );
 }
 
-export default function SignupPage() {
+function getCheckEmailHref(
+  email: string,
+  homepageDemoClaimIntent: HomepageDemoClaimAuthIntent | null
+) {
+  const query = new URLSearchParams({ email });
+
+  if (homepageDemoClaimIntent !== null) {
+    query.set("intent", HOMEPAGE_DEMO_CLAIM_AUTH_INTENT);
+  }
+
+  return `/check-email?${query.toString()}`;
+}
+
+function SignupPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const homepageDemoClaimIntent = parseHomepageDemoClaimAuthIntent(
+    searchParams.getAll("intent")
+  );
+  const loginHref =
+    homepageDemoClaimIntent === null
+      ? "/login"
+      : HOMEPAGE_DEMO_CLAIM_LOGIN_PATH;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,6 +100,9 @@ export default function SignupPage() {
         body: JSON.stringify({
           email: email.trim(),
           password,
+          ...(homepageDemoClaimIntent === null
+            ? {}
+            : { intent: homepageDemoClaimIntent }),
         }),
       });
 
@@ -89,11 +121,11 @@ export default function SignupPage() {
           return;
         }
 
-        router.push("/dashboard");
+        router.push(immediateDestination);
         return;
       }
 
-      router.push(`/check-email?email=${encodeURIComponent(email.trim())}`);
+      router.push(getCheckEmailHref(email.trim(), homepageDemoClaimIntent));
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -243,7 +275,7 @@ export default function SignupPage() {
         <div style={footerStyle}>
           <p style={footerTextStyle}>
             Already have an account?{" "}
-            <Link href="/login" style={footerLinkStyle}>
+            <Link href={loginHref} style={footerLinkStyle}>
               Log in
             </Link>
           </p>
@@ -261,6 +293,14 @@ export default function SignupPage() {
         </p>
       </section>
     </main>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<main className="signup-page" style={pageStyle} />}>
+      <SignupPageContent />
+    </Suspense>
   );
 }
 

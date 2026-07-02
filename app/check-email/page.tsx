@@ -5,15 +5,38 @@ import Link from "next/link";
 import { Suspense, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  HOMEPAGE_DEMO_CLAIM_AUTH_INTENT,
+  parseHomepageDemoClaimAuthIntent,
+  type HomepageDemoClaimAuthIntent,
+} from "@/lib/auth/homepage-demo-auth-intent";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function getAuthPathWithHomepageDemoClaimIntent(
+  path: "/login" | "/signup",
+  homepageDemoClaimIntent: HomepageDemoClaimAuthIntent | null
+) {
+  if (homepageDemoClaimIntent === null) {
+    return path;
+  }
+
+  const query = new URLSearchParams({
+    intent: HOMEPAGE_DEMO_CLAIM_AUTH_INTENT,
+  });
+
+  return `${path}?${query.toString()}`;
 }
 
 function CheckEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
+  const homepageDemoClaimIntent = parseHomepageDemoClaimAuthIntent(
+    searchParams.getAll("intent")
+  );
   const hasConfirmationLinkError =
     error === "confirmation_failed" || error === "invalid_link";
 
@@ -54,7 +77,12 @@ function CheckEmailContent() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email,
+          ...(homepageDemoClaimIntent === null
+            ? {}
+            : { intent: homepageDemoClaimIntent }),
+        }),
       });
 
       if (!response.ok) {
@@ -134,8 +162,9 @@ function CheckEmailContent() {
           )}
 
           <p style={styles.secondary}>
-            Check your inbox and click the confirmation link to activate your
-            account.
+            {homepageDemoClaimIntent === null
+              ? "Check your inbox and click the confirmation link to activate your account."
+              : "Your project is ready. Confirm your email to continue saving it."}
           </p>
         </div>
 
@@ -188,7 +217,14 @@ function CheckEmailContent() {
           <button
             type="button"
             style={styles.primaryButton}
-            onClick={() => router.push("/login")}
+            onClick={() =>
+              router.push(
+                getAuthPathWithHomepageDemoClaimIntent(
+                  "/login",
+                  homepageDemoClaimIntent
+                )
+              )
+            }
           >
             Go to Login
           </button>
@@ -196,7 +232,14 @@ function CheckEmailContent() {
           <button
             type="button"
             style={styles.secondaryButton}
-            onClick={() => router.push("/signup")}
+            onClick={() =>
+              router.push(
+                getAuthPathWithHomepageDemoClaimIntent(
+                  "/signup",
+                  homepageDemoClaimIntent
+                )
+              )
+            }
           >
             Back to Sign Up
           </button>

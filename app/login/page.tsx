@@ -3,6 +3,11 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { GoogleAuthButton } from "../components/auth/google-auth-button";
 import type React from "react";
+import {
+  HOMEPAGE_DEMO_CLAIM_AUTH_INTENT,
+  parseHomepageDemoClaimAuthIntent,
+  type HomepageDemoClaimAuthIntent,
+} from "@/lib/auth/homepage-demo-auth-intent";
 
 export const metadata: Metadata = {
   robots: {
@@ -20,6 +25,7 @@ type SearchParams = {
   email?: string;
   confirmed?: string;
   reset?: string;
+  intent?: string | string[];
 };
 
 type PageProps = {
@@ -61,15 +67,44 @@ function getSafeEmailParam(email?: string) {
   return value;
 }
 
+function getAuthPathWithHomepageDemoClaimIntent(
+  path: "/check-email" | "/login" | "/signup",
+  homepageDemoClaimIntent: HomepageDemoClaimAuthIntent | null,
+  email?: string
+) {
+  const query = new URLSearchParams();
+
+  if (email) {
+    query.set("email", email);
+  }
+
+  if (homepageDemoClaimIntent !== null) {
+    query.set("intent", HOMEPAGE_DEMO_CLAIM_AUTH_INTENT);
+  }
+
+  const queryString = query.toString();
+
+  return queryString ? `${path}?${queryString}` : path;
+}
+
 export default async function LoginPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {};
   const errorMessage = getErrorMessage(params.error);
   const confirmed = params.confirmed === "1";
   const reset = params.reset === "1";
   const email = getSafeEmailParam(params.email);
-  const checkEmailHref = email
-    ? `/check-email?email=${encodeURIComponent(email)}`
-    : "/check-email";
+  const homepageDemoClaimIntent = parseHomepageDemoClaimAuthIntent(
+    params.intent
+  );
+  const checkEmailHref = getAuthPathWithHomepageDemoClaimIntent(
+    "/check-email",
+    homepageDemoClaimIntent,
+    email
+  );
+  const signupHref = getAuthPathWithHomepageDemoClaimIntent(
+    "/signup",
+    homepageDemoClaimIntent
+  );
   const showCheckEmailLink = params.error === "email_not_confirmed";
 
   return (
@@ -133,6 +168,14 @@ export default async function LoginPage({ searchParams }: PageProps) {
           method="post"
           style={formStyle}
         >
+          {homepageDemoClaimIntent !== null ? (
+            <input
+              type="hidden"
+              name="intent"
+              value={homepageDemoClaimIntent}
+            />
+          ) : null}
+
           <div style={fieldGroupStyle}>
             <label htmlFor="email" style={labelStyle}>
               Email address
@@ -216,7 +259,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
         <div style={footerStyle}>
           <p style={bottomTextStyle}>
             Don&apos;t have an account?{" "}
-            <Link href="/signup" style={bottomLinkStyle}>
+            <Link href={signupHref} style={bottomLinkStyle}>
               Sign up
             </Link>
           </p>
