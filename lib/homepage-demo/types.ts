@@ -65,6 +65,7 @@ export const HOMEPAGE_DEMO_TOKEN_PURPOSES = [
   "homepage-demo-device",
   "homepage-demo-idempotency",
   "homepage-demo-capacity-lease",
+  "homepage-demo-claim",
 ] as const;
 
 export type HomepageDemoTokenPurpose =
