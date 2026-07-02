@@ -1,22 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
-  createHomepageDemoDuplicateOverrideAuthority,
   getHomepageDemoDuplicateOverrideCookieClearPolicy,
-  getHomepageDemoDuplicateOverrideCookiePolicy,
   readHomepageDemoDuplicateOverrideCookie,
 } from "@/lib/homepage-demo/claim-duplicate-override-identity.server";
 import {
-  prepareHomepageDemoDuplicateOverride,
-  type PrepareHomepageDemoDuplicateOverrideResult,
+  claimHomepageDemoProjectWithDuplicateOverride,
+  type ClaimHomepageDemoProjectWithDuplicateOverrideResult,
 } from "@/lib/homepage-demo/claim-duplicate-override-repository.server";
-import { readHomepageDemoClaimCookie } from "@/lib/homepage-demo/claim-identity.server";
-import { getHomepageDemoClaimCookieClearPolicy } from "@/lib/homepage-demo/claim-identity.server";
 import {
-  claimHomepageDemoProject,
-  loadHomepageDemoClaimSaveSource,
-  type ClaimHomepageDemoProjectResult,
-} from "@/lib/homepage-demo/claim-save-repository.server";
+  getHomepageDemoClaimCookieClearPolicy,
+  readHomepageDemoClaimCookie,
+} from "@/lib/homepage-demo/claim-identity.server";
+import { loadHomepageDemoClaimSaveSource } from "@/lib/homepage-demo/claim-save-repository.server";
 import {
   parseHomepageDemoClaimSaveRequest,
   readHomepageDemoClaimSaveRequestJson,
@@ -30,9 +26,7 @@ import {
   validateHomepageDemoPublicRequestOrigin,
 } from "@/lib/homepage-demo/public-extract-request.server";
 import {
-  findProjectDuplicateStrict,
   prepareProjectImportPersistenceInput,
-  type PreparedProjectImportPersistenceInput,
   validateProjectImportGroups,
 } from "@/lib/projects/import-persistence.server";
 import { createClient } from "@/lib/supabase/server";
@@ -53,7 +47,7 @@ const SECURITY_HEADERS = [
   ["X-Robots-Tag", "noindex, nofollow, noarchive"],
 ] as const;
 
-type ClaimSaveSuccessResponse = Readonly<
+type ClaimSaveAnywaySuccessResponse = Readonly<
   | {
       code: "saved";
       destination: typeof DASHBOARD_DESTINATION;
@@ -66,23 +60,25 @@ type ClaimSaveSuccessResponse = Readonly<
     }
 >;
 
-type ClaimSaveErrorResponse = Readonly<{
+type ClaimSaveAnywayErrorResponse = Readonly<{
   code:
     | "invalid_request"
     | "unauthorized"
     | "duplicate_detected"
+    | "duplicate_authority_unavailable"
+    | "duplicate_authority_expired"
     | "expired"
     | "claim_unavailable"
     | "temporarily_unavailable";
 }>;
 
-type ClaimSaveJsonResponse =
-  | ClaimSaveSuccessResponse
-  | ClaimSaveErrorResponse;
+type ClaimSaveAnywayJsonResponse =
+  | ClaimSaveAnywaySuccessResponse
+  | ClaimSaveAnywayErrorResponse;
 
 export async function POST(
   request: NextRequest
-): Promise<NextResponse<ClaimSaveJsonResponse>> {
+): Promise<NextResponse<ClaimSaveAnywayJsonResponse>> {
   try {
     assertHomepageDemoPublicExtractEnabled();
     validateHomepageDemoPublicRequestOrigin({
@@ -99,6 +95,9 @@ export async function POST(
       return createJsonResponse({ code: "claim_unavailable" }, 404);
     }
 
+    const duplicateOverrideCookie = readHomepageDemoDuplicateOverrideCookie(
+      request.cookies
+    );
     const supabase = await createClient();
     const {
       data: { user },
@@ -109,12 +108,29 @@ export async function POST(
       return createJsonResponse({ code: "unauthorized" }, 401);
     }
 
+    if (duplicateOverrideCookie.kind === "missing") {
+      return createJsonResponse(
+        { code: "duplicate_authority_unavailable" },
+        409
+      );
+    }
+
+    if (duplicateOverrideCookie.kind === "malformed") {
+      return createJsonResponseWithDuplicateOverrideClear(
+        { code: "duplicate_authority_unavailable" },
+        409
+      );
+    }
+
     const source = await loadHomepageDemoClaimSaveSource({
       claimTokenHash: claimCookie.tokenHash,
     });
 
     if (source.kind === "claim_unavailable") {
-      return createJsonResponse({ code: "claim_unavailable" }, 404);
+      return createJsonResponseWithDuplicateOverrideClear(
+        { code: "claim_unavailable" },
+        404
+      );
     }
 
     const validationFailures = validateProjectImportGroups([
@@ -128,112 +144,36 @@ export async function POST(
     const prepared = prepareProjectImportPersistenceInput([
       source.projectGroup,
     ]);
-    let duplicateCheckPassed = false;
-
-    if (source.kind === "pending") {
-      const duplicate = await findProjectDuplicateStrict(
-        supabase,
-        user.id,
-        source.projectGroup
-      );
-
-      if (duplicate !== null) {
-        const latestSource = await loadHomepageDemoClaimSaveSource({
-          claimTokenHash: claimCookie.tokenHash,
-        });
-
-        if (latestSource.kind !== "rpc_replay") {
-          return prepareDuplicateOverrideAuthorityResponse({
-            request,
-            claimTokenHash: claimCookie.tokenHash,
-            authenticatedUserId: user.id,
-            prepared,
-          });
-        }
-      } else {
-        duplicateCheckPassed = true;
-      }
-    }
-
-    const claimResult = await claimHomepageDemoProject({
+    const claimResult = await claimHomepageDemoProjectWithDuplicateOverride({
       claimTokenHash: claimCookie.tokenHash,
       authenticatedUserId: user.id,
+      authorityTokenHash: duplicateOverrideCookie.tokenHash,
       requestHash: prepared.requestHash,
-      importGroups: prepared.payloadJson,
-      duplicateCheckPassed,
+      importGroupsJson: prepared.payloadJson,
     });
 
-    return mapClaimSaveResult(claimResult);
+    return mapClaimSaveAnywayResult(claimResult);
   } catch (error) {
     try {
-      return mapClaimSaveError(error);
+      return mapClaimSaveAnywayError(error);
     } catch {
-      return createEmergencyClaimSaveErrorResponse();
+      return createEmergencyClaimSaveAnywayErrorResponse();
     }
   }
 }
 
-async function prepareDuplicateOverrideAuthorityResponse({
-  request,
-  claimTokenHash,
-  authenticatedUserId,
-  prepared,
-}: {
-  request: NextRequest;
-  claimTokenHash: string;
-  authenticatedUserId: string;
-  prepared: PreparedProjectImportPersistenceInput;
-}): Promise<NextResponse<ClaimSaveJsonResponse>> {
-  const existingAuthorityCookie = readHomepageDemoDuplicateOverrideCookie(
-    request.cookies
-  );
-  const existingAuthorityTokenHash =
-    existingAuthorityCookie.kind === "valid"
-      ? existingAuthorityCookie.tokenHash
-      : null;
-  const candidateAuthority = createHomepageDemoDuplicateOverrideAuthority();
-  const preparation = await prepareHomepageDemoDuplicateOverride({
-    claimTokenHash,
-    authenticatedUserId,
-    existingAuthorityTokenHash,
-    candidateAuthorityTokenHash: candidateAuthority.tokenHash,
-    requestHash: prepared.requestHash,
-    importGroupsJson: prepared.payloadJson,
-  });
-
-  return mapDuplicateOverridePreparationResult({
-    preparation,
-    candidateRawToken: candidateAuthority.rawToken,
-  });
-}
-
-function mapDuplicateOverridePreparationResult({
-  preparation,
-  candidateRawToken,
-}: {
-  preparation: PrepareHomepageDemoDuplicateOverrideResult;
-  candidateRawToken: string;
-}): NextResponse<ClaimSaveJsonResponse> {
-  switch (preparation.outcome) {
-    case "authority_prepared": {
-      const response = createJsonResponse({ code: "duplicate_detected" }, 409);
-      const cookiePolicy = getHomepageDemoDuplicateOverrideCookiePolicy(
-        preparation.expiresAt
-      );
-
-      response.cookies.set(
-        cookiePolicy.name,
-        candidateRawToken,
-        cookiePolicy
-      );
-
-      return response;
-    }
-    case "authority_reused":
-    case "authority_in_progress":
-      return createJsonResponse({ code: "duplicate_detected" }, 409);
+function mapClaimSaveAnywayResult(
+  result: ClaimHomepageDemoProjectWithDuplicateOverrideResult
+): NextResponse<ClaimSaveAnywayJsonResponse> {
+  switch (result.outcome) {
+    case "saved":
+      return createSuccessfulClaimSaveAnywayResponse({
+        code: "saved",
+        destination: DASHBOARD_DESTINATION,
+        created: true,
+      });
     case "already_claimed":
-      return createSuccessfulClaimSaveResponse({
+      return createSuccessfulClaimSaveAnywayResponse({
         code: "already_claimed",
         destination: DASHBOARD_DESTINATION,
         created: false,
@@ -244,42 +184,29 @@ function mapDuplicateOverridePreparationResult({
         410
       );
     case "invalid_claim":
+    case "draft_unavailable":
       return createJsonResponseWithDuplicateOverrideClear(
         { code: "claim_unavailable" },
         404
       );
-  }
-}
-
-function mapClaimSaveResult(
-  result: ClaimHomepageDemoProjectResult
-): NextResponse<ClaimSaveJsonResponse> {
-  switch (result.outcome) {
-    case "saved":
-      return createSuccessfulClaimSaveResponse({
-        code: "saved",
-        destination: DASHBOARD_DESTINATION,
-        created: true,
-      });
-    case "already_claimed":
-      return createSuccessfulClaimSaveResponse({
-        code: "already_claimed",
-        destination: DASHBOARD_DESTINATION,
-        created: false,
-      });
+    case "duplicate_authority_unavailable":
+      return createJsonResponseWithDuplicateOverrideClear(
+        { code: "duplicate_authority_unavailable" },
+        409
+      );
+    case "duplicate_authority_expired":
+      return createJsonResponseWithDuplicateOverrideClear(
+        { code: "duplicate_authority_expired" },
+        410
+      );
     case "duplicate_detected":
       return createJsonResponse({ code: "duplicate_detected" }, 409);
-    case "expired":
-      return createJsonResponse({ code: "expired" }, 410);
-    case "invalid_claim":
-    case "draft_unavailable":
-      return createJsonResponse({ code: "claim_unavailable" }, 404);
   }
 }
 
-function mapClaimSaveError(
+function mapClaimSaveAnywayError(
   error: unknown
-): NextResponse<ClaimSaveErrorResponse> {
+): NextResponse<ClaimSaveAnywayErrorResponse> {
   if (isHomepageDemoPublicRequestError(error)) {
     switch (error.code) {
       case "homepage_demo_disabled":
@@ -332,10 +259,10 @@ function mapClaimSaveError(
   return createJsonResponse({ code: "temporarily_unavailable" }, 503);
 }
 
-function createSuccessfulClaimSaveResponse(
-  body: ClaimSaveSuccessResponse
-): NextResponse<ClaimSaveJsonResponse> {
-  const response = createJsonResponse<ClaimSaveJsonResponse>(body, 200);
+function createSuccessfulClaimSaveAnywayResponse(
+  body: ClaimSaveAnywaySuccessResponse
+): NextResponse<ClaimSaveAnywayJsonResponse> {
+  const response = createJsonResponse<ClaimSaveAnywayJsonResponse>(body, 200);
 
   clearPrimaryClaimCookie(response);
   clearDuplicateOverrideCookie(response);
@@ -344,7 +271,7 @@ function createSuccessfulClaimSaveResponse(
 }
 
 function createJsonResponseWithDuplicateOverrideClear<
-  TBody extends ClaimSaveJsonResponse,
+  TBody extends ClaimSaveAnywayJsonResponse,
 >(body: TBody, status: number): NextResponse<TBody> {
   const response = createJsonResponse(body, status);
 
@@ -353,13 +280,13 @@ function createJsonResponseWithDuplicateOverrideClear<
   return response;
 }
 
-function createJsonResponse<TBody extends ClaimSaveJsonResponse>(
+function createJsonResponse<TBody extends ClaimSaveAnywayJsonResponse>(
   body: TBody,
   status: number
 ): NextResponse<TBody> {
   const response = NextResponse.json(body, { status });
 
-  applyClaimSaveResponseHeaders(response);
+  applyClaimSaveAnywayResponseHeaders(response);
 
   return response;
 }
@@ -376,7 +303,7 @@ function clearDuplicateOverrideCookie(response: NextResponse): void {
   response.cookies.set(cookiePolicy.name, "", cookiePolicy);
 }
 
-function applyClaimSaveResponseHeaders(response: NextResponse): void {
+function applyClaimSaveAnywayResponseHeaders(response: NextResponse): void {
   for (const [name, value] of SECURITY_HEADERS) {
     response.headers.set(name, value);
   }
@@ -406,7 +333,7 @@ function mergeVaryHeader(response: NextResponse, requiredValues: string[]): void
   response.headers.set("Vary", mergedValues.join(", "));
 }
 
-function createEmergencyClaimSaveErrorResponse(): NextResponse<ClaimSaveErrorResponse> {
+function createEmergencyClaimSaveAnywayErrorResponse(): NextResponse<ClaimSaveAnywayErrorResponse> {
   const response = new NextResponse('{"code":"temporarily_unavailable"}', {
     status: 503,
     headers: {
@@ -421,7 +348,7 @@ function createEmergencyClaimSaveErrorResponse(): NextResponse<ClaimSaveErrorRes
     },
   });
 
-  return response as NextResponse<ClaimSaveErrorResponse>;
+  return response as NextResponse<ClaimSaveAnywayErrorResponse>;
 }
 
 function isValidUuid(value: unknown): value is string {

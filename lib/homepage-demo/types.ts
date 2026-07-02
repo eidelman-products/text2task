@@ -66,6 +66,7 @@ export const HOMEPAGE_DEMO_TOKEN_PURPOSES = [
   "homepage-demo-idempotency",
   "homepage-demo-capacity-lease",
   "homepage-demo-claim",
+  "homepage-demo-duplicate-override",
 ] as const;
 
 export type HomepageDemoTokenPurpose =
