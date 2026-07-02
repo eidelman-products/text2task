@@ -10,6 +10,7 @@ import { parseDeadline } from "@/lib/tasks/parse-deadline";
 import {
   buildDuplicateCandidateFromProjectPayload,
   findDuplicateProject,
+  findDuplicateProjectStrict,
   type DuplicateProjectMatch,
 } from "@/lib/tasks/project-duplicate-detection";
 
@@ -884,6 +885,32 @@ export async function findProjectDuplicate(
   const subtasks = extractProjectSubtasks(body);
 
   return findDuplicateProject({
+    supabase,
+    userId,
+    candidate: buildDuplicateCandidateFromProjectPayload({
+      client_name: project.client_name,
+      contact_name: project.contact_name,
+      amount: project.amount,
+      deadline_text: project.deadline_text,
+      deadline_date: project.deadline_date,
+      title: project.title,
+      summary: project.summary,
+      subtasks: subtasks.map((subtask) => ({
+        task_title: getSubtaskTitle(subtask),
+      })),
+    }),
+  });
+}
+
+export async function findProjectDuplicateStrict(
+  supabase: SupabaseServerClient,
+  userId: string,
+  body: ProjectImportJsonRecord
+) {
+  const project = getProjectPayload(body);
+  const subtasks = extractProjectSubtasks(body);
+
+  return findDuplicateProjectStrict({
     supabase,
     userId,
     candidate: buildDuplicateCandidateFromProjectPayload({

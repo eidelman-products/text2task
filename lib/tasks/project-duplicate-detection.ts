@@ -78,6 +78,13 @@ type ExistingProjectGroup = {
   tasks: ExistingTaskRow[];
 };
 
+export class DuplicateProjectLookupError extends Error {
+  constructor() {
+    super("Project duplicate lookup failed");
+    this.name = "DuplicateProjectLookupError";
+  }
+}
+
 export async function findDuplicateProject({
   supabase,
   userId,
@@ -86,6 +93,42 @@ export async function findDuplicateProject({
   supabase: SupabaseLikeClient;
   userId: string;
   candidate: DuplicateProjectCandidate;
+}): Promise<DuplicateProjectMatch | null> {
+  return findDuplicateProjectInternal({
+    supabase,
+    userId,
+    candidate,
+    failOpenOnQueryError: true,
+  });
+}
+
+export async function findDuplicateProjectStrict({
+  supabase,
+  userId,
+  candidate,
+}: {
+  supabase: SupabaseLikeClient;
+  userId: string;
+  candidate: DuplicateProjectCandidate;
+}): Promise<DuplicateProjectMatch | null> {
+  return findDuplicateProjectInternal({
+    supabase,
+    userId,
+    candidate,
+    failOpenOnQueryError: false,
+  });
+}
+
+async function findDuplicateProjectInternal({
+  supabase,
+  userId,
+  candidate,
+  failOpenOnQueryError,
+}: {
+  supabase: SupabaseLikeClient;
+  userId: string;
+  candidate: DuplicateProjectCandidate;
+  failOpenOnQueryError: boolean;
 }): Promise<DuplicateProjectMatch | null> {
   const normalizedClientName = normalizeText(candidate.client_name);
 
@@ -141,7 +184,12 @@ export async function findDuplicateProject({
     .limit(400);
 
   if (error) {
-    console.error("Duplicate detection query failed:", error);
+    console.error("project_duplicate_lookup_failed");
+
+    if (!failOpenOnQueryError) {
+      throw new DuplicateProjectLookupError();
+    }
+
     return null;
   }
 
