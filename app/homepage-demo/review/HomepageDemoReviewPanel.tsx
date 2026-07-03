@@ -2,7 +2,18 @@ import type { ReactNode } from "react";
 
 import ProjectPreviewPresentation, {
   ProjectPreviewClientHeader,
+  ProjectPreviewClientNameField,
+  ProjectPreviewDetailField,
+  ProjectPreviewDetailText,
+  ProjectPreviewMetricCard,
+  ProjectPreviewMetricText,
+  ProjectPreviewProjectTitleField,
+  ProjectPreviewProjectTitleText,
   ProjectPreviewResourcesLine,
+  ProjectPreviewSummaryText,
+  ProjectPreviewTaskRow,
+  ProjectPreviewTasksHeading,
+  ProjectPreviewTaskText,
 } from "../../components/dashboard/extract/project-preview-presentation";
 import styles from "./homepage-demo-review.module.css";
 
@@ -42,11 +53,6 @@ type HomepageDemoReviewPanelProps = {
   footer?: ReactNode;
 };
 
-type DetailRow = {
-  label: string;
-  value: string;
-};
-
 const NOT_SPECIFIED = "Not specified";
 
 function formatAmount(
@@ -82,66 +88,6 @@ function displayValue(value: string | null): string {
   return value ?? NOT_SPECIFIED;
 }
 
-function buildClientDetails(
-  draft: HomepageDemoPublicReviewDraft,
-): DetailRow[] {
-  const details: ReadonlyArray<readonly [string, string | null]> = [
-    ["Contact", draft.contactName],
-    ["Email", draft.clientEmail],
-    ["Phone", draft.clientPhone],
-    ["Notes", draft.clientNotes],
-  ];
-
-  return details.flatMap(([label, value]) =>
-    typeof value === "string" ? [{ label, value }] : [],
-  );
-}
-
-function buildSubtaskDetails(
-  subtask: HomepageDemoPublicReviewSubtask,
-): DetailRow[] {
-  const amount = formatAmount(
-    subtask.amountText,
-    subtask.amountValue,
-    subtask.currencyCode,
-  );
-  const deadline = formatDeadline(subtask.deadlineText, subtask.deadlineDate);
-
-  const details: ReadonlyArray<readonly [string, string | null]> = [
-    ["Priority", subtask.priority],
-    ["Deadline", deadline],
-    ["Amount", amount],
-  ];
-
-  return details.flatMap(([label, value]) =>
-    typeof value === "string" ? [{ label, value }] : [],
-  );
-}
-
-function ReadOnlyMetric({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className={styles.publicMetric}>
-      <dt className={styles.publicMetricLabel}>{label}</dt>
-      <dd className={styles.publicMetricValue}>{value}</dd>
-    </div>
-  );
-}
-
-function ReadOnlyDetail({ label, value }: DetailRow) {
-  return (
-    <div className={styles.publicDetail}>
-      <dt className={styles.publicDetailLabel}>{label}</dt>
-      <dd className={styles.publicDetailValue}>{value}</dd>
-    </div>
-  );
-}
-
 export default function HomepageDemoReviewPanel({
   draft,
   notice,
@@ -154,95 +100,91 @@ export default function HomepageDemoReviewPanel({
     formatDeadline(draft.deadlineText, draft.deadlineDate),
   );
   const projectPriority = displayValue(draft.priority);
-  const clientDetails = buildClientDetails(draft);
 
   return (
     <ProjectPreviewPresentation
       header={
         <ProjectPreviewClientHeader avatarLabel={draft.clientName ?? ""}>
-          <div className={styles.publicHeaderText}>
-            <span className={styles.publicHeaderLabel}>Client</span>
-            <span className={styles.publicHeaderValue}>
+          <ProjectPreviewClientNameField>
+            <span className={styles.publicClientName}>
               {displayValue(draft.clientName)}
             </span>
-          </div>
+          </ProjectPreviewClientNameField>
         </ProjectPreviewClientHeader>
       }
       projectTitle={
-        <h2 id="homepage-demo-review-heading" className={styles.previewTitle}>
-          {draft.title}
-        </h2>
+        <ProjectPreviewProjectTitleField>
+          <ProjectPreviewProjectTitleText>
+            {draft.title}
+          </ProjectPreviewProjectTitleText>
+        </ProjectPreviewProjectTitleField>
       }
       projectSummary={
         draft.summary === null ? null : (
-          <p className={styles.previewSummary}>{draft.summary}</p>
+          <ProjectPreviewSummaryText>{draft.summary}</ProjectPreviewSummaryText>
         )
       }
       projectDetails={
-        <dl className={styles.publicMetricGrid}>
-          <ReadOnlyMetric label="Budget" value={projectAmount} />
-          <ReadOnlyMetric label="Deadline" value={projectDeadline} />
-          <ReadOnlyMetric label="Priority" value={projectPriority} />
-        </dl>
+        <>
+          <ProjectPreviewMetricCard label="Budget" tone="green">
+            <ProjectPreviewMetricText>{projectAmount}</ProjectPreviewMetricText>
+          </ProjectPreviewMetricCard>
+
+          <ProjectPreviewMetricCard label="Deadline" tone="blue">
+            <ProjectPreviewMetricText>
+              {projectDeadline}
+            </ProjectPreviewMetricText>
+          </ProjectPreviewMetricCard>
+
+          <ProjectPreviewMetricCard label="Priority" tone="orange">
+            <ProjectPreviewMetricText>
+              {projectPriority}
+            </ProjectPreviewMetricText>
+          </ProjectPreviewMetricCard>
+        </>
       }
       clientDetails={
-        clientDetails.length === 0 ? (
-          <p className={styles.publicEmptyDetail}>Not specified</p>
-        ) : (
-          <dl className={styles.publicDetailGrid}>
-            {clientDetails.map((detail) => (
-              <ReadOnlyDetail key={detail.label} {...detail} />
-            ))}
-          </dl>
-        )
+        <>
+          <ProjectPreviewDetailField label="Contact">
+            <ProjectPreviewDetailText placeholder={NOT_SPECIFIED}>
+              {draft.contactName}
+            </ProjectPreviewDetailText>
+          </ProjectPreviewDetailField>
+
+          <ProjectPreviewDetailField label="Phone">
+            <ProjectPreviewDetailText placeholder={NOT_SPECIFIED}>
+              {draft.clientPhone}
+            </ProjectPreviewDetailText>
+          </ProjectPreviewDetailField>
+
+          <ProjectPreviewDetailField label="Email">
+            <ProjectPreviewDetailText placeholder={NOT_SPECIFIED}>
+              {draft.clientEmail}
+            </ProjectPreviewDetailText>
+          </ProjectPreviewDetailField>
+
+          <ProjectPreviewDetailField label="Notes" fullWidth>
+            <ProjectPreviewDetailText placeholder={NOT_SPECIFIED}>
+              {draft.clientNotes}
+            </ProjectPreviewDetailText>
+          </ProjectPreviewDetailField>
+        </>
       }
       tasksHeading={
-        <h3 className={styles.publicTasksTitle}>
-          {draft.subtasks.length === 1
-            ? "1 task ready"
-            : `${draft.subtasks.length} tasks ready`}
-        </h3>
+        <ProjectPreviewTasksHeading count={draft.subtasks.length} />
       }
       tasks={
-        <div className={styles.publicTaskList}>
+        <>
           {draft.subtasks.map((subtask, index) => {
-            const subtaskDetails = buildSubtaskDetails(subtask);
-
             return (
-              <article
+              <ProjectPreviewTaskRow
                 key={`${subtask.order}-${index}-${subtask.task}`}
-                className={styles.publicTaskRow}
               >
-                <span className={styles.publicTaskCheck} aria-hidden="true">
-                  {"\u2713"}
-                </span>
-                <div className={styles.publicTaskBody}>
-                  <span className={styles.publicTaskEyebrow}>
-                    Task {subtask.order}
-                  </span>
-                  <h4 className={styles.publicTaskTitle}>{subtask.task}</h4>
-                  {subtaskDetails.length === 0 ? null : (
-                    <dl className={styles.publicTaskMeta}>
-                      {subtaskDetails.map((detail) => (
-                        <div
-                          key={detail.label}
-                          className={styles.publicTaskMetaItem}
-                        >
-                          <dt className={styles.publicTaskMetaLabel}>
-                            {detail.label}
-                          </dt>
-                          <dd className={styles.publicTaskMetaValue}>
-                            {detail.value}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  )}
-                </div>
-              </article>
+                <ProjectPreviewTaskText>{subtask.task}</ProjectPreviewTaskText>
+              </ProjectPreviewTaskRow>
             );
           })}
-        </div>
+        </>
       }
       resources={<ProjectPreviewResourcesLine />}
       notice={notice}

@@ -93,180 +93,17 @@
   box-shadow: 0 8px 22px rgba(22, 35, 54, 0.06);
 }
 
-.publicHeaderText {
-  display: grid;
-  gap: 2px;
+.publicClientName {
+  display: block;
+  width: 100%;
   min-width: 0;
-}
-
-.publicHeaderLabel {
-  color: #64748b;
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1.2;
-  text-transform: uppercase;
-}
-
-.publicHeaderValue {
-  color: #111827;
-  font-size: 0.98rem;
-  font-weight: 800;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
-
-.previewTitle {
   margin: 0;
-  color: #101828;
-  font-size: clamp(1.75rem, 3vw, 2.45rem);
+  color: #0f172a;
+  font-size: 18px;
   line-height: 1.12;
-  letter-spacing: 0;
+  font-weight: 950;
+  letter-spacing: -0.045em;
   overflow-wrap: anywhere;
-}
-
-.previewSummary {
-  margin: 0;
-  color: #475569;
-  font-size: 1rem;
-  line-height: 1.65;
-  overflow-wrap: anywhere;
-}
-
-.publicMetricGrid,
-.publicDetailGrid,
-.publicTaskMeta {
-  margin: 0;
-}
-
-.publicMetricGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.publicMetric {
-  min-width: 0;
-  border: 1px solid #dbe5f1;
-  border-radius: 8px;
-  padding: 14px;
-  background: #ffffff;
-}
-
-.publicMetricLabel,
-.publicDetailLabel,
-.publicTaskMetaLabel {
-  color: #64748b;
-  font-size: 0.76rem;
-  font-weight: 800;
-  line-height: 1.25;
-  text-transform: uppercase;
-}
-
-.publicMetricValue,
-.publicDetailValue,
-.publicTaskMetaValue {
-  color: #172033;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-
-.publicMetricValue {
-  margin: 8px 0 0;
-  font-size: 1rem;
-  font-weight: 800;
-}
-
-.publicDetailGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.publicDetail {
-  min-width: 0;
-  border-top: 1px solid #e2e8f0;
-  padding-top: 12px;
-}
-
-.publicDetailValue,
-.publicTaskMetaValue {
-  margin: 5px 0 0;
-  font-size: 0.95rem;
-}
-
-.publicEmptyDetail {
-  margin: 0;
-  color: #64748b;
-  line-height: 1.5;
-}
-
-.publicTasksTitle {
-  margin: 0;
-  color: #172033;
-  font-size: 1.1rem;
-  line-height: 1.35;
-  letter-spacing: 0;
-}
-
-.publicTaskList {
-  display: grid;
-  gap: 12px;
-}
-
-.publicTaskRow {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-  border: 1px solid #dbe5f1;
-  border-radius: 8px;
-  padding: 16px;
-  background: #ffffff;
-}
-
-.publicTaskCheck {
-  display: inline-flex;
-  width: 36px;
-  height: 36px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: #e8f5ee;
-  color: #087443;
-  font-weight: 900;
-}
-
-.publicTaskBody {
-  min-width: 0;
-}
-
-.publicTaskEyebrow {
-  color: #64748b;
-  font-size: 0.76rem;
-  font-weight: 800;
-  line-height: 1.25;
-  text-transform: uppercase;
-}
-
-.publicTaskTitle {
-  margin: 4px 0 0;
-  color: #172033;
-  font-size: 1rem;
-  line-height: 1.45;
-  letter-spacing: 0;
-  overflow-wrap: anywhere;
-}
-
-.publicTaskMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 18px;
-  margin-top: 12px;
-}
-
-.publicTaskMetaItem {
-  min-width: 120px;
-  max-width: 100%;
 }
 
 .previewNotice {
@@ -378,22 +215,6 @@
 
   .statusCard {
     padding: 20px;
-  }
-
-  .publicMetricGrid,
-  .publicDetailGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .publicTaskRow {
-    grid-template-columns: 32px minmax(0, 1fr);
-    gap: 12px;
-    padding: 14px;
-  }
-
-  .publicTaskCheck {
-    width: 32px;
-    height: 32px;
   }
 
   .actionRow {
