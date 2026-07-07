@@ -13,6 +13,7 @@ import {
 import { readHomepageDemoClaimCookie } from "@/lib/homepage-demo/claim-identity.server";
 import { getHomepageDemoClaimCookieClearPolicy } from "@/lib/homepage-demo/claim-identity.server";
 import {
+  HOMEPAGE_DEMO_CLAIM_IMPORT_PERSISTENCE_OPTIONS,
   claimHomepageDemoProject,
   loadHomepageDemoClaimSaveSource,
   type ClaimHomepageDemoProjectResult,
@@ -125,9 +126,10 @@ export async function POST(
       return createJsonResponse({ code: "temporarily_unavailable" }, 503);
     }
 
-    const prepared = prepareProjectImportPersistenceInput([
-      source.projectGroup,
-    ]);
+    const prepared = prepareProjectImportPersistenceInput(
+      [source.projectGroup],
+      HOMEPAGE_DEMO_CLAIM_IMPORT_PERSISTENCE_OPTIONS
+    );
     let duplicateCheckPassed = false;
 
     if (source.kind === "pending") {

@@ -7,6 +7,7 @@ import EditablePreviewList, {
   buildPreviewProjectGroups,
   getPreviewProjectStats,
   type PreviewProjectGroup,
+  type PreviewProjectPriority,
 } from "./editable-preview-list";
 import ExtractInputPanels from "./extract-input-panels";
 import DuplicateProjectModal from "./duplicate-project-modal";
@@ -20,6 +21,10 @@ import {
   type HybridAppliedChange,
   type HybridPreviewMeta,
 } from "@/lib/preview/hybrid-preview";
+import {
+  TextExtractedProjectMetadataSchema,
+  type TextExtractedProjectMetadata,
+} from "@/lib/extraction/schemas";
 import type { DuplicateProjectMatch } from "@/lib/tasks/project-duplicate-detection";
 import type { TaskRow } from "./tasks-view";
 
@@ -49,11 +54,18 @@ type SelectedImageItem = {
   previewUrl: string;
 };
 
+const PROJECT_IMPORT_MODE_TEXT_EXTRACTION_PROJECT_METADATA =
+  "text_extraction_project_metadata";
+
+type ProjectImportMode =
+  typeof PROJECT_IMPORT_MODE_TEXT_EXTRACTION_PROJECT_METADATA;
+
 type DuplicateSaveState = {
   duplicate: DuplicateProjectMatch;
   projectGroups: PreviewProjectGroup[];
   duplicateGroupIndex: number;
   overrideGroupIndexes: number[];
+  importMode: ProjectImportMode | null;
 };
 
 type DuplicateProjectSaveError = Error & {
@@ -72,6 +84,32 @@ function normalizePriority(value: unknown): "Low" | "Medium" | "High" {
 
 function normalizeOptionalText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function getExtractResponseTasks(data: unknown) {
+  return isJsonRecord(data) && Array.isArray(data.tasks) ? data.tasks : [];
+}
+
+function getExtractResponseProjectMetadata(
+  data: unknown
+): TextExtractedProjectMetadata | null {
+  if (
+    !isJsonRecord(data) ||
+    data.project === undefined ||
+    data.project === null
+  ) {
+    return null;
+  }
+
+  const parsedProject = TextExtractedProjectMetadataSchema.safeParse(
+    data.project
+  );
+
+  return parsedProject.success ? parsedProject.data : null;
 }
 
 function getPreviewContactName(preview: PreviewItem) {
@@ -323,6 +361,10 @@ export default function ExtractWorkspace({
 }: ExtractWorkspaceProps) {
   const [inputText, setInputText] = useState("");
   const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
+  const [previewProjectMetadata, setPreviewProjectMetadata] =
+    useState<TextExtractedProjectMetadata | null>(null);
+  const [projectPriorityOverride, setProjectPriorityOverride] =
+    useState<PreviewProjectPriority | null>(null);
   const [previewAiMeta, setPreviewAiMeta] = useState<
     Record<string, HybridPreviewMeta>
   >({});
@@ -345,7 +387,11 @@ export default function ExtractWorkspace({
   const saveSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const importAttemptIdRef = useRef<string | null>(null);
 
-  const previewStats = getPreviewProjectStats(previewItems);
+  const previewStats = getPreviewProjectStats(
+    previewItems,
+    previewProjectMetadata,
+    projectPriorityOverride
+  );
   const hasPreview = previewItems.length > 0;
   const showExtractingState = isExtracting && !hasPreview;
   const showEmptyState = hasTriedExtract && !isExtracting && !hasPreview;
@@ -372,6 +418,8 @@ export default function ExtractWorkspace({
   function resetPreviewState() {
     importAttemptIdRef.current = null;
     setPreviewItems([]);
+    setPreviewProjectMetadata(null);
+    setProjectPriorityOverride(null);
     setPreviewAiMeta({});
     setHasTriedExtract(false);
     setInputText("");
@@ -561,6 +609,8 @@ export default function ExtractWorkspace({
       setHasTriedExtract(true);
       importAttemptIdRef.current = null;
       setPreviewItems([]);
+      setPreviewProjectMetadata(null);
+      setProjectPriorityOverride(null);
       setPreviewAiMeta({});
       setDuplicateSaveState(null);
       setSaveSuccess(false);
@@ -573,19 +623,21 @@ export default function ExtractWorkspace({
         body: JSON.stringify({ input: text }),
       });
 
-      const data = await res.json();
+      const data: unknown = await res.json();
 
       if (!res.ok) {
         const handled = handleExtractError(data, "Extraction failed");
         if (handled) return;
       }
 
-      const extractedTasks = Array.isArray(data.tasks) ? data.tasks : [];
+      const extractedTasks = getExtractResponseTasks(data);
+      const projectMetadata = getExtractResponseProjectMetadata(data);
       const hybridResult = await buildHybridPreviewsFromTasks(
         extractedTasks,
         "AI extraction"
       );
 
+      setPreviewProjectMetadata(projectMetadata);
       setPreviewItems(hybridResult.previewItems);
       setPreviewAiMeta(hybridResult.aiMetaByPreviewId);
       clearSelectedImage();
@@ -607,6 +659,8 @@ export default function ExtractWorkspace({
       setHasTriedExtract(true);
       importAttemptIdRef.current = null;
       setPreviewItems([]);
+      setPreviewProjectMetadata(null);
+      setProjectPriorityOverride(null);
       setPreviewAiMeta({});
       setDuplicateSaveState(null);
       setSaveSuccess(false);
@@ -770,7 +824,16 @@ export default function ExtractWorkspace({
     });
   }
 
-  function buildProjectPayload(group: PreviewProjectGroup) {
+  function updateProjectPriorityOverride(priority: PreviewProjectPriority) {
+    setProjectPriorityOverride(priority);
+  }
+
+  function buildProjectPayload(
+    group: PreviewProjectGroup,
+    importMode: ProjectImportMode | null = null
+  ) {
+    const usesProjectMetadata =
+      importMode === PROJECT_IMPORT_MODE_TEXT_EXTRACTION_PROJECT_METADATA;
     const rawInput = getGroupRawInput(group);
     const contactName = getGroupContactName(group);
 
@@ -790,7 +853,9 @@ export default function ExtractWorkspace({
         amount: group.amount || "",
         deadline_text: group.deadline || "",
         deadline_date: buildSaveDeadlineDate(group.deadlineDate),
-        priority: group.priority || "Medium",
+        priority: usesProjectMetadata
+          ? group.priority || ""
+          : group.priority || "Medium",
         status: getProjectStatusFromGroup(group),
         source: group.source || "Project extraction",
         raw_input:
@@ -809,10 +874,15 @@ export default function ExtractWorkspace({
             contactName: subtaskContactName,
             contact_person: subtaskContactName,
             contactPerson: subtaskContactName,
-            amount: preview.amount || group.amount || "",
+            amount: usesProjectMetadata
+              ? preview.amount || ""
+              : preview.amount || group.amount || "",
             deadline_text:
-              buildSaveDeadlineValue(preview) || group.deadline || "",
-            priority: preview.priority || group.priority || "Medium",
+              buildSaveDeadlineValue(preview) ||
+              (usesProjectMetadata ? "" : group.deadline || ""),
+            priority: usesProjectMetadata
+              ? preview.priority || "Medium"
+              : preview.priority || group.priority || "Medium",
             status: preview.status || "New",
             source: preview.source || group.source || "Project extraction",
             raw_input:
@@ -832,7 +902,8 @@ export default function ExtractWorkspace({
   async function saveProjectBatch(
     projectGroups: PreviewProjectGroup[],
     idempotencyKey: string,
-    duplicateOverrideGroupIndexes: number[] = []
+    duplicateOverrideGroupIndexes: number[] = [],
+    importMode: ProjectImportMode | null = null
   ) {
     const res = await fetch("/api/projects/import", {
       method: "POST",
@@ -840,9 +911,12 @@ export default function ExtractWorkspace({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        projects: projectGroups.map((group) => buildProjectPayload(group)),
+        projects: projectGroups.map((group) =>
+          buildProjectPayload(group, importMode)
+        ),
         duplicateOverrideGroupIndexes,
         idempotencyKey,
+        ...(importMode ? { importMode } : {}),
       }),
     });
 
@@ -916,7 +990,14 @@ export default function ExtractWorkspace({
   async function savePreviewToTasks() {
     if (!previewItems.length || isSavingAll) return;
 
-    const projectGroups = buildPreviewProjectGroups(previewItems);
+    const importMode = previewProjectMetadata
+      ? PROJECT_IMPORT_MODE_TEXT_EXTRACTION_PROJECT_METADATA
+      : null;
+    const projectGroups = buildPreviewProjectGroups(
+      previewItems,
+      previewProjectMetadata,
+      projectPriorityOverride
+    );
 
     try {
       setIsSavingAll(true);
@@ -926,7 +1007,9 @@ export default function ExtractWorkspace({
       const importAttemptId = getOrCreateImportAttemptId();
       const allSavedRows = await saveProjectBatch(
         projectGroups,
-        importAttemptId
+        importAttemptId,
+        [],
+        importMode
       );
 
       synchronizeCommittedImport(allSavedRows);
@@ -939,6 +1022,7 @@ export default function ExtractWorkspace({
           projectGroups,
           duplicateGroupIndex: error.groupIndex,
           overrideGroupIndexes: [],
+          importMode,
         });
         return;
       }
@@ -967,7 +1051,8 @@ export default function ExtractWorkspace({
       const allSavedRows = await saveProjectBatch(
         duplicateSaveState.projectGroups,
         importAttemptId,
-        nextOverrideGroupIndexes
+        nextOverrideGroupIndexes,
+        duplicateSaveState.importMode
       );
 
       setDuplicateSaveState(null);
@@ -1128,7 +1213,12 @@ export default function ExtractWorkspace({
             <EditablePreviewList
               previewItems={previewItems}
               aiMetaByPreviewId={previewAiMeta}
+              projectMetadata={previewProjectMetadata}
+              projectPriorityOverride={projectPriorityOverride}
               onChange={updatePreviewItem}
+              onProjectPriorityChange={
+                previewProjectMetadata ? updateProjectPriorityOverride : undefined
+              }
               onUndoChange={handleUndoChange}
               onRemovePreviewItem={removePreviewItem}
             />

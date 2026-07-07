@@ -67,6 +67,19 @@ Read the messy client message and return clean CRM-ready subtasks that belong to
 
 Return ONLY valid JSON in this exact format:
 {
+  "project": {
+    "title": string,
+    "client_name": string,
+    "contact_name": string,
+    "client_phone": string,
+    "client_email": string,
+    "client_notes": string,
+    "summary": string,
+    "amount": string,
+    "currency_code": string,
+    "deadline_text": string,
+    "priority": "low" | "medium" | "high" | null
+  },
   "tasks": [
     {
       "client_name": string,
@@ -93,7 +106,10 @@ STRICT OUTPUT RULES:
 - "source" must always be "text".
 - "raw_input" must always be the exact original user input.
 - Every task object must include all fields exactly as shown.
-- If a field is missing or unknown, return an empty string "".
+- The top-level "project" object is the source of truth for project-level metadata.
+- If a project string field is missing or unknown, return an empty string "".
+- If project.priority is not explicit, return null.
+- If a task string field is missing, unknown, or not task-specific, return an empty string "".
 - If there are no clearly actionable work items, return:
   { "tasks": [] }
 
@@ -114,6 +130,22 @@ Do NOT split one client request into unrelated clients.
 Do NOT divide the total project value across subtasks.
 
 ----------------------
+PROJECT METADATA RULES
+----------------------
+
+Fill the top-level "project" object with metadata for the whole client request.
+
+- project.title is the CRM project title.
+- project.client_name is the best client, company, business, brand, or person for the request.
+- project.amount is the total project budget/value when one is mentioned.
+- project.deadline_text is the deadline for the whole project when one is mentioned.
+- project.priority is only explicit urgency/priority, or null when priority is not explicit.
+
+The task objects remain for compatibility and should describe subtasks inside
+the project. Do not force project-level amount, deadline, or priority into task
+fields unless the text clearly assigns that value to that specific task.
+
+----------------------
 CLIENT / COMPANY / CONTACT RULES
 ----------------------
 
@@ -122,6 +154,9 @@ CLIENT / COMPANY / CONTACT RULES
 Choose the most useful CRM client name.
 
 Prefer company / business / brand names over contact person names.
+
+Set project.client_name to this value.
+For compatibility, also repeat the same client_name on every task.
 
 Good:
 - "Sarah from Brightside Dental" -> client_name: "Brightside Dental", contact_name: "Sarah"
@@ -132,6 +167,18 @@ Good:
 - "Rachel from Bloom Café" -> client_name: "Bloom Café", contact_name: "Rachel"
 
 Only use the person's name as client_name if there is no company, brand, or business name.
+
+First-person business phrases count as identifiable business context:
+- "my bookkeeping studio" -> client_name: "bookkeeping studio"
+- "my bakery" -> client_name: "bakery"
+- "my agency" -> client_name: "agency"
+- "my design studio" -> client_name: "design studio"
+- "our dog grooming salon" -> client_name: "dog grooming salon"
+- "for Bright Pixel Co" -> client_name: "Bright Pixel Co"
+- "for my client Sarah" -> client_name: "Sarah"
+
+Do not return "Unknown client" when a clear first-person business or client
+context is present.
 
 Remove helper words like:
 - "from"
@@ -147,6 +194,9 @@ If no client/company/person is available, use "Unknown client".
 2. CONTACT NAME
 
 Extract contact_name when the message includes a real person's name who represents the client.
+
+Set project.contact_name to this value.
+For compatibility, also repeat the same contact_name on every task.
 
 Good:
 - "Hi, this is Sarah from Brightside Dental" -> contact_name: "Sarah"
@@ -168,6 +218,10 @@ Extract:
 - client_phone if a phone number appears anywhere.
 - client_email if an email address appears anywhere.
 - client_notes only for useful extra context that is not already task title, amount, deadline, phone, email, or contact_name.
+
+Set project.client_phone, project.client_email, and project.client_notes to
+these values. For compatibility, also repeat the same contact fields on every
+task unless a task-specific contact detail is explicitly present.
 
 Do NOT put phone numbers into amount.
 Do NOT put emails into task_title.
@@ -198,7 +252,10 @@ PROJECT VALUE / AMOUNT RULES
 
 This is extremely important.
 
-The "amount" field represents the TOTAL PROJECT VALUE for the client request, unless the input clearly says a price is per item.
+The top-level project.amount field represents the TOTAL PROJECT VALUE for the
+client request, unless the input clearly says a price is per item.
+
+Task amount fields represent task-specific prices only.
 
 A. TOTAL BUDGET
 
@@ -213,7 +270,10 @@ If the message says:
 Then that amount is the project value.
 
 When one total budget applies to a request with multiple subtasks:
-- Copy the SAME total amount into every returned task object.
+- Put the full amount in project.amount.
+- Put the currency code in project.currency_code when it is clear.
+- Do NOT copy the total project amount into every task object.
+- Set each task.amount to "" unless the text assigns a price to that specific task.
 - Do NOT divide the amount across subtasks.
 - Do NOT split 640 USD into 128 USD.
 - Do NOT split 300 USD into 150 USD.
@@ -224,15 +284,19 @@ Correct:
 Input:
 "Budget: $640. Cut it into 1 Facebook ad, 1 vertical reel, and 3 story clips."
 Output:
+project.amount = "$640"
+project.currency_code = "USD"
 Every returned task has:
-"amount": "$640"
+"amount": ""
 
 Correct:
 Input:
 "Budget is $300 for this batch. Organize follow-ups and update spreadsheet."
 Output:
+project.amount = "$300"
+project.currency_code = "USD"
 Every returned task has:
-"amount": "$300"
+"amount": ""
 
 B. PER-ITEM PRICE
 
@@ -242,6 +306,7 @@ Only use a per-subtask amount if the text clearly says:
 - "$50 for each banner"
 - "200 per email"
 - "80 per ad"
+- "logo revision $100 and homepage $800"
 
 Correct:
 Input:
@@ -250,10 +315,18 @@ Output:
 3 tasks, each with:
 "amount": "$50"
 
+Correct:
+Input:
+"Please do the logo revision for $100 and the homepage build for $800"
+Output:
+Logo task amount = "$100"
+Homepage task amount = "$800"
+
 C. NO MONEY
 
 If no money, budget, price, payment, cost, or compensation appears, return:
-"amount": ""
+project.amount = ""
+task.amount = ""
 
 D. QUANTITY IS NOT MONEY
 
@@ -341,6 +414,33 @@ Important:
 - Do not create tiny useless subtasks, but preserve each concrete business action.
 
 ----------------------
+PROJECT TITLE RULES
+----------------------
+
+project.title must describe the whole project being created, built, revised, or delivered.
+
+For build/create/make/design requests:
+- Describe the thing being built.
+- Include the client/business context when useful.
+- Do NOT call it an "updates project" unless the user explicitly asks for updates, revisions, changes, replacement, or edits to an existing asset.
+
+Good:
+- "Bookkeeping Studio Homepage"
+- "Simple Homepage for Bookkeeping Studio"
+- "Build Homepage for Bookkeeping Studio"
+- "GreenNest Client Follow-up Package"
+- "Bloom Cafe Social Media Content"
+
+Bad:
+- "Website updates project" for a new build request
+- "Updates project" when no update/revision is requested
+- "New project"
+- "Client project"
+
+For "build a simple homepage for my bookkeeping studio":
+project.title should be "Bookkeeping Studio Homepage" or equivalent.
+
+----------------------
 SPECIFIC EXPECTED BEHAVIOR EXAMPLES
 ----------------------
 
@@ -359,6 +459,15 @@ The new phone number is 305-555-7710.
 Email: emily@apexroofing.com"
 
 Expected:
+Project:
+title = "Apex Roofing Website Updates"
+client_name = "Apex Roofing"
+contact_name = "Emily"
+amount = "$950"
+currency_code = "USD"
+deadline_text = "by May 10"
+priority = null
+
 5 tasks:
 - Revise homepage headline
 - Add new testimonials to the website
@@ -369,8 +478,8 @@ Expected:
 All 5 tasks:
 client_name = "Apex Roofing"
 contact_name = "Emily"
-amount = "$950"
-deadline_text = "by May 10"
+amount = ""
+deadline_text = ""
 priority = "medium"
 client_phone = "305-555-7710"
 client_email = "emily@apexroofing.com"
@@ -389,6 +498,15 @@ Need the first version soon, ideally by Monday morning.
 Email: mark@rivonmedia.co"
 
 Expected:
+Project:
+title = "Rivon Media Product Video Edits"
+client_name = "Rivon Media"
+contact_name = "Mark"
+amount = "$640"
+currency_code = "USD"
+deadline_text = "by Monday morning"
+priority = null
+
 5 tasks:
 - Edit Facebook short ad from 4-minute product video
 - Edit vertical reel from 4-minute product video
@@ -399,9 +517,9 @@ Expected:
 All 5 tasks:
 client_name = "Rivon Media"
 contact_name = "Mark"
-amount = "$640"
-deadline_text = "by Monday morning"
-priority = "medium" or "high"
+amount = ""
+deadline_text = ""
+priority = "medium"
 client_email = "mark@rivonmedia.co"
 
 Notes may include:
@@ -418,6 +536,15 @@ Deadline: tomorrow by 6 PM.
 Contact: olivia@greennestinteriors.com"
 
 Expected:
+Project:
+title = "GreenNest Client Follow-up Package"
+client_name = "GreenNest Interiors"
+contact_name = "Olivia"
+amount = "$300"
+currency_code = "USD"
+deadline_text = "tomorrow by 6 PM"
+priority = "high"
+
 5 tasks:
 - Create list of clients who need replies
 - Mark urgent client messages
@@ -428,8 +555,8 @@ Expected:
 All 5 tasks:
 client_name = "GreenNest Interiors"
 contact_name = "Olivia"
-amount = "$300"
-deadline_text = "tomorrow by 6 PM"
+amount = ""
+deadline_text = ""
 priority = "high"
 client_email = "olivia@greennestinteriors.com"
 
@@ -452,6 +579,15 @@ Email: rachel@bloomcafe.com
 Phone: 646-555-1188"
 
 Expected:
+Project:
+title = "Bloom Cafe Social Media Content"
+client_name = "Bloom Cafe"
+contact_name = "Rachel"
+amount = "$500"
+currency_code = "USD"
+deadline_text = "by Thursday"
+priority = null
+
 5 tasks:
 - Prepare 4 Instagram posts for iced latte menu
 - Create 3 reels ideas for iced latte menu
@@ -462,8 +598,8 @@ Expected:
 All 5 tasks:
 client_name = "Bloom Café"
 contact_name = "Rachel"
-amount = "$500"
-deadline_text = "by Thursday"
+amount = ""
+deadline_text = ""
 priority = "medium"
 client_email = "rachel@bloomcafe.com"
 client_phone = "646-555-1188"
@@ -511,11 +647,41 @@ Do NOT use:
 - broken titles
 
 ----------------------
+HOMEPAGE BUILD SAMPLE CONTRACT
+----------------------
+
+Input:
+"Hi, can you build a simple homepage for my bookkeeping studio? I need sections for services, pricing, testimonials, and a contact form. Please send the first version by Friday. Budget is around $900."
+
+Expected project:
+title = "Bookkeeping Studio Homepage" or "Simple Homepage for Bookkeeping Studio"
+client_name = "bookkeeping studio"
+amount = "$900"
+currency_code = "USD"
+deadline_text = "by Friday"
+priority = null
+
+Expected tasks:
+- Build services section
+- Build pricing section
+- Add testimonials section
+- Add contact form
+
+Each task:
+amount = ""
+deadline_text = ""
+priority = "medium"
+
+----------------------
 DEADLINE RULES
 ----------------------
 
 Extract the deadline if mentioned.
 Keep it short and natural.
+
+Use project.deadline_text for a deadline that applies to the whole request.
+Use task.deadline_text only when the text explicitly assigns a deadline to
+that specific task.
 
 Examples:
 - "by Friday"
@@ -527,24 +693,39 @@ Examples:
 - "next week"
 - "within 2 weeks"
 
-If one deadline applies to the whole request, copy it to every task object.
-If no deadline appears, return "".
+If one deadline applies to the whole request:
+- project.deadline_text = the deadline
+- task.deadline_text = ""
+
+If a task has its own deadline:
+- task.deadline_text = that task-specific deadline
+
+If no deadline appears:
+- project.deadline_text = ""
+- task.deadline_text = ""
 
 ----------------------
 PRIORITY RULES
 ----------------------
 
-Return "high" if:
+project.priority should be null unless the message explicitly expresses
+urgency/priority for the whole project.
+
+Return project.priority = "high" when the text says:
 - the text says urgent, ASAP, immediately, as soon as possible, rush
 - OR the deadline is today, tonight, tomorrow, tomorrow morning, tomorrow by 6 PM
-- OR the message clearly sounds time-critical
+- OR the text says blocker, critical, emergency, or must be done immediately
 
-Return "low" if:
+Return project.priority = "low" if:
 - the text says no rush, not urgent, low priority, whenever, flexible
 
-Return "medium" if:
-- there is a normal deadline
-- OR the task seems like normal business work
+Return project.priority = null if priority is not explicit.
+
+Task priority is still required for compatibility with the current task schema:
+- Use "high" only for tasks with explicit urgent/time-critical wording.
+- Use "low" only for explicitly relaxed tasks.
+- Use "medium" as a neutral compatibility default when no task priority is explicit.
+- Do not describe this neutral "medium" as an explicitly extracted priority.
 
 Do not mark every task high just because there is a deadline next week.
 
@@ -580,22 +761,31 @@ Before returning JSON, verify:
    - Do not lose the contact person.
 
 4. Is there one total budget?
-   - If yes, copy the same full amount to every task.
+   - If yes, put the full amount in project.amount.
+   - Keep task.amount empty unless the amount is task-specific.
    - Never divide total project value across subtasks.
 
-5. Are there bullets / numbered deliverables / explicit requested outputs?
+5. Is there one project deadline?
+   - If yes, put it in project.deadline_text.
+   - Keep task.deadline_text empty unless the deadline is task-specific.
+
+6. Does the title match the request type?
+   - Build/create/make/design requests should get build/create titles.
+   - Use "updates" only for update/revision/change requests.
+
+7. Are there bullets / numbered deliverables / explicit requested outputs?
    - If yes, create meaningful subtasks.
-   5B. Are there multiple explicit admin/operations actions?
+   7B. Are there multiple explicit admin/operations actions?
    - If yes, avoid collapsing them into one broad task.
    - Create separate subtasks for each useful concrete action.
    - Example: create list, mark urgent messages, prepare drafts, update phone numbers, add budget notes.
 
-6. Are quantities being treated correctly?
+8. Are quantities being treated correctly?
    - Work quantities stay in task_title.
    - Money goes in amount.
    - Phone goes in client_phone.
 
-7. Is the output valid JSON only?
+9. Is the output valid JSON only?
 
 User input:
 ${input}

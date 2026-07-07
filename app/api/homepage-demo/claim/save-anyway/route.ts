@@ -12,7 +12,10 @@ import {
   getHomepageDemoClaimCookieClearPolicy,
   readHomepageDemoClaimCookie,
 } from "@/lib/homepage-demo/claim-identity.server";
-import { loadHomepageDemoClaimSaveSource } from "@/lib/homepage-demo/claim-save-repository.server";
+import {
+  HOMEPAGE_DEMO_CLAIM_IMPORT_PERSISTENCE_OPTIONS,
+  loadHomepageDemoClaimSaveSource,
+} from "@/lib/homepage-demo/claim-save-repository.server";
 import {
   parseHomepageDemoClaimSaveRequest,
   readHomepageDemoClaimSaveRequestJson,
@@ -141,9 +144,10 @@ export async function POST(
       return createJsonResponse({ code: "temporarily_unavailable" }, 503);
     }
 
-    const prepared = prepareProjectImportPersistenceInput([
-      source.projectGroup,
-    ]);
+    const prepared = prepareProjectImportPersistenceInput(
+      [source.projectGroup],
+      HOMEPAGE_DEMO_CLAIM_IMPORT_PERSISTENCE_OPTIONS
+    );
     const claimResult = await claimHomepageDemoProjectWithDuplicateOverride({
       claimTokenHash: claimCookie.tokenHash,
       authenticatedUserId: user.id,

@@ -70,6 +70,11 @@ export type PreparedProjectImportPersistenceInput = Readonly<{
   payloadJson: ProjectImportJsonRecord[];
 }>;
 
+export type ProjectImportPersistenceOptions = Readonly<{
+  defaultProjectPriority?: boolean;
+  inheritProjectFieldsToSubtasks?: boolean;
+}>;
+
 export type ClaimedImportAttempt = Readonly<{
   userId: string;
   attemptId: string;
@@ -116,6 +121,11 @@ type ExecuteClaimedProjectImportResult =
       category: TransactionalImportFailureCategory;
     }>;
 
+type ResolvedProjectImportPersistenceOptions = Readonly<{
+  defaultProjectPriority: boolean;
+  inheritProjectFieldsToSubtasks: boolean;
+}>;
+
 const TASK_WITH_CONTEXT_SELECT = `
   *,
   clients (
@@ -151,6 +161,12 @@ const TASK_WITH_CONTEXT_SELECT = `
     deleted_at
   )
 `;
+
+const DEFAULT_PROJECT_IMPORT_PERSISTENCE_OPTIONS: ResolvedProjectImportPersistenceOptions =
+  {
+    defaultProjectPriority: true,
+    inheritProjectFieldsToSubtasks: true,
+  };
 
 function pickFirstString(...values: unknown[]) {
   for (const value of values) {
@@ -304,7 +320,11 @@ function getSubtaskTitle(subtask: ProjectSubtaskInput | undefined) {
   );
 }
 
-function getProjectPayload(body: ProjectImportJsonRecord) {
+function getProjectPayload(
+  body: ProjectImportJsonRecord,
+  options: ResolvedProjectImportPersistenceOptions =
+    DEFAULT_PROJECT_IMPORT_PERSISTENCE_OPTIONS
+) {
   const projectBody = getProjectBody(body);
   const client = getClientPayload(projectBody);
   const rawAmountInput = normalizeAmountInput(
@@ -332,6 +352,7 @@ function getProjectPayload(body: ProjectImportJsonRecord) {
     projectBody.deadline_date ?? projectBody.deadlineDate
   );
   const parsedDeadlineDate = normalizeProjectDeadlineDateInput(deadlineDate);
+  const priority = pickFirstString(projectBody.priority);
 
   return {
     ...client,
@@ -352,7 +373,8 @@ function getProjectPayload(body: ProjectImportJsonRecord) {
     currency_code: parsedAmount.currencyCode,
     deadline_text: deadlineText,
     deadline_date: suppliedDeadlineDate ?? parsedDeadlineDate,
-    priority: pickFirstString(projectBody.priority) || "Medium",
+    priority:
+      priority || (options.defaultProjectPriority ? "Medium" : null),
     status: pickFirstString(projectBody.status) || "New",
     source: pickFirstString(projectBody.source) || "Pasted text",
     raw_input: pickFirstString(projectBody.raw_input, projectBody.rawInput),
@@ -416,18 +438,184 @@ function normalizeResourceType(value: unknown) {
   return allowed.has(raw) ? raw : "link";
 }
 
-function buildCanonicalImportPayload(projects: ProjectImportJsonRecord[]) {
+function resolveProjectImportPersistenceOptions(
+  options: ProjectImportPersistenceOptions = {}
+): ResolvedProjectImportPersistenceOptions {
+  return {
+    defaultProjectPriority:
+      options.defaultProjectPriority ??
+      DEFAULT_PROJECT_IMPORT_PERSISTENCE_OPTIONS.defaultProjectPriority,
+    inheritProjectFieldsToSubtasks:
+      options.inheritProjectFieldsToSubtasks ??
+      DEFAULT_PROJECT_IMPORT_PERSISTENCE_OPTIONS.inheritProjectFieldsToSubtasks,
+  };
+}
+
+type ProjectPayload = ReturnType<typeof getProjectPayload>;
+
+function getSubtaskAmountInput({
+  subtask,
+  project,
+  options,
+}: {
+  subtask: ProjectSubtaskInput;
+  project: ProjectPayload;
+  options: ResolvedProjectImportPersistenceOptions;
+}): string | number | null {
+  return normalizeAmountInput(
+    options.inheritProjectFieldsToSubtasks
+      ? subtask.amount ?? project.amount
+      : subtask.amount
+  );
+}
+
+function getSubtaskAmount({
+  rawAmount,
+  parsedAmount,
+  project,
+  options,
+}: {
+  rawAmount: string | number | null;
+  parsedAmount: ReturnType<typeof parseAmount>;
+  project: ProjectPayload;
+  options: ResolvedProjectImportPersistenceOptions;
+}): string | null {
+  return (
+    parsedAmount.displayAmount ??
+    (typeof rawAmount === "string"
+      ? rawAmount
+      : typeof rawAmount === "number"
+        ? String(rawAmount)
+        : options.inheritProjectFieldsToSubtasks
+          ? project.amount
+          : null)
+  );
+}
+
+function getSubtaskAmountValue({
+  parsedAmount,
+  project,
+  options,
+}: {
+  parsedAmount: ReturnType<typeof parseAmount>;
+  project: ProjectPayload;
+  options: ResolvedProjectImportPersistenceOptions;
+}): number | null {
+  return (
+    parsedAmount.amountValue ??
+    (options.inheritProjectFieldsToSubtasks ? project.amount_value : null)
+  );
+}
+
+function getSubtaskCurrencyCode({
+  parsedAmount,
+  project,
+  options,
+}: {
+  parsedAmount: ReturnType<typeof parseAmount>;
+  project: ProjectPayload;
+  options: ResolvedProjectImportPersistenceOptions;
+}): string | null {
+  return (
+    parsedAmount.currencyCode ??
+    (options.inheritProjectFieldsToSubtasks ? project.currency_code : null)
+  );
+}
+
+function getSubtaskDeadlineText({
+  subtask,
+  project,
+  options,
+}: {
+  subtask: ProjectSubtaskInput;
+  project: ProjectPayload;
+  options: ResolvedProjectImportPersistenceOptions;
+}): string {
+  const taskDeadlineText = pickFirstString(
+    subtask.deadline_text,
+    subtask.deadlineText,
+    subtask.deadline
+  );
+
+  return options.inheritProjectFieldsToSubtasks
+    ? taskDeadlineText || project.deadline_text
+    : taskDeadlineText;
+}
+
+function getSubtaskDeadlineDate({
+  deadlineDate,
+  project,
+  options,
+}: {
+  deadlineDate: string | null;
+  project: ProjectPayload;
+  options: ResolvedProjectImportPersistenceOptions;
+}): string | null {
+  return (
+    deadlineDate ??
+    (options.inheritProjectFieldsToSubtasks ? project.deadline_date : null)
+  );
+}
+
+function getSubtaskPriority({
+  subtask,
+  project,
+  options,
+}: {
+  subtask: ProjectSubtaskInput;
+  project: ProjectPayload;
+  options: ResolvedProjectImportPersistenceOptions;
+}): string {
+  const taskPriority = pickFirstString(subtask.priority);
+
+  return options.inheritProjectFieldsToSubtasks
+    ? taskPriority || project.priority || "Medium"
+    : taskPriority || "Medium";
+}
+
+function buildFallbackSubtask({
+  fallbackTitle,
+  project,
+  options,
+}: {
+  fallbackTitle: string;
+  project: ProjectPayload;
+  options: ResolvedProjectImportPersistenceOptions;
+}): ProjectSubtaskInput {
+  if (options.inheritProjectFieldsToSubtasks) {
+    return {
+      task: fallbackTitle,
+      amount: project.amount,
+      deadline: project.deadline_text,
+      priority: project.priority,
+      status: project.status,
+      source: project.source,
+      raw_input: project.raw_input,
+    };
+  }
+
+  return {
+    task: fallbackTitle,
+    status: project.status,
+    source: project.source,
+    raw_input: project.raw_input,
+  };
+}
+
+function buildCanonicalImportPayload(
+  projects: ProjectImportJsonRecord[],
+  options: ResolvedProjectImportPersistenceOptions
+) {
   return projects.map((body) => {
-    const project = getProjectPayload(body);
+    const project = getProjectPayload(body, options);
     const subtasks = extractProjectSubtasks(body).map((subtask) => {
-      const rawAmount = normalizeAmountInput(subtask.amount ?? project.amount);
+      const rawAmount = getSubtaskAmountInput({ subtask, project, options });
       const parsedAmount = parseAmount(rawAmount);
-      const deadlineText =
-        pickFirstString(
-          subtask.deadline_text,
-          subtask.deadlineText,
-          subtask.deadline
-        ) || project.deadline_text;
+      const deadlineText = getSubtaskDeadlineText({
+        subtask,
+        project,
+        options,
+      });
       const { deadlineDate } = parseDeadline(deadlineText);
       const resources = Array.isArray(subtask.resources)
         ? subtask.resources.flatMap((resource) => {
@@ -453,18 +641,24 @@ function buildCanonicalImportPayload(projects: ProjectImportJsonRecord[]) {
         contact_name:
           pickFirstString(subtask.contact_name, subtask.contactName) ||
           project.contact_name,
-        amount:
-          parsedAmount.displayAmount ??
-          (typeof rawAmount === "string"
-            ? rawAmount
-            : typeof rawAmount === "number"
-              ? String(rawAmount)
-              : project.amount),
-        amount_value: parsedAmount.amountValue ?? project.amount_value,
-        currency_code: parsedAmount.currencyCode ?? project.currency_code,
+        amount: getSubtaskAmount({ rawAmount, parsedAmount, project, options }),
+        amount_value: getSubtaskAmountValue({
+          parsedAmount,
+          project,
+          options,
+        }),
+        currency_code: getSubtaskCurrencyCode({
+          parsedAmount,
+          project,
+          options,
+        }),
         deadline_text: deadlineText,
-        deadline_date: deadlineDate ?? project.deadline_date,
-        priority: pickFirstString(subtask.priority) || project.priority || "Medium",
+        deadline_date: getSubtaskDeadlineDate({
+          deadlineDate,
+          project,
+          options,
+        }),
+        priority: getSubtaskPriority({ subtask, project, options }),
         status: pickFirstString(subtask.status) || project.status || "New",
         source: pickFirstString(subtask.source) || project.source,
         raw_input:
@@ -481,34 +675,28 @@ function buildCanonicalImportPayload(projects: ProjectImportJsonRecord[]) {
   });
 }
 
-function getImportRequestHash(projects: ProjectImportJsonRecord[]) {
+function getImportRequestHash(
+  projects: ProjectImportJsonRecord[],
+  options: ResolvedProjectImportPersistenceOptions
+) {
   return createHash("sha256")
-    .update(JSON.stringify(buildCanonicalImportPayload(projects)))
+    .update(JSON.stringify(buildCanonicalImportPayload(projects, options)))
     .digest("hex");
 }
 
 function buildTransactionalImportGroups(
-  projects: ProjectImportJsonRecord[]
+  projects: ProjectImportJsonRecord[],
+  options: ResolvedProjectImportPersistenceOptions
 ) {
   return projects.map((body) => {
-    const project = getProjectPayload(body);
+    const project = getProjectPayload(body, options);
     const subtasks = extractProjectSubtasks(body);
     const fallbackTitle =
       project.title || getSubtaskTitle(subtasks[0]) || "Untitled project";
     const normalizedSubtasks =
       subtasks.length > 0
         ? subtasks
-        : [
-            {
-              task: fallbackTitle,
-              amount: project.amount,
-              deadline: project.deadline_text,
-              priority: project.priority,
-              status: project.status,
-              source: project.source,
-              raw_input: project.raw_input,
-            },
-          ];
+        : [buildFallbackSubtask({ fallbackTitle, project, options })];
 
     return {
       client: {
@@ -534,14 +722,13 @@ function buildTransactionalImportGroups(
         raw_input: project.raw_input,
       },
       tasks: normalizedSubtasks.map((subtask, index) => {
-        const rawAmount = normalizeAmountInput(subtask.amount ?? project.amount);
+        const rawAmount = getSubtaskAmountInput({ subtask, project, options });
         const parsedAmount = parseAmount(rawAmount);
-        const deadlineText =
-          pickFirstString(
-            subtask.deadline_text,
-            subtask.deadlineText,
-            subtask.deadline
-          ) || project.deadline_text;
+        const deadlineText = getSubtaskDeadlineText({
+          subtask,
+          project,
+          options,
+        });
         const { deadlineDate } = parseDeadline(deadlineText);
         const resources = Array.isArray(subtask.resources)
           ? subtask.resources.flatMap((resource) => {
@@ -570,19 +757,29 @@ function buildTransactionalImportGroups(
             null,
           subtask_order: index + 1,
           task_title: getSubtaskTitle(subtask),
-          amount:
-            parsedAmount.displayAmount ??
-            (typeof rawAmount === "string"
-              ? rawAmount
-              : typeof rawAmount === "number"
-                ? String(rawAmount)
-                : project.amount),
-          amount_value: parsedAmount.amountValue ?? project.amount_value,
-          currency_code: parsedAmount.currencyCode ?? project.currency_code,
+          amount: getSubtaskAmount({
+            rawAmount,
+            parsedAmount,
+            project,
+            options,
+          }),
+          amount_value: getSubtaskAmountValue({
+            parsedAmount,
+            project,
+            options,
+          }),
+          currency_code: getSubtaskCurrencyCode({
+            parsedAmount,
+            project,
+            options,
+          }),
           deadline_text: deadlineText,
-          deadline_date: deadlineDate ?? project.deadline_date,
-          priority:
-            pickFirstString(subtask.priority) || project.priority || "Medium",
+          deadline_date: getSubtaskDeadlineDate({
+            deadlineDate,
+            project,
+            options,
+          }),
+          priority: getSubtaskPriority({ subtask, project, options }),
           status: pickFirstString(subtask.status) || project.status || "New",
           source: pickFirstString(subtask.source) || project.source,
           raw_input:
@@ -596,11 +793,14 @@ function buildTransactionalImportGroups(
 }
 
 export function prepareProjectImportPersistenceInput(
-  projects: ProjectImportJsonRecord[]
+  projects: ProjectImportJsonRecord[],
+  options?: ProjectImportPersistenceOptions
 ): PreparedProjectImportPersistenceInput {
+  const resolvedOptions = resolveProjectImportPersistenceOptions(options);
+
   return {
-    requestHash: getImportRequestHash(projects),
-    payloadJson: buildTransactionalImportGroups(projects),
+    requestHash: getImportRequestHash(projects, resolvedOptions),
+    payloadJson: buildTransactionalImportGroups(projects, resolvedOptions),
   };
 }
 
@@ -618,13 +818,15 @@ export async function claimProjectImportAttempt({
   userId,
   idempotencyKey,
   projects,
+  options,
 }: {
   userId: string;
   idempotencyKey: string;
   projects: ProjectImportJsonRecord[];
+  options?: ProjectImportPersistenceOptions;
 }): Promise<ProjectImportClaimResult> {
   const { requestHash, payloadJson } =
-    prepareProjectImportPersistenceInput(projects);
+    prepareProjectImportPersistenceInput(projects, options);
 
   const { data: insertedAttempt, error: insertError } = await supabaseAdmin
     .from("project_import_attempts")

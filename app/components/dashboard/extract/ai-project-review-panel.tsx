@@ -2,7 +2,10 @@
 
 import type { HybridPreviewMeta } from "@/lib/preview/hybrid-preview";
 import { formatDeadline } from "@/lib/tasks/format-deadline";
-import type { PreviewProjectGroup } from "../editable-preview-list";
+import type {
+  PreviewProjectGroup,
+  PreviewProjectPriority,
+} from "../editable-preview-list";
 import ProjectPreviewPresentation, {
   ProjectPreviewClientHeader,
   ProjectPreviewClientNameField,
@@ -46,12 +49,21 @@ type AiProjectReviewPanelProps = {
   group: PreviewProjectGroup;
   aiMetaByPreviewId: Record<string, HybridPreviewMeta>;
   onChange: (index: number, field: PreviewFieldName, value: string) => void;
+  onProjectPriorityChange?: (priority: PreviewProjectPriority) => void;
   onRemovePreviewItem: (previewId: string) => void;
 };
+
+const PROJECT_PRIORITY_NOT_SPECIFIED = "Not specified";
+const PROJECT_PRIORITY_OPTIONS: readonly PreviewProjectPriority[] = [
+  "Low",
+  "Medium",
+  "High",
+];
 
 export default function AiProjectReviewPanel({
   group,
   onChange,
+  onProjectPriorityChange,
   onRemovePreviewItem,
 }: AiProjectReviewPanelProps) {
   const visibleTasks = group.items.slice(0, 7);
@@ -59,6 +71,11 @@ export default function AiProjectReviewPanel({
   const normalizedDeadlineDisplay = group.deadlineDate
     ? formatDeadline(undefined, group.deadlineDate)
     : "";
+  const priorityValue = group.priority || PROJECT_PRIORITY_NOT_SPECIFIED;
+  const priorityOptions =
+    group.priority === ""
+      ? [PROJECT_PRIORITY_NOT_SPECIFIED, ...PROJECT_PRIORITY_OPTIONS]
+      : PROJECT_PRIORITY_OPTIONS;
 
   function updateGroupField(field: PreviewFieldName, value: string) {
     group.items.forEach((item) => {
@@ -68,6 +85,25 @@ export default function AiProjectReviewPanel({
 
   function updateTask(originalIndex: number, value: string) {
     onChange(originalIndex, "task", value);
+  }
+
+  function isPreviewProjectPriority(
+    value: string
+  ): value is PreviewProjectPriority {
+    return PROJECT_PRIORITY_OPTIONS.includes(value as PreviewProjectPriority);
+  }
+
+  function updateProjectPriority(value: string) {
+    if (!isPreviewProjectPriority(value)) {
+      return;
+    }
+
+    if (onProjectPriorityChange) {
+      onProjectPriorityChange(value);
+      return;
+    }
+
+    updateGroupField("priority", value);
   }
 
   return (
@@ -120,10 +156,10 @@ export default function AiProjectReviewPanel({
 
           <ProjectPreviewMetricSelect
             label="Priority"
-            value={group.priority || "Medium"}
-            options={["Low", "Medium", "High"]}
+            value={priorityValue}
+            options={priorityOptions}
             tone="orange"
-            onChange={(value) => updateGroupField("priority", value)}
+            onChange={updateProjectPriority}
           />
         </>
       }

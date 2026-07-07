@@ -3,10 +3,13 @@
 import AiProjectReviewPanel from "./extract/ai-project-review-panel";
 import type {
   ExtractedPreview,
+  ExtractedPreviewPriority,
   HybridAppliedChange,
   HybridPreviewMeta,
 } from "@/lib/preview/hybrid-preview";
+import type { TextExtractedProjectMetadata } from "@/lib/extraction/schemas";
 import { parseAmount } from "@/lib/tasks/parse-amount";
+import { parseDeadline } from "@/lib/tasks/parse-deadline";
 
 type PreviewItem = ExtractedPreview & {
   contact_name?: string;
@@ -20,6 +23,9 @@ type PreviewItem = ExtractedPreview & {
 };
 
 type PreviewFieldName = keyof Omit<PreviewItem, "previewId">;
+
+export type PreviewProjectMetadata = TextExtractedProjectMetadata;
+export type PreviewProjectPriority = ExtractedPreviewPriority;
 
 type LegacyDuplicateWarning = {
   existingTaskId: number;
@@ -39,7 +45,7 @@ export type PreviewProjectGroup = {
   amount: string;
   deadline: string;
   deadlineDate?: string | null;
-  priority: "Low" | "Medium" | "High";
+  priority: PreviewProjectPriority | "";
   source: string;
   client_phone: string;
   client_email: string;
@@ -53,7 +59,10 @@ export type PreviewProjectGroup = {
 type EditablePreviewListProps = {
   previewItems: PreviewItem[];
   aiMetaByPreviewId: Record<string, HybridPreviewMeta>;
+  projectMetadata?: PreviewProjectMetadata | null;
+  projectPriorityOverride?: PreviewProjectPriority | null;
   onChange: (index: number, field: PreviewFieldName, value: string) => void;
+  onProjectPriorityChange?: (priority: PreviewProjectPriority) => void;
   onUndoChange?: (previewId: string, change: HybridAppliedChange) => void;
   onRemovePreviewItem: (previewId: string) => void;
 
@@ -66,10 +75,17 @@ type EditablePreviewListProps = {
 export default function EditablePreviewList({
   previewItems,
   aiMetaByPreviewId,
+  projectMetadata = null,
+  projectPriorityOverride = null,
   onChange,
+  onProjectPriorityChange,
   onRemovePreviewItem,
 }: EditablePreviewListProps) {
-  const previewGroups = buildPreviewProjectGroups(previewItems);
+  const previewGroups = buildPreviewProjectGroups(
+    previewItems,
+    projectMetadata,
+    projectPriorityOverride
+  );
 
   return (
     <div
@@ -86,6 +102,7 @@ export default function EditablePreviewList({
           group={group}
           aiMetaByPreviewId={aiMetaByPreviewId}
           onChange={onChange}
+          onProjectPriorityChange={onProjectPriorityChange}
           onRemovePreviewItem={onRemovePreviewItem}
         />
       ))}
@@ -94,7 +111,9 @@ export default function EditablePreviewList({
 }
 
 export function buildPreviewProjectGroups(
-  previewItems: PreviewItem[]
+  previewItems: PreviewItem[],
+  projectMetadata: PreviewProjectMetadata | null = null,
+  projectPriorityOverride: PreviewProjectPriority | null = null
 ): PreviewProjectGroup[] {
   const grouped = new Map<
     string,
@@ -105,7 +124,7 @@ export function buildPreviewProjectGroups(
   >();
 
   previewItems.forEach((preview, originalIndex) => {
-    const key = getPreviewProjectKey(preview);
+    const key = getPreviewProjectKey(preview, projectMetadata);
     const existing = grouped.get(key) || [];
 
     existing.push({ preview, originalIndex });
@@ -116,18 +135,27 @@ export function buildPreviewProjectGroups(
     const previews = items.map((item) => item.preview);
     const primary = previews[0];
 
-    const clientName = primary?.client?.trim() || "Unassigned";
-    const contactName = getFirstFilled(
-      previews.flatMap((preview) => [
-        preview.contact_name,
-        preview.contactName,
-        preview.contact_person,
-        preview.contactPerson,
-      ])
-    );
+    const clientName =
+      getProjectMetadataText(projectMetadata, "client_name") ||
+      primary?.client?.trim() ||
+      "Unassigned";
+    const contactName =
+      getProjectMetadataText(projectMetadata, "contact_name") ||
+      getFirstFilled(
+        previews.flatMap((preview) => [
+          preview.contact_name,
+          preview.contactName,
+          preview.contact_person,
+          preview.contactPerson,
+        ])
+      );
 
-    const projectTitle = inferProjectTitle(previews);
-    const projectSummary = buildProjectSummary(previews);
+    const projectTitle =
+      getProjectMetadataText(projectMetadata, "title") ||
+      inferProjectTitle(previews);
+    const projectSummary =
+      getProjectMetadataText(projectMetadata, "summary") ||
+      buildProjectSummary(previews);
 
     return {
       key,
@@ -135,27 +163,39 @@ export function buildPreviewProjectGroups(
       contactName,
       projectTitle,
       projectSummary,
-      amount: getGroupAmount(previews),
-      deadline: getGroupDeadline(previews),
-      deadlineDate: getGroupDeadlineDate(previews),
-      priority: getGroupPriority(previews),
+      amount: getGroupAmount(previews, projectMetadata),
+      deadline: getGroupDeadline(previews, projectMetadata),
+      deadlineDate: getGroupDeadlineDate(previews, projectMetadata),
+      priority: getGroupPriority(
+        previews,
+        projectMetadata,
+        projectPriorityOverride
+      ),
       source: primary?.source || "Project extraction",
-      client_phone: getFirstFilled(
-        previews.map((preview) => preview.client_phone)
-      ),
-      client_email: getFirstFilled(
-        previews.map((preview) => preview.client_email)
-      ),
-      client_notes: getFirstFilled(
-        previews.map((preview) => preview.client_notes)
-      ),
+      client_phone:
+        getProjectMetadataText(projectMetadata, "client_phone") ||
+        getFirstFilled(previews.map((preview) => preview.client_phone)),
+      client_email:
+        getProjectMetadataText(projectMetadata, "client_email") ||
+        getFirstFilled(previews.map((preview) => preview.client_email)),
+      client_notes:
+        getProjectMetadataText(projectMetadata, "client_notes") ||
+        getFirstFilled(previews.map((preview) => preview.client_notes)),
       items,
     };
   });
 }
 
-export function getPreviewProjectStats(previewItems: PreviewItem[]) {
-  const groups = buildPreviewProjectGroups(previewItems);
+export function getPreviewProjectStats(
+  previewItems: PreviewItem[],
+  projectMetadata: PreviewProjectMetadata | null = null,
+  projectPriorityOverride: PreviewProjectPriority | null = null
+) {
+  const groups = buildPreviewProjectGroups(
+    previewItems,
+    projectMetadata,
+    projectPriorityOverride
+  );
   const projectCount = groups.length;
   const taskCount = previewItems.length;
 
@@ -174,8 +214,48 @@ export function getPreviewProjectStats(previewItems: PreviewItem[]) {
   };
 }
 
-function getPreviewProjectKey(preview: PreviewItem) {
-  const client = normalize(preview.client || "Unassigned");
+type ProjectMetadataTextField = keyof Pick<
+  PreviewProjectMetadata,
+  | "amount"
+  | "client_email"
+  | "client_name"
+  | "client_notes"
+  | "client_phone"
+  | "contact_name"
+  | "currency_code"
+  | "deadline_text"
+  | "summary"
+  | "title"
+>;
+
+function hasProjectMetadata(
+  projectMetadata: PreviewProjectMetadata | null | undefined
+): projectMetadata is PreviewProjectMetadata {
+  return projectMetadata !== null && projectMetadata !== undefined;
+}
+
+function getProjectMetadataText(
+  projectMetadata: PreviewProjectMetadata | null | undefined,
+  field: ProjectMetadataTextField
+) {
+  if (!hasProjectMetadata(projectMetadata)) {
+    return "";
+  }
+
+  const value = projectMetadata[field];
+
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getPreviewProjectKey(
+  preview: PreviewItem,
+  projectMetadata: PreviewProjectMetadata | null
+) {
+  const client = normalize(
+    getProjectMetadataText(projectMetadata, "client_name") ||
+      preview.client ||
+      "Unassigned"
+  );
   const rawInput = normalize(preview.raw_input || "");
 
   if (rawInput) {
@@ -395,7 +475,14 @@ function buildProjectSummary(previews: PreviewItem[]) {
   return `${titles.join(", ")}${suffix}`;
 }
 
-function getGroupDeadline(previews: PreviewItem[]) {
+function getGroupDeadline(
+  previews: PreviewItem[],
+  projectMetadata: PreviewProjectMetadata | null
+) {
+  if (hasProjectMetadata(projectMetadata)) {
+    return getProjectMetadataText(projectMetadata, "deadline_text");
+  }
+
   const firstOriginalDeadline = previews
     .map((preview) => preview.deadline_original_text?.trim())
     .filter(Boolean)[0];
@@ -407,7 +494,19 @@ function getGroupDeadline(previews: PreviewItem[]) {
   );
 }
 
-function getGroupDeadlineDate(previews: PreviewItem[]) {
+function getGroupDeadlineDate(
+  previews: PreviewItem[],
+  projectMetadata: PreviewProjectMetadata | null
+) {
+  if (hasProjectMetadata(projectMetadata)) {
+    const deadlineText = getProjectMetadataText(
+      projectMetadata,
+      "deadline_text"
+    );
+
+    return deadlineText ? parseDeadline(deadlineText).deadlineDate : null;
+  }
+
   return (
     previews.map((preview) => preview.deadline_date?.trim()).filter(Boolean)[0] ||
     null
@@ -436,7 +535,14 @@ function extractExplicitBudgetAmount(
   return null;
 }
 
-function getGroupAmount(previews: PreviewItem[]) {
+function getGroupAmount(
+  previews: PreviewItem[],
+  projectMetadata: PreviewProjectMetadata | null
+) {
+  if (hasProjectMetadata(projectMetadata)) {
+    return getProjectMetadataAmount(projectMetadata);
+  }
+
   const explicitBudget = previews
     .map((preview) => extractExplicitBudgetAmount(preview.raw_input))
     .find(Boolean);
@@ -475,6 +581,29 @@ function getGroupAmount(previews: PreviewItem[]) {
   const suffix = parsed.find((item) => item.suffix)?.suffix || "";
 
   return `${formatNumber(total)}${suffix ? ` ${suffix}` : ""}`;
+}
+
+function getProjectMetadataAmount(projectMetadata: PreviewProjectMetadata) {
+  const amount = getProjectMetadataText(projectMetadata, "amount");
+
+  if (!amount) {
+    return "";
+  }
+
+  const parsedAmount = parsePreviewAmount(amount);
+  const currencyCode = normalizeCurrencyCode(
+    getProjectMetadataText(projectMetadata, "currency_code")
+  );
+
+  if (!parsedAmount) {
+    return amount;
+  }
+
+  if (!parsedAmount.suffix && currencyCode) {
+    return `${formatNumber(parsedAmount.value)} ${currencyCode}`;
+  }
+
+  return parsedAmount.display;
 }
 
 function parseAmountLikeValue(value: string) {
@@ -590,7 +719,29 @@ function formatNumber(value: number) {
   }).format(value);
 }
 
-function getGroupPriority(previews: PreviewItem[]): "Low" | "Medium" | "High" {
+function getGroupPriority(
+  previews: PreviewItem[],
+  projectMetadata: PreviewProjectMetadata | null,
+  projectPriorityOverride: PreviewProjectPriority | null
+): PreviewProjectGroup["priority"] {
+  if (hasProjectMetadata(projectMetadata)) {
+    if (projectPriorityOverride !== null) {
+      return projectPriorityOverride;
+    }
+
+    switch (projectMetadata.priority) {
+      case "high":
+        return "High";
+      case "medium":
+        return "Medium";
+      case "low":
+        return "Low";
+      case null:
+      case undefined:
+        return "";
+    }
+  }
+
   const priorities = previews.map((preview) =>
     String(preview.priority || "").trim().toLowerCase()
   );

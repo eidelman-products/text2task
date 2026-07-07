@@ -53,6 +53,7 @@ type LiveDemoStep = "bootstrapping" | "verifying_challenge" | "extracting" | "op
 type LiveDemoState =
   | Readonly<{ status: "idle" }>
   | Readonly<{ status: "working"; step: LiveDemoStep }>
+  | Readonly<{ status: "done" }>
   | Readonly<{ status: "error"; code: LiveDemoErrorCode }>;
 
 type LiveDemoErrorCode =
@@ -131,6 +132,8 @@ export default function HomepageLiveDemoClient({
   const turnstileExecutionConsumedRef = useRef(false);
 
   const isWorking = state.status === "working";
+  const isDone = state.status === "done";
+  const isInteractionDisabled = isWorking || isDone;
   const isTextError =
     state.status === "error" &&
     (state.code === "invalid_text_input" || state.code === "request_too_large");
@@ -171,7 +174,7 @@ export default function HomepageLiveDemoClient({
   }
 
   function handleAnotherExample(): void {
-    if (isWorking) {
+    if (isInteractionDisabled) {
       return;
     }
 
@@ -189,7 +192,7 @@ export default function HomepageLiveDemoClient({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
-    if (submissionActiveRef.current) {
+    if (submissionActiveRef.current || isDone) {
       return;
     }
 
@@ -231,6 +234,9 @@ export default function HomepageLiveDemoClient({
       assertActiveRun(runId, mountedRef, runIdRef);
       setState({ status: "working", step: "opening_review" });
       navigateToReview(reviewTarget, bootstrap.publicToken);
+      if (mountedRef.current && runIdRef.current === runId) {
+        setState({ status: "done" });
+      }
     } catch (error) {
       if (isIgnorableRunError(error)) {
         return;
@@ -428,7 +434,11 @@ export default function HomepageLiveDemoClient({
   }
 
   const statusCopy =
-    state.status === "working" ? getWorkingCopy(state.step) : null;
+    state.status === "working"
+      ? getWorkingCopy(state.step)
+      : state.status === "done"
+        ? getWorkingCopy("opening_review")
+        : null;
   const errorCopy = state.status === "error" ? getErrorCopy(state.code) : null;
 
   return (
@@ -447,7 +457,7 @@ export default function HomepageLiveDemoClient({
               <button
                 type="button"
                 className={styles.anotherExampleButton}
-                disabled={isWorking}
+                disabled={isInteractionDisabled}
                 onClick={handleAnotherExample}
               >
                 Try another example
@@ -461,7 +471,7 @@ export default function HomepageLiveDemoClient({
               onChange={(event) => handleTextChange(event.target.value)}
               aria-describedby={`${helpTextId} ${countTextId}`}
               aria-invalid={isTextError}
-              disabled={isWorking}
+              disabled={isInteractionDisabled}
               maxLength={TEXT_INPUT_MAX_CHARACTERS}
               placeholder="Paste a client request here…"
               rows={7}
@@ -512,9 +522,13 @@ export default function HomepageLiveDemoClient({
               <button
                 type="submit"
                 className={styles.primaryButton}
-                disabled={isWorking}
+                disabled={isInteractionDisabled}
               >
-                {isWorking ? "Creating preview…" : "Preview my project"}
+                {isDone
+                  ? "✓ Done"
+                  : isWorking
+                    ? "Creating preview…"
+                    : "Preview my project"}
               </button>
             </div>
           </div>

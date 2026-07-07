@@ -9,9 +9,11 @@ import type { HomepageDemoReviewDraft } from "@/lib/homepage-demo/review-reposit
 import { parseAmount } from "@/lib/tasks/parse-amount";
 import { parseDeadline } from "@/lib/tasks/parse-deadline";
 
-type TextExtractedTask = z.infer<
-  typeof TextExtractedTasksResponseSchema
->["tasks"][number];
+type TextExtractionResult = z.infer<typeof TextExtractedTasksResponseSchema>;
+type TextExtractedProjectMetadata = NonNullable<
+  TextExtractionResult["project"]
+>;
+type TextExtractedTask = TextExtractionResult["tasks"][number];
 
 export type HomepageDemoPublicReviewPriority =
   | "Low"
@@ -100,25 +102,33 @@ export function createHomepageDemoPublicReviewPayload(
   }
 
   const tasks = parsedDraft.data.tasks;
-  const primaryAmount = parseAmount(firstOptionalText(tasks, "amount"));
-  const primaryDeadlineText = firstOptionalText(tasks, "deadline_text");
-  const primaryDeadline = parseDeadline(primaryDeadlineText);
+  const project = parsedDraft.data.project;
+  const projectAmount = getPayloadAmount({ project, tasks });
+  const projectDeadline = getPayloadDeadline({ project, tasks });
   const payload: HomepageDemoPublicReviewPayload = {
-    title: inferPayloadTitle(tasks),
-    summary: buildPayloadSummary(tasks),
-    clientName: firstOptionalText(tasks, "client_name"),
-    contactName: firstOptionalText(tasks, "contact_name"),
-    clientEmail: firstOptionalText(tasks, "client_email"),
-    clientPhone: firstOptionalText(tasks, "client_phone"),
-    clientNotes: firstOptionalText(tasks, "client_notes"),
-    amountText: toNullableText(
-      primaryAmount.displayAmount ?? primaryAmount.rawText
-    ),
-    amountValue: primaryAmount.amountValue,
-    currencyCode: primaryAmount.currencyCode,
-    deadlineText: primaryDeadlineText,
-    deadlineDate: primaryDeadline.deadlineDate,
-    priority: getGroupPriority(tasks),
+    title: getProjectText(project, "title") ?? inferPayloadTitle(tasks),
+    summary: getProjectText(project, "summary") ?? buildPayloadSummary(tasks),
+    clientName:
+      getProjectText(project, "client_name") ??
+      firstOptionalText(tasks, "client_name"),
+    contactName:
+      getProjectText(project, "contact_name") ??
+      firstOptionalText(tasks, "contact_name"),
+    clientEmail:
+      getProjectText(project, "client_email") ??
+      firstOptionalText(tasks, "client_email"),
+    clientPhone:
+      getProjectText(project, "client_phone") ??
+      firstOptionalText(tasks, "client_phone"),
+    clientNotes:
+      getProjectText(project, "client_notes") ??
+      firstOptionalText(tasks, "client_notes"),
+    amountText: projectAmount.amountText,
+    amountValue: projectAmount.amountValue,
+    currencyCode: projectAmount.currencyCode,
+    deadlineText: projectDeadline.deadlineText,
+    deadlineDate: projectDeadline.deadlineDate,
+    priority: getPayloadPriority({ project, tasks }),
     subtasks: tasks.map((task, index) =>
       createPublicReviewSubtask(task, index)
     ),
@@ -156,6 +166,108 @@ function createPublicReviewSubtask(
     currencyCode: amount.currencyCode,
     order: index + 1,
   };
+}
+
+type ProjectTextField = keyof Pick<
+  TextExtractedProjectMetadata,
+  | "amount"
+  | "client_email"
+  | "client_name"
+  | "client_notes"
+  | "client_phone"
+  | "contact_name"
+  | "currency_code"
+  | "deadline_text"
+  | "summary"
+  | "title"
+>;
+
+function getProjectText(
+  project: TextExtractedProjectMetadata | undefined,
+  field: ProjectTextField
+): string | null {
+  if (project === undefined) {
+    return null;
+  }
+
+  return toNullableText(project[field]);
+}
+
+function getPayloadAmount({
+  project,
+  tasks,
+}: {
+  project: TextExtractedProjectMetadata | undefined;
+  tasks: readonly TextExtractedTask[];
+}): Pick<
+  HomepageDemoPublicReviewPayload,
+  "amountText" | "amountValue" | "currencyCode"
+> {
+  if (project !== undefined) {
+    const amountText = getProjectText(project, "amount");
+    const projectCurrencyCode = getProjectText(project, "currency_code");
+    const parsedAmount = parseAmount(amountText);
+    const currencyCode = parsedAmount.currencyCode ?? projectCurrencyCode;
+    let displayAmount = parsedAmount.displayAmount ?? parsedAmount.rawText;
+
+    if (
+      displayAmount &&
+      parsedAmount.amountValue !== null &&
+      parsedAmount.currencyCode === null &&
+      projectCurrencyCode !== null
+    ) {
+      displayAmount = `${displayAmount} ${projectCurrencyCode}`;
+    }
+
+    return {
+      amountText: toNullableText(displayAmount),
+      amountValue: parsedAmount.amountValue,
+      currencyCode: toNullableText(displayAmount) ? currencyCode : null,
+    };
+  }
+
+  const primaryAmount = parseAmount(firstOptionalText(tasks, "amount"));
+
+  return {
+    amountText: toNullableText(
+      primaryAmount.displayAmount ?? primaryAmount.rawText
+    ),
+    amountValue: primaryAmount.amountValue,
+    currencyCode: primaryAmount.currencyCode,
+  };
+}
+
+function getPayloadDeadline({
+  project,
+  tasks,
+}: {
+  project: TextExtractedProjectMetadata | undefined;
+  tasks: readonly TextExtractedTask[];
+}): Pick<HomepageDemoPublicReviewPayload, "deadlineText" | "deadlineDate"> {
+  const deadlineText =
+    project !== undefined
+      ? getProjectText(project, "deadline_text")
+      : firstOptionalText(tasks, "deadline_text");
+  const deadline = parseDeadline(deadlineText);
+
+  return {
+    deadlineText,
+    deadlineDate: deadline.deadlineDate,
+  };
+}
+
+function getPayloadPriority({
+  project,
+  tasks,
+}: {
+  project: TextExtractedProjectMetadata | undefined;
+  tasks: readonly TextExtractedTask[];
+}): HomepageDemoPublicReviewPriority | null {
+  if (project !== undefined) {
+    return toPublicPriority(project.priority);
+  }
+
+  return getGroupPriority(tasks);
 }
 
 function inferPayloadTitle(tasks: readonly TextExtractedTask[]): string {
@@ -265,8 +377,10 @@ function getGroupPriority(
 }
 
 function toPublicPriority(
-  value: TextExtractedTask["priority"]
-): HomepageDemoPublicReviewPriority {
+  value:
+    | TextExtractedProjectMetadata["priority"]
+    | TextExtractedTask["priority"]
+): HomepageDemoPublicReviewPriority | null {
   switch (value) {
     case "high":
       return "High";
@@ -274,6 +388,9 @@ function toPublicPriority(
       return "Medium";
     case "low":
       return "Low";
+    case null:
+    case undefined:
+      return null;
   }
 }
 

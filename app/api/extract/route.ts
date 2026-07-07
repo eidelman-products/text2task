@@ -236,6 +236,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       tasks: extractionResult.tasks,
+      ...(extractionResult.project !== undefined
+        ? { project: extractionResult.project }
+        : {}),
       usage: {
         plan: profile.plan,
         extract_count: nextExtractCount,

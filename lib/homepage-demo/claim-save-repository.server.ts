@@ -4,15 +4,25 @@ import { z } from "zod";
 
 import {
   TextExtractedTasksResponseSchema,
-  type TextExtractedTask,
+  type TextExtractedProjectMetadata,
+  type TextExtractionResult,
 } from "@/lib/extraction/schemas";
 import { HomepageDemoRepositoryError } from "@/lib/homepage-demo/errors";
-import type { ProjectImportJsonRecord } from "@/lib/projects/import-persistence.server";
+import type {
+  ProjectImportJsonRecord,
+  ProjectImportPersistenceOptions,
+} from "@/lib/projects/import-persistence.server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { parseAmount } from "@/lib/tasks/parse-amount";
 
 const SHA_256_HASH_PATTERN = /^[0-9a-f]{64}$/;
 const HOMEPAGE_DEMO_TEXT_SCHEMA_VERSION = "homepage-demo-draft-v1";
 const HOMEPAGE_DEMO_TEXT_ENGINE_VERSION = "text-extraction-v1";
+
+export const HOMEPAGE_DEMO_CLAIM_IMPORT_PERSISTENCE_OPTIONS: ProjectImportPersistenceOptions =
+  {
+    inheritProjectFieldsToSubtasks: false,
+  };
 
 export type HomepageDemoClaimSaveSource =
   | Readonly<{
@@ -221,7 +231,7 @@ export async function loadHomepageDemoClaimSaveSource({
 
   return {
     kind: "pending",
-    projectGroup: buildProjectImportGroup(parsedDraft.data.tasks),
+    projectGroup: buildProjectImportGroup(parsedDraft.data),
   };
 }
 
@@ -349,9 +359,8 @@ function isPendingClaimDraftEligible({
   );
 }
 
-function buildProjectImportGroup(
-  tasks: readonly TextExtractedTask[]
-): ProjectImportJsonRecord {
+function buildProjectImportGroup(result: TextExtractionResult): ProjectImportJsonRecord {
+  const { project, tasks } = result;
   const firstTask = tasks[0];
 
   if (firstTask === undefined) {
@@ -359,15 +368,25 @@ function buildProjectImportGroup(
   }
 
   return {
-    client_name: firstTask.client_name,
-    contact_name: firstTask.contact_name,
-    client_phone: firstTask.client_phone,
-    client_email: firstTask.client_email,
-    client_notes: firstTask.client_notes,
-    title: firstTask.task_title,
-    amount: firstTask.amount,
-    deadline_text: firstTask.deadline_text,
-    priority: firstTask.priority,
+    client_name: getProjectText(project, "client_name") ?? firstTask.client_name,
+    contact_name:
+      getProjectText(project, "contact_name") ?? firstTask.contact_name,
+    client_phone:
+      getProjectText(project, "client_phone") ?? firstTask.client_phone,
+    client_email:
+      getProjectText(project, "client_email") ?? firstTask.client_email,
+    client_notes:
+      getProjectText(project, "client_notes") ?? firstTask.client_notes,
+    title: getProjectText(project, "title") ?? firstTask.task_title,
+    summary: getProjectText(project, "summary") ?? "",
+    amount:
+      project === undefined ? firstTask.amount : getProjectAmountText(project),
+    currency_code: getProjectText(project, "currency_code") ?? "",
+    deadline_text:
+      project === undefined
+        ? firstTask.deadline_text
+        : getProjectText(project, "deadline_text") ?? "",
+    priority: project === undefined ? firstTask.priority : project.priority ?? "",
     source: "Homepage Demo",
     raw_input: firstTask.raw_input,
     tasks: tasks.map((task) => ({
@@ -384,6 +403,59 @@ function buildProjectImportGroup(
       raw_input: task.raw_input,
     })),
   };
+}
+
+type ProjectTextField = keyof Pick<
+  TextExtractedProjectMetadata,
+  | "amount"
+  | "client_email"
+  | "client_name"
+  | "client_notes"
+  | "client_phone"
+  | "contact_name"
+  | "currency_code"
+  | "deadline_text"
+  | "summary"
+  | "title"
+>;
+
+function getProjectText(
+  project: TextExtractedProjectMetadata | undefined,
+  field: ProjectTextField
+): string | undefined {
+  const value = project?.[field];
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function getProjectAmountText(
+  project: TextExtractedProjectMetadata
+): string {
+  const amount = getProjectText(project, "amount");
+
+  if (amount === undefined) {
+    return "";
+  }
+
+  const currencyCode = getProjectText(project, "currency_code");
+
+  if (currencyCode === undefined) {
+    return amount;
+  }
+
+  const parsedAmount = parseAmount(amount);
+
+  if (parsedAmount.currencyCode !== null || parsedAmount.amountValue === null) {
+    return amount;
+  }
+
+  return `${amount} ${currencyCode}`;
 }
 
 function buildRpcReplayProjectGroup(): ProjectImportJsonRecord {

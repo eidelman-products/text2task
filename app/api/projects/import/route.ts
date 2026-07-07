@@ -14,11 +14,19 @@ import {
   type ClaimedImportAttempt,
   type ProjectImportDuplicateResult,
   type ProjectImportJsonRecord,
+  type ProjectImportPersistenceOptions,
   type TransactionalImportFailureCategory,
 } from "@/lib/projects/import-persistence.server";
 import { createClient } from "@/lib/supabase/server";
 
 const MAX_PROJECTS = PROJECT_IMPORT_MAX_PROJECTS;
+const PROJECT_IMPORT_MODE_TEXT_EXTRACTION_PROJECT_METADATA =
+  "text_extraction_project_metadata";
+const TEXT_EXTRACTION_PROJECT_METADATA_PERSISTENCE_OPTIONS: ProjectImportPersistenceOptions =
+  {
+    defaultProjectPriority: false,
+    inheritProjectFieldsToSubtasks: false,
+  };
 
 const ProjectImportSchema = z
   .object({
@@ -31,6 +39,9 @@ const ProjectImportSchema = z
       .max(MAX_PROJECTS)
       .default([]),
     idempotencyKey: z.string().uuid().optional(),
+    importMode: z
+      .literal(PROJECT_IMPORT_MODE_TEXT_EXTRACTION_PROJECT_METADATA)
+      .optional(),
   })
   .strict();
 
@@ -89,9 +100,21 @@ export async function POST(req: NextRequest) {
       return errorResponse("INVALID_PAYLOAD", "Invalid import request", 400);
     }
 
-    const { projects, duplicateOverrideGroupIndexes, idempotencyKey } =
-      parsed.data;
+    const {
+      projects,
+      duplicateOverrideGroupIndexes,
+      idempotencyKey,
+      importMode,
+    } = parsed.data;
     const overrideIndexes = new Set(duplicateOverrideGroupIndexes);
+    const persistenceOptions =
+      importMode === PROJECT_IMPORT_MODE_TEXT_EXTRACTION_PROJECT_METADATA
+        ? TEXT_EXTRACTION_PROJECT_METADATA_PERSISTENCE_OPTIONS
+        : undefined;
+
+    if (importMode && !idempotencyKey) {
+      return errorResponse("INVALID_PAYLOAD", "Invalid import request", 400);
+    }
 
     if (
       duplicateOverrideGroupIndexes.some((index) => index >= projects.length)
@@ -129,6 +152,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         idempotencyKey,
         projects,
+        options: persistenceOptions,
       });
 
       if (claim.kind === "conflict") {
