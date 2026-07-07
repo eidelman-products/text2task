@@ -24,7 +24,11 @@ const PROJECT_IMPORT_MODE_TEXT_EXTRACTION_PROJECT_METADATA =
   "text_extraction_project_metadata";
 const TEXT_EXTRACTION_PROJECT_METADATA_PERSISTENCE_OPTIONS: ProjectImportPersistenceOptions =
   {
-    defaultProjectPriority: false,
+    /*
+      Keep display/extraction priority neutral in the Preview, but let the
+      persistence boundary apply the current DB-safe project priority default
+      until project priority can be made nullable by an explicit migration.
+    */
     inheritProjectFieldsToSubtasks: false,
   };
 

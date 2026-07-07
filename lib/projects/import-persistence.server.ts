@@ -1054,6 +1054,12 @@ export async function executeClaimedProjectImport(
       };
     }
 
+    console.error("Transactional project import RPC failed", {
+      code: rpcError.code,
+      message: rpcError.message,
+      hint: rpcError.hint,
+    });
+
     await failProjectImportAttempt(attempt, "TRANSACTIONAL_IMPORT_FAILED");
 
     return {
