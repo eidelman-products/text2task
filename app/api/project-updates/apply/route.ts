@@ -19,6 +19,7 @@ import {
 
 import type {
   JsonRecord,
+  ProjectPrioritySource,
   ProjectTimelineEvent,
   ProjectUpdate,
   ProjectUpdateItem,
@@ -126,6 +127,7 @@ type ProjectRow = {
   deadline_date: string | null;
 
   priority: string | null;
+  priority_source: ProjectPrioritySource | null;
   status: string | null;
 
   source?: string | null;
@@ -218,6 +220,25 @@ function getStringValue(
   return fallback;
 }
 
+function getExactStringValue(
+  record: JsonRecord | null,
+  keys: string[]
+): string | null {
+  if (!record) {
+    return null;
+  }
+
+  for (const key of keys) {
+    const value = record[key];
+
+    if (typeof value === "string") {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 function getNumberValue(
   record: JsonRecord | null,
   keys: string[],
@@ -283,6 +304,18 @@ function normalizeAllowedChoice(
   }
 
   return match;
+}
+
+function validateProjectPriorityChoice(
+  value: string | null
+): "Low" | "Medium" | "High" | null {
+  if (value === null) return null;
+
+  if (value === "Low" || value === "Medium" || value === "High") {
+    return value;
+  }
+
+  throw new Error("Invalid priority.");
 }
 
 function compactJsonRecord(record: JsonRecord): JsonRecord {
@@ -382,10 +415,8 @@ function normalizeEditedNewValueForItem(item: ProjectUpdateItemRow, rawValue: Js
     }
 
     case "priority_change": {
-      const priority = normalizeAllowedChoice(
-        getOptionalString(rawValue, ["priority", "value"]),
-        ["Low", "Medium", "High"],
-        "priority"
+      const priority = validateProjectPriorityChoice(
+        getExactStringValue(rawValue, ["priority", "value"])
       );
 
       if (!priority) {
@@ -655,6 +686,7 @@ async function loadProjectUpdateForApply(input: {
       deadline_text,
       deadline_date,
       priority,
+      priority_source,
       status,
       deleted_at
     `
@@ -684,7 +716,7 @@ async function loadProjectUpdateForApply(input: {
     return {
       ok: false,
       status: 500,
-      error: itemsError.message || "Could not load project update items.",
+      error: "Could not load project update items.",
     };
   }
 
@@ -780,8 +812,8 @@ async function claimProjectUpdateForApply(input: {
 
   if (claimError) {
     console.error("Could not claim project update for apply:", {
-      updateId: input.projectUpdateId,
-      error: claimError.message,
+      stage: "claim_apply",
+      category: "claim_failed",
     });
 
     return {
@@ -989,8 +1021,15 @@ function buildTransactionalApplyPayloadItem(input: {
     }
 
     if (item.type === "priority_change") {
-      const priority = getStringValue(nextValue, ["priority"]);
-      if (priority !== null) updates.priority = priority;
+      const priority = validateProjectPriorityChoice(
+        getExactStringValue(nextValue, ["priority", "value"])
+      );
+
+      if (!priority) {
+        throw new Error("Priority edits require a suggested priority.");
+      }
+
+      updates.priority = priority;
       eventType = "priority_updated";
       eventTitle = "Priority updated";
       targetField = targetField ?? "priority";
@@ -1171,15 +1210,14 @@ async function markProjectUpdateApplyFailed(input: {
 
   if (error) {
     console.error("Could not record failed project update apply attempt:", {
-      updateId: input.updateId,
-      attemptId: input.attemptId,
-      error: error.message,
+      stage: "record_failed_apply",
+      category: "record_failed_state_unavailable",
     });
 
     return {
       recorded: false,
       update: null,
-      recordingError: error.message,
+      recordingError: "record_failed_state_unavailable",
     };
   }
 
@@ -1251,7 +1289,7 @@ async function recoverTransactionalApplyResult(input: {
       .order("created_at", { ascending: true });
 
     if (error) {
-      throw new Error(error.message || "Could not recover applied items.");
+      throw new Error("recover_applied_items_failed");
     }
 
     return (data ?? []) as ProjectUpdateItem[];
@@ -1273,9 +1311,7 @@ async function recoverTransactionalApplyResult(input: {
     ]);
 
     if (timelineResult.error) {
-      throw new Error(
-        timelineResult.error.message || "Could not recover timeline events."
-      );
+      throw new Error("recover_timeline_events_failed");
     }
 
     return {
@@ -1284,11 +1320,10 @@ async function recoverTransactionalApplyResult(input: {
       rejectedItems,
       timelineEvents: (timelineResult.data ?? []) as ProjectTimelineEvent[],
     };
-  } catch (error) {
+  } catch {
     console.warn("Recovered applied update, but related apply result reads failed:", {
-      updateId: input.updateId,
-      attemptId: input.attemptId,
-      error,
+      stage: "recover_transactional_apply",
+      category: "related_result_reads_failed",
     });
 
     return {
@@ -1322,6 +1357,7 @@ async function reloadProjectAfterApply(input: {
       deadline_text,
       deadline_date,
       priority,
+      priority_source,
       status,
       source,
       raw_input,
@@ -1350,7 +1386,10 @@ async function reloadProjectAfterApply(input: {
   if (error || !data) {
     console.warn(
       "Could not reload project after applying client update:",
-      error?.message || "Project not found"
+      {
+        stage: "reload_project_after_apply",
+        category: error ? "reload_failed" : "project_not_found",
+      }
     );
     return null;
   }
@@ -1380,10 +1419,13 @@ async function reloadProjectTasksAfterApply(input: {
       view: "active",
       projectId: input.projectId,
     });
-  } catch (error) {
+  } catch {
     console.warn(
       "Could not reload project task snapshot after applying client update:",
-      error instanceof Error ? error.message : "Task snapshot reload failed"
+      {
+        stage: "reload_project_tasks_after_apply",
+        category: "reload_failed",
+      }
     );
     return [];
   }
@@ -1399,12 +1441,13 @@ async function reloadActiveDashboardTasksAfterApply(input: {
       userId: input.userId,
       view: "active",
     });
-  } catch (error) {
+  } catch {
     console.warn(
       "Could not reload active dashboard task snapshot after applying client update:",
-      error instanceof Error
-        ? error.message
-        : "Dashboard task snapshot reload failed"
+      {
+        stage: "reload_dashboard_tasks_after_apply",
+        category: "reload_failed",
+      }
     );
     return [];
   }
@@ -1538,13 +1581,11 @@ export async function POST(request: NextRequest) {
       acceptedItemIds: new Set(uniqueAcceptedIds),
       rejectedItemIds: new Set(uniqueRejectedIds),
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Invalid edited item values.";
-
+  } catch {
     return NextResponse.json<ApplyProjectUpdateResponse>(
       {
         ok: false,
-        error: message,
+        error: "Invalid edited item values.",
       },
       { status: 400, headers: dashboardTasksNoStoreHeaders }
     );
@@ -1565,14 +1606,11 @@ export async function POST(request: NextRequest) {
     preflightAcceptedItems = preflightItemsForApply.filter((item) =>
       uniqueAcceptedIds.includes(item.id)
     );
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Invalid project update values.";
-
+  } catch {
     return NextResponse.json<ApplyProjectUpdateResponse>(
       {
         ok: false,
-        error: message,
+        error: "Invalid project update values.",
       },
       { status: 400, headers: dashboardTasksNoStoreHeaders }
     );
@@ -1600,15 +1638,12 @@ export async function POST(request: NextRequest) {
         { status: 409, headers: dashboardTasksNoStoreHeaders }
       );
     }
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Could not validate this project update.";
-
+  } catch {
     return NextResponse.json<ApplyProjectUpdateResponse>(
       {
         ok: false,
         code: "project_update_preflight_failed",
-        error: `Could not safely validate this project update: ${message}`,
+        error: "Could not safely validate this project update.",
       },
       { status: 500, headers: dashboardTasksNoStoreHeaders }
     );
@@ -1684,17 +1719,14 @@ export async function POST(request: NextRequest) {
       });
 
       if (!transactionalResult) {
-        throw new Error(
-          rpcError.message || "Could not transactionally apply project update."
-        );
+        throw new Error("transactional_apply_unavailable");
       }
 
       console.warn(
         "Project update apply RPC returned an error after commit; recovered committed result:",
         {
-          updateId: loaded.update.id,
-          attemptId: claim.attemptId,
-          error: rpcError.message,
+          stage: "transactional_apply",
+          category: "rpc_error_after_commit_recovered",
         }
       );
     }
@@ -1717,9 +1749,9 @@ export async function POST(request: NextRequest) {
         narrowed or the follow-up recovery read fails.
       */
       console.error("Committed project update apply result could not be narrowed:", {
-        updateId: loaded.update.id,
-        attemptId: claim.attemptId,
-        rpcData,
+        stage: "transactional_apply",
+        category: "committed_result_not_narrowed",
+        hasRpcData: rpcData !== null && rpcData !== undefined,
       });
 
       const committedAt = new Date().toISOString();
@@ -1772,15 +1804,12 @@ export async function POST(request: NextRequest) {
     }, {
       headers: dashboardTasksNoStoreHeaders,
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown apply error.";
+  } catch {
     const errorCode = `project_update_${applyStage}_failed`;
 
     console.error("Project update apply attempt failed:", {
-      updateId: loaded.update.id,
-      attemptId: claim.attemptId,
       stage: applyStage,
-      error: message,
+      category: "apply_attempt_failed",
     });
 
     const failedState = await markProjectUpdateApplyFailed({
@@ -1798,7 +1827,7 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         code: "project_update_apply_failed",
-        error: `Could not apply project update: ${message} ${recoveryMessage}`,
+        error: `Could not apply project update. ${recoveryMessage}`,
         message: recoveryMessage,
         details: {
           applyAttemptId: claim.attemptId,

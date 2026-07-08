@@ -649,7 +649,10 @@ function nativeCheckboxStyle(enabled: boolean): CSSProperties {
 
 function getProjectVisualState(project: TaskProjectGroup) {
   const status = String(project.status || "").trim().toLowerCase();
-  const priority = String(project.priority || "").trim().toLowerCase();
+  const priority =
+    project.priority_source === "storage_default"
+      ? ""
+      : String(project.priority || "").trim().toLowerCase();
   const deadlineState = getDeadlineState(project);
 
   if (status === "done") {

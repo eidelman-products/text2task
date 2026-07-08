@@ -82,6 +82,25 @@ function normalizePriority(value: unknown): "Low" | "Medium" | "High" {
   return "Medium";
 }
 
+function getProjectPriorityIntent(
+  group: PreviewProjectGroup,
+  usesProjectMetadata: boolean
+): "neutral" | "ai" | "user" | null {
+  if (!usesProjectMetadata) {
+    return null;
+  }
+
+  if (group.prioritySource === "ai" || group.prioritySource === "user") {
+    return group.prioritySource;
+  }
+
+  if (group.prioritySource === "storage_default") {
+    return "neutral";
+  }
+
+  return "neutral";
+}
+
 function normalizeOptionalText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -287,6 +306,7 @@ function mapSavedProject(saved: any) {
     deadline_text: project.deadline_text || null,
     deadline_date: project.deadline_date || null,
     priority: project.priority || null,
+    priority_source: project.priority_source || null,
     status: project.status || null,
     source: project.source || null,
     raw_input: project.raw_input || null,
@@ -836,6 +856,10 @@ export default function ExtractWorkspace({
       importMode === PROJECT_IMPORT_MODE_TEXT_EXTRACTION_PROJECT_METADATA;
     const rawInput = getGroupRawInput(group);
     const contactName = getGroupContactName(group);
+    const projectPriorityIntent = getProjectPriorityIntent(
+      group,
+      usesProjectMetadata
+    );
 
     return {
       create_project: true,
@@ -856,6 +880,9 @@ export default function ExtractWorkspace({
         priority: usesProjectMetadata
           ? group.priority || ""
           : group.priority || "Medium",
+        ...(projectPriorityIntent === null
+          ? {}
+          : { project_priority_intent: projectPriorityIntent }),
         status: getProjectStatusFromGroup(group),
         source: group.source || "Project extraction",
         raw_input:

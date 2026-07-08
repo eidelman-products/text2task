@@ -26,6 +26,11 @@ type PreviewFieldName = keyof Omit<PreviewItem, "previewId">;
 
 export type PreviewProjectMetadata = TextExtractedProjectMetadata;
 export type PreviewProjectPriority = ExtractedPreviewPriority;
+export type PreviewProjectPrioritySource =
+  | "ai"
+  | "user"
+  | "storage_default"
+  | "unknown";
 
 type LegacyDuplicateWarning = {
   existingTaskId: number;
@@ -46,6 +51,7 @@ export type PreviewProjectGroup = {
   deadline: string;
   deadlineDate?: string | null;
   priority: PreviewProjectPriority | "";
+  prioritySource: PreviewProjectPrioritySource;
   source: string;
   client_phone: string;
   client_email: string;
@@ -168,6 +174,10 @@ export function buildPreviewProjectGroups(
       deadlineDate: getGroupDeadlineDate(previews, projectMetadata),
       priority: getGroupPriority(
         previews,
+        projectMetadata,
+        projectPriorityOverride
+      ),
+      prioritySource: getGroupPrioritySource(
         projectMetadata,
         projectPriorityOverride
       ),
@@ -749,4 +759,24 @@ function getGroupPriority(
   if (priorities.includes("high")) return "High";
   if (priorities.includes("medium")) return "Medium";
   return "Low";
+}
+
+function getGroupPrioritySource(
+  projectMetadata: PreviewProjectMetadata | null,
+  projectPriorityOverride: PreviewProjectPriority | null
+): PreviewProjectPrioritySource {
+  if (!hasProjectMetadata(projectMetadata)) {
+    return "unknown";
+  }
+
+  if (projectPriorityOverride !== null) {
+    return "user";
+  }
+
+  return (
+    projectMetadata.priority === null ||
+    projectMetadata.priority === undefined
+  )
+    ? "storage_default"
+    : "ai";
 }

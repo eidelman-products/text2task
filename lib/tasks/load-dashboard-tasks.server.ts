@@ -43,6 +43,7 @@ const dashboardTaskSelect = `
     deadline_text,
     deadline_date,
     priority,
+    priority_source,
     status,
     source,
     raw_input,

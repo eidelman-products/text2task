@@ -84,6 +84,7 @@ export function normalizeTaskFromApi(item: any): TaskRow {
           deadline_text: rawProject.deadline_text || null,
           deadline_date: rawProject.deadline_date || null,
           priority: rawProject.priority || null,
+          priority_source: rawProject.priority_source || null,
           status: rawProject.status || null,
           source: rawProject.source || null,
           raw_input: rawProject.raw_input || null,

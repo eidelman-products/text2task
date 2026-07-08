@@ -30,6 +30,7 @@ const TEXT_EXTRACTION_PROJECT_METADATA_PERSISTENCE_OPTIONS: ProjectImportPersist
       until project priority can be made nullable by an explicit migration.
     */
     inheritProjectFieldsToSubtasks: false,
+    priorityProvenanceMode: "metadata",
   };
 
 const ProjectImportSchema = z
@@ -130,7 +131,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const validationFailures = validateProjectImportGroups(projects);
+    const validationFailures = validateProjectImportGroups(
+      projects,
+      persistenceOptions
+    );
 
     if (validationFailures.length > 0) {
       return errorResponse(

@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 
-import type { ExistingProjectUpdateContext } from "@/lib/project-updates/project-update-types";
+import type {
+  ExistingProjectUpdateContext,
+  ProjectPrioritySource,
+} from "@/lib/project-updates/project-update-types";
 
 type LoadProjectUpdateContextResult =
   | {
@@ -14,7 +17,11 @@ type LoadProjectUpdateContextResult =
       error: string;
     };
 
-type ProjectRelationRow = ExistingProjectUpdateContext["project"] & {
+type ProjectRelationRow = Omit<
+  ExistingProjectUpdateContext["project"],
+  "priority_source"
+> & {
+  priority_source?: unknown;
   clients?: unknown;
 };
 
@@ -68,9 +75,24 @@ function normalizeClient(value: unknown): ExistingProjectUpdateContext["client"]
   };
 }
 
+function normalizeProjectPrioritySource(value: unknown): ProjectPrioritySource {
+  if (
+    value === "ai" ||
+    value === "user" ||
+    value === "storage_default" ||
+    value === "unknown"
+  ) {
+    return value;
+  }
+
+  return "unknown";
+}
+
 function normalizeProject(
   project: ProjectRelationRow
 ): ExistingProjectUpdateContext["project"] {
+  const prioritySource = normalizeProjectPrioritySource(project.priority_source);
+
   return {
     id: project.id,
     user_id: project.user_id,
@@ -89,7 +111,8 @@ function normalizeProject(
     deadline_text: project.deadline_text ?? null,
     deadline_date: project.deadline_date ?? null,
 
-    priority: project.priority ?? null,
+    priority: prioritySource === "storage_default" ? null : project.priority ?? null,
+    priority_source: prioritySource,
     status: project.status ?? null,
 
     created_at: project.created_at ?? null,
@@ -156,6 +179,7 @@ export async function loadProjectUpdateContext(
       deadline_text,
       deadline_date,
       priority,
+      priority_source,
       status,
       created_at,
       updated_at,

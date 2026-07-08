@@ -77,7 +77,7 @@ export default function ClientContactEditor({
           <EditableTextField
             label="Email"
             type="email"
-            placeholder="client@email.com"
+            placeholder="Add email"
             defaultValue={email}
             disabled={isDeleting}
             onEnterBlur={onEnterBlur}
@@ -87,7 +87,7 @@ export default function ClientContactEditor({
           <EditableTextField
             label="Phone"
             type="tel"
-            placeholder="Client phone"
+            placeholder="Add phone"
             defaultValue={phone}
             disabled={isDeleting}
             onEnterBlur={onEnterBlur}

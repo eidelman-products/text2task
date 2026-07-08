@@ -65,6 +65,14 @@ type ProjectImportAttemptRow = z.infer<typeof ProjectImportAttemptSchema>;
 
 type ProjectImportSuccess = z.infer<typeof ProjectImportSuccessSchema>;
 
+type ProjectPrioritySource = "ai" | "user" | "storage_default" | "unknown";
+type MetadataProjectPriorityIntent = "ai" | "user" | "neutral";
+type StoredProjectPriority = "Low" | "Medium" | "High";
+type ProjectPriorityPayload = Readonly<{
+  priority: string | null;
+  priority_source: ProjectPrioritySource;
+}>;
+
 export type PreparedProjectImportPersistenceInput = Readonly<{
   requestHash: string;
   payloadJson: ProjectImportJsonRecord[];
@@ -73,6 +81,7 @@ export type PreparedProjectImportPersistenceInput = Readonly<{
 export type ProjectImportPersistenceOptions = Readonly<{
   defaultProjectPriority?: boolean;
   inheritProjectFieldsToSubtasks?: boolean;
+  priorityProvenanceMode?: "metadata";
 }>;
 
 export type ClaimedImportAttempt = Readonly<{
@@ -124,6 +133,7 @@ type ExecuteClaimedProjectImportResult =
 type ResolvedProjectImportPersistenceOptions = Readonly<{
   defaultProjectPriority: boolean;
   inheritProjectFieldsToSubtasks: boolean;
+  priorityProvenanceMode: "legacy" | "metadata";
 }>;
 
 const TASK_WITH_CONTEXT_SELECT = `
@@ -150,6 +160,7 @@ const TASK_WITH_CONTEXT_SELECT = `
     deadline_text,
     deadline_date,
     priority,
+    priority_source,
     status,
     source,
     raw_input,
@@ -166,6 +177,7 @@ const DEFAULT_PROJECT_IMPORT_PERSISTENCE_OPTIONS: ResolvedProjectImportPersisten
   {
     defaultProjectPriority: true,
     inheritProjectFieldsToSubtasks: true,
+    priorityProvenanceMode: "legacy",
   };
 
 function pickFirstString(...values: unknown[]) {
@@ -176,6 +188,125 @@ function pickFirstString(...values: unknown[]) {
   }
 
   return "";
+}
+
+function normalizeMetadataProjectPriorityIntent(
+  value: unknown
+): MetadataProjectPriorityIntent | null {
+  const intent = typeof value === "string" ? value.trim().toLowerCase() : "";
+
+  if (intent === "ai" || intent === "user" || intent === "neutral") {
+    return intent;
+  }
+
+  return null;
+}
+
+function normalizeStoredProjectPriority(
+  value: unknown
+): StoredProjectPriority | null {
+  if (value === "Low" || value === "Medium" || value === "High") {
+    return value;
+  }
+
+  return null;
+}
+
+function getMetadataProjectPriorityIntent(
+  projectBody: ProjectImportJsonRecord,
+  options: ResolvedProjectImportPersistenceOptions
+): MetadataProjectPriorityIntent {
+  if (options.priorityProvenanceMode !== "metadata") {
+    throw new Error("Project priority intent is only valid in metadata mode");
+  }
+
+  const priorityIntent = normalizeMetadataProjectPriorityIntent(
+    projectBody.project_priority_intent ?? projectBody.projectPriorityIntent
+  );
+
+  if (priorityIntent === null) {
+    throw new Error("Invalid project priority intent");
+  }
+
+  return priorityIntent;
+}
+
+function getProjectPriorityPayload(
+  projectBody: ProjectImportJsonRecord,
+  options: ResolvedProjectImportPersistenceOptions
+): ProjectPriorityPayload {
+  const suppliedPriority = pickFirstString(projectBody.priority);
+
+  if (options.priorityProvenanceMode !== "metadata") {
+    return {
+      priority:
+        suppliedPriority || (options.defaultProjectPriority ? "Medium" : null),
+      priority_source: "unknown",
+    };
+  }
+
+  const priorityIntent = getMetadataProjectPriorityIntent(projectBody, options);
+  const storedPriority = normalizeStoredProjectPriority(suppliedPriority);
+  const defaultPriority = options.defaultProjectPriority ? "Medium" : null;
+
+  if (priorityIntent === "ai" || priorityIntent === "user") {
+    if (storedPriority === null) {
+      throw new Error("Invalid project priority");
+    }
+
+    return {
+      priority: storedPriority,
+      priority_source: priorityIntent,
+    };
+  }
+
+  return {
+    priority: defaultPriority,
+    priority_source: "storage_default",
+  };
+}
+
+function validateProjectPriorityProvenance(
+  project: ProjectImportJsonRecord,
+  groupIndex: number,
+  options: ResolvedProjectImportPersistenceOptions
+) {
+  if (options.priorityProvenanceMode !== "metadata") {
+    return [];
+  }
+
+  const projectBody = getProjectBody(project);
+  const suppliedPriority = pickFirstString(projectBody.priority);
+  const priorityIntent = normalizeMetadataProjectPriorityIntent(
+    projectBody.project_priority_intent ?? projectBody.projectPriorityIntent
+  );
+
+  if (priorityIntent === null) {
+    return [
+      {
+        groupIndex,
+        error: `Project group ${groupIndex + 1} has invalid project priority intent.`,
+      },
+    ];
+  }
+
+  if (priorityIntent === "neutral" && !suppliedPriority) {
+    return [];
+  }
+
+  if (
+    (priorityIntent === "ai" || priorityIntent === "user") &&
+    normalizeStoredProjectPriority(suppliedPriority) !== null
+  ) {
+    return [];
+  }
+
+  return [
+    {
+      groupIndex,
+      error: `Project group ${groupIndex + 1} has invalid project priority.`,
+    },
+  ];
 }
 
 function normalizeAmountInput(value: unknown): string | number | null {
@@ -352,7 +483,7 @@ function getProjectPayload(
     projectBody.deadline_date ?? projectBody.deadlineDate
   );
   const parsedDeadlineDate = normalizeProjectDeadlineDateInput(deadlineDate);
-  const priority = pickFirstString(projectBody.priority);
+  const priorityPayload = getProjectPriorityPayload(projectBody, options);
 
   return {
     ...client,
@@ -373,8 +504,8 @@ function getProjectPayload(
     currency_code: parsedAmount.currencyCode,
     deadline_text: deadlineText,
     deadline_date: suppliedDeadlineDate ?? parsedDeadlineDate,
-    priority:
-      priority || (options.defaultProjectPriority ? "Medium" : null),
+    priority: priorityPayload.priority,
+    priority_source: priorityPayload.priority_source,
     status: pickFirstString(projectBody.status) || "New",
     source: pickFirstString(projectBody.source) || "Pasted text",
     raw_input: pickFirstString(projectBody.raw_input, projectBody.rawInput),
@@ -382,10 +513,23 @@ function getProjectPayload(
 }
 
 export function validateProjectImportGroups(
-  projects: ProjectImportJsonRecord[]
+  projects: ProjectImportJsonRecord[],
+  options?: ProjectImportPersistenceOptions
 ) {
+  const resolvedOptions = resolveProjectImportPersistenceOptions(options);
+
   return projects.flatMap((project, groupIndex) => {
-    const payload = getProjectPayload(project);
+    const priorityFailures = validateProjectPriorityProvenance(
+      project,
+      groupIndex,
+      resolvedOptions
+    );
+
+    if (priorityFailures.length > 0) {
+      return priorityFailures;
+    }
+
+    const payload = getProjectPayload(project, resolvedOptions);
     const subtasks = extractProjectSubtasks(project);
 
     if (!payload.title && subtasks.length === 0) {
@@ -448,6 +592,9 @@ function resolveProjectImportPersistenceOptions(
     inheritProjectFieldsToSubtasks:
       options.inheritProjectFieldsToSubtasks ??
       DEFAULT_PROJECT_IMPORT_PERSISTENCE_OPTIONS.inheritProjectFieldsToSubtasks,
+    priorityProvenanceMode:
+      options.priorityProvenanceMode ??
+      DEFAULT_PROJECT_IMPORT_PERSISTENCE_OPTIONS.priorityProvenanceMode,
   };
 }
 
@@ -717,6 +864,7 @@ function buildTransactionalImportGroups(
         deadline_text: project.deadline_text,
         deadline_date: project.deadline_date,
         priority: project.priority,
+        priority_source: project.priority_source,
         status: project.status,
         source: project.source,
         raw_input: project.raw_input,
@@ -1243,6 +1391,7 @@ export async function createProjectGroup({
       deadline_text: project.deadline_text,
       deadline_date: project.deadline_date,
       priority: project.priority,
+      priority_source: project.priority_source,
       status: project.status,
       source: project.source,
       raw_input: project.raw_input,

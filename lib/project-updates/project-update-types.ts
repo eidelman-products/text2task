@@ -51,6 +51,12 @@ export type ProjectTimelineEventType =
 
 export type JsonRecord = Record<string, unknown>;
 
+export type ProjectPrioritySource =
+  | "ai"
+  | "user"
+  | "storage_default"
+  | "unknown";
+
 export type ProjectUpdate = {
   id: string;
 
@@ -165,6 +171,7 @@ export type ExistingProjectUpdateContext = {
     deadline_date: string | null;
 
     priority: string | null;
+    priority_source: ProjectPrioritySource;
     status: string | null;
 
     created_at: string | null;

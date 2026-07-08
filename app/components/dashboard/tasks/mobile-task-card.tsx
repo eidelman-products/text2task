@@ -5,7 +5,11 @@ import type {
   TaskProjectGroup,
   TaskProjectSubtask,
 } from "./task-types";
-import { formatCreatedDate } from "./task-utils";
+import {
+  formatCreatedDate,
+  getProjectPrioritySelectValue,
+  getSemanticProjectPriorityLabel,
+} from "./task-utils";
 
 type MobileTaskCardProps = {
   project: TaskProjectGroup;
@@ -60,6 +64,11 @@ export default function MobileTaskCard({
   const projectState = getProjectVisualState(project);
   const deadlineStyle = getDeadlineStyle(project);
   const statusStyle = getStatusStyle(project.status);
+  const priorityDisplay = getSemanticProjectPriorityLabel({
+    priority: project.priority,
+    prioritySource: project.priority_source,
+  });
+  const prioritySelectValue = getProjectPrioritySelectValue(project);
   const completedPercent =
     project.subtaskCount > 0
       ? Math.round(
@@ -232,18 +241,23 @@ export default function MobileTaskCard({
                 <label style={mobileFieldLabelStyle}>Priority</label>
                 {actionMode === "archived" ? (
                   <div style={mobileReadOnlyMetaStyle}>
-                    {project.priority || "Medium"}
+                    {priorityDisplay}
                   </div>
                 ) : (
                   <select
-                    value={project.priority || "Medium"}
+                    value={prioritySelectValue}
                     onChange={(e) => updateProjectPriority(e.target.value)}
                     disabled={isBusy || !projectId}
                     style={{
                       ...mobileInputStyle,
-                      ...getPrioritySelectStyle(project.priority),
+                      ...getPrioritySelectStyle(prioritySelectValue),
                     }}
                   >
+                    {project.priority_source === "storage_default" ? (
+                      <option value="Not specified" disabled>
+                        Not specified
+                      </option>
+                    ) : null}
                     <option>Low</option>
                     <option>Medium</option>
                     <option>High</option>
@@ -577,7 +591,10 @@ function formatArchivedDate(value?: string | null) {
 
 function getProjectVisualState(project: TaskProjectGroup) {
   const status = String(project.status || "").trim().toLowerCase();
-  const priority = String(project.priority || "").trim().toLowerCase();
+  const priority =
+    project.priority_source === "storage_default"
+      ? ""
+      : String(project.priority || "").trim().toLowerCase();
   const deadlineState = getDeadlineState(project);
 
   if (status === "done") {

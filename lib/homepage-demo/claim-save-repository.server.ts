@@ -22,6 +22,7 @@ const HOMEPAGE_DEMO_TEXT_ENGINE_VERSION = "text-extraction-v1";
 export const HOMEPAGE_DEMO_CLAIM_IMPORT_PERSISTENCE_OPTIONS: ProjectImportPersistenceOptions =
   {
     inheritProjectFieldsToSubtasks: false,
+    priorityProvenanceMode: "metadata",
   };
 
 export type HomepageDemoClaimSaveSource =
@@ -138,6 +139,7 @@ type ClaimRow = z.infer<typeof ClaimRowSchema>;
 type TrialRow = z.infer<typeof TrialRowSchema>;
 type DraftRow = z.infer<typeof DraftRowSchema>;
 type ClaimSaveRpcRow = z.infer<typeof ClaimSaveRpcRowSchema>;
+type StoredProjectPriority = "Low" | "Medium" | "High";
 
 const CLAIM_SELECT = [
   "id",
@@ -362,6 +364,7 @@ function isPendingClaimDraftEligible({
 function buildProjectImportGroup(result: TextExtractionResult): ProjectImportJsonRecord {
   const { project, tasks } = result;
   const firstTask = tasks[0];
+  const projectPriority = normalizeExtractedProjectPriority(project?.priority);
 
   if (firstTask === undefined) {
     throw new HomepageDemoRepositoryError("repository_response_invalid");
@@ -386,7 +389,13 @@ function buildProjectImportGroup(result: TextExtractionResult): ProjectImportJso
       project === undefined
         ? firstTask.deadline_text
         : getProjectText(project, "deadline_text") ?? "",
-    priority: project === undefined ? firstTask.priority : project.priority ?? "",
+    priority: projectPriority ?? "",
+    project_priority_intent:
+      project === undefined
+        ? "neutral"
+        : projectPriority === null
+          ? "neutral"
+          : "ai",
     source: "Homepage Demo",
     raw_input: firstTask.raw_input,
     tasks: tasks.map((task) => ({
@@ -403,6 +412,18 @@ function buildProjectImportGroup(result: TextExtractionResult): ProjectImportJso
       raw_input: task.raw_input,
     })),
   };
+}
+
+function normalizeExtractedProjectPriority(
+  value: unknown
+): StoredProjectPriority | null {
+  const priority = typeof value === "string" ? value.trim().toLowerCase() : "";
+
+  if (priority === "high") return "High";
+  if (priority === "medium") return "Medium";
+  if (priority === "low") return "Low";
+
+  return null;
 }
 
 type ProjectTextField = keyof Pick<

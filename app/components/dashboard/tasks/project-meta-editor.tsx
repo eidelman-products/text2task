@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import type { TaskProjectGroup } from "./task-types";
+import {
+  getProjectPrioritySelectValue,
+  getSemanticProjectPriorityLabel,
+} from "./task-utils";
 
 type ProjectMetaEditorProps = {
   project: TaskProjectGroup;
@@ -32,6 +36,11 @@ export default function ProjectMetaEditor({
     project.deadline,
     project.deadline_original_text
   );
+  const priorityDisplay = getSemanticProjectPriorityLabel({
+    priority: project.priority,
+    prioritySource: project.priority_source,
+  });
+  const prioritySelectValue = getProjectPrioritySelectValue(project);
 
   function commitProjectField(
     field: "amount" | "deadline",
@@ -85,19 +94,24 @@ export default function ProjectMetaEditor({
         <span style={metaLabelStyle}>Priority</span>
         {readOnlyStatusPriority ? (
           <span style={readOnlyMetaValueStyle}>
-            {project.priority || "Medium"}
+            {priorityDisplay}
           </span>
         ) : (
           <select
-            value={project.priority || "Medium"}
+            value={prioritySelectValue}
             onChange={(e) => updateProjectPriority(e.target.value)}
             onKeyDown={onEnterBlur}
             disabled={!canEditProject}
             style={{
               ...selectStyle,
-              ...getPrioritySelectStyle(project.priority),
+              ...getPrioritySelectStyle(prioritySelectValue),
             }}
           >
+            {project.priority_source === "storage_default" ? (
+              <option value="Not specified" disabled>
+                Not specified
+              </option>
+            ) : null}
             <option>Low</option>
             <option>Medium</option>
             <option>High</option>
@@ -217,6 +231,14 @@ function getPrioritySelectStyle(priorityValue: string) {
   }
 
   if (priority === "low") {
+    return {
+      color: "#475467",
+      background: "rgba(248,250,252,0.58)",
+      borderColor: "rgba(226,232,240,0.50)",
+    };
+  }
+
+  if (priority === "not specified") {
     return {
       color: "#475467",
       background: "rgba(248,250,252,0.58)",

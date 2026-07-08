@@ -22,6 +22,7 @@ export type ProjectEntity = {
   deadline_text?: string | null;
   deadline_date?: string | null;
   priority?: string | null;
+  priority_source?: "ai" | "user" | "storage_default" | "unknown" | null;
   status?: string | null;
   source?: string | null;
   raw_input?: string | null;
@@ -127,6 +128,7 @@ export type TaskProjectGroup = {
   deadline_original_text?: string | null;
 
   priority: string;
+  priority_source?: "ai" | "user" | "storage_default" | "unknown" | null;
   status: string;
   source: string;
 

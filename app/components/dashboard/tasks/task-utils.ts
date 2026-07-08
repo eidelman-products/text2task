@@ -1,10 +1,46 @@
 import { formatDeadline } from "@/lib/tasks/format-deadline";
 import type {
   TaskArchiveView,
+  ProjectEntity,
   TaskProjectGroup,
   TaskProjectSubtask,
   TaskRow,
 } from "./task-types";
+
+export function getProjectPrioritySource(
+  project?: ProjectEntity | null
+): ProjectEntity["priority_source"] {
+  const source = project?.priority_source;
+
+  if (
+    source === "ai" ||
+    source === "user" ||
+    source === "storage_default" ||
+    source === "unknown"
+  ) {
+    return source;
+  }
+
+  return "unknown";
+}
+
+export function getSemanticProjectPriorityLabel({
+  priority,
+  prioritySource,
+}: {
+  priority?: string | null;
+  prioritySource?: ProjectEntity["priority_source"];
+}) {
+  return prioritySource === "storage_default"
+    ? "Not specified"
+    : priority?.trim() || "Medium";
+}
+
+export function getProjectPrioritySelectValue(project: TaskProjectGroup) {
+  return project.priority_source === "storage_default"
+    ? "Not specified"
+    : project.priority || "Medium";
+}
 
 export function normalizeTask(task: TaskRow): TaskRow {
   const preciseDeadline = task.deadline_date?.trim() || "";
@@ -253,6 +289,7 @@ function buildSingleTaskProjectGroup(
       null,
 
     priority: project?.priority?.trim() || getProjectPriority(tasks),
+    priority_source: getProjectPrioritySource(project),
     status: project?.status?.trim() || getProjectStatus(tasks),
     source: project?.source?.trim() || primaryTask.source || "",
 

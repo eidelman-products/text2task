@@ -24,6 +24,18 @@ function normalizeText(value: unknown): string {
   return String(value).trim();
 }
 
+function parseProjectPriority(value: unknown): "Low" | "Medium" | "High" | null {
+  if (typeof value !== "string") return null;
+
+  const priority = value.trim();
+
+  if (priority === "Low" || priority === "Medium" || priority === "High") {
+    return priority;
+  }
+
+  return null;
+}
+
 function normalizeNullableText(value: unknown): string | null {
   const clean = normalizeText(value);
   return clean === "" ? null : clean;
@@ -137,6 +149,7 @@ export async function POST(req: NextRequest) {
           deadline_text,
           deadline_date,
           priority,
+          priority_source,
           status,
           completed_at,
           deleted_at,
@@ -201,7 +214,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (field === "priority") {
-      updateData.priority = normalizeText(value) || "Medium";
+      const priority = parseProjectPriority(value);
+
+      if (priority === null) {
+        return NextResponse.json(
+          { error: "Invalid request body" },
+          { status: 400 }
+        );
+      }
+
+      updateData.priority = priority;
+      updateData.priority_source = "user";
     }
 
     if (field === "status") {

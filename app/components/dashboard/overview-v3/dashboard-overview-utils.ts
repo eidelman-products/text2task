@@ -1,6 +1,7 @@
 import type { TaskRow } from "../tasks-view";
 import type { UrgentPreviewTask } from "../dashboard-helpers";
 import { getClientDisplayName } from "../dashboard-helpers";
+import { getSemanticProjectPriorityLabel } from "../tasks/task-utils";
 import type {
   ProjectCardTone,
   ProjectSnapshotItem,
@@ -54,7 +55,7 @@ export function isDoneTask(task: TaskRow) {
 }
 
 export function isHighPriorityTask(task: TaskRow) {
-  return normalizePriority(task.project?.priority || task.priority) === "high";
+  return normalizePriority(getProjectPriority(task)) === "high";
 }
 
 export function getTaskTitle(task: TaskRow) {
@@ -95,7 +96,14 @@ export function getProjectDeadline(task: TaskRow) {
 }
 
 export function getProjectPriority(task: TaskRow) {
-  return task.project?.priority?.trim() || task.priority?.trim() || "Medium";
+  if (task.project) {
+    return getSemanticProjectPriorityLabel({
+      priority: task.project.priority,
+      prioritySource: task.project.priority_source,
+    });
+  }
+
+  return task.priority?.trim() || "Medium";
 }
 
 export function getProjectStatus(task: TaskRow) {

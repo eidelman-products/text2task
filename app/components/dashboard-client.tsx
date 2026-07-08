@@ -1306,7 +1306,10 @@ export default function DashboardClient({
             ? { deadline_text: String(value ?? "").trim() }
             : {}),
           ...(field === "priority"
-            ? { priority: String(value ?? "").trim() || "Medium" }
+            ? {
+                priority: String(value ?? "").trim() || "Medium",
+                priority_source: "user",
+              }
             : {}),
           ...(field === "status"
             ? { status: String(value ?? "").trim() || "New" }
