@@ -28,11 +28,35 @@ type SignupAttributionRow = {
   page_path: string | null;
 };
 
+type LiveDemoAnalyticsEventName =
+  | "homepage_demo_extract_attempt"
+  | "homepage_demo_extract_succeeded"
+  | "homepage_demo_extract_failed";
+
+type LiveDemoAnalyticsRow = {
+  event_name: LiveDemoAnalyticsEventName;
+  occurred_at: string;
+  metadata: Record<string, unknown>;
+};
+
 type PeriodStats = {
   label: string;
   total: number;
   pageViews: number;
   uniqueVisitors: number;
+};
+
+type LiveDemoPeriodStats = {
+  label: string;
+  attempts: number;
+  succeeded: number;
+  failed: number;
+};
+
+type LiveDemoFailureStageRow = {
+  stage: string;
+  errorCode: string;
+  events: number;
 };
 
 type RecentUserSummary = {
@@ -53,12 +77,18 @@ type ProductActivationData = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRAFFIC_ROWS_LIMIT = 5000;
+const LIVE_DEMO_ROWS_LIMIT = 5000;
 const RECENT_USERS_LIMIT = 25;
 const SIGNUP_ATTRIBUTION_LIMIT = 200;
 const SIGNUP_ATTRIBUTION_EVENTS = [
   "signup_attribution_captured",
   "signup_success",
 ] as const;
+const LIVE_DEMO_ANALYTICS_EVENTS = [
+  "homepage_demo_extract_attempt",
+  "homepage_demo_extract_succeeded",
+  "homepage_demo_extract_failed",
+] as const satisfies readonly LiveDemoAnalyticsEventName[];
 const OWNER_ANALYTICS_TIME_ZONE = "Asia/Jerusalem";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -130,7 +160,7 @@ function parseTimestamp(value: string | null | undefined) {
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
-function parseEventDate(row: AnalyticsEventRow) {
+function parseEventDate(row: { occurred_at: string }) {
   return parseTimestamp(row.occurred_at) ?? 0;
 }
 
@@ -233,6 +263,98 @@ function buildPeriodStats(
   };
 }
 
+function buildLiveDemoPeriodStats(
+  label: string,
+  rows: LiveDemoAnalyticsRow[],
+  since: number
+): LiveDemoPeriodStats {
+  const periodRows = rows.filter((row) => parseEventDate(row) >= since);
+
+  return {
+    label,
+    attempts: periodRows.filter(
+      (row) => row.event_name === "homepage_demo_extract_attempt"
+    ).length,
+    succeeded: periodRows.filter(
+      (row) => row.event_name === "homepage_demo_extract_succeeded"
+    ).length,
+    failed: periodRows.filter(
+      (row) => row.event_name === "homepage_demo_extract_failed"
+    ).length,
+  };
+}
+
+function getLiveDemoMetadataString(
+  row: LiveDemoAnalyticsRow,
+  key: string,
+  fallback: string
+) {
+  const value = row.metadata[key];
+
+  return typeof value === "string" && value.trim()
+    ? value.trim().slice(0, 120)
+    : fallback;
+}
+
+function getLiveDemoMetadataNumber(
+  row: LiveDemoAnalyticsRow,
+  key: string
+) {
+  const value = row.metadata[key];
+
+  return typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isInteger(value)
+    ? value
+    : null;
+}
+
+function getLiveDemoStage(row: LiveDemoAnalyticsRow) {
+  return getLiveDemoMetadataString(row, "stage", "none");
+}
+
+function getLiveDemoErrorCode(row: LiveDemoAnalyticsRow) {
+  return getLiveDemoMetadataString(row, "errorCode", "none");
+}
+
+function getLiveDemoEnvironment(row: LiveDemoAnalyticsRow) {
+  return getLiveDemoMetadataString(row, "environment", "unknown");
+}
+
+function getLiveDemoHttpStatus(row: LiveDemoAnalyticsRow) {
+  const status = getLiveDemoMetadataNumber(row, "httpStatus");
+
+  return status === null ? "none" : String(status);
+}
+
+function buildLiveDemoFailureStageRows(
+  rows: LiveDemoAnalyticsRow[]
+): LiveDemoFailureStageRow[] {
+  const groups = new Map<string, LiveDemoFailureStageRow>();
+
+  for (const row of rows) {
+    if (row.event_name !== "homepage_demo_extract_failed") {
+      continue;
+    }
+
+    const stage = getLiveDemoStage(row);
+    const errorCode = getLiveDemoErrorCode(row);
+    const key = `${stage}\u0000${errorCode}`;
+    const current = groups.get(key) ?? {
+      stage,
+      errorCode,
+      events: 0,
+    };
+
+    current.events += 1;
+    groups.set(key, current);
+  }
+
+  return Array.from(groups.values())
+    .sort((a, b) => b.events - a.events)
+    .slice(0, 12);
+}
+
 function getTrafficSource(row: Pick<AnalyticsEventRow, "utm_source">) {
   return row.utm_source?.trim() || "direct / none";
 }
@@ -296,6 +418,17 @@ function buildCountryRows(rows: AnalyticsEventRow[]) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isLiveDemoAnalyticsEventName(
+  value: unknown
+): value is LiveDemoAnalyticsEventName {
+  return (
+    typeof value === "string" &&
+    LIVE_DEMO_ANALYTICS_EVENTS.includes(
+      value as LiveDemoAnalyticsEventName
+    )
+  );
 }
 
 function readNonNegativeInteger(record: Record<string, unknown>, key: string) {
@@ -438,6 +571,56 @@ async function loadTrafficRows(now: number) {
   } catch (error) {
     console.warn("Owner traffic analytics query failed:", {
       message: error instanceof Error ? error.message : "Unknown analytics error",
+    });
+
+    return null;
+  }
+}
+
+async function loadLiveDemoAnalyticsRows(now: number) {
+  try {
+    const since = new Date(now - 30 * DAY_MS).toISOString();
+    const { data, error } = await supabaseAdmin
+      .from("analytics_events")
+      .select("event_name, occurred_at, metadata")
+      .in("event_name", LIVE_DEMO_ANALYTICS_EVENTS)
+      .gte("occurred_at", since)
+      .order("occurred_at", { ascending: false })
+      .limit(LIVE_DEMO_ROWS_LIMIT);
+
+    if (error) {
+      console.warn("Owner live demo analytics query failed:", error.message);
+
+      return null;
+    }
+
+    return ((data ?? []) as Array<Record<string, unknown>>)
+      .map((row) => {
+        const eventName = row.event_name;
+        const occurredAt = row.occurred_at;
+        const metadata = row.metadata;
+
+        if (
+          !isLiveDemoAnalyticsEventName(eventName) ||
+          typeof occurredAt !== "string" ||
+          !isRecord(metadata)
+        ) {
+          return null;
+        }
+
+        return {
+          event_name: eventName,
+          occurred_at: occurredAt,
+          metadata,
+        } satisfies LiveDemoAnalyticsRow;
+      })
+      .filter((row): row is LiveDemoAnalyticsRow => row !== null);
+  } catch (error) {
+    console.warn("Owner live demo analytics query failed:", {
+      message:
+        error instanceof Error
+          ? error.message
+          : "Unknown live demo analytics error",
     });
 
     return null;
@@ -681,9 +864,10 @@ export default async function AdminAnalyticsPage() {
 
   const now = Date.now();
 
-  const [trafficRows, productData] = await Promise.all([
+  const [trafficRows, productData, liveDemoRows] = await Promise.all([
     loadTrafficRows(now),
     loadProductActivationData(),
+    loadLiveDemoAnalyticsRows(now),
   ]);
   const signupAttributionRows = productData
     ? await loadSignupAttributionRows(
@@ -691,7 +875,7 @@ export default async function AdminAnalyticsPage() {
       )
     : null;
 
-  if (!trafficRows && !productData) {
+  if (!trafficRows && !productData && !liveDemoRows) {
     return (
       <main className="admin-analytics-page">
         <style>{adminAnalyticsCss}</style>
@@ -719,6 +903,25 @@ export default async function AdminAnalyticsPage() {
   const sourceRows = trafficRows ? buildSourceRows(trafficRows) : [];
   const countryRows = trafficRows ? buildCountryRows(trafficRows) : [];
   const recentRows = trafficRows ? trafficRows.slice(0, 25) : [];
+  const liveDemoPeriodStats = liveDemoRows
+    ? [
+        buildLiveDemoPeriodStats("Today", liveDemoRows, startOfToday),
+        buildLiveDemoPeriodStats(
+          "Last 7 days",
+          liveDemoRows,
+          now - 7 * DAY_MS
+        ),
+        buildLiveDemoPeriodStats(
+          "Last 30 days",
+          liveDemoRows,
+          now - 30 * DAY_MS
+        ),
+      ]
+    : [];
+  const liveDemoFailureStageRows = liveDemoRows
+    ? buildLiveDemoFailureStageRows(liveDemoRows)
+    : [];
+  const recentLiveDemoRows = liveDemoRows ? liveDemoRows.slice(0, 25) : [];
   const signupAttributionByUser = buildSignupAttributionByUser(
     signupAttributionRows ?? []
   );
@@ -876,6 +1079,113 @@ export default async function AdminAnalyticsPage() {
             </>
           ) : (
             <UnavailablePanel message="Traffic analytics unavailable." />
+          )}
+        </section>
+
+        <section className="admin-section">
+          <div className="admin-section-heading">
+            <div>
+              <h2>Live Demo usage</h2>
+              <p className="admin-muted">
+                Operational telemetry for the public live demo. Counted
+                server-side even without analytics-cookie consent.
+              </p>
+            </div>
+            <span>Last 30 days</span>
+          </div>
+
+          {liveDemoRows ? (
+            <>
+              <div className="admin-stat-grid">
+                {liveDemoPeriodStats.map((stat) => (
+                  <article className="admin-stat-card" key={stat.label}>
+                    <p>{stat.label}</p>
+                    <strong>{formatNumber(stat.attempts)}</strong>
+                    <span>attempts</span>
+                    <span>{formatNumber(stat.succeeded)} succeeded</span>
+                    <span>{formatNumber(stat.failed)} failed</span>
+                  </article>
+                ))}
+              </div>
+
+              <section className="admin-section-grid">
+                <div className="admin-panel">
+                  <div className="admin-panel-header">
+                    <h2>Failure stages</h2>
+                    <span>Live demo</span>
+                  </div>
+                  <div className="admin-table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Stage</th>
+                          <th>Error code</th>
+                          <th>Events</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {liveDemoFailureStageRows.length ? (
+                          liveDemoFailureStageRows.map((row) => (
+                            <tr key={`${row.stage}-${row.errorCode}`}>
+                              <td>{row.stage}</td>
+                              <td>{row.errorCode}</td>
+                              <td>{formatNumber(row.events)}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={3}>No failures logged yet.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="admin-panel">
+                  <div className="admin-panel-header">
+                    <h2>Recent live demo events</h2>
+                    <span>{formatNumber(recentLiveDemoRows.length)} shown</span>
+                  </div>
+                  <div className="admin-table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Time</th>
+                          <th>Event</th>
+                          <th>Stage</th>
+                          <th>Error code</th>
+                          <th>HTTP status</th>
+                          <th>Environment</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recentLiveDemoRows.length ? (
+                          recentLiveDemoRows.map((row, index) => (
+                            <tr
+                              key={`${row.occurred_at}-${row.event_name}-${index}`}
+                            >
+                              <td>{formatDate(row.occurred_at)}</td>
+                              <td>{row.event_name}</td>
+                              <td>{getLiveDemoStage(row)}</td>
+                              <td>{getLiveDemoErrorCode(row)}</td>
+                              <td>{getLiveDemoHttpStatus(row)}</td>
+                              <td>{getLiveDemoEnvironment(row)}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={6}>No live demo events logged yet.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            </>
+          ) : (
+            <UnavailablePanel message="Live Demo usage analytics unavailable." />
           )}
         </section>
 

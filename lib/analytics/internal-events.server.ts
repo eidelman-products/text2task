@@ -14,6 +14,9 @@ const ALLOWED_EVENT_NAMES = new Set([
   "project_saved",
   "client_update_created",
   "client_update_applied",
+  "homepage_demo_extract_attempt",
+  "homepage_demo_extract_succeeded",
+  "homepage_demo_extract_failed",
 ] as const);
 
 const MAX_METADATA_BYTES = 2000;

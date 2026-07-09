@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
+import { logAnalyticsEventSafe } from "@/lib/analytics/internal-events.server";
 import {
   isHomepageDemoChallengeError,
   isHomepageDemoExtractionError,
@@ -35,6 +36,57 @@ const SECURITY_HEADERS = [
   ["X-Content-Type-Options", "nosniff"],
   ["Referrer-Policy", "no-referrer"],
 ] as const;
+
+const HOMEPAGE_DEMO_EXTRACT_ANALYTICS_ROUTE =
+  "/api/homepage-demo/extract";
+const HOMEPAGE_DEMO_EXTRACT_ATTEMPT_EVENT =
+  "homepage_demo_extract_attempt";
+const HOMEPAGE_DEMO_EXTRACT_SUCCEEDED_EVENT =
+  "homepage_demo_extract_succeeded";
+const HOMEPAGE_DEMO_EXTRACT_FAILED_EVENT =
+  "homepage_demo_extract_failed";
+
+type HomepageDemoExtractAnalyticsEventName =
+  | typeof HOMEPAGE_DEMO_EXTRACT_ATTEMPT_EVENT
+  | typeof HOMEPAGE_DEMO_EXTRACT_SUCCEEDED_EVENT
+  | typeof HOMEPAGE_DEMO_EXTRACT_FAILED_EVENT;
+type HomepageDemoExtractAnalyticsEnvironment =
+  | "production"
+  | "preview"
+  | "development"
+  | "unknown";
+type HomepageDemoExtractAnalyticsStatusCategory =
+  | "attempt"
+  | "succeeded"
+  | "failed";
+type HomepageDemoExtractAnalyticsStage =
+  | "request"
+  | "origin"
+  | "body"
+  | "identity"
+  | "challenge"
+  | "admission"
+  | "extraction"
+  | "repository"
+  | "orchestration"
+  | "unexpected";
+type HomepageDemoExtractAnalyticsSource = "admission" | "completion";
+type HomepageDemoExtractAnalyticsMetadata = Readonly<{
+  statusCategory: HomepageDemoExtractAnalyticsStatusCategory;
+  stage?: HomepageDemoExtractAnalyticsStage;
+  errorCode?: string;
+  httpStatus?: number;
+  source?: HomepageDemoExtractAnalyticsSource;
+}>;
+type HomepageDemoExtractFailureAnalytics = Readonly<{
+  stage: HomepageDemoExtractAnalyticsStage;
+  errorCode: string;
+  httpStatus: number;
+}>;
+type MappedExtractFailureResponse = Readonly<{
+  response: NextResponse<ExtractJsonResponse>;
+  failure: HomepageDemoExtractFailureAnalytics;
+}>;
 
 type NotAdmittedDecision = Extract<
   HomepageDemoTextTrialOrchestrationResult,
@@ -100,11 +152,141 @@ export async function POST(request: NextRequest) {
       remoteIp: identityResult.remoteIp,
       identity: identityResult.identity,
     });
+    const response = mapOrchestrationResult(result);
 
-    return mapOrchestrationResult(result);
+    scheduleHomepageDemoExtractAttempt(response.status);
+    scheduleHomepageDemoExtractOrchestrationOutcome(result, response.status);
+
+    return response;
   } catch (error) {
-    return mapExtractError(error);
+    const mapped = mapExtractError(error);
+
+    scheduleHomepageDemoExtractAttempt(mapped.response.status);
+    scheduleHomepageDemoExtractFailure(mapped.failure);
+
+    return mapped.response;
   }
+}
+
+function scheduleHomepageDemoExtractAttempt(httpStatus: number): void {
+  scheduleHomepageDemoExtractAnalytics({
+    eventName: HOMEPAGE_DEMO_EXTRACT_ATTEMPT_EVENT,
+    metadata: {
+      statusCategory: "attempt",
+      httpStatus,
+    },
+  });
+}
+
+function scheduleHomepageDemoExtractOrchestrationOutcome(
+  result: HomepageDemoTextTrialOrchestrationResult,
+  httpStatus: number
+): void {
+  switch (result.outcome) {
+    case "review_ready":
+      scheduleHomepageDemoExtractAnalytics({
+        eventName: HOMEPAGE_DEMO_EXTRACT_SUCCEEDED_EVENT,
+        metadata: {
+          statusCategory: "succeeded",
+          httpStatus,
+          source: result.source,
+        },
+      });
+      return;
+
+    case "challenge_failed":
+      scheduleHomepageDemoExtractFailure({
+        stage: "challenge",
+        errorCode: result.blocked
+          ? "challenge_rate_limited"
+          : "challenge_failed",
+        httpStatus,
+      });
+      return;
+
+    case "not_admitted":
+      scheduleHomepageDemoExtractFailure({
+        stage: "admission",
+        errorCode: result.admission.decision,
+        httpStatus,
+      });
+      return;
+  }
+
+  scheduleHomepageDemoExtractFailure({
+    stage: "unexpected",
+    errorCode: "unexpected",
+    httpStatus,
+  });
+}
+
+function scheduleHomepageDemoExtractFailure(
+  failure: HomepageDemoExtractFailureAnalytics
+): void {
+  scheduleHomepageDemoExtractAnalytics({
+    eventName: HOMEPAGE_DEMO_EXTRACT_FAILED_EVENT,
+    metadata: {
+      statusCategory: "failed",
+      stage: failure.stage,
+      errorCode: failure.errorCode,
+      httpStatus: failure.httpStatus,
+    },
+  });
+}
+
+function scheduleHomepageDemoExtractAnalytics({
+  eventName,
+  metadata,
+}: Readonly<{
+  eventName: HomepageDemoExtractAnalyticsEventName;
+  metadata: HomepageDemoExtractAnalyticsMetadata;
+}>): void {
+  try {
+    const environment = getHomepageDemoExtractAnalyticsEnvironment();
+
+    after(async () => {
+      try {
+        await logAnalyticsEventSafe({
+          eventName,
+          userId: null,
+          anonymousId: null,
+          pagePath: HOMEPAGE_DEMO_EXTRACT_ANALYTICS_ROUTE,
+          metadata: {
+            mode: "text",
+            anonymous: true,
+            environment,
+            ...metadata,
+          },
+        });
+      } catch {
+        // Operational analytics is best-effort and must never affect extraction.
+      }
+    });
+  } catch {
+    // Scheduling analytics is best-effort and must never affect extraction.
+  }
+}
+
+function getHomepageDemoExtractAnalyticsEnvironment(): HomepageDemoExtractAnalyticsEnvironment {
+  const vercelEnvironment = process.env.VERCEL_ENV?.trim().toLowerCase();
+
+  switch (vercelEnvironment) {
+    case "production":
+    case "preview":
+    case "development":
+      return vercelEnvironment;
+  }
+
+  const nodeEnvironment = process.env.NODE_ENV?.trim().toLowerCase();
+
+  switch (nodeEnvironment) {
+    case "production":
+      return "production";
+    case "development":
+      return "development";
+  }
+
+  return "unknown";
 }
 
 function mapOrchestrationResult(
@@ -142,7 +324,6 @@ function mapAdmissionDecision(
 
     case "capacity_unavailable":
     case "budget_unavailable":
-      logTemporaryUnavailableDiagnostic("admission", decision);
       return createJsonResponse({ code: "temporarily_unavailable" }, 503);
 
     case "processing_failed":
@@ -158,32 +339,51 @@ function mapAdmissionDecision(
   return mapUnexpectedRouteState(decision);
 }
 
-function mapExtractError(error: unknown): NextResponse<ExtractJsonResponse> {
+function mapExtractError(error: unknown): MappedExtractFailureResponse {
   if (isHomepageDemoPublicRequestError(error)) {
     const code = error.code;
 
     switch (code) {
       case "homepage_demo_disabled":
-        return createJsonResponse({ code: "not_found" }, 404);
+        return createFailureResponse("not_found", 404, "request", code);
       case "invalid_request_origin":
-        return createJsonResponse({ code: "invalid_request_origin" }, 403);
+        return createFailureResponse(
+          "invalid_request_origin",
+          403,
+          "origin",
+          code
+        );
       case "invalid_request_content_type":
-        return createJsonResponse(
-          { code: "invalid_request_content_type" },
-          415
+        return createFailureResponse(
+          "invalid_request_content_type",
+          415,
+          "request",
+          code
         );
       case "unsupported_request_encoding":
-        return createJsonResponse(
-          { code: "unsupported_request_encoding" },
-          415
+        return createFailureResponse(
+          "unsupported_request_encoding",
+          415,
+          "request",
+          code
         );
       case "request_body_too_large":
-        return createJsonResponse({ code: "request_body_too_large" }, 413);
+        return createFailureResponse(
+          "request_body_too_large",
+          413,
+          "body",
+          code
+        );
       case "invalid_request_body":
-        return createJsonResponse({ code: "invalid_request_body" }, 400);
+        return createFailureResponse(
+          "invalid_request_body",
+          400,
+          "body",
+          code
+        );
     }
 
-    return mapUnexpectedRouteState(code);
+    return mapUnexpectedErrorState(code);
   }
 
   if (isHomepageDemoIdentityError(error)) {
@@ -191,14 +391,23 @@ function mapExtractError(error: unknown): NextResponse<ExtractJsonResponse> {
 
     switch (code) {
       case "identity_input_invalid":
-        return createJsonResponse({ code: "invalid_request" }, 400);
+        return createFailureResponse(
+          "invalid_request",
+          400,
+          "identity",
+          code
+        );
       case "identity_configuration_invalid":
       case "identity_unavailable":
-        logTemporaryUnavailableDiagnostic("identity", code);
-        return createJsonResponse({ code: "temporarily_unavailable" }, 503);
+        return createFailureResponse(
+          "temporarily_unavailable",
+          503,
+          "identity",
+          code
+        );
     }
 
-    return mapUnexpectedRouteState(code);
+    return mapUnexpectedErrorState(code);
   }
 
   if (isHomepageDemoChallengeError(error)) {
@@ -206,16 +415,25 @@ function mapExtractError(error: unknown): NextResponse<ExtractJsonResponse> {
 
     switch (code) {
       case "invalid_challenge_input":
-        return createJsonResponse({ code: "invalid_challenge_input" }, 400);
+        return createFailureResponse(
+          "invalid_challenge_input",
+          400,
+          "challenge",
+          code
+        );
       case "challenge_configuration_error":
       case "challenge_verification_unavailable":
-        logTemporaryUnavailableDiagnostic("challenge", code);
-        return createJsonResponse({ code: "temporarily_unavailable" }, 503);
+        return createFailureResponse(
+          "temporarily_unavailable",
+          503,
+          "challenge",
+          code
+        );
       case "challenge_verification_timeout":
-        return createJsonResponse({ code: "timeout" }, 504);
+        return createFailureResponse("timeout", 504, "challenge", code);
     }
 
-    return mapUnexpectedRouteState(code);
+    return mapUnexpectedErrorState(code);
   }
 
   if (isHomepageDemoExtractionError(error)) {
@@ -223,19 +441,38 @@ function mapExtractError(error: unknown): NextResponse<ExtractJsonResponse> {
 
     switch (code) {
       case "invalid_text_input":
-        return createJsonResponse({ code: "invalid_text_input" }, 400);
+        return createFailureResponse(
+          "invalid_text_input",
+          400,
+          "request",
+          code
+        );
       case "text_input_too_large":
-        return createJsonResponse({ code: "request_too_large" }, 413);
+        return createFailureResponse(
+          "request_too_large",
+          413,
+          "request",
+          code
+        );
       case "text_extraction_timeout":
-        return createJsonResponse({ code: "timeout" }, 504);
+        return createFailureResponse("timeout", 504, "extraction", code);
       case "text_extraction_invalid_result":
-        return createJsonResponse({ code: "extraction_failed" }, 502);
+        return createFailureResponse(
+          "extraction_failed",
+          502,
+          "extraction",
+          code
+        );
       case "text_extraction_unavailable":
-        logTemporaryUnavailableDiagnostic("extraction", code);
-        return createJsonResponse({ code: "temporarily_unavailable" }, 503);
+        return createFailureResponse(
+          "temporarily_unavailable",
+          503,
+          "extraction",
+          code
+        );
     }
 
-    return mapUnexpectedRouteState(code);
+    return mapUnexpectedErrorState(code);
   }
 
   if (isHomepageDemoRepositoryError(error)) {
@@ -243,20 +480,30 @@ function mapExtractError(error: unknown): NextResponse<ExtractJsonResponse> {
 
     switch (code) {
       case "invalid_repository_input":
-        return createJsonResponse({ code: "invalid_request" }, 400);
+        return createFailureResponse(
+          "invalid_request",
+          400,
+          "repository",
+          code
+        );
 
       case "idempotency_conflict":
-        return createJsonResponse({ code: "request_conflict" }, 409);
+        return createFailureResponse(
+          "request_conflict",
+          409,
+          "repository",
+          code
+        );
 
       case "trial_not_found":
       case "processing_attempt_not_found":
       case "review_access_denied":
-        return createJsonResponse({ code: "not_found" }, 404);
+        return createFailureResponse("not_found", 404, "repository", code);
 
       case "trial_expired":
       case "processing_lease_expired":
       case "review_expired":
-        return createJsonResponse({ code: "expired" }, 410);
+        return createFailureResponse("expired", 410, "repository", code);
 
       case "invalid_transition":
       case "risk_not_allowed":
@@ -270,17 +517,26 @@ function mapExtractError(error: unknown): NextResponse<ExtractJsonResponse> {
       case "processing_completion_conflict":
       case "review_not_ready":
       case "review_edit_conflict":
-        return createJsonResponse({ code: "processing_conflict" }, 409);
+        return createFailureResponse(
+          "processing_conflict",
+          409,
+          "repository",
+          code
+        );
 
       case "token_collision":
       case "admission_config_missing":
       case "repository_response_invalid":
       case "repository_unavailable":
-        logTemporaryUnavailableDiagnostic("repository", code);
-        return createJsonResponse({ code: "temporarily_unavailable" }, 503);
+        return createFailureResponse(
+          "temporarily_unavailable",
+          503,
+          "repository",
+          code
+        );
     }
 
-    return mapUnexpectedRouteState(code);
+    return mapUnexpectedErrorState(code);
   }
 
   if (isHomepageDemoOrchestrationError(error)) {
@@ -288,32 +544,30 @@ function mapExtractError(error: unknown): NextResponse<ExtractJsonResponse> {
 
     switch (code) {
       case "processing_cleanup_unavailable":
-        logTemporaryUnavailableDiagnostic("orchestration", code);
-        return createJsonResponse(
-          { code: "processing_cleanup_unavailable" },
-          503
+        return createFailureResponse(
+          "processing_cleanup_unavailable",
+          503,
+          "orchestration",
+          code
         );
       case "orchestration_unavailable":
-        logTemporaryUnavailableDiagnostic("orchestration", code);
-        return createJsonResponse({ code: "temporarily_unavailable" }, 503);
+        return createFailureResponse(
+          "temporarily_unavailable",
+          503,
+          "orchestration",
+          code
+        );
     }
 
-    return mapUnexpectedRouteState(code);
+    return mapUnexpectedErrorState(code);
   }
 
-  logTemporaryUnavailableDiagnostic("unexpected", "unexpected");
-  return createJsonResponse({ code: "temporarily_unavailable" }, 503);
-}
-
-function logTemporaryUnavailableDiagnostic(
-  stage: string,
-  errorCode: string
-): void {
-  console.error("[homepage-demo-extract] temporary_unavailable", {
-    stage,
-    errorCode,
-    errorName: errorCode,
-  });
+  return createFailureResponse(
+    "temporarily_unavailable",
+    503,
+    "unexpected",
+    "unexpected"
+  );
 }
 
 function createJsonResponse(
@@ -330,8 +584,32 @@ function createJsonResponse(
 function mapUnexpectedRouteState(
   _value: never
 ): NextResponse<ExtractJsonResponse> {
-  logTemporaryUnavailableDiagnostic("unexpected", "unexpected");
   return createJsonResponse({ code: "temporarily_unavailable" }, 503);
+}
+
+function mapUnexpectedErrorState(_value: never): MappedExtractFailureResponse {
+  return createFailureResponse(
+    "temporarily_unavailable",
+    503,
+    "unexpected",
+    "unexpected"
+  );
+}
+
+function createFailureResponse(
+  code: ExtractResponseCode,
+  status: number,
+  stage: HomepageDemoExtractAnalyticsStage,
+  errorCode: string
+): MappedExtractFailureResponse {
+  return {
+    response: createJsonResponse({ code }, status),
+    failure: {
+      stage,
+      errorCode,
+      httpStatus: status,
+    },
+  };
 }
 
 function applyExtractResponseHeaders(response: NextResponse): void {
