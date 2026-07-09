@@ -142,6 +142,7 @@ function mapAdmissionDecision(
 
     case "capacity_unavailable":
     case "budget_unavailable":
+      logTemporaryUnavailableDiagnostic("admission", decision);
       return createJsonResponse({ code: "temporarily_unavailable" }, 503);
 
     case "processing_failed":
@@ -193,6 +194,7 @@ function mapExtractError(error: unknown): NextResponse<ExtractJsonResponse> {
         return createJsonResponse({ code: "invalid_request" }, 400);
       case "identity_configuration_invalid":
       case "identity_unavailable":
+        logTemporaryUnavailableDiagnostic("identity", code);
         return createJsonResponse({ code: "temporarily_unavailable" }, 503);
     }
 
@@ -207,6 +209,7 @@ function mapExtractError(error: unknown): NextResponse<ExtractJsonResponse> {
         return createJsonResponse({ code: "invalid_challenge_input" }, 400);
       case "challenge_configuration_error":
       case "challenge_verification_unavailable":
+        logTemporaryUnavailableDiagnostic("challenge", code);
         return createJsonResponse({ code: "temporarily_unavailable" }, 503);
       case "challenge_verification_timeout":
         return createJsonResponse({ code: "timeout" }, 504);
@@ -228,6 +231,7 @@ function mapExtractError(error: unknown): NextResponse<ExtractJsonResponse> {
       case "text_extraction_invalid_result":
         return createJsonResponse({ code: "extraction_failed" }, 502);
       case "text_extraction_unavailable":
+        logTemporaryUnavailableDiagnostic("extraction", code);
         return createJsonResponse({ code: "temporarily_unavailable" }, 503);
     }
 
@@ -272,6 +276,7 @@ function mapExtractError(error: unknown): NextResponse<ExtractJsonResponse> {
       case "admission_config_missing":
       case "repository_response_invalid":
       case "repository_unavailable":
+        logTemporaryUnavailableDiagnostic("repository", code);
         return createJsonResponse({ code: "temporarily_unavailable" }, 503);
     }
 
@@ -283,18 +288,32 @@ function mapExtractError(error: unknown): NextResponse<ExtractJsonResponse> {
 
     switch (code) {
       case "processing_cleanup_unavailable":
+        logTemporaryUnavailableDiagnostic("orchestration", code);
         return createJsonResponse(
           { code: "processing_cleanup_unavailable" },
           503
         );
       case "orchestration_unavailable":
+        logTemporaryUnavailableDiagnostic("orchestration", code);
         return createJsonResponse({ code: "temporarily_unavailable" }, 503);
     }
 
     return mapUnexpectedRouteState(code);
   }
 
+  logTemporaryUnavailableDiagnostic("unexpected", "unexpected");
   return createJsonResponse({ code: "temporarily_unavailable" }, 503);
+}
+
+function logTemporaryUnavailableDiagnostic(
+  stage: string,
+  errorCode: string
+): void {
+  console.error("[homepage-demo-extract] temporary_unavailable", {
+    stage,
+    errorCode,
+    errorName: errorCode,
+  });
 }
 
 function createJsonResponse(
@@ -311,6 +330,7 @@ function createJsonResponse(
 function mapUnexpectedRouteState(
   _value: never
 ): NextResponse<ExtractJsonResponse> {
+  logTemporaryUnavailableDiagnostic("unexpected", "unexpected");
   return createJsonResponse({ code: "temporarily_unavailable" }, 503);
 }
 
