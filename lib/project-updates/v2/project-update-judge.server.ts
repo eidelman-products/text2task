@@ -17,9 +17,6 @@ import type {
   ProjectUpdateV2AnalysisSummary,
   ProjectUpdateV2JudgeResult,
 } from "@/lib/project-updates/v2/project-update-facts.types";
-
-type ExistingSubtask = ExistingProjectUpdateContext["subtasks"][number];
-
 type DuplicateMatch = {
   existingTaskId: number;
   existingTitle: string;

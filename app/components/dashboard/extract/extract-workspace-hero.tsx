@@ -5,8 +5,10 @@ type ExtractWorkspaceHeroProps = {
 };
 
 export default function ExtractWorkspaceHero({
-  plan: _plan,
+  plan,
 }: ExtractWorkspaceHeroProps) {
+  void plan;
+
   return (
     <section className="extract-premium-hero" style={heroShellStyle}>
       <div style={blueWashStyle} />

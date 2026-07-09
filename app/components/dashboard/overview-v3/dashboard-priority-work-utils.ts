@@ -133,9 +133,11 @@ export function buildPriorityProjectSummary(
   const sortedGroups = Array.from(groups.values()).sort(sortGroups);
   const displayGroups = sortedGroups.map((group) => ({
     ...group,
-    previewItems: group.previewItems
-      .sort(sortPreviewItems)
-      .map(({ sortTime: _sortTime, ...item }) => item),
+    previewItems: group.previewItems.sort(sortPreviewItems).map((item) => {
+      const { sortTime, ...previewItem } = item;
+      void sortTime;
+      return previewItem;
+    }),
   }));
 
   return {

@@ -360,7 +360,10 @@ class BrowserHomepageDemoTurnstileAdapter implements HomepageDemoTurnstileAdapte
         "refresh-expired": "never",
         "refresh-timeout": "never",
         callback: (token) => this.#handleSuccess(context, token),
-        "error-callback": (_errorCode?: unknown) => this.#handleError(context),
+        "error-callback": (_errorCode?: unknown) => {
+          void _errorCode;
+          return this.#handleError(context);
+        },
         "expired-callback": () => this.#handleExpiry(context),
         "timeout-callback": () => this.#handleTimeout(context),
       });
@@ -952,6 +955,10 @@ function validatePositiveTimeout(value: number, fallback: number): number {
   return value;
 }
 
-function noopResolve(_token: string): void {}
+function noopResolve(_token: string): void {
+  void _token;
+}
 
-function noopReject(_error: HomepageDemoTurnstileClientError): void {}
+function noopReject(_error: HomepageDemoTurnstileClientError): void {
+  void _error;
+}

@@ -248,8 +248,6 @@ function SenderLogo({
 export default function DashboardOverview({
   scanResult,
   email,
-  latestSnapshot,
-  previousSnapshot,
   loadingScan,
   toneStyles,
   onRunSampleScan,

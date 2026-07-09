@@ -584,10 +584,14 @@ function createJsonResponse(
 function mapUnexpectedRouteState(
   _value: never
 ): NextResponse<ExtractJsonResponse> {
+  void _value;
+
   return createJsonResponse({ code: "temporarily_unavailable" }, 503);
 }
 
 function mapUnexpectedErrorState(_value: never): MappedExtractFailureResponse {
+  void _value;
+
   return createFailureResponse(
     "temporarily_unavailable",
     503,

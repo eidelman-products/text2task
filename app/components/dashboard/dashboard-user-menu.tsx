@@ -5,7 +5,6 @@ import {
   dashboardColors,
   dashboardRadii,
   dashboardShadows,
-  dashboardTransitions,
   dashboardTypography,
   dashboardZIndex,
 } from "./ui/tokens";

@@ -6,7 +6,6 @@ const slate900 = "#0f172a";
 const slate700 = "#334155";
 const slate600 = "#475569";
 const slate500 = "#64748b";
-const border = "rgba(226, 232, 240, 0.9)";
 
 export const responsiveClassNames = {
   overlay: "project-update-modal-overlay",

@@ -13,7 +13,6 @@ import type {
 import { extractProjectUpdateFacts } from "@/lib/project-updates/v2/project-update-facts.server";
 import type {
   ProjectUpdateV2AnalyzerInput,
-  ProjectUpdateV2AnalyzerResult,
   ProjectUpdateV2AnalysisSummary,
 } from "@/lib/project-updates/v2/project-update-facts.types";
 import { judgeProjectUpdateFacts } from "@/lib/project-updates/v2/project-update-judge.server";

@@ -225,7 +225,7 @@ function buildDateFromMonthDay(
 ): Date | null {
   if (day < 1 || day > 31) return null;
 
-  let year = now.getFullYear();
+  const year = now.getFullYear();
   let d = new Date(year, monthIndex, day, 12, 0, 0, 0);
 
   if (Number.isNaN(d.getTime()) || d.getMonth() !== monthIndex) {

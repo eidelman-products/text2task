@@ -438,7 +438,7 @@ function renderState({
             id="homepage-demo-claim-continuation-heading"
             style={titleStyle}
           >
-            We couldn't save your project right now.
+            We couldn&apos;t save your project right now.
           </h1>
           <p style={bodyStyle}>Please try again.</p>
           <button

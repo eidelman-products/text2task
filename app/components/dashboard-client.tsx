@@ -12,7 +12,6 @@ import { trackBeginCheckout } from "@/lib/analytics/events";
 import ExtractWorkspace from "./dashboard/extract-workspace";
 import DashboardShell from "./dashboard/dashboard-shell";
 import DashboardSidebarProfile from "./dashboard/dashboard-sidebar-profile";
-import DashboardHeader from "./dashboard/dashboard-header";
 import FirstRunDashboard from "./dashboard/first-run-dashboard";
 import DashboardOverviewV3 from "./dashboard/overview-v3/dashboard-overview-v3";
 import {

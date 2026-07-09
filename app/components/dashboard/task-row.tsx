@@ -194,7 +194,6 @@ function buildDeadlineUi(task: TaskRowType) {
 }
 
 export default function TaskRow({
-  rowIndex,
   task,
   createdLabel,
   isSaving,

@@ -6,7 +6,6 @@ import SidebarButton from "./sidebar-button";
 import {
   dashboardColors,
   dashboardRadii,
-  dashboardShadows,
   dashboardSpacing,
   dashboardTransitions,
   dashboardTypography,

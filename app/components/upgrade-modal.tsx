@@ -110,7 +110,7 @@ export default function UpgradeModal({ isOpen, onClose }: Props) {
                 letterSpacing: "-0.04em",
               }}
             >
-              You've reached your free limit
+              You&apos;ve reached your free limit
             </h2>
 
             <p

@@ -764,7 +764,7 @@ export default function HomepageDemoReviewClient() {
         ) : null}
         {authPreparationState.status === "temporarily_unavailable" ? (
           <p className={styles.statusText} role="alert">
-            We couldn't prepare your project. Please try again.
+            We couldn&apos;t prepare your project. Please try again.
           </p>
         ) : null}
       </div>

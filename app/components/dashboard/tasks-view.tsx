@@ -211,7 +211,6 @@ export default function TasksView({
   const {
     singleDeleteTask,
     isSingleDeleting,
-    requestSinglePermanentDelete,
     closeSingleDeleteConfirm,
     confirmSinglePermanentDelete,
   } = useTaskSingleDelete({

@@ -1316,14 +1316,6 @@ const workspaceHeaderStyle: CSSProperties = {
   gap: 18,
 };
 
-const workspaceEyebrowStyle: CSSProperties = {
-  color: "#4f46e5",
-  fontSize: 11,
-  fontWeight: 900,
-  textTransform: "uppercase",
-  letterSpacing: "0.13em",
-};
-
 const workspaceTitleStyle: CSSProperties = {
   margin: 0,
   color: "#0f172a",
@@ -1340,28 +1332,6 @@ const workspaceDescriptionStyle: CSSProperties = {
   lineHeight: 1.65,
   fontWeight: 620,
   maxWidth: 760,
-};
-
-const workspaceStatusStyle: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  borderRadius: 999,
-  padding: "9px 12px",
-  background: "#ffffff",
-  border: "1px solid rgba(199,210,254,0.88)",
-  color: "#4338ca",
-  fontSize: 12,
-  fontWeight: 850,
-  whiteSpace: "nowrap",
-  boxShadow: "0 10px 24px rgba(15,23,42,0.045)",
-};
-
-const workspaceStatusDotStyle: CSSProperties = {
-  width: 8,
-  height: 8,
-  borderRadius: 999,
-  background: "#22c55e",
 };
 
 const loadingShellStyle: CSSProperties = {
@@ -1434,14 +1404,6 @@ const previewOpenHeaderStyle: CSSProperties = {
   padding: "0 4px",
 };
 
-const previewEyebrowStyle: CSSProperties = {
-  color: "#4f46e5",
-  fontSize: 11,
-  fontWeight: 900,
-  textTransform: "uppercase",
-  letterSpacing: "0.13em",
-};
-
 const previewOpenTitleStyle: CSSProperties = {
   margin: "5px 0 0",
   color: "#0f172a",
@@ -1449,15 +1411,6 @@ const previewOpenTitleStyle: CSSProperties = {
   lineHeight: 1.08,
   fontWeight: 850,
   letterSpacing: "-0.05em",
-};
-
-const previewOpenDescriptionStyle: CSSProperties = {
-  margin: "8px 0 0",
-  color: "#64748b",
-  fontSize: 14,
-  lineHeight: 1.55,
-  fontWeight: 620,
-  maxWidth: 760,
 };
 
 const previewOpenActionsStyle: CSSProperties = {
