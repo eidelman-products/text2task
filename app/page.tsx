@@ -12,7 +12,7 @@ import HomepageTrustStrip from "./components/landing/homepage-trust-strip";
 import HomepageUseCasesSection from "./components/landing/homepage-use-cases-section";
 import LandingFooter from "./components/landing/landing-footer";
 import LandingHeader from "./components/landing/landing-header";
-import { absoluteUrl } from "./lib/site-config";
+import { SITE_ORGANIZATION_SAME_AS, absoluteUrl } from "./lib/site-config";
 import { HOMEPAGE_DEMO_CONFIG } from "@/lib/homepage-demo/config.server";
 
 export const metadata: Metadata = {
@@ -56,9 +56,7 @@ const structuredData = {
       name: "Text2Task",
       url: absoluteUrl("/"),
       logo: absoluteUrl("/text2task-logo.png"),
-      sameAs: [
-        "https://www.facebook.com/profile.php?id=61588954785433",
-      ],
+      sameAs: SITE_ORGANIZATION_SAME_AS,
     },
     {
       "@type": "WebSite",

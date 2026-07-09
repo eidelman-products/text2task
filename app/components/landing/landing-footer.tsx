@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { SITE_SOCIAL_LINKS } from "@/app/lib/site-config";
 
 const productLinks = [
   { label: "How it works", href: "/#how-it-works" },
@@ -55,17 +56,31 @@ export default function LandingFooter() {
 
           <div className="t2t-footer-follow">
             <span>FOLLOW</span>
-            <a
-              className="t2t-footer-social"
-              href="https://www.facebook.com/profile.php?id=61588954785433"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Text2Task on Facebook"
-            >
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="M13.7 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5H17V4a22 22 0 0 0-2.4-.1c-2.4 0-4.1 1.5-4.1 4.2V10H8v3h2.5v8h3.2Z" />
-              </svg>
-            </a>
+            <div className="t2t-footer-social-links">
+              <a
+                className="t2t-footer-social"
+                href={SITE_SOCIAL_LINKS.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Text2Task on Facebook"
+              >
+                <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                  <path d="M13.7 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5H17V4a22 22 0 0 0-2.4-.1c-2.4 0-4.1 1.5-4.1 4.2V10H8v3h2.5v8h3.2Z" />
+                </svg>
+              </a>
+
+              <a
+                className="t2t-footer-social"
+                href={SITE_SOCIAL_LINKS.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Text2Task on LinkedIn"
+              >
+                <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                  <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.13 1.44-2.13 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28h-.01ZM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12ZM7.12 20.45H3.56V9h3.56v11.45Z" />
+                </svg>
+              </a>
+            </div>
           </div>
         </div>
 
@@ -213,6 +228,13 @@ const footerStyles = `
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.15em;
+  }
+
+  .t2t-footer-social-links {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 
   .t2t-footer-social {
