@@ -9,7 +9,7 @@ type ReturnTarget = {
   label: string;
 };
 
-function getReturnTarget(fromParam: string | null): ReturnTarget {
+function getReturnTarget(fromParam: string | null): ReturnTarget | null {
   if (fromParam === "dashboard") {
     return {
       href: "/dashboard",
@@ -31,33 +31,29 @@ function getReturnTarget(fromParam: string | null): ReturnTarget {
         };
       }
     } catch {
-      // If the referrer cannot be parsed, fall back to the public landing page.
+      // If the referrer cannot be parsed, do not show a dashboard return link.
     }
   }
 
-  return {
-    href: "/",
-    label: "Back to landing page",
-  };
+  return null;
 }
 
 export default function AboutReturnLink() {
   const searchParams = useSearchParams();
-  const [target, setTarget] = useState<ReturnTarget>({
-    href: "/",
-    label: "Back to landing page",
-  });
+  const [target, setTarget] = useState<ReturnTarget | null>(null);
 
   useEffect(() => {
     setTarget(getReturnTarget(searchParams.get("from")));
   }, [searchParams]);
 
+  if (!target) return null;
+
   return (
     <Link
       href={target.href}
-      className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-4 py-2.5 text-sm font-black text-slate-800 shadow-sm shadow-slate-200/70 backdrop-blur transition hover:-translate-y-0.5 hover:border-indigo-200 hover:text-indigo-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
+      className="mb-6 inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/70 px-4 py-2.5 text-sm font-black text-blue-700 transition hover:-translate-y-0.5 hover:border-blue-300 hover:text-slate-950 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-100"
     >
-      <span aria-hidden="true">←</span>
+      <span aria-hidden="true">{"\u2190"}</span>
       <span>{target.label}</span>
     </Link>
   );

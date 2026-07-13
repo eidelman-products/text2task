@@ -3,123 +3,130 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import LandingFooter from "../components/landing/landing-footer";
-import UseCaseLightbox from "../components/use-cases/use-case-lightbox";
+import LandingHeader from "../components/landing/landing-header";
 import { absoluteUrl } from "../lib/site-config";
 import AboutReturnLink from "./about-return-link";
 
+const pageTitle = "About Text2Task | Our Story and Product Principles";
+const pageDescription =
+  "Learn why Text2Task was built, the product principles behind its review-first workflow, and the independent story shaping its development.";
+
 export const metadata: Metadata = {
-  title: "About Text2Task | AI Task Extraction for Client Work",
-  description:
-    "Learn how Text2Task helps freelancers and small teams turn messy client messages, emails, screenshots, and notes into organized tasks, deadlines, budgets, and client details.",
+  title: {
+    absolute: pageTitle,
+  },
+  description: pageDescription,
   alternates: {
     canonical: "/about",
   },
   openGraph: {
-    title: "About Text2Task | AI Task Extraction for Client Work",
-    description:
-      "Learn how Text2Task helps freelancers and small teams turn messy client communication into organized work.",
+    title: pageTitle,
+    description: pageDescription,
     url: absoluteUrl("/about"),
     siteName: "Text2Task",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "About Text2Task | AI Task Extraction for Client Work",
-    description:
-      "Text2Task helps freelancers and small teams turn messy client messages, emails, screenshots, and notes into organized work.",
+    title: pageTitle,
+    description: pageDescription,
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
-const problemCards = [
-  {
-    title: "Messy client messages",
-    text: "Requests arrive as long emails, chat threads, screenshots, revision notes, and quick follow-ups.",
+const founderImages = {
+  portrait: {
+    src: "/landing/about/text2task-founder-portrait.png",
+    alt: "Founder and independent builder of Text2Task",
+    width: 1254,
+    height: 1254,
   },
-  {
-    title: "Missed details",
-    text: "Deadlines, budgets, files, links, and client context are easy to overlook when they are buried in the conversation.",
+  working: {
+    src: "/landing/about/text2task-founder-working.png",
+    alt: "The founder of Text2Task working on the product",
+    width: 1184,
+    height: 896,
   },
-  {
-    title: "Manual copying",
-    text: "Moving work from inboxes and chats into a project system by hand burns time before the real work starts.",
+  standing: {
+    src: "/landing/about/text2task-founder-standing.png",
+    alt: "The founder of Text2Task in a modern workspace",
+    width: 1122,
+    height: 1402,
   },
-  {
-    title: "Unclear next steps",
-    text: "A request can sound simple until it needs to become a clear plan with tasks, priorities, and details.",
-  },
-];
+} as const;
 
-const approachItems = [
+const productPrinciples = [
   {
-    title: "AI-assisted extraction",
-    text: "Text2Task identifies the useful work details inside messages, screenshots, and notes.",
+    title: "Clarity over automation",
+    text: "The goal is not to automate every decision. The goal is to make the work easier to understand and act on.",
   },
   {
-    title: "Review before saving",
-    text: "The extracted project stays editable, so the final saved work remains under the user's control.",
+    title: "Review before save",
+    text: "Extracted work remains editable so the person managing the project stays in control of what becomes part of the workspace.",
   },
   {
-    title: "Structured workspace",
-    text: "Tasks, deadlines, budgets, resources, and client details become easier to manage after intake.",
+    title: "Built for real intake",
+    text: "Client requests are often incomplete, mixed together, and spread across different formats. The product is designed around that reality.",
   },
-];
+  {
+    title: "Practical by design",
+    text: "Text2Task focuses on useful project structure, clear next steps, and less time spent repeatedly copying information between messages and project tools.",
+  },
+] as const;
 
-const workflowAudiences = [
+const journeyStages = [
   {
-    title: "Freelancers",
-    text: "Capture client requests without rebuilding every task list by hand.",
+    title: "From messages to structured projects",
+    text: "Identify the useful details inside text and supported images, then turn them into a project draft and actionable tasks.",
   },
   {
-    title: "Web designers",
-    text: "Turn revisions, screenshots, assets, deadlines, and budget notes into organized project work.",
+    title: "From a draft to a working client workspace",
+    text: "Review projects, tasks, deadlines, client details, updates, and resources in one organized place.",
   },
   {
-    title: "Developers",
-    text: "Keep bug notes, fixes, links, and maintenance requests connected to the right client work.",
+    title: "Toward a clearer ongoing workflow",
+    text: "Continue reducing repetitive client-work administration while keeping review and final decisions with the user.",
   },
-  {
-    title: "Small agencies",
-    text: "Bring multi-client requests into a clearer workflow before handoff or delivery.",
-  },
-  {
-    title: "Virtual assistants",
-    text: "Separate mixed admin instructions into practical next actions across clients.",
-  },
-  {
-    title: "Social media managers",
-    text: "Organize content requests, approvals, captions, dates, and campaign changes.",
-  },
-];
+] as const;
 
-const workflowProof = [
+const audiences = [
+  "Freelancers",
+  "Small agencies",
+  "Web designers and developers",
+  "Graphic designers and social media managers",
+  "Virtual assistants",
+  "Project managers",
+  "Other client-service professionals",
+] as const;
+
+const supportEmail = "support@text2task.com";
+
+const trustPoints = [
   {
-    step: "1",
-    label: "Client WhatsApp message",
-    src: "/landing/text2task-client-whatsapp-graphic-designers.png",
-    alt: "Client WhatsApp message with graphic design revision request.",
+    title: "User-controlled review",
+    text: "Nothing needs to be saved before the extracted work has been reviewed.",
   },
   {
-    step: "2",
-    label: "AI extracts the work",
-    src: "/landing/text2task-client-whatsapp-graphic-designers extracted.png",
-    alt: "Text2Task AI extraction preview from a client WhatsApp message.",
+    title: "Ongoing product development",
+    text: "The product continues to evolve around real client-service workflows.",
   },
   {
-    step: "3",
-    label: "Saved in the CRM",
-    src: "/landing/New-Task-CRM.png",
-    alt: "New extracted task saved inside the Text2Task CRM.",
+    title: "Direct support",
+    text: "Questions and product issues can be sent to support.",
   },
-];
+] as const;
 
 export default function AboutPage() {
   const aboutJsonLd = {
     "@context": "https://schema.org",
     "@type": "AboutPage",
-    name: "About Text2Task",
-    description:
-      "Text2Task helps freelancers and small teams turn messy client messages, emails, screenshots, and notes into organized tasks, deadlines, budgets, and client details.",
+    name: pageTitle,
+    description: pageDescription,
     url: absoluteUrl("/about"),
+    inLanguage: "en-US",
     isPartOf: {
       "@type": "WebSite",
       name: "Text2Task",
@@ -130,393 +137,366 @@ export default function AboutPage() {
       name: "Text2Task",
       applicationCategory: "ProductivityApplication",
       operatingSystem: "Web",
+      url: absoluteUrl("/"),
     },
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f7ff] text-slate-950">
+    <div className="min-h-screen bg-white text-slate-950">
+      <LandingHeader />
+
       <main>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutJsonLd) }}
         />
 
-        <section className="relative overflow-hidden border-b border-indigo-100 bg-[radial-gradient(circle_at_16%_12%,_rgba(199,210,254,0.62),_transparent_31%),radial-gradient(circle_at_88%_14%,_rgba(221,214,254,0.54),_transparent_30%),linear-gradient(135deg,_#ffffff_0%,_#fafaff_52%,_#eef2ff_100%)]">
-          <div className="absolute left-[8%] top-8 h-72 w-72 rounded-full bg-indigo-200/30 blur-3xl" />
-          <div className="absolute bottom-0 right-[10%] h-72 w-72 rounded-full bg-violet-200/30 blur-3xl" />
+        <section className="overflow-hidden border-b border-slate-200 bg-white">
+          <div className="mx-auto grid max-w-7xl gap-12 px-6 py-14 sm:py-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-8 lg:py-24">
+            <div className="max-w-3xl">
+              <Suspense fallback={null}>
+                <AboutReturnLink />
+              </Suspense>
 
-          <div className="relative mx-auto max-w-7xl px-6 pt-6 sm:pt-8 lg:px-8">
-  <Suspense fallback={null}>
-    <AboutReturnLink />
-  </Suspense>
-</div>
+              <p className="mt-6 text-sm font-black uppercase tracking-[0.16em] text-blue-700 first:mt-0">
+                About Text2Task
+              </p>
 
-          <div className="relative mx-auto grid max-w-7xl gap-14 px-6 pb-16 pt-10 sm:pb-20 sm:pt-14 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:px-8 lg:pb-24 lg:pt-16">
-            <div>
-              <h1 className="max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-                Turn messy client communication into organized work.
+              <h1 className="mt-5 text-5xl font-black tracking-tight text-slate-950 sm:text-6xl lg:text-[4.75rem] lg:leading-[0.96]">
+                More efficient client work starts with Text2Task.
               </h1>
 
-              <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600 sm:text-xl">
-                Text2Task is an independent SaaS product built for freelancers
-                and small teams who manage client work across emails,
-                screenshots, WhatsApp messages, and notes.
+              <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
+                Text2Task is an independently built SaaS product that turns
+                scattered client communication into clear, reviewable projects
+                and tasks—so less time is spent copying details and more time
+                can go into the work itself.
               </p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/signup"
-                  className="inline-flex min-w-[150px] items-center justify-center rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-black text-white shadow-xl shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-indigo-700"
-                >
-                  <span className="text-white">Try Text2Task</span>
-                </Link>
+              <p className="mt-7 border-l-2 border-blue-600 pl-5 text-base font-black text-slate-950">
+                Built independently.
+              </p>
 
-                <Link
-                  href="/use-cases"
-                  className="inline-flex min-w-[150px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-3.5 text-sm font-black text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:text-indigo-700"
-                >
-                  <span>View use cases</span>
-                </Link>
-              </div>
+              <Link
+                href="/#how-it-works"
+                className="mt-8 inline-flex text-sm font-black text-blue-700 transition hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-4"
+              >
+                See how Text2Task works {"\u2192"}
+              </Link>
             </div>
 
-            <div className="relative min-h-[500px] lg:min-h-[560px]">
-              <button
-                type="button"
-                data-image-lightbox-trigger
-                data-image-lightbox-src="/landing/text2task-client-gmail-web-designers.png"
-                data-image-lightbox-alt="Client email request with website edits, budget, and deadline."
-                data-image-lightbox-label="Client email request"
-                data-image-lightbox-width="1586"
-                data-image-lightbox-height="992"
-                aria-label="Open client email request screenshot preview"
-                className="group absolute right-0 top-0 w-[84%] cursor-pointer rounded-3xl border border-white bg-white/80 p-3 text-left shadow-2xl shadow-indigo-200/50 backdrop-blur transition duration-300 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
-              >
-                <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
-                  <Image
-                    src="/landing/text2task-client-gmail-web-designers.png"
-                    alt="Client email request with website edits, budget, and deadline."
-                    width={1586}
-                    height={992}
-                    priority
-                    className="h-auto w-full object-cover"
-                    sizes="(min-width: 1024px) 46vw, 90vw"
-                  />
-                </div>
-                <span className="pointer-events-none absolute bottom-5 right-5 rounded-full border border-white/70 bg-slate-950/70 px-3 py-1.5 text-xs font-black text-white opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100 group-focus-visible:opacity-100">
-                  Click to enlarge
-                </span>
-              </button>
-
-              <button
-                type="button"
-                data-image-lightbox-trigger
-                data-image-lightbox-src="/landing/text2task-ai-project-preview.png"
-                data-image-lightbox-alt="Text2Task AI project preview with extracted tasks, deadline, budget, and client details."
-                data-image-lightbox-label="AI project preview"
-                data-image-lightbox-width="959"
-                data-image-lightbox-height="909"
-                aria-label="Open Text2Task AI project preview screenshot"
-                className="group absolute bottom-0 left-0 w-[78%] cursor-pointer rounded-3xl border border-white bg-white/90 p-3 text-left shadow-2xl shadow-slate-200/80 backdrop-blur transition duration-300 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
-              >
-                <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
-                  <Image
-                    src="/landing/text2task-ai-project-preview.png"
-                    alt="Text2Task AI project preview with extracted tasks, deadline, budget, and client details."
-                    width={1380}
-                    height={564}
-                    priority
-                    className="h-auto w-full object-cover"
-                    sizes="(min-width: 1024px) 42vw, 86vw"
-                  />
-                </div>
-                <span className="pointer-events-none absolute bottom-5 right-5 rounded-full border border-white/70 bg-slate-950/70 px-3 py-1.5 text-xs font-black text-white opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100 group-focus-visible:opacity-100">
-                  Click to enlarge
-                </span>
-              </button>
-
-              <div
-                className="pointer-events-none absolute left-[13%] top-[46%] flex h-12 w-12 items-center justify-center rounded-full border border-indigo-100 bg-white/95 text-lg font-black text-indigo-700 shadow-xl shadow-indigo-200/50 backdrop-blur"
-                aria-hidden="true"
-              >
-                -&gt;
+            <figure className="relative mx-auto w-full max-w-[560px] lg:ml-auto">
+              <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-100">
+                <Image
+                  src={founderImages.portrait.src}
+                  alt={founderImages.portrait.alt}
+                  width={founderImages.portrait.width}
+                  height={founderImages.portrait.height}
+                  priority
+                  className="aspect-[4/5] h-auto w-full object-cover object-center sm:aspect-square lg:aspect-[4/5]"
+                  sizes="(min-width: 1280px) 520px, (min-width: 1024px) 44vw, calc(100vw - 48px)"
+                />
               </div>
+            </figure>
+          </div>
+        </section>
+
+        <section className="border-b border-slate-200 bg-slate-50/70">
+          <div className="mx-auto max-w-7xl px-6 py-16 sm:py-20 lg:px-8 lg:py-24">
+            <div className="mx-auto max-w-4xl text-center">
+              <p className="text-sm font-black uppercase tracking-[0.16em] text-blue-700">
+                Our mission
+              </p>
+              <h2 className="mt-4 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+                Make client work easier to understand and faster to organize.
+              </h2>
+              <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-slate-600">
+                The problem is not that the work is missing. It is that the work
+                is buried inside messages, screenshots, revisions, links,
+                deadlines, and follow-ups. Text2Task exists to turn that noise
+                into a clear starting point without rebuilding every project and
+                task list by hand.
+              </p>
+
+              <div className="mx-auto my-10 h-px w-24 bg-blue-600" />
+
+              <p className="text-4xl font-black tracking-tight text-slate-950 sm:text-6xl">
+                Clarity before automation.
+              </p>
+              <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-600">
+                AI should help structure the work. The final decision should
+                remain with the user.
+              </p>
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-6 py-16 sm:py-20 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
-            <div>
-              <h2 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                Why Text2Task exists
-              </h2>
-              <p className="mt-5 text-lg leading-8 text-slate-600">
-                Client requests rarely arrive as clean tasks. They show up as
-                emails, screenshots, chat messages, quick notes, and revision
-                requests. Text2Task exists to turn that intake into organized
-                work without removing the human review step.
+        <section className="border-b border-slate-200 bg-white">
+          <div className="mx-auto grid max-w-7xl gap-12 px-6 py-16 sm:py-20 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:px-8 lg:py-24">
+            <div className="max-w-2xl lg:order-2">
+              <p className="text-sm font-black uppercase tracking-[0.16em] text-blue-700">
+                The story behind the product
               </p>
+              <h2 className="mt-4 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+                Built from a simple frustration with messy client work.
+              </h2>
+              <div className="mt-7 space-y-5 text-lg leading-8 text-slate-600">
+                <p>
+                  Too much useful work still begins in places that were never
+                  designed to manage it: inboxes, WhatsApp threads, screenshots,
+                  and notes. The important details are there, but the structure
+                  is not.
+                </p>
+                <p>
+                  I built Text2Task to reduce the time spent manually copying
+                  client requests into project systems. AI helps organize the
+                  information into a workable draft, while the user reviews and
+                  decides what gets saved.
+                </p>
+              </div>
+
+              <div className="mt-8 border-t border-slate-200 pt-6">
+                <p className="text-sm font-bold text-slate-500">
+                  Founder and independent builder of Text2Task
+                </p>
+              </div>
             </div>
 
-            <div className="relative min-h-[390px]">
-              <div className="absolute -right-8 top-0 h-40 w-40 rounded-full bg-indigo-200/30 blur-3xl" />
-              <button
-                type="button"
-                data-image-lightbox-trigger
-                data-image-lightbox-src="/landing/text2task-client-whatsapp-request.png"
-                data-image-lightbox-alt="Client WhatsApp request before extraction."
-                data-image-lightbox-label="Client WhatsApp request"
-                data-image-lightbox-width="760"
-                data-image-lightbox-height="760"
-                aria-label="Open client WhatsApp request screenshot preview"
-                className="group absolute left-0 top-0 w-[52%] cursor-pointer rounded-[1.75rem] border border-white bg-white/80 p-3 text-left shadow-2xl shadow-slate-200/70 backdrop-blur transition duration-300 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
-              >
-                <div className="overflow-hidden rounded-[1.25rem] border border-slate-200 bg-white">
-                  <Image
-                    src="/landing/text2task-client-whatsapp-request.png"
-                    alt="Client WhatsApp request before extraction."
-                    width={760}
-                    height={760}
-                    className="h-auto max-h-[340px] w-full object-contain"
-                    sizes="(min-width: 1024px) 28vw, 90vw"
-                  />
-                </div>
-                <span className="pointer-events-none absolute bottom-5 right-5 rounded-full border border-white/70 bg-slate-950/70 px-3 py-1.5 text-xs font-black text-white opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100 group-focus-visible:opacity-100">
-                  Click to enlarge
-                </span>
-              </button>
-
-              <button
-                type="button"
-                data-image-lightbox-trigger
-                data-image-lightbox-src="/landing/text2task-client-update-review.png"
-                data-image-lightbox-alt="Text2Task client update review showing extracted changes before saving."
-                data-image-lightbox-label="Client update review"
-                data-image-lightbox-width="1400"
-                data-image-lightbox-height="840"
-                aria-label="Open Text2Task client update review screenshot preview"
-                className="group absolute bottom-0 right-0 w-[68%] cursor-pointer rounded-[1.75rem] border border-white bg-white/90 p-3 text-left shadow-2xl shadow-indigo-100/80 backdrop-blur transition duration-300 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
-              >
-                <div className="overflow-hidden rounded-[1.25rem] border border-slate-200 bg-white">
-                  <Image
-                    src="/landing/text2task-client-update-review.png"
-                    alt="Text2Task client update review showing extracted changes before saving."
-                    width={1400}
-                    height={840}
-                    className="h-auto max-h-[320px] w-full object-contain"
-                    sizes="(min-width: 1024px) 32vw, 90vw"
-                  />
-                </div>
-                <span className="pointer-events-none absolute bottom-5 right-5 rounded-full border border-white/70 bg-slate-950/70 px-3 py-1.5 text-xs font-black text-white opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100 group-focus-visible:opacity-100">
-                  Click to enlarge
-                </span>
-              </button>
-            </div>
+            <figure className="lg:order-1">
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                <Image
+                  src={founderImages.working.src}
+                  alt={founderImages.working.alt}
+                  width={founderImages.working.width}
+                  height={founderImages.working.height}
+                  className="h-auto w-full object-cover object-center"
+                  sizes="(min-width: 1280px) 560px, (min-width: 1024px) 44vw, calc(100vw - 48px)"
+                />
+              </div>
+            </figure>
           </div>
         </section>
 
-        <section className="border-y border-indigo-100 bg-white">
-          <div className="mx-auto max-w-7xl px-6 py-16 sm:py-20 lg:px-8">
-            <div className="max-w-3xl">
-              <h2 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                The problem we solve
-              </h2>
-              <p className="mt-5 text-lg leading-8 text-slate-600">
-                Text2Task helps reduce the friction between receiving a client
-                request and knowing exactly what needs to happen next.
+        <section className="bg-slate-950 text-white">
+          <div className="mx-auto max-w-7xl px-6 py-16 sm:py-20 lg:px-8 lg:py-24">
+            <div className="max-w-4xl">
+              <p className="text-sm font-black uppercase tracking-[0.16em] text-blue-300">
+                What guides the product
               </p>
+              <h2 className="mt-4 text-4xl font-black tracking-tight text-white sm:text-5xl">
+                Useful AI should make work clearer, not make decisions
+                disappear.
+              </h2>
             </div>
 
-            <div className="mt-12 grid gap-8 md:grid-cols-2 xl:grid-cols-4">
-              {problemCards.map((card, index) => (
-                <div
-                  key={card.title}
-                  className="relative border-t border-slate-200 pt-6"
+            <div className="mt-12 grid gap-x-12 gap-y-0 md:grid-cols-2">
+              {productPrinciples.map((principle, index) => (
+                <article
+                  key={principle.title}
+                  className="border-t border-white/15 py-7"
                 >
-                  <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50 text-sm font-black text-indigo-700 ring-8 ring-white">
-                    {index + 1}
-                  </div>
-                  <h3 className="text-lg font-black tracking-tight text-slate-950">
-                    {card.title}
-                  </h3>
-                  <p className="mt-3 text-sm leading-7 text-slate-600">
-                    {card.text}
+                  <p className="text-sm font-black text-blue-300">
+                    {String(index + 1).padStart(2, "0")}
                   </p>
-                </div>
+                  <h3 className="mt-4 text-2xl font-black tracking-tight text-white">
+                    {principle.title}
+                  </h3>
+                  <p className="mt-3 max-w-xl text-base leading-7 text-slate-300">
+                    {principle.text}
+                  </p>
+                </article>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-6 py-16 sm:py-20 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-[0.86fr_1.14fr] lg:items-start">
+        <section className="border-b border-slate-200 bg-white">
+          <div className="mx-auto grid max-w-7xl gap-12 px-6 py-16 sm:py-20 lg:grid-cols-[1.15fr_0.85fr] lg:items-start lg:px-8 lg:py-24">
             <div>
-              <h2 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                Our approach
-              </h2>
-              <p className="mt-5 text-lg leading-8 text-slate-600">
-                Text2Task is built around AI-assisted extraction and a
-                review-first workflow. The product helps draft the structure,
-                while the user stays in control before anything is saved.
+              <p className="text-sm font-black uppercase tracking-[0.16em] text-blue-700">
+                How Text2Task is evolving
               </p>
-            </div>
+              <h2 className="mt-4 max-w-3xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+                One focused problem, a broader working system.
+              </h2>
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
+                Text2Task started with one job: turn scattered client
+                communication into structured work. The product continues to
+                grow around that same core problem.
+              </p>
 
-            <div className="relative">
-              <div
-                className="absolute left-5 top-6 hidden h-[calc(100%-48px)] w-px bg-gradient-to-b from-indigo-200 via-indigo-300 to-transparent sm:block"
-                aria-hidden="true"
-              />
-              <div className="grid gap-8">
-                {approachItems.map((item, index) => (
-                  <div
-                    key={item.title}
-                    className="relative grid gap-4 sm:grid-cols-[42px_1fr]"
+              <div className="mt-10 border-y border-slate-200">
+                {journeyStages.map((stage, index) => (
+                  <article
+                    key={stage.title}
+                    className="grid gap-4 border-b border-slate-200 py-6 last:border-b-0 sm:grid-cols-[96px_1fr]"
                   >
-                    <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full border border-indigo-100 bg-white text-sm font-black text-indigo-700 shadow-sm shadow-indigo-100">
-                      {index + 1}
-                    </div>
-                    <div className="pb-2">
-                      <h3 className="text-lg font-black text-slate-950">
-                        {item.title}
+                    <p className="text-sm font-black text-blue-700">
+                      Stage {index + 1}
+                    </p>
+                    <div>
+                      <h3 className="text-xl font-black tracking-tight text-slate-950">
+                        {stage.title}
                       </h3>
-                      <p className="mt-2 max-w-xl text-sm leading-7 text-slate-600">
-                        {item.text}
+                      <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                        {stage.text}
                       </p>
                     </div>
-                  </div>
+                  </article>
                 ))}
               </div>
             </div>
+
+            <figure className="lg:pt-8">
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                <Image
+                  src={founderImages.standing.src}
+                  alt={founderImages.standing.alt}
+                  width={founderImages.standing.width}
+                  height={founderImages.standing.height}
+                  className="aspect-[4/5] h-auto w-full object-cover object-center"
+                  sizes="(min-width: 1280px) 420px, (min-width: 1024px) 34vw, calc(100vw - 48px)"
+                />
+              </div>
+            </figure>
           </div>
         </section>
 
-        <section className="border-y border-indigo-100 bg-[radial-gradient(circle_at_top,_rgba(199,210,254,0.28),_transparent_36%),#ffffff]">
+        <section className="border-b border-slate-200 bg-slate-50/70">
           <div className="mx-auto max-w-7xl px-6 py-16 sm:py-20 lg:px-8">
-            <div className="mx-auto max-w-3xl text-center">
-              <h2 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                Built for client-service workflows
-              </h2>
-              <p className="mt-5 text-lg leading-8 text-slate-600">
-                Text2Task is designed for the kind of work that starts in client
-                communication and needs to become clear tasks before delivery can
-                move forward.
+            <div className="grid gap-10 lg:grid-cols-[0.75fr_1.25fr] lg:items-start">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.16em] text-blue-700">
+                  Who it is built for
+                </p>
+                <h2 className="mt-4 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+                  People who turn requests into deliverables.
+                </h2>
+                <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">
+                  Text2Task is designed for professionals who regularly receive
+                  client instructions and need to turn them into clear,
+                  manageable work.
+                </p>
+              </div>
+
+              <div>
+                <div className="flex flex-wrap gap-3">
+                  {audiences.map((audience) => (
+                    <span
+                      key={audience}
+                      className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-800"
+                    >
+                      {audience}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-8 border-t border-slate-200 pt-6 text-lg font-black leading-8 text-slate-950">
+                  Different services, same recurring problem: the work arrives
+                  in communication before it becomes a plan.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-slate-200 bg-white">
+          <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 sm:py-20 lg:grid-cols-[0.82fr_1.18fr] lg:px-8">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.16em] text-blue-700">
+                Built for long-term use
               </p>
+              <h2 className="mt-4 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+                Independent, active, and built to keep improving.
+              </h2>
+              <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">
+                Text2Task is actively maintained as a long-term SaaS product.
+                Product decisions are guided by practical workflows, clear user
+                control, and direct support, not automation for its own sake.
+              </p>
+
+              <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-sm font-bold text-blue-700">
+                <Link
+                  href="/privacy"
+                  className="transition hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-4"
+                >
+                  Privacy
+                </Link>
+                <Link
+                  href="/terms"
+                  className="transition hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-4"
+                >
+                  Terms
+                </Link>
+                <Link
+                  href="/contact"
+                  className="transition hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-4"
+                >
+                  Contact
+                </Link>
+              </div>
             </div>
 
-            <div className="mx-auto mt-12 grid max-w-5xl gap-x-8 gap-y-0 overflow-hidden rounded-[2rem] border-y border-slate-200 sm:grid-cols-2 lg:grid-cols-3">
-              {workflowAudiences.map((audience) => (
-                <div
-                  key={audience.title}
-                  className="border-b border-slate-200 py-6 text-left lg:[&:nth-last-child(-n+3)]:border-b-0"
-                >
-                  <div className="mb-3 h-1.5 w-8 rounded-full bg-indigo-400" />
-                  <h3 className="text-base font-black text-slate-950">
-                    {audience.title}
+            <div className="border-y border-slate-200">
+              {trustPoints.map((point) => (
+                <article key={point.title} className="border-b border-slate-200 py-6 last:border-b-0">
+                  <h3 className="text-xl font-black tracking-tight text-slate-950">
+                    {point.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    {audience.text}
-                  </p>
-                </div>
+                  {point.title === "Direct support" ? (
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Questions and product issues can be sent to{" "}
+                      <a
+                        href={`mailto:${supportEmail}`}
+                        className="font-bold text-blue-700 transition hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-4"
+                      >
+                        {supportEmail}
+                      </a>
+                      .
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      {point.text}
+                    </p>
+                  )}
+                </article>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-6 py-14 sm:py-16 lg:px-8">
-          <div className="mx-auto mb-10 max-w-3xl text-center">
-            <h2 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-              From client WhatsApp to AI extraction to saved CRM task.
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600">
-              A real client request can move from messy message to reviewed work
-              and finally into the workspace.
-            </p>
-          </div>
-
-          <div className="grid gap-5 lg:grid-cols-3">
-            {workflowProof.map((image, index) => (
-              <div key={image.src} className="relative">
-                {index > 0 ? (
-                  <div
-                    className="pointer-events-none absolute -left-4 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-indigo-100 bg-white text-sm font-black text-indigo-700 shadow-lg shadow-indigo-100 lg:flex"
-                    aria-hidden="true"
-                  >
-                    -&gt;
-                  </div>
-                ) : null}
-
-                <button
-                  type="button"
-                  data-image-lightbox-trigger
-                  data-image-lightbox-src={image.src}
-                  data-image-lightbox-alt={image.alt}
-                  data-image-lightbox-label={image.label}
-                  data-image-lightbox-width="1400"
-                  data-image-lightbox-height="900"
-                  aria-label={`Open screenshot preview: ${image.alt}`}
-                  className="group relative w-full cursor-pointer rounded-3xl border border-white bg-white/85 p-3 text-left shadow-lg shadow-slate-200/60 backdrop-blur transition duration-300 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
-                >
-                  <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white">
-                    <Image
-                      src={image.src}
-                      alt={image.alt}
-                      width={1400}
-                      height={900}
-                      className="h-56 w-full object-contain"
-                      sizes="(min-width: 1024px) 30vw, 90vw"
-                    />
-                  </div>
-
-                  <div className="mt-4 flex items-center gap-3 px-1 pb-1">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-black text-indigo-700">
-                      {image.step}
-                    </span>
-                    <span className="text-sm font-black text-slate-950">
-                      {image.label}
-                    </span>
-                  </div>
-
-                  <span className="pointer-events-none absolute bottom-16 right-5 rounded-full border border-white/70 bg-slate-950/70 px-3 py-1.5 text-xs font-black text-white opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100 group-focus-visible:opacity-100">
-                    Click to enlarge
-                  </span>
-                </button>
+        <section className="bg-slate-950">
+          <div className="mx-auto max-w-7xl px-6 py-14 sm:py-16 lg:px-8">
+            <div className="grid gap-8 rounded-2xl border border-white/10 bg-[linear-gradient(135deg,_rgba(37,99,235,0.28),_rgba(15,23,42,0)_42%),#0f172a] p-6 text-white sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center lg:p-10">
+              <div>
+                <h2 className="max-w-3xl text-4xl font-black tracking-tight text-white sm:text-5xl">
+                  Bring the next client request into focus.
+                </h2>
+                <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-300">
+                  Try Text2Task with a real message and review the result before
+                  anything is saved.
+                </p>
               </div>
-            ))}
-          </div>
-        </section>
 
-        <section className="px-6 pb-16 sm:pb-20 lg:px-8">
-          <div className="mx-auto max-w-5xl overflow-hidden rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_top_left,_rgba(129,140,248,0.32),_transparent_34%),linear-gradient(135deg,_#0f172a,_#111827)] px-6 py-10 text-center text-white shadow-2xl shadow-slate-900/25 sm:px-10">
-            <h2 className="mx-auto max-w-3xl text-3xl font-black tracking-tight text-white sm:text-4xl">
-              Ready to turn your next client request into organized work?
-            </h2>
-            <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-100">
-              Paste a real client message, review the extracted project plan,
-              and save the work when it looks right.
-            </p>
-
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link
-                href="/signup"
-                className="inline-flex min-w-[150px] items-center justify-center rounded-2xl bg-white px-6 py-3.5 text-sm font-black text-slate-950 shadow-xl transition hover:-translate-y-0.5 hover:bg-indigo-50"
-              >
-                <span className="text-slate-950">Start free</span>
-              </Link>
-              <Link
-                href="/contact"
-                className="inline-flex min-w-[150px] items-center justify-center rounded-2xl border border-white/25 bg-white/10 px-6 py-3.5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
-              >
-                <span className="text-white">Contact support</span>
-              </Link>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/signup"
+                  className="inline-flex min-h-12 min-w-[140px] items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-black text-white transition hover:bg-blue-500 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300/40"
+                >
+                  <span className="text-white">Start free</span>
+                </Link>
+                <Link
+                  href="/contact"
+                  className="inline-flex min-h-12 min-w-[140px] items-center justify-center rounded-xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-black text-white transition hover:bg-white/15 focus:outline-none focus-visible:ring-4 focus-visible:ring-white/20"
+                >
+                  Contact support
+                </Link>
+              </div>
             </div>
           </div>
         </section>
-
       </main>
 
       <LandingFooter />
-      <UseCaseLightbox />
     </div>
   );
 }
