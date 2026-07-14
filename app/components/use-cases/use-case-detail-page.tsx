@@ -1,5 +1,7 @@
+import JsonLd from "@/app/components/JsonLd";
 import LandingFooter from "@/app/components/landing/landing-footer";
 import LandingHeader from "@/app/components/landing/landing-header";
+import { buildBreadcrumbListJsonLd } from "@/app/lib/schema";
 import type { UseCase } from "@/app/lib/use-cases";
 import { getRelatedUseCases } from "@/app/lib/use-cases";
 import { absoluteUrl } from "@/app/lib/site-config";
@@ -21,6 +23,8 @@ type UseCaseDetailPageProps = {
 
 export default function UseCaseDetailPage({ useCase }: UseCaseDetailPageProps) {
   const relatedUseCases = getRelatedUseCases(useCase.relatedSlugs ?? []);
+  const canonicalUrl = absoluteUrl(`/use-cases/${useCase.slug}`);
+  const visiblePageName = `${useCase.hero.title} ${useCase.hero.highlight}`;
 
   const faqJsonLd = useCase.faq
     ? {
@@ -42,7 +46,7 @@ export default function UseCaseDetailPage({ useCase }: UseCaseDetailPageProps) {
     "@type": "WebPage",
     name: useCase.seo.title,
     description: useCase.seo.description,
-    url: absoluteUrl(`/use-cases/${useCase.slug}`),
+    url: canonicalUrl,
     isPartOf: {
       "@type": "WebSite",
       name: "Text2Task",
@@ -56,18 +60,29 @@ export default function UseCaseDetailPage({ useCase }: UseCaseDetailPageProps) {
     },
   };
 
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd({
+    currentCanonicalUrl: canonicalUrl,
+    items: [
+      {
+        name: "Home",
+        url: absoluteUrl("/"),
+      },
+      {
+        name: "Use Cases",
+        url: absoluteUrl("/use-cases"),
+      },
+      {
+        name: visiblePageName,
+        url: canonicalUrl,
+      },
+    ],
+  });
+
   return (
     <div className="min-h-screen bg-white text-slate-950">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageJsonLd) }}
-      />
-      {faqJsonLd ? (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-        />
-      ) : null}
+      <JsonLd data={webPageJsonLd} />
+      <JsonLd id="use-case-breadcrumb-jsonld" data={breadcrumbJsonLd} />
+      {faqJsonLd ? <JsonLd data={faqJsonLd} /> : null}
 
       <LandingHeader />
 

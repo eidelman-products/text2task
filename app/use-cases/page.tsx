@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import JsonLd from "@/app/components/JsonLd";
 import LandingFooter from "@/app/components/landing/landing-footer";
 import LandingHeader from "@/app/components/landing/landing-header";
 import UseCaseLightbox from "@/app/components/use-cases/use-case-lightbox";
+import { buildBreadcrumbListJsonLd } from "@/app/lib/schema";
 import { absoluteUrl } from "@/app/lib/site-config";
 import {
   getAllUseCases,
@@ -36,6 +38,7 @@ export const metadata: Metadata = {
 export default function UseCasesPage() {
   const useCases = getAllUseCases();
   const categoryGroups = getUseCaseCategoryGroups();
+  const useCasesCanonicalUrl = absoluteUrl("/use-cases");
 
   const collectionJsonLd = {
     "@context": "https://schema.org",
@@ -43,7 +46,7 @@ export default function UseCasesPage() {
     name: "Text2Task Use Cases",
     description:
       "Use cases for freelancers and agencies organizing client messages into projects and tasks with Text2Task.",
-    url: absoluteUrl("/use-cases"),
+    url: useCasesCanonicalUrl,
     mainEntity: useCases.map((useCase) => ({
       "@type": "WebPage",
       name: useCase.listing.label,
@@ -66,16 +69,25 @@ export default function UseCasesPage() {
     })),
   };
 
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd({
+    currentCanonicalUrl: useCasesCanonicalUrl,
+    items: [
+      {
+        name: "Home",
+        url: absoluteUrl("/"),
+      },
+      {
+        name: "Use Cases",
+        url: useCasesCanonicalUrl,
+      },
+    ],
+  });
+
   return (
     <div className="min-h-screen bg-[#fbfcfe] text-slate-950">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
-      />
+      <JsonLd data={collectionJsonLd} />
+      <JsonLd data={itemListJsonLd} />
+      <JsonLd id="use-cases-breadcrumb-jsonld" data={breadcrumbJsonLd} />
 
       <LandingHeader />
 
