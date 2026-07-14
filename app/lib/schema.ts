@@ -1,3 +1,5 @@
+import { absoluteUrl } from "@/app/lib/site-config";
+
 export type BreadcrumbListItemInput = Readonly<{
   name: string;
   url: string;
@@ -34,5 +36,51 @@ export function buildBreadcrumbListJsonLd({
       name: item.name,
       item: item.url,
     })),
+  };
+}
+
+export type ArticleJsonLdInput = Readonly<{
+  headline: string;
+  description: string;
+  url: string;
+}>;
+
+export type ArticleJsonLd = Readonly<{
+  "@context": "https://schema.org";
+  "@type": "Article";
+  "@id": string;
+  headline: string;
+  description: string;
+  url: string;
+  mainEntityOfPage: Readonly<{
+    "@type": "WebPage";
+    "@id": string;
+    url: string;
+  }>;
+  publisher: Readonly<{
+    "@id": string;
+  }>;
+}>;
+
+export function buildArticleJsonLd({
+  headline,
+  description,
+  url,
+}: ArticleJsonLdInput): ArticleJsonLd {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": `${url}#article`,
+    headline,
+    description,
+    url,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${url}#webpage`,
+      url,
+    },
+    publisher: {
+      "@id": absoluteUrl("/#organization"),
+    },
   };
 }

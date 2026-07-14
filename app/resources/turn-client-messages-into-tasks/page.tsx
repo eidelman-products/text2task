@@ -1,27 +1,66 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import JsonLd from "@/app/components/JsonLd";
+import {
+  buildArticleJsonLd,
+  buildBreadcrumbListJsonLd,
+} from "@/app/lib/schema";
 import { absoluteUrl } from "@/app/lib/site-config";
 
+const articleTitle =
+  "Turn Client Messages Into Tasks: A Simple Workflow for Freelancers";
+const articleDescription =
+  "Learn a simple workflow for turning messy client messages, screenshots, budgets, deadlines, and notes into organized tasks.";
+const articlePath = "/resources/turn-client-messages-into-tasks";
+const articleUrl = absoluteUrl(articlePath);
+
 export const metadata: Metadata = {
-  title: "Turn Client Messages Into Tasks: A Simple Workflow for Freelancers",
-  description:
-    "Learn a simple workflow for turning messy client messages, screenshots, budgets, deadlines, and notes into organized tasks.",
+  title: articleTitle,
+  description: articleDescription,
   alternates: {
-    canonical: "/resources/turn-client-messages-into-tasks",
+    canonical: articlePath,
   },
   openGraph: {
-    title: "Turn Client Messages Into Tasks: A Simple Workflow for Freelancers",
-    description:
-      "Learn a simple workflow for turning messy client messages, screenshots, budgets, deadlines, and notes into organized tasks.",
-    url: absoluteUrl("/resources/turn-client-messages-into-tasks"),
+    title: articleTitle,
+    description: articleDescription,
+    url: articleUrl,
     siteName: "Text2Task",
     type: "article",
   },
 };
 
 export default function ArticlePage() {
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd({
+    currentCanonicalUrl: articleUrl,
+    items: [
+      {
+        name: "Home",
+        url: absoluteUrl("/"),
+      },
+      {
+        name: "Resources",
+        url: absoluteUrl("/resources"),
+      },
+      {
+        name: articleTitle,
+        url: articleUrl,
+      },
+    ],
+  });
+  const articleJsonLd = buildArticleJsonLd({
+    headline: articleTitle,
+    description: articleDescription,
+    url: articleUrl,
+  });
+
   return (
     <main style={pageStyle}>
+      <JsonLd
+        id="resource-article-breadcrumb-jsonld"
+        data={breadcrumbJsonLd}
+      />
+      <JsonLd id="resource-article-jsonld" data={articleJsonLd} />
+
       <article style={articleStyle}>
         <Link href="/resources" style={backLinkStyle}>
           ← Resources
@@ -29,9 +68,7 @@ export default function ArticlePage() {
 
         <p style={eyebrowStyle}>Client messages</p>
 
-        <h1 style={h1Style}>
-          Turn Client Messages Into Tasks: A Simple Workflow for Freelancers
-        </h1>
+        <h1 style={h1Style}>{articleTitle}</h1>
 
         <p style={leadStyle}>
           Client messages are not always organized. They often include tasks,

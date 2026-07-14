@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import JsonLd from "@/app/components/JsonLd";
+import { buildBreadcrumbListJsonLd } from "@/app/lib/schema";
 import { absoluteUrl } from "@/app/lib/site-config";
 
 export const metadata: Metadata = {
@@ -43,6 +45,21 @@ const articles = [
 ];
 
 export default function ResourcesPage() {
+  const resourcesCanonicalUrl = absoluteUrl("/resources");
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd({
+    currentCanonicalUrl: resourcesCanonicalUrl,
+    items: [
+      {
+        name: "Home",
+        url: absoluteUrl("/"),
+      },
+      {
+        name: "Resources",
+        url: resourcesCanonicalUrl,
+      },
+    ],
+  });
+
   return (
     <main
       style={{
@@ -53,6 +70,8 @@ export default function ResourcesPage() {
         padding: "56px 18px 80px",
       }}
     >
+      <JsonLd id="resources-breadcrumb-jsonld" data={breadcrumbJsonLd} />
+
       <section
         style={{
           maxWidth: "1080px",

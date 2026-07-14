@@ -1,29 +1,65 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import JsonLd from "@/app/components/JsonLd";
+import {
+  buildArticleJsonLd,
+  buildBreadcrumbListJsonLd,
+} from "@/app/lib/schema";
 import { absoluteUrl } from "@/app/lib/site-config";
 
+const articleTitle = "How Web Designers Can Manage Client Revisions Faster";
+const articleDescription =
+  "A practical guide for web designers who want to organize client revisions, screenshots, website edits, deadlines, and feedback faster.";
+const articlePath = "/resources/manage-client-revisions-web-designers";
+const articleUrl = absoluteUrl(articlePath);
+
 export const metadata: Metadata = {
-  title: "How Web Designers Can Manage Client Revisions Faster",
-  description:
-    "A practical guide for web designers who want to organize client revisions, screenshots, website edits, deadlines, and feedback faster.",
+  title: articleTitle,
+  description: articleDescription,
   alternates: {
-    canonical: "/resources/manage-client-revisions-web-designers",
+    canonical: articlePath,
   },
   openGraph: {
-    title: "How Web Designers Can Manage Client Revisions Faster",
-    description:
-      "A practical guide for web designers who want to organize client revisions, screenshots, website edits, deadlines, and feedback faster.",
-    url: absoluteUrl(
-      "/resources/manage-client-revisions-web-designers"
-    ),
+    title: articleTitle,
+    description: articleDescription,
+    url: articleUrl,
     siteName: "Text2Task",
     type: "article",
   },
 };
 
 export default function ArticlePage() {
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd({
+    currentCanonicalUrl: articleUrl,
+    items: [
+      {
+        name: "Home",
+        url: absoluteUrl("/"),
+      },
+      {
+        name: "Resources",
+        url: absoluteUrl("/resources"),
+      },
+      {
+        name: articleTitle,
+        url: articleUrl,
+      },
+    ],
+  });
+  const articleJsonLd = buildArticleJsonLd({
+    headline: articleTitle,
+    description: articleDescription,
+    url: articleUrl,
+  });
+
   return (
     <main style={pageStyle}>
+      <JsonLd
+        id="resource-article-breadcrumb-jsonld"
+        data={breadcrumbJsonLd}
+      />
+      <JsonLd id="resource-article-jsonld" data={articleJsonLd} />
+
       <article style={articleStyle}>
         <Link href="/resources" style={backLinkStyle}>
           ← Resources
@@ -31,9 +67,7 @@ export default function ArticlePage() {
 
         <p style={eyebrowStyle}>Web designers</p>
 
-        <h1 style={h1Style}>
-          How Web Designers Can Manage Client Revisions Faster
-        </h1>
+        <h1 style={h1Style}>{articleTitle}</h1>
 
         <p style={leadStyle}>
           Website revision requests rarely arrive in a clean format. A client

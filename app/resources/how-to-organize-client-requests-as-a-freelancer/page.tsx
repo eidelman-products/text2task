@@ -1,29 +1,66 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import JsonLd from "@/app/components/JsonLd";
+import {
+  buildArticleJsonLd,
+  buildBreadcrumbListJsonLd,
+} from "@/app/lib/schema";
 import { absoluteUrl } from "@/app/lib/site-config";
 
+const articleTitle = "How to Organize Client Requests as a Freelancer";
+const articleDescription =
+  "Learn how freelancers can organize messy client requests, screenshots, messages, deadlines, budgets, and notes into clear tasks.";
+const articlePath =
+  "/resources/how-to-organize-client-requests-as-a-freelancer";
+const articleUrl = absoluteUrl(articlePath);
+
 export const metadata: Metadata = {
-  title: "How to Organize Client Requests as a Freelancer",
-  description:
-    "Learn how freelancers can organize messy client requests, screenshots, messages, deadlines, budgets, and notes into clear tasks.",
+  title: articleTitle,
+  description: articleDescription,
   alternates: {
-    canonical: "/resources/how-to-organize-client-requests-as-a-freelancer",
+    canonical: articlePath,
   },
   openGraph: {
-    title: "How to Organize Client Requests as a Freelancer",
-    description:
-      "Learn how freelancers can organize messy client requests, screenshots, messages, deadlines, budgets, and notes into clear tasks.",
-    url: absoluteUrl(
-      "/resources/how-to-organize-client-requests-as-a-freelancer"
-    ),
+    title: articleTitle,
+    description: articleDescription,
+    url: articleUrl,
     siteName: "Text2Task",
     type: "article",
   },
 };
 
 export default function ArticlePage() {
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd({
+    currentCanonicalUrl: articleUrl,
+    items: [
+      {
+        name: "Home",
+        url: absoluteUrl("/"),
+      },
+      {
+        name: "Resources",
+        url: absoluteUrl("/resources"),
+      },
+      {
+        name: articleTitle,
+        url: articleUrl,
+      },
+    ],
+  });
+  const articleJsonLd = buildArticleJsonLd({
+    headline: articleTitle,
+    description: articleDescription,
+    url: articleUrl,
+  });
+
   return (
     <main style={pageStyle}>
+      <JsonLd
+        id="resource-article-breadcrumb-jsonld"
+        data={breadcrumbJsonLd}
+      />
+      <JsonLd id="resource-article-jsonld" data={articleJsonLd} />
+
       <article style={articleStyle}>
         <Link href="/resources" style={backLinkStyle}>
           ← Resources
@@ -31,7 +68,7 @@ export default function ArticlePage() {
 
         <p style={eyebrowStyle}>Freelancer workflow</p>
 
-        <h1 style={h1Style}>How to Organize Client Requests as a Freelancer</h1>
+        <h1 style={h1Style}>{articleTitle}</h1>
 
         <p style={leadStyle}>
           Freelancers rarely receive perfect briefs. Client work often arrives
