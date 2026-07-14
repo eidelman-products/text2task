@@ -5,8 +5,8 @@ export const virtualAssistantsUseCase = {
   "audienceLabel": "Virtual Assistants",
   "title": "AI Task Organization for Virtual Assistants",
   "seo": {
-    "title": "AI Task Organization for Virtual Assistants | Text2Task",
-    "description": "Text2Task helps virtual assistants turn mixed client messages into organized admin projects and tasks, reducing manual task entry while keeping every plan reviewable."
+    "title": "Client Request Management for Virtual Assistants",
+    "description": "Help virtual assistants manage client requests by turning administrative messages, follow-ups, scheduling notes, and deadlines into reviewable admin tasks."
   },
   "listing": {
     "category": "operations-teams",

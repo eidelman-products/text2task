@@ -24,7 +24,7 @@ export async function generateMetadata({
 
   if (!useCase) {
     return {
-      title: "Use Case Not Found | Text2Task",
+      title: "Use Case Not Found",
       robots: {
         index: false,
         follow: false,
@@ -34,6 +34,7 @@ export async function generateMetadata({
 
   const canonicalPath = `/use-cases/${useCase.slug}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
+  const brandedTitle = `${useCase.seo.title} | Text2Task`;
 
   return {
     title: useCase.seo.title,
@@ -42,7 +43,7 @@ export async function generateMetadata({
       canonical: canonicalPath,
     },
     openGraph: {
-      title: useCase.seo.title,
+      title: brandedTitle,
       description: useCase.seo.description,
       url: canonicalUrl,
       siteName: "Text2Task",
@@ -50,7 +51,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: useCase.seo.title,
+      title: brandedTitle,
       description: useCase.seo.description,
     },
   };

@@ -5,8 +5,8 @@ export const seoFreelancersUseCase = {
   "audienceLabel": "SEO Freelancers",
   "title": "AI SEO Request Organizer for Freelancers",
   "seo": {
-    "title": "AI SEO Task Organizer for Freelancers | Text2Task",
-    "description": "Save time by turning pasted client SEO instructions, page URLs, metadata changes, internal links, redirects, screenshots, and deadlines into proposed tasks you review before saving."
+    "title": "SEO Client Task Management for Freelancers",
+    "description": "Help freelancers manage SEO client tasks by turning page URLs, content notes, metadata changes, internal links, redirects, and supported screenshots into reviewable work."
   },
   "listing": {
     "category": "website-development",

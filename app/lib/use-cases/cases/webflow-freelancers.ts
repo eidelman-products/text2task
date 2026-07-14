@@ -5,8 +5,8 @@ export const webflowFreelancersUseCase = {
   "audienceLabel": "Webflow Freelancers",
   "title": "AI Webflow Launch Task Manager for Freelancers",
   "seo": {
-    "title": "AI Webflow Launch Task Manager for Freelancers | Text2Task",
-    "description": "Text2Task helps Webflow freelancers turn client feedback, CMS and responsive changes, and launch revision messages into organized tasks with less manual entry."
+    "title": "Client Feedback Management for Webflow Freelancers",
+    "description": "Help Webflow freelancers manage client feedback by turning launch notes, CMS edits, responsive issues, and supported screenshots into reviewable project tasks."
   },
   "listing": {
     "category": "website-development",

@@ -5,8 +5,8 @@ export const wordpressFreelancersUseCase = {
   "audienceLabel": "WordPress Freelancers",
   "title": "AI WordPress Maintenance Task Manager for Freelancers",
   "seo": {
-    "title": "AI WordPress Maintenance Task Manager for Freelancers | Text2Task",
-    "description": "Text2Task helps WordPress freelancers turn client support messages, plugin and Elementor fixes, and maintenance requests into organized tasks with less manual entry."
+    "title": "Client Request Management for WordPress Freelancers",
+    "description": "Help WordPress freelancers manage client requests by turning maintenance notes, plugin fixes, page edits, and supported screenshots into reviewable project tasks."
   },
   "listing": {
     "category": "website-development",

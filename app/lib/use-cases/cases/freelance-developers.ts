@@ -5,8 +5,8 @@ export const freelanceDevelopersUseCase = {
   "audienceLabel": "Freelance Developers",
   "title": "AI Client Request Organizer for Freelance Developers",
   "seo": {
-    "title": "AI Task Organizer for Freelance Developers | Text2Task",
-    "description": "Save time by turning pasted client requests, feature changes, screenshots, mobile fixes, priorities, and deadlines into proposed development tasks you review before saving."
+    "title": "Client Request Management for Freelance Developers",
+    "description": "Help freelance developers manage client requests by turning feature changes, bug-fix notes, technical context, and supported screenshots into reviewable development tasks."
   },
   "listing": {
     "category": "website-development",

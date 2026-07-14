@@ -5,8 +5,8 @@ export const smallAgenciesUseCase = {
   "audienceLabel": "Small Agencies",
   "title": "AI Client Request Task Manager for Small Agencies",
   "seo": {
-    "title": "AI Client Request Task Manager for Small Agencies | Text2Task",
-    "description": "Text2Task helps small agencies turn separate website, creative, content, and campaign requests from multiple clients into organized project tasks with less manual data entry."
+    "title": "Client Request Management for Small Agencies",
+    "description": "Help small agencies manage client requests by turning multi-client project intake, creative feedback, content notes, and updates into reviewable tasks."
   },
   "listing": {
     "category": "operations-teams",

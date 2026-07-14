@@ -5,8 +5,8 @@ export const projectManagersUseCase = {
   "audienceLabel": "Project Managers",
   "title": "AI Project Request Organizer for Project Managers",
   "seo": {
-    "title": "AI Project Request Organizer for Project Managers | Text2Task",
-    "description": "Save time by turning pasted stakeholder requests, meeting notes, screenshots, and scope changes into proposed projects and tasks you review before saving."
+    "title": "AI Project Request Organizer for Project Managers",
+    "description": "Help project managers organize stakeholder requests by turning meeting notes, scope changes, deadlines, and supported screenshots into reviewable project work."
   },
   "listing": {
     "category": "operations-teams",

@@ -16,18 +16,18 @@ import { SITE_ORGANIZATION_SAME_AS, absoluteUrl } from "./lib/site-config";
 import { HOMEPAGE_DEMO_CONFIG } from "@/lib/homepage-demo/config.server";
 
 export const metadata: Metadata = {
-  title: "Text2Task | Turn Client Messages Into Organized Work",
+  title: "Turn Client Messages Into Projects and Tasks",
   description:
-    "Text2Task turns messy client messages, emails, notes, and screenshots into organized work with tasks, deadlines, budgets, and client details.",
+    "Turn client messages, emails, notes, and supported screenshots into reviewable projects and tasks so client work can be organized without manually retyping every detail.",
 
   alternates: {
     canonical: "/",
   },
 
   openGraph: {
-    title: "Text2Task | Turn Client Messages Into Organized Work",
+    title: "Turn Client Messages Into Projects and Tasks | Text2Task",
     description:
-      "Paste a WhatsApp message, email, note, or screenshot. Text2Task extracts the project, tasks, budget, deadline, and client details.",
+      "Turn client messages, emails, notes, and supported screenshots into reviewable projects and tasks without manually retyping every detail.",
     url: absoluteUrl("/"),
     siteName: "Text2Task",
     type: "website",
@@ -36,9 +36,9 @@ export const metadata: Metadata = {
 
   twitter: {
     card: "summary_large_image",
-    title: "Text2Task | Turn Client Messages Into Organized Work",
+    title: "Turn Client Messages Into Projects and Tasks | Text2Task",
     description:
-      "Paste a WhatsApp message, email, note, or screenshot. Text2Task extracts the project, tasks, budget, deadline, and client details.",
+      "Turn client messages, emails, notes, and supported screenshots into reviewable projects and tasks.",
   },
 
   robots: {

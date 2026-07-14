@@ -5,8 +5,8 @@ export const graphicDesignersUseCase = {
   "audienceLabel": "Graphic Designers",
   "title": "AI Task Manager for Graphic Designers",
   "seo": {
-    "title": "AI Task Manager for Graphic Designers | Text2Task",
-    "description": "Text2Task helps graphic designers turn client feedback, revision requests, WhatsApp messages, emails, screenshots, deadlines, and budgets into organized projects and tasks."
+    "title": "Client Feedback Management for Graphic Designers",
+    "description": "Help graphic designers manage client feedback by turning creative revision notes, asset requests, deadlines, and supported screenshots into reviewable design tasks."
   },
   "listing": {
     "category": "creative-content",

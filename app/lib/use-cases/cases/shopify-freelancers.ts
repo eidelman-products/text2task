@@ -5,8 +5,8 @@ export const shopifyFreelancersUseCase = {
   "audienceLabel": "Shopify Freelancers",
   "title": "AI Shopify Request Organizer for Freelancers",
   "seo": {
-    "title": "AI Shopify Task Organizer for Freelancers | Text2Task",
-    "description": "Save time by turning pasted Shopify store requests, product updates, promotions, screenshots, and mobile fixes into proposed projects and tasks you review before saving."
+    "title": "Client Request Management for Shopify Freelancers",
+    "description": "Help Shopify freelancers manage client requests by turning store updates, product changes, promotion notes, and supported screenshots into reviewable project tasks."
   },
   "listing": {
     "category": "website-development",

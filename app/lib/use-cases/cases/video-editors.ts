@@ -5,8 +5,8 @@ export const videoEditorsUseCase = {
   "audienceLabel": "Video Editors",
   "title": "AI Video Revision Task Manager for Video Editors",
   "seo": {
-    "title": "AI Video Revision Task Manager for Video Editors | Text2Task",
-    "description": "Text2Task helps video editors turn client revision messages, timestamped notes, caption changes, and export requests into organized editing tasks with less manual entry."
+    "title": "Client Feedback Management for Video Editors",
+    "description": "Help video editors manage client feedback by turning revision messages, caption changes, export notes, and supported screenshots into reviewable editing tasks."
   },
   "listing": {
     "category": "creative-content",

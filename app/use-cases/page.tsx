@@ -11,16 +11,16 @@ import {
 } from "@/app/lib/use-cases";
 
 export const metadata: Metadata = {
-  title: "Use Cases for Freelancers & Agencies | Text2Task",
+  title: "Use Cases for Freelancers & Agencies",
   description:
-    "See how freelancers and agencies use Text2Task to turn client messages into organized projects and tasks without manual task entry.",
+    "Explore how freelancers and small agencies use Text2Task to convert client requests, feedback, messages, and updates into organized projects and tasks they can review before saving.",
   alternates: {
     canonical: "/use-cases",
   },
   openGraph: {
     title: "Use Cases for Freelancers & Agencies | Text2Task",
     description:
-      "See how freelancers and agencies turn client messages into organized projects and tasks without manual task entry.",
+      "See how different client-service professionals use Text2Task to organize client requests, feedback, messages, and updates into reviewable project work.",
     url: absoluteUrl("/use-cases"),
     siteName: "Text2Task",
     type: "website",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Use Cases for Freelancers & Agencies | Text2Task",
     description:
-      "Turn client messages into organized projects and tasks without manual task entry.",
+      "See how freelancers and agencies use Text2Task to organize client requests, feedback, and updates into reviewable projects and tasks.",
   },
 };
 

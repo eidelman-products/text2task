@@ -5,8 +5,8 @@ export const webDesignersUseCase = {
   "audienceLabel": "Web Designers",
   "title": "AI Website Revision Task Manager for Web Designers",
   "seo": {
-    "title": "AI Website Revision Task Manager for Web Designers | Text2Task",
-    "description": "Text2Task helps web designers turn client feedback and website revision requests into organized project tasks, reducing manual task entry before design work begins."
+    "title": "Client Feedback Management for Web Designers",
+    "description": "Help web designers manage client feedback by turning website revision notes, client messages, and supported screenshots into reviewable project tasks."
   },
   "listing": {
     "category": "website-development",

@@ -5,8 +5,8 @@ export const socialMediaManagersUseCase = {
   "audienceLabel": "Social Media Managers",
   "title": "AI Social Media Task Manager for Client Content",
   "seo": {
-    "title": "AI Social Media Task Manager for Client Content | Text2Task",
-    "description": "Text2Task helps social media managers turn client content requests, captions, stories, campaign changes, and approval messages into organized tasks with less manual entry."
+    "title": "Client Request Management for Social Media Managers",
+    "description": "Help social media managers manage client requests by turning content requests, approval feedback, campaign notes, and deadlines into reviewable tasks."
   },
   "listing": {
     "category": "creative-content",
