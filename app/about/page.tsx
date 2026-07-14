@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
+import JsonLd from "../components/JsonLd";
 import LandingFooter from "../components/landing/landing-footer";
 import LandingHeader from "../components/landing/landing-header";
+import {
+  SITE_SCHEMA_ENTITY_IDS,
+  buildWebPageEntityId,
+} from "../lib/schema";
 import { absoluteUrl } from "../lib/site-config";
 import AboutReturnLink from "./about-return-link";
 
@@ -120,24 +125,23 @@ const trustPoints = [
 ] as const;
 
 export default function AboutPage() {
+  const aboutUrl = absoluteUrl("/about");
   const aboutJsonLd = {
     "@context": "https://schema.org",
     "@type": "AboutPage",
+    "@id": buildWebPageEntityId(aboutUrl),
     name: pageTitle,
     description: pageDescription,
-    url: absoluteUrl("/about"),
+    url: aboutUrl,
     inLanguage: "en-US",
     isPartOf: {
-      "@type": "WebSite",
-      name: "Text2Task",
-      url: absoluteUrl("/"),
+      "@id": SITE_SCHEMA_ENTITY_IDS.website,
     },
     about: {
-      "@type": "SoftwareApplication",
-      name: "Text2Task",
-      applicationCategory: "ProductivityApplication",
-      operatingSystem: "Web",
-      url: absoluteUrl("/"),
+      "@id": SITE_SCHEMA_ENTITY_IDS.softwareApplication,
+    },
+    publisher: {
+      "@id": SITE_SCHEMA_ENTITY_IDS.organization,
     },
   };
 
@@ -146,10 +150,7 @@ export default function AboutPage() {
       <LandingHeader />
 
       <main>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutJsonLd) }}
-        />
+        <JsonLd id="about-page-jsonld" data={aboutJsonLd} />
 
         <section className="overflow-hidden border-b border-slate-200 bg-white">
           <div className="mx-auto grid max-w-7xl gap-12 px-6 py-14 sm:py-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-8 lg:py-24">

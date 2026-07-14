@@ -1,13 +1,16 @@
-type JsonLdValue =
-  | string
-  | number
-  | boolean
-  | null
-  | readonly JsonLdValue[]
-  | { readonly [key: string]: JsonLdValue };
+type JsonLdPrimitive = string | number | boolean | null;
+
+export type JsonLdObject = {
+  readonly [key: string]: JsonLdValue;
+};
+
+export type JsonLdValue =
+  | JsonLdPrimitive
+  | JsonLdObject
+  | readonly JsonLdValue[];
 
 type JsonLdProps = Readonly<{
-  data: { readonly [key: string]: JsonLdValue };
+  data: JsonLdObject;
   id?: string;
 }>;
 

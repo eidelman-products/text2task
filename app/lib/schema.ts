@@ -1,5 +1,15 @@
 import { absoluteUrl } from "@/app/lib/site-config";
 
+export const SITE_SCHEMA_ENTITY_IDS = {
+  organization: absoluteUrl("/#organization"),
+  website: absoluteUrl("/#website"),
+  softwareApplication: absoluteUrl("/#softwareapplication"),
+} as const;
+
+export function buildWebPageEntityId(canonicalUrl: string): string {
+  return `${canonicalUrl}#webpage`;
+}
+
 export type BreadcrumbListItemInput = Readonly<{
   name: string;
   url: string;
