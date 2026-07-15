@@ -25,6 +25,14 @@ const resourceRoutes = [
   },
 ];
 
+const solutionRoutes = [
+  {
+    path: "/solutions/freelancer-project-management-software",
+    priority: 0.86,
+    changeFrequency: "monthly" as const,
+  },
+];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const publicRoutes: MetadataRoute.Sitemap = [
     {
@@ -73,5 +81,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: route.priority,
   }));
 
-  return [...publicRoutes, ...useCaseRoutes, ...resources];
+  const solutions: MetadataRoute.Sitemap = solutionRoutes.map((route) => ({
+    url: absoluteUrl(route.path),
+    changeFrequency: route.changeFrequency,
+    priority: route.priority,
+  }));
+
+  return [...publicRoutes, ...useCaseRoutes, ...resources, ...solutions];
 }

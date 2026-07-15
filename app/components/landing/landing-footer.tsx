@@ -9,6 +9,10 @@ const productLinks = [
   { label: "Pricing", href: "/#pricing" },
   { label: "About", href: "/about" },
   { label: "Resources", href: "/resources" },
+  {
+    label: "For freelancers",
+    href: "/solutions/freelancer-project-management-software",
+  },
 ];
 
 const useCaseLinks = [
