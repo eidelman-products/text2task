@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import JsonLd from "@/app/components/JsonLd";
+import LandingFooter from "@/app/components/landing/landing-footer";
+import LandingHeader from "@/app/components/landing/landing-header";
 import { buildBreadcrumbListJsonLd } from "@/app/lib/schema";
 import { absoluteUrl } from "@/app/lib/site-config";
+import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: "Resources for Freelancers",
@@ -68,214 +71,60 @@ export default function ResourcesPage() {
   });
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(180deg, #f8fbff 0%, #ffffff 42%, #f8fafc 100%)",
-        color: "#0f172a",
-        padding: "56px 18px 80px",
-      }}
-    >
+    <div className={styles.pageShell}>
       <JsonLd id="resources-breadcrumb-jsonld" data={breadcrumbJsonLd} />
 
-      <section
-        style={{
-          maxWidth: "1080px",
-          margin: "0 auto",
-        }}
-      >
-        <Link
-          href="/"
-          style={{
-            color: "#2563eb",
-            textDecoration: "none",
-            fontWeight: 800,
-            fontSize: "15px",
-          }}
-        >
-          ← Back to Text2Task
-        </Link>
+      <LandingHeader />
 
-        <div
-          style={{
-            marginTop: "42px",
-            maxWidth: "780px",
-          }}
-        >
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              border: "1px solid #dbeafe",
-              background: "#eff6ff",
-              color: "#1d4ed8",
-              borderRadius: "999px",
-              padding: "8px 14px",
-              fontSize: "14px",
-              fontWeight: 800,
-              marginBottom: "20px",
-            }}
-          >
-            Text2Task Resources
+      <main>
+        <section className={styles.hero}>
+          <p className={styles.eyebrow}>Text2Task Resources</p>
+          <h1>Practical guides for organizing messy client work.</h1>
+          <p className={styles.lead}>
+            Learn how freelancers, web designers, virtual assistants, and
+            small service providers can turn scattered client messages,
+            screenshots, notes, deadlines, and budgets into clear tasks.
+          </p>
+        </section>
+
+        <section className={styles.gridSection}>
+          <h2>Explore the guides</h2>
+
+          <div className={styles.articleGrid}>
+            {articles.map((article) => (
+              <Link
+                key={article.href}
+                href={article.href}
+                className={styles.articleCard}
+              >
+                <span className={styles.articleTag}>{article.tag}</span>
+                <h3>{article.title}</h3>
+                <p>{article.description}</p>
+                <span className={styles.readGuide}>Read guide &rarr;</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className={styles.finalCta}>
+          <div>
+            <h2>Turn messy client messages into organized tasks.</h2>
+            <p>
+              Paste a client message or upload a screenshot. Text2Task helps
+              extract tasks, deadlines, budgets, priorities, client details,
+              and notes.
+            </p>
           </div>
 
-          <h1
-            style={{
-              fontSize: "clamp(38px, 6vw, 68px)",
-              lineHeight: 1.03,
-              letterSpacing: "-0.055em",
-              margin: "0 0 18px",
-              fontWeight: 950,
-            }}
-          >
-            Practical guides for organizing messy client work.
-          </h1>
-
-          <p
-            style={{
-              fontSize: "20px",
-              lineHeight: 1.75,
-              color: "#475569",
-              margin: 0,
-              maxWidth: "720px",
-              fontWeight: 500,
-            }}
-          >
-            Learn how freelancers, web designers, virtual assistants, and small
-            service providers can turn scattered client messages, screenshots,
-            notes, deadlines, and budgets into clear tasks.
-          </p>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))",
-            gap: "22px",
-            marginTop: "44px",
-          }}
-        >
-          {articles.map((article) => (
-            <Link
-              key={article.href}
-              href={article.href}
-              style={{
-                display: "block",
-                padding: "28px",
-                borderRadius: "28px",
-                border: "1px solid #e2e8f0",
-                background: "rgba(255,255,255,0.92)",
-                boxShadow: "0 20px 60px rgba(15, 23, 42, 0.08)",
-                textDecoration: "none",
-                color: "#0f172a",
-              }}
-            >
-              <div
-                style={{
-                  color: "#4f46e5",
-                  fontSize: "13px",
-                  fontWeight: 900,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  marginBottom: "14px",
-                }}
-              >
-                {article.tag}
-              </div>
-
-              <h2
-                style={{
-                  fontSize: "25px",
-                  lineHeight: 1.16,
-                  letterSpacing: "-0.03em",
-                  margin: "0 0 14px",
-                  fontWeight: 950,
-                }}
-              >
-                {article.title}
-              </h2>
-
-              <p
-                style={{
-                  color: "#64748b",
-                  fontSize: "16px",
-                  lineHeight: 1.7,
-                  margin: "0 0 22px",
-                  fontWeight: 500,
-                }}
-              >
-                {article.description}
-              </p>
-
-              <span
-                style={{
-                  color: "#2563eb",
-                  fontWeight: 900,
-                  fontSize: "15px",
-                }}
-              >
-                Read guide →
-              </span>
+          <div className={styles.finalActions}>
+            <Link href="/signup" className={styles.primaryButton}>
+              Try Text2Task free
             </Link>
-          ))}
-        </div>
-
-        <section
-          style={{
-            marginTop: "56px",
-            padding: "34px",
-            borderRadius: "30px",
-            background: "linear-gradient(135deg, #2563eb, #7c3aed)",
-            color: "white",
-            boxShadow: "0 24px 70px rgba(37, 99, 235, 0.24)",
-          }}
-        >
-          <h2
-            style={{
-              margin: "0 0 10px",
-              fontSize: "32px",
-              letterSpacing: "-0.04em",
-              fontWeight: 950,
-            }}
-          >
-            Turn messy client messages into organized tasks.
-          </h2>
-
-          <p
-            style={{
-              margin: "0 0 22px",
-              fontSize: "18px",
-              lineHeight: 1.7,
-              opacity: 0.92,
-              maxWidth: "720px",
-              fontWeight: 500,
-            }}
-          >
-            Paste a client message or upload a screenshot. Text2Task helps
-            extract tasks, deadlines, budgets, priorities, client details, and
-            notes.
-          </p>
-
-          <Link
-            href="/signup"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "white",
-              color: "#1d4ed8",
-              textDecoration: "none",
-              fontWeight: 950,
-              borderRadius: "16px",
-              padding: "14px 20px",
-              boxShadow: "0 14px 30px rgba(15, 23, 42, 0.18)",
-            }}
-          >
-            Try Text2Task free
-          </Link>
+          </div>
         </section>
-      </section>
-    </main>
+      </main>
+
+      <LandingFooter />
+    </div>
   );
 }
