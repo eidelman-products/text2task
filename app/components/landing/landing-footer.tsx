@@ -13,6 +13,7 @@ const productLinks = [
     label: "For freelancers",
     href: "/solutions/freelancer-project-management-software",
   },
+  { label: "Email to tasks", href: "/features/email-to-tasks" },
 ];
 
 const useCaseLinks = [

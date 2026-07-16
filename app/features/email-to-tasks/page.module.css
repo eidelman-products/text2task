@@ -1,0 +1,627 @@
+.pageShell {
+  min-height: 100vh;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.hero,
+.section,
+.faqSection,
+.finalCta {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.hero {
+  width: min(1280px, calc(100% - 48px));
+  padding: 40px 0 8px;
+}
+
+.heroInner {
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.heroCopy {
+  min-width: 0;
+  max-width: 720px;
+}
+
+.eyebrow,
+.sectionEyebrow {
+  margin: 0 0 13px;
+  color: #2563eb;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(36px, 4.4vw, 54px);
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.heroLead {
+  margin: 18px 0 0;
+  color: #475569;
+  font-size: 18px;
+  line-height: 1.62;
+  font-weight: 540;
+}
+
+.heroActions,
+.finalActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.primaryButton,
+.secondaryButton,
+.secondaryButtonOnDark {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 900;
+  text-decoration: none;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.primaryButton {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.secondaryButton {
+  border: 1px solid #dbe3ee;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.secondaryButtonOnDark {
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.primaryButton:hover,
+.secondaryButton:hover,
+.secondaryButtonOnDark:hover {
+  transform: translateY(-1px);
+}
+
+.primaryButton:hover {
+  background: #1d4ed8;
+}
+
+.secondaryButton:hover {
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.secondaryButtonOnDark:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.secondaryButtonOnDark:focus-visible,
+.audienceLink:focus-visible,
+.relatedLink:focus-visible,
+.exploreLink:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.26);
+  outline-offset: 3px;
+}
+
+.ctaNote {
+  margin: 14px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.55;
+  font-weight: 700;
+}
+
+.flowGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.flowFigure {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  padding: 8px;
+  border: 1px solid #e7ebf1;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+}
+
+.flowLabel {
+  display: block;
+  margin: 4px 6px 8px;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.image {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 12px;
+}
+
+.flowCaption {
+  margin: 16px auto 0;
+  max-width: 640px;
+  color: #64748b;
+  font-size: 13.5px;
+  line-height: 1.6;
+  font-weight: 560;
+  text-align: center;
+}
+
+.section,
+.faqSection {
+  padding: 52px 0;
+  border-top: 1px solid #eef1f5;
+}
+
+.sectionHeader {
+  max-width: 780px;
+}
+
+.sectionHeader h2,
+.finalCta h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(26px, 2.9vw, 38px);
+  line-height: 1.12;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.sectionHeader p,
+.finalCta p {
+  margin: 16px 0 0;
+  color: #475569;
+  font-size: 16.5px;
+  line-height: 1.7;
+  font-weight: 540;
+}
+
+/* Problem topics: open editorial blocks, no cards */
+.topicGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px 40px;
+  margin-top: 30px;
+}
+
+.topicItem {
+  min-width: 0;
+  padding-left: 18px;
+  border-left: 2px solid #bfdbfe;
+}
+
+.topicItem h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 880;
+}
+
+.topicItem p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14.5px;
+  line-height: 1.6;
+  font-weight: 560;
+}
+
+/* How it works: light columns with thin dividers */
+.stepsRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+  margin-top: 32px;
+}
+
+.stepColumn {
+  min-width: 0;
+  padding-left: 20px;
+  border-left: 1px solid #e7ebf1;
+}
+
+.stepColumn:first-child {
+  border-left: none;
+  padding-left: 0;
+}
+
+.stepNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.stepColumn h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 880;
+}
+
+.stepColumn p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14.5px;
+  line-height: 1.6;
+  font-weight: 560;
+}
+
+/* Capability checklist */
+.checklistGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 32px;
+  margin: 30px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checklistGrid li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #334155;
+  font-size: 15.5px;
+  line-height: 1.5;
+  font-weight: 640;
+}
+
+.checkMark {
+  flex: none;
+  color: #2563eb;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.5;
+}
+
+/* Merged control section: pale blue band */
+.controlSection {
+  padding: 52px 0;
+  background: #eff6ff;
+}
+
+.controlInner {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.controlColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px 40px;
+  margin-top: 32px;
+}
+
+.controlColumn h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.controlList {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.controlList li {
+  position: relative;
+  padding-left: 20px;
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.55;
+  font-weight: 600;
+}
+
+.controlList li::before {
+  content: "";
+  position: absolute;
+  top: 0.6em;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
+.controlNote {
+  margin: 26px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid rgba(37, 99, 235, 0.14);
+  color: #1e3a8a;
+  font-size: 13.5px;
+  line-height: 1.6;
+  font-weight: 700;
+}
+
+/* Email-to-structure mapping list */
+.mappingList {
+  margin: 30px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mappingRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  padding: 16px 0;
+  border-bottom: 1px solid #eef1f5;
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.mappingRow:first-child {
+  padding-top: 0;
+}
+
+.mappingFrom {
+  color: #64748b;
+  font-weight: 620;
+}
+
+.mappingArrow {
+  color: #93c5fd;
+  font-weight: 900;
+}
+
+.mappingTo {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+/* Audience and related links: text lists, no cards */
+.audienceGrid,
+.relatedGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 40px;
+  margin-top: 30px;
+}
+
+.audienceItem,
+.relatedItem {
+  min-width: 0;
+  padding: 18px 0;
+  border-top: 1px solid #eef1f5;
+}
+
+.audienceLink,
+.relatedLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #1d4ed8;
+  font-size: 16px;
+  line-height: 1.25;
+  font-weight: 880;
+  text-decoration: none;
+}
+
+.audienceLink:hover,
+.relatedLink:hover {
+  color: #1e40af;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.audienceItem p,
+.relatedItem p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+  font-weight: 560;
+}
+
+.exploreLink {
+  display: inline-flex;
+  margin-top: 20px;
+  color: #1d4ed8;
+  font-size: 14px;
+  font-weight: 850;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.exploreLink:hover {
+  color: #1e40af;
+}
+
+/* FAQ: light rows, minimal shadow */
+.faqList {
+  display: grid;
+  gap: 4px;
+  margin-top: 28px;
+}
+
+.faqItem {
+  padding: 0;
+  border-bottom: 1px solid #eef1f5;
+}
+
+.faqItem summary {
+  cursor: pointer;
+  padding: 18px 4px;
+  color: #0f172a;
+  font-size: 16.5px;
+  line-height: 1.4;
+  font-weight: 880;
+}
+
+.faqItem summary:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.26);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+.faqItem p {
+  margin: 0;
+  padding: 0 4px 20px;
+  color: #475569;
+  font-size: 15px;
+  line-height: 1.7;
+  font-weight: 540;
+}
+
+.finalCta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 52px;
+  padding: 32px 36px;
+  border-radius: 20px;
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.finalCta h2 {
+  color: #ffffff;
+}
+
+.finalCta p {
+  max-width: 620px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.finalActions {
+  justify-content: flex-end;
+  margin-top: 0;
+}
+
+@media (max-width: 1060px) {
+  .finalCta {
+    grid-template-columns: 1fr;
+  }
+
+  .finalActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 820px) {
+  .hero,
+  .section,
+  .faqSection,
+  .controlSection {
+    padding: 44px 0;
+  }
+
+  .flowGrid,
+  .topicGrid,
+  .stepsRow,
+  .checklistGrid,
+  .controlColumns,
+  .audienceGrid,
+  .relatedGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .stepColumn {
+    border-left: none;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero,
+  .section,
+  .faqSection,
+  .finalCta {
+    width: min(100% - 24px, 1180px);
+  }
+
+  .controlInner {
+    width: min(100% - 24px, 1180px);
+  }
+
+  .hero {
+    padding-top: 36px;
+  }
+
+  .hero h1 {
+    font-size: clamp(30px, 10.5vw, 42px);
+    line-height: 1.08;
+  }
+
+  .heroLead,
+  .sectionHeader p,
+  .finalCta p {
+    font-size: 15.5px;
+  }
+
+  .heroActions,
+  .finalActions {
+    flex-direction: column;
+  }
+
+  .heroActions {
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .primaryButton,
+  .secondaryButton,
+  .secondaryButtonOnDark {
+    width: 100%;
+  }
+
+  .finalCta {
+    padding: 26px 22px;
+  }
+
+  .topicItem {
+    padding-left: 16px;
+  }
+}

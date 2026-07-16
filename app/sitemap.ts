@@ -33,6 +33,14 @@ const solutionRoutes = [
   },
 ];
 
+const featureRoutes = [
+  {
+    path: "/features/email-to-tasks",
+    priority: 0.84,
+    changeFrequency: "monthly" as const,
+  },
+];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const publicRoutes: MetadataRoute.Sitemap = [
     {
@@ -87,5 +95,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: route.priority,
   }));
 
-  return [...publicRoutes, ...useCaseRoutes, ...resources, ...solutions];
+  const features: MetadataRoute.Sitemap = featureRoutes.map((route) => ({
+    url: absoluteUrl(route.path),
+    changeFrequency: route.changeFrequency,
+    priority: route.priority,
+  }));
+
+  return [
+    ...publicRoutes,
+    ...useCaseRoutes,
+    ...resources,
+    ...solutions,
+    ...features,
+  ];
 }
