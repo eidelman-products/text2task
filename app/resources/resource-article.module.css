@@ -1,0 +1,252 @@
+.pageShell {
+  min-height: 100vh;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.article {
+  width: min(820px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 40px 0 64px;
+}
+
+.backLink {
+  display: inline-flex;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: #1e40af;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.backLink:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.26);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.hero {
+  margin-top: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: #2563eb;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(30px, 4.2vw, 46px);
+  line-height: 1.12;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+}
+
+.lead {
+  margin: 18px 0 0;
+  color: #475569;
+  font-size: 18px;
+  line-height: 1.68;
+  font-weight: 540;
+}
+
+.section {
+  margin-top: 40px;
+  padding-top: 40px;
+  border-top: 1px solid #eef1f5;
+}
+
+.section h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(24px, 2.6vw, 32px);
+  line-height: 1.16;
+  font-weight: 920;
+  letter-spacing: -0.005em;
+}
+
+.section p {
+  margin: 16px 0 0;
+  color: #334155;
+  font-size: 16.5px;
+  line-height: 1.75;
+  font-weight: 520;
+}
+
+.exampleBox {
+  margin: 22px 0 0;
+  padding: 20px 22px;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-style: normal;
+  font-size: 16px;
+  line-height: 1.7;
+  font-weight: 640;
+}
+
+.orderedList {
+  display: grid;
+  gap: 0;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  border-top: 1px solid #eef1f5;
+}
+
+.orderedList li {
+  position: relative;
+  padding: 14px 4px 14px 32px;
+  border-bottom: 1px solid #eef1f5;
+  color: #334155;
+  font-size: 16px;
+  line-height: 1.6;
+  font-weight: 560;
+  counter-increment: step;
+}
+
+.orderedList li:last-child {
+  border-bottom: none;
+}
+
+.orderedList li::before {
+  content: counter(step);
+  position: absolute;
+  left: 2px;
+  top: 14px;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.unorderedList {
+  display: grid;
+  gap: 10px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unorderedList li {
+  position: relative;
+  padding-left: 20px;
+  color: #334155;
+  font-size: 16px;
+  line-height: 1.6;
+  font-weight: 560;
+}
+
+.unorderedList li::before {
+  content: "";
+  position: absolute;
+  top: 0.6em;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
+.finalCta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  margin: 44px 0 0;
+  padding: 32px 36px;
+  border-radius: 20px;
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.finalCtaContent h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(24px, 2.8vw, 32px);
+  line-height: 1.16;
+  font-weight: 920;
+}
+
+.finalCtaContent p {
+  max-width: 560px;
+  margin: 14px 0 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 16px;
+  line-height: 1.65;
+  font-weight: 540;
+}
+
+.primaryButton {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  padding: 0 20px;
+  background: #ffffff;
+  color: #1d4ed8;
+  font-size: 14px;
+  font-weight: 900;
+  text-decoration: none;
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.primaryButton:hover {
+  background: #eff6ff;
+  transform: translateY(-1px);
+}
+
+.primaryButton:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .finalCta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .article {
+    width: min(100% - 24px, 820px);
+    padding-top: 28px;
+  }
+
+  .lead {
+    font-size: 16px;
+  }
+
+  .section {
+    margin-top: 32px;
+    padding-top: 32px;
+  }
+
+  .section p {
+    font-size: 15.5px;
+  }
+
+  .finalCta {
+    margin-top: 32px;
+    padding: 26px 22px;
+  }
+
+  .primaryButton {
+    width: 100%;
+  }
+}
