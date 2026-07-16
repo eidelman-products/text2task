@@ -22,6 +22,13 @@ export const metadata: Metadata = {
 
 const articles = [
   {
+    title: "How to turn emails into tasks",
+    description:
+      "A practical workflow for turning a detailed client email into a reviewable project, tasks, deadlines, priorities, and supporting details.",
+    href: "/resources/how-to-turn-emails-into-tasks",
+    tag: "Email workflow",
+  },
+  {
     title: "How to Organize Client Requests as a Freelancer",
     description:
       "A simple workflow for turning scattered client messages, screenshots, notes, deadlines, and budgets into organized work.",

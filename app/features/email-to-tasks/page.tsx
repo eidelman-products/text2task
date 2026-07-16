@@ -164,9 +164,9 @@ const relatedLinks = [
     text: "See how Text2Task keeps client requests, projects, tasks, updates, history, and resources together.",
   },
   {
-    href: "/resources/turn-client-messages-into-tasks",
-    title: "Turn client messages into tasks",
-    text: "Follow a practical workflow for organizing requests from emails, notes, messages, and screenshots.",
+    href: "/resources/how-to-turn-emails-into-tasks",
+    title: "How to turn emails into tasks",
+    text: "Follow a practical workflow for separating project context, action items, dates, priorities, and supporting details from a client email.",
   },
 ] as const;
 

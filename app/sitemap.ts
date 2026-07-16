@@ -9,6 +9,11 @@ const resourceRoutes = [
     changeFrequency: "weekly" as const,
   },
   {
+    path: "/resources/how-to-turn-emails-into-tasks",
+    priority: 0.78,
+    changeFrequency: "monthly" as const,
+  },
+  {
     path: "/resources/how-to-organize-client-requests-as-a-freelancer",
     priority: 0.78,
     changeFrequency: "monthly" as const,
