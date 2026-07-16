@@ -44,6 +44,16 @@ const featureRoutes = [
     priority: 0.84,
     changeFrequency: "monthly" as const,
   },
+  {
+    path: "/features/screenshot-to-tasks",
+    priority: 0.84,
+    changeFrequency: "monthly" as const,
+  },
+  {
+    path: "/features/ai-task-extractor",
+    priority: 0.84,
+    changeFrequency: "monthly" as const,
+  },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

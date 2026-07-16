@@ -14,6 +14,8 @@ const productLinks = [
     href: "/solutions/freelancer-project-management-software",
   },
   { label: "Email to tasks", href: "/features/email-to-tasks" },
+  { label: "Screenshot to tasks", href: "/features/screenshot-to-tasks" },
+  { label: "AI task extractor", href: "/features/ai-task-extractor" },
 ];
 
 const useCaseLinks = [
