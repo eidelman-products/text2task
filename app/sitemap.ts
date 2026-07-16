@@ -9,6 +9,11 @@ const resourceRoutes = [
     changeFrequency: "weekly" as const,
   },
   {
+    path: "/resources/how-to-turn-client-feedback-into-tasks",
+    priority: 0.78,
+    changeFrequency: "monthly" as const,
+  },
+  {
     path: "/resources/how-to-turn-emails-into-tasks",
     priority: 0.78,
     changeFrequency: "monthly" as const,
@@ -61,6 +66,11 @@ const featureRoutes = [
   },
   {
     path: "/features/ai-task-extractor",
+    priority: 0.84,
+    changeFrequency: "monthly" as const,
+  },
+  {
+    path: "/features/client-feedback-to-tasks",
     priority: 0.84,
     changeFrequency: "monthly" as const,
   },

@@ -16,6 +16,10 @@ const productLinks = [
   { label: "Email to tasks", href: "/features/email-to-tasks" },
   { label: "Screenshot to tasks", href: "/features/screenshot-to-tasks" },
   { label: "AI task extractor", href: "/features/ai-task-extractor" },
+  {
+    label: "Client feedback to tasks",
+    href: "/features/client-feedback-to-tasks",
+  },
 ];
 
 const useCaseLinks = [

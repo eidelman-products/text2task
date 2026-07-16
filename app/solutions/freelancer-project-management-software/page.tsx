@@ -233,6 +233,29 @@ const guideLinks = [
   },
 ] as const;
 
+const featureLinks = [
+  {
+    href: "/features/email-to-tasks",
+    title: "Email to Tasks",
+    text: "Turn a client email into a reviewable project and task draft.",
+  },
+  {
+    href: "/features/screenshot-to-tasks",
+    title: "Screenshot to Tasks",
+    text: "Turn a client-request screenshot into a reviewable task draft.",
+  },
+  {
+    href: "/features/ai-task-extractor",
+    title: "AI Task Extractor",
+    text: "Turn pasted client text or notes into a project and task draft.",
+  },
+  {
+    href: "/features/client-feedback-to-tasks",
+    title: "Client Feedback to Tasks",
+    text: "Compare follow-up client feedback with an existing saved project.",
+  },
+] as const;
+
 const faqs = [
   {
     question: "What is freelancer project management software?",
@@ -622,6 +645,22 @@ export default function FreelancerProjectManagementSoftwarePage() {
 
           <div className={styles.linkGrid}>
             {guideLinks.map((link) => (
+              <Link key={link.href} href={link.href} className={styles.linkCard}>
+                <span>{link.title}</span>
+                <p>{link.text}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <p className={styles.sectionEyebrow}>Features</p>
+            <h2>Explore Text2Task features</h2>
+          </div>
+
+          <div className={styles.linkGrid}>
+            {featureLinks.map((link) => (
               <Link key={link.href} href={link.href} className={styles.linkCard}>
                 <span>{link.title}</span>
                 <p>{link.text}</p>

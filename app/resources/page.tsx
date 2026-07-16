@@ -25,6 +25,13 @@ export const metadata: Metadata = {
 
 const articles = [
   {
+    title: "How to Turn Client Feedback Into Tasks: A Practical Workflow",
+    description:
+      "A practical workflow for comparing follow-up client feedback with an existing project, reviewing proposed changes, and avoiding duplicate work.",
+    href: "/resources/how-to-turn-client-feedback-into-tasks",
+    tag: "Client update workflow",
+  },
+  {
     title: "How to Turn Screenshots Into Tasks: A Practical Workflow",
     description:
       "A practical workflow for turning a client-request screenshot into clear tasks while keeping deadlines, amounts, contact details, and original context available for review.",

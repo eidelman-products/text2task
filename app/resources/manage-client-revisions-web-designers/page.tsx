@@ -132,6 +132,15 @@ export default function ArticlePage() {
               freelancers, Webflow freelancers, and small agencies that
               handle repeated client edits.
             </p>
+            <p>
+              When a revision request is a follow-up to a project that is
+              already saved,{" "}
+              <Link href="/features/client-feedback-to-tasks">
+                Explore Client Feedback to Tasks
+              </Link>{" "}
+              to compare the update with the existing project before
+              anything changes.
+            </p>
           </section>
 
           <section className={styles.finalCta}>

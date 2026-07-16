@@ -140,6 +140,14 @@ export default function ArticlePage() {
               and you stay in control by reviewing and editing before
               saving anything.
             </p>
+            <p>
+              For a message that is mostly plain text,{" "}
+              <Link href="/features/ai-task-extractor">
+                Explore the AI Task Extractor
+              </Link>{" "}
+              to see how pasted text becomes a reviewable project and task
+              draft.
+            </p>
           </section>
 
           <section className={styles.finalCta}>

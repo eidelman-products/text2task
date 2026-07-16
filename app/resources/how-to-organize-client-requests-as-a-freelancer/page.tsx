@@ -142,6 +142,13 @@ export default function ArticlePage() {
               time at the moment where work usually becomes messy: the
               moment a client sends a request.
             </p>
+            <p>
+              <Link href="/features/ai-task-extractor">
+                See how the AI Task Extractor works
+              </Link>{" "}
+              to turn a pasted client request into a reviewable project and
+              task draft.
+            </p>
           </section>
 
           <section className={styles.finalCta}>
