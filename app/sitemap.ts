@@ -14,6 +14,16 @@ const resourceRoutes = [
     changeFrequency: "monthly" as const,
   },
   {
+    path: "/resources/how-to-turn-screenshots-into-tasks",
+    priority: 0.78,
+    changeFrequency: "monthly" as const,
+  },
+  {
+    path: "/resources/how-to-extract-action-items-from-text",
+    priority: 0.78,
+    changeFrequency: "monthly" as const,
+  },
+  {
     path: "/resources/how-to-organize-client-requests-as-a-freelancer",
     priority: 0.78,
     changeFrequency: "monthly" as const,

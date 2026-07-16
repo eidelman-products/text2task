@@ -133,6 +133,11 @@ const relatedLinks = [
     title: "How to organize client requests as a freelancer",
     text: "A practical workflow for turning scattered client requests into organized work.",
   },
+  {
+    href: "/resources/how-to-extract-action-items-from-text",
+    title: "How to extract action items from text",
+    text: "Follow a practical workflow for separating action items from project context, dates, amounts, and client details.",
+  },
 ] as const;
 
 const faqs = [

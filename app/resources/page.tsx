@@ -25,11 +25,32 @@ export const metadata: Metadata = {
 
 const articles = [
   {
+    title: "How to Turn Screenshots Into Tasks: A Practical Workflow",
+    description:
+      "A practical workflow for turning a client-request screenshot into clear tasks while keeping deadlines, amounts, contact details, and original context available for review.",
+    href: "/resources/how-to-turn-screenshots-into-tasks",
+    tag: "Screenshot workflow",
+  },
+  {
+    title: "How to Extract Action Items From Text: A Practical Workflow",
+    description:
+      "A practical workflow for separating action items, project context, dates, priorities, amounts, and contact details from unstructured text.",
+    href: "/resources/how-to-extract-action-items-from-text",
+    tag: "Action item workflow",
+  },
+  {
     title: "How to turn emails into tasks",
     description:
       "A practical workflow for turning a detailed client email into a reviewable project, tasks, deadlines, priorities, and supporting details.",
     href: "/resources/how-to-turn-emails-into-tasks",
     tag: "Email workflow",
+  },
+  {
+    title: "Turn Client Messages Into Tasks: A Simple Workflow for Freelancers",
+    description:
+      "A practical guide to converting messy client conversations into structured tasks with deadlines, budgets, priorities, and notes.",
+    href: "/resources/turn-client-messages-into-tasks",
+    tag: "Client messages",
   },
   {
     title: "How to Organize Client Requests as a Freelancer",
@@ -44,13 +65,6 @@ const articles = [
       "How web designers can organize edits, screenshots, client feedback, launch notes, and revision requests without losing details.",
     href: "/resources/manage-client-revisions-web-designers",
     tag: "Web designers",
-  },
-  {
-    title: "Turn Client Messages Into Tasks: A Simple Workflow for Freelancers",
-    description:
-      "A practical guide to converting messy client conversations into structured tasks with deadlines, budgets, priorities, and notes.",
-    href: "/resources/turn-client-messages-into-tasks",
-    tag: "Client messages",
   },
 ];
 

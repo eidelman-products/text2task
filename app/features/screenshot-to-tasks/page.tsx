@@ -124,6 +124,11 @@ const relatedLinks = [
     title: "Freelancer project management software",
     text: "See how projects, tasks, updates, and resources stay connected after intake.",
   },
+  {
+    href: "/resources/how-to-turn-screenshots-into-tasks",
+    title: "How to turn screenshots into tasks",
+    text: "Follow a practical workflow for separating tasks, deadlines, amounts, contact details, and context from a client-request screenshot.",
+  },
 ] as const;
 
 const faqs = [
