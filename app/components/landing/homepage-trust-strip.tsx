@@ -1,15 +1,16 @@
 const trustItems = [
   {
-    label: "START FOR FREE",
-    description: "30 AI extracts included.",
+    label: "NO INBOX CONNECTION REQUIRED",
+    description:
+      "You choose what to paste or upload. Text2Task doesn't need access to Gmail or WhatsApp.",
   },
   {
-    label: "STOP RETYPING REQUESTS",
-    description: "Turn client messages into reviewable project drafts.",
+    label: "REVIEW BEFORE SAVING",
+    description: "Nothing is added to your workspace until you approve it.",
   },
   {
-    label: "BUILT-IN PROJECT CRM",
-    description: "Keep projects, tasks, updates, and resources together.",
+    label: "NOTHING CHANGES AUTOMATICALLY",
+    description: "Suggested updates stay optional until you approve them.",
   },
 ] as const;
 

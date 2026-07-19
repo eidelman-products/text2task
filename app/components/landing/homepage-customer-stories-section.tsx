@@ -30,7 +30,7 @@ export default async function HomepageCustomerStoriesSection() {
             id="homepage-customer-stories-heading"
             className="homepage-heading text-[1.75rem] text-slate-950 sm:text-3xl"
           >
-            What early users say
+            What users say
           </h2>
         </div>
 
@@ -64,9 +64,11 @@ export default async function HomepageCustomerStoriesSection() {
                   <div className="break-words text-sm font-bold leading-5 text-slate-950">
                     {story.displayName}
                   </div>
-                  <div className="mt-0.5 break-words text-xs font-semibold leading-5 text-slate-500">
-                    {formatRoleLine(story.roleOrBusinessType)}
-                  </div>
+                  {formatRoleLine(story.roleOrBusinessType) ? (
+                    <div className="mt-0.5 break-words text-xs font-semibold leading-5 text-slate-500">
+                      {formatRoleLine(story.roleOrBusinessType)}
+                    </div>
+                  ) : null}
                 </div>
               </footer>
             </article>
@@ -77,10 +79,10 @@ export default async function HomepageCustomerStoriesSection() {
   );
 }
 
-function formatRoleLine(roleOrBusinessType: string | null) {
+function formatRoleLine(roleOrBusinessType: string | null): string | null {
   const cleanRole = roleOrBusinessType?.trim();
 
-  return cleanRole ? `${cleanRole} \u00b7 Early user` : "Early user";
+  return cleanRole ? cleanRole : null;
 }
 
 function getInitials(displayName: string) {

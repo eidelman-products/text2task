@@ -1,4 +1,5 @@
-import Link from "next/link";
+import HomepageCtaLink from "./homepage-cta-link.client";
+import HomepageTrackedAnchor from "./homepage-tracked-anchor.client";
 
 const plans = [
   {
@@ -13,8 +14,9 @@ const plans = [
       "Resource attachments",
       "Deadlines, priorities, budgets, and status tracking",
     ],
-    cta: "START FOR FREE",
-    helper: "Create your workspace with Google or email.",
+    cta: "CREATE FREE WORKSPACE",
+    helper:
+      "Create your workspace with Google or email. No credit card required.",
     href: "/signup",
     featured: false,
   },
@@ -98,17 +100,22 @@ export default function HomepagePricingSection() {
                 </ul>
 
                 {plan.featured ? (
-                  <a href={plan.href} className={ctaClassName}>
+                  <HomepageTrackedAnchor
+                    href={plan.href}
+                    className={ctaClassName}
+                    trackingEvent="homepage_pro_plan_click"
+                  >
                     <span className="text-white">{plan.cta}</span>
-                  </a>
+                  </HomepageTrackedAnchor>
                 ) : (
-                  <Link
+                  <HomepageCtaLink
                     href={plan.href}
                     prefetch={false}
                     className={ctaClassName}
+                    trackingEvent="homepage_free_plan_click"
                   >
                     {plan.cta}
-                  </Link>
+                  </HomepageCtaLink>
                 )}
                 <p className="mt-3 text-center text-xs font-semibold leading-5 text-slate-500">
                   {plan.helper}

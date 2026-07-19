@@ -23,6 +23,11 @@ import {
   type HomepageDemoTurnstileAdapter,
 } from "./homepage-demo-turnstile.client";
 import styles from "./homepage-live-demo.module.css";
+import {
+  trackLiveDemoExampleClick,
+  trackLiveDemoSubmit,
+  trackLiveDemoSuccess,
+} from "@/lib/analytics/events";
 
 export type HomepageLiveDemoClientProps = Readonly<{
   turnstileSiteKey: string;
@@ -181,6 +186,7 @@ export default function HomepageLiveDemoClient({
     const nextExampleIndex =
       (exampleIndex + 1) % HOMEPAGE_LIVE_DEMO_EXAMPLES.length;
 
+    trackLiveDemoExampleClick();
     setExampleIndex(nextExampleIndex);
     setText(
       HOMEPAGE_LIVE_DEMO_EXAMPLES[nextExampleIndex] ??
@@ -207,6 +213,8 @@ export default function HomepageLiveDemoClient({
       setState({ status: "error", code: "temporarily_unavailable" });
       return;
     }
+
+    trackLiveDemoSubmit();
 
     const reviewTarget = prepareReviewTarget();
     const runId = runIdRef.current + 1;
@@ -236,6 +244,7 @@ export default function HomepageLiveDemoClient({
       navigateToReview(reviewTarget, bootstrap.publicToken);
       if (mountedRef.current && runIdRef.current === runId) {
         setState({ status: "done" });
+        trackLiveDemoSuccess();
       }
     } catch (error) {
       if (isIgnorableRunError(error)) {
@@ -447,6 +456,16 @@ export default function HomepageLiveDemoClient({
       className={styles.shell}
       aria-label="Live preview"
     >
+      <div className="mx-auto mb-6 w-full max-w-[640px] text-center">
+        <h2 className="homepage-heading text-2xl text-slate-950 sm:text-[1.75rem]">
+          Try it with a client message
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
+          Paste a request and see the organized project draft before
+          creating an account.
+        </p>
+      </div>
+
       <div className={styles.container}>
         <form className={styles.composer} onSubmit={handleSubmit} noValidate>
           <div className={styles.inputSurface}>
@@ -466,6 +485,7 @@ export default function HomepageLiveDemoClient({
             <textarea
               ref={textAreaRef}
               id={textAreaId}
+              data-homepage-live-demo-input=""
               className={styles.textarea}
               value={text}
               onChange={(event) => handleTextChange(event.target.value)}
