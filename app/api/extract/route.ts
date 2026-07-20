@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { z } from "zod";
@@ -181,6 +181,36 @@ async function incrementExtractCount(profile: UsageProfile) {
   return nextCount;
 }
 
+/**
+ * Owner-analytics only. Scheduled AFTER the extraction response has already
+ * been prepared, via next/server after(). Applies to both Free and Pro
+ * users. Must never affect the extraction response, and must never touch
+ * extract_count or Free-plan quota state -- see
+ * public.record_successful_extraction() (migration
+ * 202607210002_user_activity_write_rpcs.sql).
+ */
+function scheduleSuccessfulExtractionActivity(userId: string): void {
+  try {
+    after(async () => {
+      try {
+        await supabaseAdmin.rpc("record_successful_extraction", {
+          p_user_id: userId,
+        });
+      } catch (error) {
+        console.warn("Owner activity tracking (text extraction) failed:", {
+          message:
+            error instanceof Error ? error.message : "Unknown activity error",
+        });
+      }
+    });
+  } catch (error) {
+    console.warn("Owner activity tracking scheduling failed:", {
+      message:
+        error instanceof Error ? error.message : "Unknown activity error",
+    });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -232,6 +262,8 @@ export async function POST(req: NextRequest) {
       profile.plan === "pro"
         ? null
         : Math.max(FREE_EXTRACT_LIMIT - nextExtractCount, 0);
+
+    scheduleSuccessfulExtractionActivity(profile.userId);
 
     return NextResponse.json({
       success: true,

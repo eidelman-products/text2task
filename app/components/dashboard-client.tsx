@@ -908,6 +908,25 @@ export default function DashboardClient({
     void loadTasks();
   }, [userId, archiveView]);
 
+  // Owner-analytics only: records that this user opened the dashboard, at
+  // most once per 4-hour window (rate-limited server-side). Fire-and-forget
+  // -- not awaited, no loading state, no retry, does not depend on
+  // analytics-cookie consent, and must never affect dashboard rendering.
+  // Deliberately a separate effect (depends only on userId, not
+  // archiveView) so it does not re-fire on internal dashboard navigation.
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
+
+    fetch("/api/activity/dashboard-visit", {
+      method: "POST",
+      keepalive: true,
+    }).catch(() => {
+      // Best-effort only; failures must never surface to the user.
+    });
+  }, [userId]);
+
   function markTaskSaved(taskId: number) {
     if (saveTimersRef.current[taskId]) {
       clearTimeout(saveTimersRef.current[taskId]);

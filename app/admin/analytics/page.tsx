@@ -1,6 +1,6 @@
-import { notFound } from "next/navigation";
+import Link from "next/link";
 
-import { createClient } from "@/lib/supabase/server";
+import { requireOwner } from "@/lib/auth/owner.server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type AnalyticsEventRow = {
@@ -112,35 +112,6 @@ const ownerTimeZonePartsFormatter = new Intl.DateTimeFormat("en-US", {
   second: "2-digit",
   hourCycle: "h23",
 });
-
-function getOwnerEmails() {
-  return (process.env.TEXT2TASK_OWNER_EMAILS ?? "")
-    .split(/[\s,]+/)
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-function isOwnerEmail(email: string | null | undefined) {
-  const normalizedEmail = email?.trim().toLowerCase();
-
-  if (!normalizedEmail) {
-    return false;
-  }
-
-  return getOwnerEmails().includes(normalizedEmail);
-}
-
-async function requireOwner() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user?.email || !isOwnerEmail(user.email)) {
-    notFound();
-  }
-}
 
 function isAdminPath(pathname: string | null | undefined) {
   return typeof pathname === "string" && pathname.startsWith("/admin");
@@ -941,6 +912,13 @@ export default async function AdminAnalyticsPage() {
           </p>
         </div>
 
+        <nav className="admin-tabs" aria-label="Owner analytics sections">
+          <span className="admin-tab admin-tab--active">Overview</span>
+          <Link href="/admin/analytics/users" className="admin-tab">
+            Users &amp; Activity
+          </Link>
+        </nav>
+
         <section className="admin-section">
           <div className="admin-section-heading">
             <div>
@@ -1328,6 +1306,39 @@ const adminAnalyticsCss = `
     gap: 18px;
     border-bottom: 1px solid #e2e8f0;
     padding-bottom: 18px;
+  }
+
+  .admin-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .admin-tab {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 800;
+    text-decoration: none;
+    transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+  }
+
+  a.admin-tab:hover {
+    border-color: #93c5fd;
+    color: #1d4ed8;
+  }
+
+  .admin-tab--active {
+    border-color: #2563eb;
+    background: #eff6ff;
+    color: #1d4ed8;
   }
 
   .admin-section {
