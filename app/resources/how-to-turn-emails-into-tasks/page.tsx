@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import JsonLd from "@/app/components/JsonLd";
 import LandingFooter from "@/app/components/landing/landing-footer";
@@ -15,14 +16,16 @@ const pageDescription =
   "Learn a practical workflow for turning client emails into organized tasks, deadlines, priorities, and a reviewable project before saving.";
 const pagePath = "/resources/how-to-turn-emails-into-tasks";
 const pageUrl = absoluteUrl(pagePath);
-const ogImagePath =
-  "/landing/use-cases/project-managers/project-manager-stakeholder-request-project-flow.png";
+const heroImagePath = "/landing/text2task-turn-emails-into-tasks-hero.png";
+const ogImagePath = heroImagePath;
 const ogImageUrl = absoluteUrl(ogImagePath);
 const ogTitle = "How to Turn Emails Into Tasks: A Practical Workflow | Text2Task";
 const ogDescription =
   "Learn how to separate project context, action items, deadlines, priorities, and supporting details from a client email before saving the work.";
 const ogImageAlt =
-  "Client request organized into a reviewable project and task workflow";
+  "An email inbox with several client messages turned into a structured task list with due dates and priorities";
+const datePublished = "2026-07-16";
+const dateModified = "2026-07-20";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -39,8 +42,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: ogImageUrl,
-        width: 1672,
-        height: 941,
+        width: 1448,
+        height: 1086,
         alt: ogImageAlt,
       },
     ],
@@ -158,6 +161,8 @@ const articleJsonLd = buildArticleJsonLd({
   headline: pageTitle,
   description: pageDescription,
   url: pageUrl,
+  datePublished,
+  dateModified,
 });
 
 const breadcrumbJsonLd = buildBreadcrumbListJsonLd({
@@ -201,6 +206,9 @@ export default function HowToTurnEmailsIntoTasksPage() {
           <header className={styles.hero}>
             <p className={styles.eyebrow}>Email workflow</p>
             <h1>How to turn emails into tasks without losing project context</h1>
+            <p className={styles.dateLine}>
+              Published July 16, 2026 · Updated July 20, 2026
+            </p>
             <p className={styles.lead}>
               A client email often contains more than one action. It may
               include the main request, several follow-up items, dates,
@@ -209,6 +217,21 @@ export default function HowToTurnEmailsIntoTasksPage() {
               the context that connects it.
             </p>
           </header>
+
+          <figure className={styles.heroFigure}>
+            <Image
+              src={heroImagePath}
+              alt={ogImageAlt}
+              width={1448}
+              height={1086}
+              className={styles.heroImage}
+              sizes="(min-width: 820px) 820px, 100vw"
+            />
+            <figcaption className={styles.heroCaption}>
+              Illustration: an inbox full of client emails turned into one
+              structured task list.
+            </figcaption>
+          </figure>
 
           <section className={styles.section}>
             <h2>Why one email can contain an entire project</h2>
@@ -417,7 +440,11 @@ export default function HowToTurnEmailsIntoTasksPage() {
                 turn selected email text into a reviewable project and task
                 draft
               </Link>
-              .
+              . Long, detail-heavy emails are common for{" "}
+              <Link href="/use-cases/project-managers">
+                project managers
+              </Link>{" "}
+              juggling requests from several stakeholders at once.
             </p>
 
             <p className={styles.trustNote}>

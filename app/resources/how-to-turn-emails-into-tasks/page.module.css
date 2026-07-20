@@ -62,6 +62,35 @@
   font-weight: 540;
 }
 
+.dateLine {
+  margin: 14px 0 0;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 620;
+}
+
+.heroFigure {
+  max-width: 820px;
+  margin: 26px auto 0;
+}
+
+.heroImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+}
+
+.heroCaption {
+  margin: 10px 2px 0;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.5;
+  font-style: italic;
+}
+
 .section {
   max-width: 820px;
   margin: 0 auto;

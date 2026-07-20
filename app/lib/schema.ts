@@ -53,6 +53,8 @@ export type ArticleJsonLdInput = Readonly<{
   headline: string;
   description: string;
   url: string;
+  datePublished?: string;
+  dateModified?: string;
 }>;
 
 export type ArticleJsonLd = Readonly<{
@@ -62,6 +64,8 @@ export type ArticleJsonLd = Readonly<{
   headline: string;
   description: string;
   url: string;
+  datePublished?: string;
+  dateModified?: string;
   mainEntityOfPage: Readonly<{
     "@type": "WebPage";
     "@id": string;
@@ -76,6 +80,8 @@ export function buildArticleJsonLd({
   headline,
   description,
   url,
+  datePublished,
+  dateModified,
 }: ArticleJsonLdInput): ArticleJsonLd {
   return {
     "@context": "https://schema.org",
@@ -84,6 +90,8 @@ export function buildArticleJsonLd({
     headline,
     description,
     url,
+    ...(datePublished ? { datePublished } : {}),
+    ...(dateModified ? { dateModified } : {}),
     mainEntityOfPage: {
       "@type": "WebPage",
       "@id": `${url}#webpage`,
