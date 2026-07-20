@@ -1,8 +1,9 @@
+import { Fragment } from "react";
 import JsonLd from "@/app/components/JsonLd";
 import LandingFooter from "@/app/components/landing/landing-footer";
 import LandingHeader from "@/app/components/landing/landing-header";
 import { buildBreadcrumbListJsonLd } from "@/app/lib/schema";
-import type { UseCase } from "@/app/lib/use-cases";
+import type { UseCase, UseCaseSectionKey } from "@/app/lib/use-cases";
 import { getRelatedUseCases } from "@/app/lib/use-cases";
 import { absoluteUrl } from "@/app/lib/site-config";
 import UseCaseCapabilities from "./use-case-capabilities";
@@ -14,6 +15,8 @@ import UseCaseLightbox from "./use-case-lightbox";
 import UseCasePainPoints from "./use-case-pain-points";
 import UseCaseProof from "./use-case-proof";
 import UseCaseRelated from "./use-case-related";
+import UseCaseRelatedLinks from "./use-case-related-links";
+import UseCaseSignatureModule from "./use-case-signature-module";
 import UseCaseTransformation from "./use-case-transformation";
 import UseCaseWorkflow from "./use-case-workflow";
 
@@ -21,10 +24,24 @@ type UseCaseDetailPageProps = {
   useCase: UseCase;
 };
 
+const DEFAULT_SECTION_ORDER: readonly UseCaseSectionKey[] = [
+  "transformation",
+  "painPoints",
+  "workflow",
+  "capabilities",
+  "proof",
+  "clientUpdates",
+  "faq",
+  "relatedLinks",
+  "related",
+  "finalCta",
+];
+
 export default function UseCaseDetailPage({ useCase }: UseCaseDetailPageProps) {
   const relatedUseCases = getRelatedUseCases(useCase.relatedSlugs ?? []);
   const canonicalUrl = absoluteUrl(`/use-cases/${useCase.slug}`);
   const visiblePageName = `${useCase.hero.title} ${useCase.hero.highlight}`;
+  const sectionOrder = useCase.sectionOrder ?? DEFAULT_SECTION_ORDER;
 
   const faqJsonLd = useCase.faq
     ? {
@@ -78,6 +95,25 @@ export default function UseCaseDetailPage({ useCase }: UseCaseDetailPageProps) {
     ],
   });
 
+  const sectionRenderers: Record<UseCaseSectionKey, () => React.ReactNode> = {
+    transformation: () => <UseCaseTransformation useCase={useCase} />,
+    signatureModule: () => (
+      <UseCaseSignatureModule useCase={useCase} field="signatureModule" />
+    ),
+    secondaryModule: () => (
+      <UseCaseSignatureModule useCase={useCase} field="secondaryModule" />
+    ),
+    painPoints: () => <UseCasePainPoints useCase={useCase} />,
+    workflow: () => <UseCaseWorkflow useCase={useCase} />,
+    capabilities: () => <UseCaseCapabilities useCase={useCase} />,
+    proof: () => <UseCaseProof useCase={useCase} />,
+    clientUpdates: () => <UseCaseClientUpdates useCase={useCase} />,
+    faq: () => <UseCaseFaq useCase={useCase} />,
+    relatedLinks: () => <UseCaseRelatedLinks useCase={useCase} />,
+    related: () => <UseCaseRelated relatedUseCases={relatedUseCases} />,
+    finalCta: () => <UseCaseFinalCta useCase={useCase} />,
+  };
+
   return (
     <div className="min-h-screen bg-white text-slate-950">
       <JsonLd data={webPageJsonLd} />
@@ -88,15 +124,9 @@ export default function UseCaseDetailPage({ useCase }: UseCaseDetailPageProps) {
 
       <main>
         <UseCaseHero useCase={useCase} />
-        <UseCaseTransformation useCase={useCase} />
-        <UseCasePainPoints useCase={useCase} />
-        <UseCaseWorkflow useCase={useCase} />
-        <UseCaseCapabilities useCase={useCase} />
-        <UseCaseProof useCase={useCase} />
-        <UseCaseClientUpdates useCase={useCase} />
-        <UseCaseFaq useCase={useCase} />
-        <UseCaseRelated relatedUseCases={relatedUseCases} />
-        <UseCaseFinalCta useCase={useCase} />
+        {sectionOrder.map((sectionKey) => (
+          <Fragment key={sectionKey}>{sectionRenderers[sectionKey]()}</Fragment>
+        ))}
       </main>
 
       <LandingFooter />

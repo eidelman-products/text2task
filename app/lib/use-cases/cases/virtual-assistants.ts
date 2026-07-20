@@ -5,8 +5,8 @@ export const virtualAssistantsUseCase = {
   "audienceLabel": "Virtual Assistants",
   "title": "AI Task Organization for Virtual Assistants",
   "seo": {
-    "title": "Client Request Management for Virtual Assistants",
-    "description": "Help virtual assistants manage client requests by turning administrative messages, follow-ups, scheduling notes, and deadlines into reviewable admin tasks."
+    "title": "Admin Task Organizer for Virtual Assistants",
+    "description": "Turn client Slack messages, emails, and notes with several requests into separated, reviewable admin tasks, scheduling, follow-ups, and reminders included."
   },
   "listing": {
     "category": "operations-teams",
@@ -21,9 +21,9 @@ export const virtualAssistantsUseCase = {
     ]
   },
   "hero": {
-    "title": "Turn mixed client instructions into an",
-    "highlight": "organized admin plan",
-    "description": "Text2Task turns client emails, WhatsApp messages, screenshots, and notes into a structured project with admin tasks you can review and edit before saving.",
+    "title": "Stop losing one task inside someone else's paragraph.",
+    "highlight": "Split every ask before it slips through.",
+    "description": "Paste a client's Slack message, email, or note with several requests in one place. Text2Task separates it into individual tasks, scheduling, follow-ups, research, reminders, that you review before saving.",
     "primaryCta": {
       "label": "Try Text2Task",
       "href": "/signup"
@@ -42,32 +42,89 @@ export const virtualAssistantsUseCase = {
       "priority": true
     }
   },
+  "heroVariant": "reversed",
+  "accentTone": "blue",
+  "signatureModule": {
+    "kind": "board",
+    "title": "One message, split into operations lanes",
+    "description": "Example breakdown of a multi-part request, like Renata's.",
+    "note": "Example workflow — not an automated decision.",
+    "groups": [
+      {
+        "label": "Scheduling",
+        "items": [
+          { "label": "Reschedule 2pm with Marcus to Thursday" }
+        ]
+      },
+      {
+        "label": "Follow-up",
+        "items": [
+          { "label": "Denver conference organizers — speaker fee" }
+        ]
+      },
+      {
+        "label": "Research",
+        "items": [
+          { "label": "Hotel near venue, ~$220/night" }
+        ]
+      },
+      {
+        "label": "Admin",
+        "items": [
+          { "label": "Update client tracker with 3 leads" },
+          { "label": "Friday reminder: send Marcus's invoice" }
+        ]
+      }
+    ]
+  },
+  "transformation": {
+    "title": "From one long message to five separate tasks.",
+    "description": "Example: a Slack DM asking for a reschedule, a follow-up, a spreadsheet update, travel research, and a reminder, all in one message.",
+    "beforeLabel": "Slack DM",
+    "beforeText": "\"Hi — can you reschedule my 2pm with Marcus to Thursday, follow up with the Denver conference organizers about my speaker fee (haven't heard back in a week), update the client tracker with the 3 new leads from yesterday's webinar, and see if you can find a nicer hotel near the venue for the Denver trip, budget around $220/night. Also remind me Friday to send Marcus his invoice.\" — Renata, Sowell Consulting",
+    "inputTitle": "What Text2Task can identify",
+    "inputs": [
+      "Reschedule the 2pm with Marcus to Thursday",
+      "Follow up with Denver conference organizers about the speaker fee",
+      "Update the client tracker with 3 new webinar leads",
+      "Research a hotel near the venue, budget around $220/night",
+      "Friday reminder to send Marcus his invoice"
+    ],
+    "outputTitle": "What still needs a decision",
+    "outputs": [
+      "No last name or contact info given for Marcus or the organizers",
+      "No deadline stated for the hotel research",
+      "Access details for the client tracker not included",
+      "Confirming the tone for the overdue follow-up"
+    ],
+    "value": "Five separate tasks instead of one paragraph, with the details that matter to each one kept attached."
+  },
   "painPoints": {
-    "title": "One client message can contain an entire admin workload.",
-    "description": "Follow-up emails, scheduling changes, spreadsheet updates, meeting notes, invoice reminders, and research requests often arrive together.",
-    "supportingDescription": "Dates, names, links, files, and small reminders are easy to miss, and copying every instruction into a task manager wastes time.",
+    "title": "One message can hide five unrelated tasks.",
+    "description": "A single Slack DM might ask you to reschedule a meeting, chase an unanswered email, update a spreadsheet, book travel, and set a reminder, all in one unnumbered paragraph.",
+    "supportingDescription": "Text2Task proposes the split. You confirm contacts, deadlines, and access needs, and nothing saves until you approve it.",
     "items": [
-      "Separate mixed admin requests into clear, trackable tasks.",
-      "Keep dates, names, links, files, and client context with the work.",
-      "Make small follow-ups and reminders visible before they slip through.",
-      "Review the organized plan instead of rebuilding it by hand."
+      "Separate several unrelated asks in one message into individual tasks.",
+      "Keep a contact's name attached to the right follow-up, even with only a first name given.",
+      "Flag when a task needs login or account access you don't have.",
+      "Preserve reminders and their exact due date or day."
     ]
   },
   "workflow": {
-    "title": "From client instructions to approved admin work.",
-    "description": "Capture the instructions, check the organized admin plan, and save only the work you approve.",
+    "title": "A three-step admin request workflow.",
+    "description": "Capture the message, review the split, and save only the tasks you approve.",
     "steps": [
       {
-        "title": "Capture the client instructions",
-        "description": "Capture the message containing meeting notes, follow-ups, scheduling, spreadsheet work, reminders, research, or document administration."
+        "title": "Capture the client message",
+        "description": "Paste the Slack message, email, or note with the day's requests."
       },
       {
-        "title": "Review the organized admin plan",
-        "description": "Check each admin task, deadline, name, link, file reference, and client detail, then edit anything that needs clarification."
+        "title": "Review the proposed tasks",
+        "description": "Check that each ask was separated correctly, along with contacts, deadlines, and anything missing."
       },
       {
-        "title": "Save the approved work",
-        "description": "Save the approved project and tasks so the client's admin work is ready to manage."
+        "title": "Save the tasks you approve",
+        "description": "Edit anything unclear, then save the approved tasks so the admin work is ready to track."
       }
     ]
   },
@@ -88,42 +145,42 @@ export const virtualAssistantsUseCase = {
     ]
   },
   "clientUpdates": {
-    "title": "Handle follow-up instructions without rebuilding the project.",
-    "description": "When a client sends a follow-up, Client Updates compares it with the saved project and proposes what may need attention.",
+    "title": "Track the next round of requests without losing the last one.",
+    "description": "When another message comes in, Client Updates checks it against the saved project so a repeated ask doesn't get logged twice.",
     "steps": [
       {
-        "title": "Compare the follow-up with the saved project",
-        "description": "Analyze the additional admin instructions against the project's existing tasks and context."
+        "title": "Compare the new message with the saved project",
+        "description": "Text2Task checks the follow-up against admin tasks already tracked for this client."
       },
       {
-        "title": "Identify new and already-handled work",
-        "description": "See suggested new requests alongside work that may already be covered in the project."
+        "title": "See what's new versus already handled",
+        "description": "Review which requests are new, and which may already be in progress or done."
       },
       {
-        "title": "Approve only what should change",
-        "description": "Review the suggestions and select what to apply. Text2Task never modifies the project automatically."
+        "title": "Approve what should change",
+        "description": "Choose which updates to apply. Nothing changes in your saved project automatically."
       }
     ],
-    "note": "The virtual assistant stays in control: Text2Task suggests updates, and only approved changes are applied."
+    "note": "You confirm every task before it's added — Text2Task never sends emails, books travel, or updates records on its own."
   },
   "faq": {
     "title": "Questions about using Text2Task for Virtual Assistants",
     "items": [
       {
-        "question": "Can Text2Task separate one client message into multiple admin tasks?",
-        "answer": "Yes. It can organize mixed instructions into separate admin tasks that you review before saving."
+        "question": "Can it split one message with several unrelated asks into separate tasks?",
+        "answer": "Yes. When a message contains multiple distinct requests, Text2Task organizes them into individual tasks instead of one combined note."
       },
       {
-        "question": "Can it extract admin tasks from screenshots or email text?",
-        "answer": "Yes. You can upload a screenshot or paste email text, then review the extracted project and tasks."
+        "question": "Can it flag when a task needs account access or login details I don't have?",
+        "answer": "It can note that access information wasn't included in the request. It does not log into any account, tool, or system on your behalf."
       },
       {
-        "question": "Can I edit the admin plan before saving it?",
-        "answer": "Yes. The extracted plan remains editable, so you can correct details and decide what should be saved."
+        "question": "Can it keep a follow-up tied to the right contact, even with only a first name?",
+        "answer": "Yes, it keeps whatever contact detail is given attached to that task. If more than one person shares a name, it's worth double-checking before you reach out."
       },
       {
-        "question": "How does Text2Task handle follow-up client instructions?",
-        "answer": "Client Updates compares the follow-up with the saved project, suggests new or already-handled work, and lets you approve what should change."
+        "question": "Does it send emails, schedule meetings, or book anything automatically?",
+        "answer": "No. Text2Task only turns the request into a reviewable task. It does not send messages, update calendars, or make bookings on its own."
       }
     ]
   },
@@ -132,6 +189,21 @@ export const virtualAssistantsUseCase = {
     "social-media-managers",
     "web-designers"
   ],
+  "relatedLinks": {
+    "title": "Related reading",
+    "links": [
+      {
+        "label": "Explore Email to Tasks",
+        "href": "/features/email-to-tasks",
+        "description": "Turn a long client email with several requests into a reviewable project."
+      },
+      {
+        "label": "How to extract action items from text",
+        "href": "/resources/how-to-extract-action-items-from-text",
+        "description": "A practical workflow for separating action items without losing context."
+      }
+    ]
+  },
   "finalCta": {
     "title": "Turn the next client request into a clear admin plan.",
     "description": "Capture the request, review the proposed project and tasks, and save only the work you approve.",
@@ -143,5 +215,17 @@ export const virtualAssistantsUseCase = {
       "label": "Explore use cases",
       "href": "/use-cases"
     }
-  }
+  },
+  "sectionOrder": [
+    "signatureModule",
+    "painPoints",
+    "transformation",
+    "workflow",
+    "faq",
+    "capabilities",
+    "clientUpdates",
+    "relatedLinks",
+    "related",
+    "finalCta"
+  ]
 } satisfies UseCase;

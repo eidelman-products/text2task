@@ -5,8 +5,8 @@ export const videoEditorsUseCase = {
   "audienceLabel": "Video Editors",
   "title": "AI Video Revision Task Manager for Video Editors",
   "seo": {
-    "title": "Client Feedback Management for Video Editors",
-    "description": "Help video editors manage client feedback by turning revision messages, caption changes, export notes, and supported screenshots into reviewable editing tasks."
+    "title": "Video Revision & Delivery Task Manager for Editors",
+    "description": "Turn client texts, emails, and messages about cuts, timecodes, and exports into organized editing tasks with deadlines, reviewed before saving."
   },
   "listing": {
     "category": "creative-content",
@@ -21,9 +21,9 @@ export const videoEditorsUseCase = {
     ]
   },
   "hero": {
-    "title": "Turn scattered video revision notes into a",
-    "highlight": "clear editing plan.",
-    "description": "Text2Task turns client WhatsApp messages, emails, screenshots, and revision notes into a structured video project and editing tasks you review and edit before saving.",
+    "title": "Stop scrubbing through texts for timecodes.",
+    "highlight": "Keep every cut, format, and deadline together.",
+    "description": "Paste a client's text, email, or WhatsApp message about a revision. Text2Task organizes it into tasks, including timecodes, aspect ratios, and export deadlines, that you review before saving.",
     "primaryCta": {
       "label": "Try Text2Task",
       "href": "/signup"
@@ -42,32 +42,78 @@ export const videoEditorsUseCase = {
       "priority": true
     }
   },
-  "painPoints": {
-    "title": "Video feedback rarely arrives as one clean revision list.",
-    "description": "Timestamped cuts, captions, B-roll, audio, and visual changes can arrive together, with export requests and platform versions mixed into creative feedback.",
-    "supportingDescription": "Assets, links, timecodes, references, deadlines, and delivery notes may be buried in the message, while copying every revision into a task manager wastes time and makes small changes easier to miss.",
+  "heroVariant": "reversed",
+  "accentTone": "slate",
+  "signatureModule": {
+    "kind": "timeline",
+    "title": "A timecoded revision list",
+    "description": "Example edit notes pulled from a client text, like Noah's.",
+    "note": "Example workflow — not an automated decision.",
     "items": [
-      "Separate cut, caption, B-roll, audio, transition, and motion-graphics requests into clear tasks.",
-      "Keep intros, outros, lower thirds, color notes, and creative revisions visible.",
-      "Carry timecodes, assets, references, aspect ratios, exports, deadlines, and priorities into the plan.",
-      "Review the organized editing work instead of rebuilding the revision message by hand."
+      { "marker": "0:38", "label": "Mute background noise" },
+      { "marker": "1:42→0:60", "label": "Trim walkthrough for Reels", "description": "9:16 export" },
+      { "marker": "—", "label": "16:9 YouTube version", "description": "No changes needed" }
+    ]
+  },
+  "secondaryModule": {
+    "kind": "checklist",
+    "title": "Export and revision checklist",
+    "description": "Confirm these before delivering a cut.",
+    "items": [
+      "Aspect ratio for each platform",
+      "Captions for silent autoplay",
+      "Timecodes confirmed against the source",
+      "Hard vs. soft deadline",
+      "Rate for extra export versions"
+    ]
+  },
+  "transformation": {
+    "title": "From a client text to a split editing task list.",
+    "description": "Example: a text message asking for a trim, a mute, and a new vertical export with a hard deadline.",
+    "beforeLabel": "Client text message",
+    "beforeText": "\"hey can u cut the walkthrough down to under 60 sec for reels, its 1:42 now. also mute the part around 0:38 where you can hear the neighbor's dog barking. need the vertical version by thursday am, the listing goes live then. the 16x9 one for youtube is fine as is\" — Noah, Petrosyan Realty Group",
+    "inputTitle": "What Text2Task can identify",
+    "inputs": [
+      "Trim the 1:42 walkthrough to under 60 seconds, 9:16 for Reels",
+      "Mute the audio around the 0:38 mark",
+      "Deadline: Thursday AM, tied to the listing going live",
+      "16:9 YouTube version needs no changes"
+    ],
+    "outputTitle": "What still needs a decision",
+    "outputs": [
+      "Which scenes to keep for the under-60-second cut — a creative call, not automatic",
+      "No guidance on captions for silent autoplay viewing",
+      "No rate mentioned for the extra vertical export",
+      "Confirming Thursday AM is a hard deadline, not a soft target"
+    ],
+    "value": "The trim, the mute, and the new vertical export stay as three separate tasks, each with its own timecode and deadline."
+  },
+  "painPoints": {
+    "title": "One text can ask for a trim, a mute, and a whole new export.",
+    "description": "A message about muting a noisy few seconds can also ask for a shorter cut in a different aspect ratio for a hard deadline, three different deliverables, one text.",
+    "supportingDescription": "Text2Task proposes the breakdown. You confirm the timecodes and formats, and nothing saves until you approve it.",
+    "items": [
+      "Separate a simple trim from a request for a new export or version.",
+      "Keep timecoded notes, like '0:38,' attached to the exact task.",
+      "Flag missing specs, like aspect ratio or platform, when a client just says 'make it work for social.'",
+      "Track hard delivery deadlines alongside creative revision requests."
     ]
   },
   "workflow": {
-    "title": "From client revision notes to approved video-editing work.",
-    "description": "Capture the revision request, check the proposed editing plan, and save only the video tasks you approve.",
+    "title": "A three-step revision request workflow.",
+    "description": "Capture the message, review the breakdown, and save only the tasks you approve.",
     "steps": [
       {
-        "title": "Capture the video revision request",
-        "description": "Capture the supplied notes for timestamped cuts, B-roll, captions, audio, transitions, motion graphics, intros, outros, or lower thirds."
+        "title": "Capture the revision request",
+        "description": "Paste the text, email, or WhatsApp message describing the cuts, mutes, or new export needed."
       },
       {
-        "title": "Review the organized editing plan",
-        "description": "Check each proposed task, aspect ratio, export format, platform version, asset, reference, and revision deadline before saving."
+        "title": "Review the proposed tasks",
+        "description": "Check each timecode, aspect ratio, and deadline before saving."
       },
       {
-        "title": "Save the approved revision tasks",
-        "description": "Save the approved project and tasks so the requested video work is ready for your editing workflow."
+        "title": "Save the tasks you approve",
+        "description": "Edit anything unclear, then save the approved tasks so the edit is ready to work on."
       }
     ]
   },
@@ -88,42 +134,42 @@ export const videoEditorsUseCase = {
     ]
   },
   "clientUpdates": {
-    "title": "Handle follow-up video revisions without rebuilding the editing plan.",
-    "description": "When a client sends another revision message, Client Updates compares it with the saved video project and proposes what may need attention.",
+    "title": "Track the next revision against what's already cut.",
+    "description": "When another message comes in, Client Updates checks it against the saved project so a repeat note doesn't get logged twice.",
     "steps": [
       {
-        "title": "Compare the follow-up with the saved video project",
-        "description": "Analyze the client's additional revision notes against the project's existing editing tasks and context."
+        "title": "Compare the new message with the saved project",
+        "description": "Text2Task checks the follow-up against editing tasks already tracked for this project."
       },
       {
-        "title": "Identify new and already-handled revisions",
-        "description": "See genuinely new requests alongside video changes that may already be covered in the editing plan."
+        "title": "See what's new versus already addressed",
+        "description": "Review which notes are new, and which may already be reflected in an earlier cut."
       },
       {
-        "title": "Approve only what should change",
-        "description": "Review the suggestions and choose what to add or update. Text2Task never modifies the project automatically."
+        "title": "Approve what should change",
+        "description": "Choose which updates to apply. Nothing changes in your saved project automatically."
       }
     ],
-    "note": "You stay in control: Text2Task suggests the revision updates, and only the changes you approve are applied."
+    "note": "You confirm every cut before it's added — Text2Task never edits, exports, or renders video."
   },
   "faq": {
     "title": "Questions about using Text2Task for Video Editors",
     "items": [
       {
-        "question": "Can Text2Task separate one client revision message into multiple video-editing tasks?",
-        "answer": "Yes. It can organize revision notes provided as text or screenshots into separate editing tasks that you review before saving."
+        "question": "Can it capture timecoded feedback accurately, like 'mute the part around 0:38'?",
+        "answer": "Yes, when a timecode or clear time reference is included in the message, Text2Task keeps it attached to that specific task."
       },
       {
-        "question": "Can it extract video revision notes from screenshots or email text?",
-        "answer": "Yes. You can upload a screenshot or paste email text, then review the extracted video project and tasks."
+        "question": "Can it flag missing specs, like aspect ratio, when a client just says 'make it work for social'?",
+        "answer": "Yes. When a request doesn't name a platform or aspect ratio, Text2Task flags that detail as missing instead of guessing one."
       },
       {
-        "question": "Can I edit the video plan before saving it?",
-        "answer": "Yes. The extracted plan remains editable, so you can correct details and decide what should be saved."
+        "question": "Can it tell a small trim apart from a request for a whole new version?",
+        "answer": "It can flag language suggesting a separate deliverable, like a different aspect ratio or length, versus a quick trim to the existing cut. The final call is yours."
       },
       {
-        "question": "How does Text2Task handle follow-up revisions for an existing video project?",
-        "answer": "Client Updates compares the follow-up with the saved project, suggests new or already-handled revisions, and lets you approve what should change."
+        "question": "Does it edit, render, or export video for me?",
+        "answer": "No. Text2Task only organizes the request into a task you review. It does not touch your footage, export files, or editing software."
       }
     ]
   },
@@ -132,6 +178,21 @@ export const videoEditorsUseCase = {
     "graphic-designers",
     "small-agencies"
   ],
+  "relatedLinks": {
+    "title": "Related reading",
+    "links": [
+      {
+        "label": "Explore Client Feedback to Tasks",
+        "href": "/features/client-feedback-to-tasks",
+        "description": "Compare a new round of edit notes against a project you've already saved."
+      },
+      {
+        "label": "How to turn client feedback into tasks",
+        "href": "/resources/how-to-turn-client-feedback-into-tasks",
+        "description": "A closer look at separating new notes from work already handled."
+      }
+    ]
+  },
   "finalCta": {
     "title": "Turn the next client revision message into a clear video-editing plan.",
     "description": "Capture the revision request, review the proposed editing tasks, and save only the video work you approve.",
@@ -143,5 +204,18 @@ export const videoEditorsUseCase = {
       "label": "Explore use cases",
       "href": "/use-cases"
     }
-  }
+  },
+  "sectionOrder": [
+    "signatureModule",
+    "secondaryModule",
+    "transformation",
+    "painPoints",
+    "workflow",
+    "faq",
+    "capabilities",
+    "clientUpdates",
+    "relatedLinks",
+    "related",
+    "finalCta"
+  ]
 } satisfies UseCase;

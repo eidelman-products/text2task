@@ -5,8 +5,8 @@ export const webDesignersUseCase = {
   "audienceLabel": "Web Designers",
   "title": "AI Website Revision Task Manager for Web Designers",
   "seo": {
-    "title": "Client Feedback Management for Web Designers",
-    "description": "Help web designers manage client feedback by turning website revision notes, client messages, and supported screenshots into reviewable project tasks."
+    "title": "Website Revision Task Manager for Web Designers",
+    "description": "Turn client revision emails, WhatsApp messages, and marked-up screenshots into tracked website tasks, organized by page and reviewed before saving."
   },
   "listing": {
     "category": "website-development",
@@ -21,9 +21,9 @@ export const webDesignersUseCase = {
     ]
   },
   "hero": {
-    "title": "Turn scattered website feedback into a",
-    "highlight": "clear revision plan.",
-    "description": "Text2Task turns client emails, WhatsApp messages, screenshots, and revision notes into a structured website project and tasks you review and edit before saving.",
+    "title": "Stop rebuilding revision emails into task lists.",
+    "highlight": "Start tracking each page change.",
+    "description": "Paste a client's revision email, WhatsApp message, or a marked-up screenshot. Text2Task extracts the page or section it affects, the deadline, and whether it looks like a quick fix or bigger scope — organized into a project you review before saving.",
     "primaryCta": {
       "label": "Try Text2Task",
       "href": "/signup"
@@ -42,32 +42,104 @@ export const webDesignersUseCase = {
       "priority": true
     }
   },
+  "heroVariant": "editorial",
+  "accentTone": "blue",
+  "signatureModule": {
+    "kind": "board",
+    "title": "How one revision message gets sorted",
+    "description": "Example workflow: each part of Marisol's homepage feedback gets classified before it becomes a task.",
+    "note": "Example workflow — not an automated decision.",
+    "groups": [
+      {
+        "label": "Requested change",
+        "items": [
+          { "label": "Soften the hero headline" },
+          { "label": "Enlarge the 'Book a Consultation' button" }
+        ]
+      },
+      {
+        "label": "Existing scope",
+        "items": [
+          { "label": "Hero image swap", "tag": "Revision" },
+          { "label": "Button color and size", "tag": "Revision" }
+        ]
+      },
+      {
+        "label": "Needs clarification",
+        "items": [
+          { "label": "Which page the mobile bug affects" },
+          { "label": "Exact show date for the deadline" }
+        ]
+      },
+      {
+        "label": "Approved task",
+        "items": [
+          { "label": "Fix oversized testimonial text on mobile", "tag": "Ready" }
+        ]
+      }
+    ]
+  },
+  "proof": {
+    "title": "The mechanism behind the revision board",
+    "description": "A client screenshot, and the structured task list it becomes.",
+    "images": [
+      {
+        "src": "/landing/text2task-website-redesign-workflow-hero.png",
+        "alt": "Illustration of a website screenshot being converted into a structured list of build and revision tasks",
+        "label": "Screenshot to structured tasks",
+        "width": 1448,
+        "height": 1086,
+        "role": "supporting"
+      }
+    ]
+  },
+  "transformation": {
+    "title": "From one revision email to a tracked task list.",
+    "description": "Example: a client's feedback on a homepage draft, before and after Text2Task organizes it.",
+    "beforeLabel": "Client email",
+    "beforeText": "\"Hi! We looked at the homepage draft with the team. Can you swap the hero image for the one I sent last week (living room shot), and the 'Book a Consultation' button feels lost — can it stand out more, maybe match the gold accent on the logo? Also on phones the testimonials section text is huge. Trying to get this live before the Bellevue show opens.\" — Marisol, Fenn & Co. Interiors",
+    "inputTitle": "What Text2Task can identify",
+    "inputs": [
+      "Swap the hero image (the client references an earlier message, not an attachment here)",
+      "Restyle the 'Book a Consultation' button",
+      "Fix oversized testimonial text on mobile",
+      "Deadline tied to the Bellevue show, though no exact date is given"
+    ],
+    "outputTitle": "What still needs a decision",
+    "outputs": [
+      "Whether 'stand out more' means a color and size tweak or a new component",
+      "Confirming the hero image is the one from last week's thread",
+      "The exact show date, to set a real deadline",
+      "Priority order across the three requests"
+    ],
+    "value": "The draft task list is ready to review in minutes — you still confirm scope and the exact deadline before anything is saved."
+  },
   "painPoints": {
-    "title": "Website feedback rarely arrives as a clean task list.",
-    "description": "Homepage and landing-page edits can arrive alongside mobile fixes, copy changes, CTA updates, form requests, and layout revisions in the same message.",
-    "supportingDescription": "Deadlines, assets, references, and budget details are easy to miss, while copying each revision into a task manager wastes time.",
+    "title": "Revision rounds pile up fast when feedback isn't tied to a page.",
+    "description": "One client email can touch the hero section, a mobile bug, and a missing testimonial, with no note on which round of feedback this is or what's still outstanding from the last one.",
+    "supportingDescription": "Text2Task proposes the task breakdown. You still decide whether something is an in-scope revision or a new request, and nothing is saved until you approve it.",
     "items": [
-      "Separate homepage, landing-page, mobile, copy, form, and layout changes into clear tasks.",
-      "Keep images, client assets, references, and contact details connected to the work.",
-      "Make delivery deadlines and budget notes visible before revisions begin.",
-      "Review the structured plan instead of rebuilding the request by hand."
+      "Separate hero, section, and page-specific feedback into individual tasks.",
+      "Flag requests that read like new scope instead of a routine revision.",
+      "Keep missing assets and copy visible instead of buried in a thread.",
+      "Track launch deadlines and approval status alongside the work."
     ]
   },
   "workflow": {
-    "title": "From client feedback to approved website work.",
-    "description": "Capture the revision request, check the proposed website plan, and save only the project work you approve.",
+    "title": "A three-step revision workflow.",
+    "description": "Capture the message, review what Text2Task found, and save only the tasks you approve.",
     "steps": [
       {
-        "title": "Capture the website revision request",
-        "description": "Capture the request containing homepage sections, copy changes, mobile fixes, CTA buttons, forms, images, or client details."
+        "title": "Capture the revision message",
+        "description": "Paste the email or WhatsApp message, or upload a marked-up screenshot showing what the client wants changed."
       },
       {
-        "title": "Review the organized website plan",
-        "description": "Check each proposed website task, deadline, asset, reference, and budget note, then edit any details before saving."
+        "title": "Check what's tied to which page",
+        "description": "Review each proposed task against the page or section it affects, the deadline, and whether it reads as a revision or new scope."
       },
       {
-        "title": "Save the approved project work",
-        "description": "Save the approved project and tasks so the revisions are ready for design or implementation."
+        "title": "Save the tasks you approve",
+        "description": "Edit anything unclear, then save the approved tasks so the revisions are ready to build."
       }
     ]
   },
@@ -88,42 +160,42 @@ export const webDesignersUseCase = {
     ]
   },
   "clientUpdates": {
-    "title": "Handle follow-up website revisions without rebuilding the project.",
-    "description": "When a client sends more feedback, Client Updates compares it with the saved website project and proposes what may need attention.",
+    "title": "Handle the next round of feedback without losing the first.",
+    "description": "When more feedback arrives, Client Updates checks it against the saved project so you can see what's genuinely new.",
     "steps": [
       {
-        "title": "Compare the follow-up with the saved website project",
-        "description": "Analyze the client's additional revision request against the project's existing tasks and context."
+        "title": "Compare the new message with the saved project",
+        "description": "Text2Task checks the follow-up against the revision tasks already on file."
       },
       {
-        "title": "Identify new and already-handled revisions",
-        "description": "See genuinely new website requests alongside work that may already be covered in the project."
+        "title": "See what's new versus already flagged",
+        "description": "Review which requests are new, and which ones may already be tracked from an earlier round."
       },
       {
-        "title": "Approve only what should change",
-        "description": "Review the suggestions and select what to apply. Text2Task never modifies the project automatically."
+        "title": "Approve what should change",
+        "description": "Choose which updates to apply. Nothing changes in your saved project automatically."
       }
     ],
-    "note": "The web designer stays in control: Text2Task suggests updates, and only approved changes are applied."
+    "note": "You review every round before it's added — Text2Task never applies a revision on its own."
   },
   "faq": {
     "title": "Questions about using Text2Task for Web Designers",
     "items": [
       {
-        "question": "Can Text2Task separate one website revision message into multiple tasks?",
-        "answer": "Yes. It can organize a mixed revision request into separate website tasks that you review before saving."
+        "question": "Can Text2Task tell a small revision apart from a request for new scope?",
+        "answer": "It can flag language that suggests a bigger change, like a new section or feature, so you can review it before treating it as part of the current revision round. The judgment call stays with you."
       },
       {
-        "question": "Can it extract website feedback from screenshots or email text?",
-        "answer": "Yes. You can upload a screenshot or paste email text, then review the extracted website project and tasks."
+        "question": "Can it capture which page or section feedback is about?",
+        "answer": "Yes, when the client's message names or clearly implies the page or section. If that detail is missing, Text2Task won't guess at it."
       },
       {
-        "question": "Can I edit the website plan before saving it?",
-        "answer": "Yes. The extracted plan remains editable, so you can correct details and decide what should be saved."
+        "question": "Can it work from a marked-up screenshot, not just text?",
+        "answer": "Yes. Upload a screenshot with circles, arrows, or notes, and Text2Task organizes the visible feedback into tasks you review before saving."
       },
       {
-        "question": "How does Text2Task handle follow-up revisions for an existing website project?",
-        "answer": "Client Updates compares the follow-up with the saved project, suggests new or already-handled revisions, and lets you approve what should change."
+        "question": "Does it connect to my design files or staging site?",
+        "answer": "No. Text2Task only works with the text or screenshot you provide. It does not access Figma, a staging URL, or your website directly."
       }
     ]
   },
@@ -132,6 +204,21 @@ export const webDesignersUseCase = {
     "webflow-freelancers",
     "graphic-designers"
   ],
+  "relatedLinks": {
+    "title": "Related reading",
+    "links": [
+      {
+        "label": "Explore Client Feedback to Tasks",
+        "href": "/features/client-feedback-to-tasks",
+        "description": "Compare a new round of feedback against a project you've already saved."
+      },
+      {
+        "label": "How web designers can manage client revisions faster",
+        "href": "/resources/manage-client-revisions-web-designers",
+        "description": "A closer look at separating revisions from new scope, round by round."
+      }
+    ]
+  },
   "finalCta": {
     "title": "Turn the next website revision request into a clear project plan.",
     "description": "Capture the request, review the proposed website tasks, and save only the project work you approve.",
@@ -143,5 +230,18 @@ export const webDesignersUseCase = {
       "label": "Explore use cases",
       "href": "/use-cases"
     }
-  }
+  },
+  "sectionOrder": [
+    "signatureModule",
+    "transformation",
+    "painPoints",
+    "workflow",
+    "clientUpdates",
+    "faq",
+    "capabilities",
+    "proof",
+    "relatedLinks",
+    "related",
+    "finalCta"
+  ]
 } satisfies UseCase;

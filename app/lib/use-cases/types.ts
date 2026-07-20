@@ -117,6 +117,17 @@ export type UseCaseFaqSection = {
   items: UseCaseFaq[];
 };
 
+export type UseCaseRelatedLink = {
+  label: string;
+  description: string;
+  href: string;
+};
+
+export type UseCaseRelatedLinksSection = {
+  title: string;
+  links: readonly UseCaseRelatedLink[];
+};
+
 export type UseCaseFinalCta = {
   eyebrow?: string;
   title: string;
@@ -125,6 +136,118 @@ export type UseCaseFinalCta = {
   secondary: UseCaseCta;
 };
 
+/**
+ * Visual-differentiation layer. Every field below is optional so the 4
+ * use-cases that don't set them keep rendering through the original,
+ * unchanged default layout.
+ */
+export type UseCaseHeroVariant =
+  | "split"
+  | "editorial"
+  | "centered"
+  | "panel"
+  | "reversed"
+  | "overlap"
+  | "wide";
+
+export type UseCaseAccentTone =
+  | "blue"
+  | "violet"
+  | "amber"
+  | "teal"
+  | "rose"
+  | "slate";
+
+export type UseCaseBoardItem = {
+  label: string;
+  tag?: string;
+};
+
+export type UseCaseBoardGroup = {
+  label: string;
+  items: readonly UseCaseBoardItem[];
+};
+
+export type UseCaseBoardModuleData = {
+  kind: "board";
+  title: string;
+  description: string;
+  note?: string;
+  groups: readonly UseCaseBoardGroup[];
+};
+
+export type UseCaseTimelineItem = {
+  marker: string;
+  label: string;
+  description?: string;
+};
+
+export type UseCaseTimelineModuleData = {
+  kind: "timeline";
+  title: string;
+  description: string;
+  note?: string;
+  items: readonly UseCaseTimelineItem[];
+};
+
+export type UseCaseChecklistModuleData = {
+  kind: "checklist";
+  title: string;
+  description: string;
+  note?: string;
+  items: readonly string[];
+};
+
+export type UseCaseCalendarEntry = {
+  day: string;
+  label: string;
+  meta: string;
+};
+
+export type UseCaseCalendarModuleData = {
+  kind: "calendar";
+  title: string;
+  description: string;
+  note?: string;
+  entries: readonly UseCaseCalendarEntry[];
+};
+
+export type UseCasePipelineRow = {
+  client: string;
+  project: string;
+  owner: string;
+  status: string;
+};
+
+export type UseCasePipelineModuleData = {
+  kind: "pipeline";
+  title: string;
+  description: string;
+  note?: string;
+  rows: readonly UseCasePipelineRow[];
+};
+
+export type UseCaseSignatureModule =
+  | UseCaseBoardModuleData
+  | UseCaseTimelineModuleData
+  | UseCaseChecklistModuleData
+  | UseCaseCalendarModuleData
+  | UseCasePipelineModuleData;
+
+export type UseCaseSectionKey =
+  | "transformation"
+  | "signatureModule"
+  | "secondaryModule"
+  | "painPoints"
+  | "workflow"
+  | "capabilities"
+  | "proof"
+  | "clientUpdates"
+  | "faq"
+  | "relatedLinks"
+  | "related"
+  | "finalCta";
+
 export type UseCase = {
   slug: string;
   audienceLabel: string;
@@ -132,7 +255,11 @@ export type UseCase = {
   seo: UseCaseSeo;
   listing: UseCaseListing;
   hero: UseCaseHero;
+  heroVariant?: UseCaseHeroVariant;
+  accentTone?: UseCaseAccentTone;
   transformation?: UseCaseTransformation;
+  signatureModule?: UseCaseSignatureModule;
+  secondaryModule?: UseCaseSignatureModule;
   painPoints?: UseCasePainPoints;
   outcomes?: UseCaseOutcomes;
   workflow?: UseCaseWorkflow;
@@ -141,5 +268,7 @@ export type UseCase = {
   clientUpdates?: UseCaseClientUpdates;
   faq?: UseCaseFaqSection;
   relatedSlugs?: string[];
+  relatedLinks?: UseCaseRelatedLinksSection;
   finalCta?: UseCaseFinalCta;
+  sectionOrder?: readonly UseCaseSectionKey[];
 };
