@@ -126,24 +126,6 @@ function getNonEmptyString(value: unknown): string | null {
   return trimmed || null;
 }
 
-function getStringFromRecord(record: JsonRecord | undefined, keys: string[]) {
-  if (!record) return null;
-
-  for (const key of keys) {
-    const value = record[key];
-
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return String(value);
-    }
-  }
-
-  return null;
-}
-
 function normalizePriority(value: unknown): unknown {
   const text = getNonEmptyString(value);
 
