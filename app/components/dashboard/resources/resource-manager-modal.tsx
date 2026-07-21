@@ -53,6 +53,25 @@ const FILE_RESOURCE_TYPES: TaskResourceType[] = [
   "reference",
 ];
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    return error.message ? error.message : fallback;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as { message: unknown }).message === "string"
+  ) {
+    const message = (error as { message: string }).message;
+
+    return message ? message : fallback;
+  }
+
+  return fallback;
+}
+
 export default function ResourceManagerModal({
   isOpen,
   title = "Project resources",
@@ -187,11 +206,10 @@ export default function ResourceManagerModal({
 
       syncResources(nextResources);
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       setErrorMessage(
         options?.failureMessage ||
-          error?.message ||
-          "Failed to load resources."
+          getErrorMessage(error, "Failed to load resources.")
       );
       return false;
     } finally {
@@ -265,8 +283,8 @@ export default function ResourceManagerModal({
         failureMessage:
           "Link added, but the resource list could not refresh. Use Refresh to pull the latest resources.",
       });
-    } catch (error: any) {
-      setErrorMessage(error?.message || "Failed to add link.");
+    } catch (error: unknown) {
+      setErrorMessage(getErrorMessage(error, "Failed to add link."));
     } finally {
       setIsSavingLink(false);
     }
@@ -299,8 +317,8 @@ export default function ResourceManagerModal({
         failureMessage:
           "Note added, but the resource list could not refresh. Use Refresh to pull the latest resources.",
       });
-    } catch (error: any) {
-      setErrorMessage(error?.message || "Failed to add note.");
+    } catch (error: unknown) {
+      setErrorMessage(getErrorMessage(error, "Failed to add note."));
     } finally {
       setIsSavingNote(false);
     }
@@ -334,8 +352,8 @@ export default function ResourceManagerModal({
         failureMessage:
           "Note updated, but the resource list could not refresh. Use Refresh to pull the latest resources.",
       });
-    } catch (error: any) {
-      setNoteEditorError(error?.message || "Failed to update note.");
+    } catch (error: unknown) {
+      setNoteEditorError(getErrorMessage(error, "Failed to update note."));
     } finally {
       setIsUpdatingNote(false);
     }
@@ -373,8 +391,8 @@ export default function ResourceManagerModal({
         failureMessage:
           "File uploaded, but the resource list could not refresh. Use Refresh to pull the latest resources.",
       });
-    } catch (error: any) {
-      setErrorMessage(error?.message || "Failed to upload file.");
+    } catch (error: unknown) {
+      setErrorMessage(getErrorMessage(error, "Failed to upload file."));
     } finally {
       setIsUploadingFile(false);
     }
@@ -411,8 +429,8 @@ export default function ResourceManagerModal({
         failureMessage:
           "Resource deleted, but the resource list could not refresh. Use Refresh to pull the latest resources.",
       });
-    } catch (error: any) {
-      const message = error?.message || "Failed to delete resource.";
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, "Failed to delete resource.");
 
       setErrorMessage(message);
       setDeleteConfirmationError(message);
@@ -1820,8 +1838,8 @@ function ResourceRow({
       });
 
       window.open(fileUrl, "_blank", "noopener,noreferrer");
-    } catch (error: any) {
-      setFileActionError(error?.message || "Failed to open file.");
+    } catch (error: unknown) {
+      setFileActionError(getErrorMessage(error, "Failed to open file."));
     } finally {
       setIsOpeningFile(false);
     }
@@ -1839,8 +1857,8 @@ function ResourceRow({
       });
 
       window.open(fileUrl, "_blank", "noopener,noreferrer");
-    } catch (error: any) {
-      setFileActionError(error?.message || "Failed to download file.");
+    } catch (error: unknown) {
+      setFileActionError(getErrorMessage(error, "Failed to download file."));
     } finally {
       setIsDownloadingFile(false);
     }
