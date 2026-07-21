@@ -345,7 +345,6 @@ export default function DashboardClient({
   const [copiedTaskIds, setCopiedTaskIds] = useState<Record<number, boolean>>(
     {}
   );
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isBillingLoading, setIsBillingLoading] = useState(false);
 
   const saveTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>(
@@ -687,32 +686,6 @@ export default function DashboardClient({
       });
     } finally {
       setIsBillingLoading(false);
-    }
-  }
-
-  async function handleLogout() {
-    if (isLoggingOut) return;
-
-    try {
-      setIsLoggingOut(true);
-
-      const res = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Logout failed");
-      }
-
-      window.location.href = "/";
-    } catch (error: any) {
-      console.error(error);
-      toast.error("Logout failed", {
-        description: error?.message || "Could not log out. Please try again.",
-      });
-      setIsLoggingOut(false);
     }
   }
 

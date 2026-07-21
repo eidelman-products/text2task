@@ -28,6 +28,14 @@ type ChartPoint = {
   value: number;
 };
 
+type TimelineSourceItem = {
+  label?: string;
+  month?: string;
+  value?: number;
+  amount?: number;
+  total?: number;
+};
+
 function buildTimelineData(analytics: ReturnType<typeof getIncomeAnalytics>) {
   const current = analytics.summary.thisMonth || 0;
   const previous = analytics.summary.previousMonth || 0;
@@ -42,7 +50,7 @@ function buildTimelineData(analytics: ReturnType<typeof getIncomeAnalytics>) {
   if (analytics.timeline?.length) {
     return analytics.timeline
       .slice(-6)
-      .map((item: any, index: number) => ({
+      .map((item: TimelineSourceItem, index: number) => ({
         label: item.label || item.month || `P${index + 1}`,
         value: Number(item.value || item.amount || item.total || 0),
       }))
@@ -52,7 +60,13 @@ function buildTimelineData(analytics: ReturnType<typeof getIncomeAnalytics>) {
   return base;
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+type CustomTooltipProps = {
+  active?: boolean;
+  payload?: Array<{ value?: number }>;
+  label?: React.ReactNode;
+};
+
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
 
   return (

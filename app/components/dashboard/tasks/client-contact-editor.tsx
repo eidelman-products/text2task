@@ -7,11 +7,11 @@ type ClientContactEditorProps = {
   onEnterBlur: (
     e: KeyboardEvent<HTMLInputElement | HTMLSelectElement>
   ) => void;
-  updateTaskField: (taskId: number, field: string, value: any) => void;
+  updateTaskField: (taskId: number, field: string, value: string) => void;
   updateProjectField: (
     projectId: string,
     field: string,
-    value: any
+    value: string
   ) => Promise<void> | void;
 };
 

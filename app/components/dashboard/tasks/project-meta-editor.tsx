@@ -16,7 +16,7 @@ type ProjectMetaEditorProps = {
   updateProjectField: (
     projectId: string,
     field: string,
-    value: any
+    value: string
   ) => Promise<void> | void;
 };
 
