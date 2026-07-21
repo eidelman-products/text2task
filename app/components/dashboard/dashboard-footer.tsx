@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import Image from "next/image";
 
 type FooterColumn = {
   title: string;
@@ -53,9 +54,11 @@ export default function DashboardFooter() {
       <div style={styles.inner}>
         <div className="dashboard-footer-brand" style={styles.brandBlock}>
           <div style={styles.logoCrop}>
-            <img
+            <Image
               src="/text2task-logo.png"
               alt="Text2Task"
+              width={136}
+              height={32}
               style={styles.logoImage}
             />
           </div>

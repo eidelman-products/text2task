@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import Image from "next/image";
 import {
   dashboardColors,
   dashboardRadii,
@@ -52,9 +53,11 @@ export default function FirstRunDashboard({
         <div className="first-run-visual-wrap" style={visualWrapStyle}>
           <div style={visualGlowStyle} />
 
-          <img
+          <Image
             src={flowImageSrc}
             alt="Text2Task workflow from messy client message to organized project tasks"
+            width={1672}
+            height={941}
             className="first-run-flow-image"
             style={flowImageStyle}
           />

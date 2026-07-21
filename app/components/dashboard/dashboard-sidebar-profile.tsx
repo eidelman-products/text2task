@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { trackBeginCheckout } from "@/lib/analytics/events";
 import SidebarButton from "./sidebar-button";
 import {
@@ -67,9 +68,11 @@ export default function DashboardSidebarProfile({
       <div style={topAreaStyle}>
         <div style={brandBlockStyle}>
           <div style={logoFrameStyle}>
-            <img
+            <Image
               src="/text2task-logo.png"
               alt="Text2Task"
+              width={178}
+              height={46}
               style={logoImageStyle}
             />
           </div>
