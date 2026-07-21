@@ -26,12 +26,12 @@ type MobileTaskCardProps = {
   onOpenProjectUpdate?: (project: TaskProjectGroup) => void;
   onOpenProjectHistory?: (project: TaskProjectGroup) => void;
   onToggleProjectSelection: (project: TaskProjectGroup) => void;
-  updateTaskField: (taskId: number, field: string, value: any) => void;
+  updateTaskField: (taskId: number, field: string, value: string) => void;
   updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
   updateProjectField: (
     projectId: string,
     field: string,
-    value: any
+    value: string
   ) => Promise<void> | void;
   copyTask: (taskId: number) => void;
 };
@@ -437,7 +437,7 @@ function MobileSubtaskRow({
   isBusy: boolean;
   readOnly: boolean;
   onTextareaEnter: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
-  updateTaskField: (taskId: number, field: string, value: any) => void;
+  updateTaskField: (taskId: number, field: string, value: string) => void;
   updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
 }) {
   const isDone =

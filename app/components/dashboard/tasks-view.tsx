@@ -88,11 +88,11 @@ type TasksViewProps = {
       throwOnError?: boolean;
     }
   ) => Promise<void> | void;
-  updateTaskField: (taskId: number, field: string, value: any) => void;
+  updateTaskField: (taskId: number, field: string, value: string) => void;
   updateProjectField: (
     projectId: string,
     field: string,
-    value: any
+    value: string
   ) => Promise<void> | void;
   copyTask: (taskId: number) => void;
   archiveTask: (taskId: number) => Promise<void> | void;

@@ -31,12 +31,12 @@ type DesktopTasksTableProps = {
     e: KeyboardEvent<HTMLInputElement | HTMLSelectElement>
   ) => void;
   toggleSelect: (taskId: number) => void;
-  updateTaskField: (taskId: number, field: string, value: any) => void;
+  updateTaskField: (taskId: number, field: string, value: string) => void;
   updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
   updateProjectField: (
     projectId: string,
     field: string,
-    value: any
+    value: string
   ) => Promise<void> | void;
   copyTask: (taskId: number) => void;
   pendingProjectAction: {
