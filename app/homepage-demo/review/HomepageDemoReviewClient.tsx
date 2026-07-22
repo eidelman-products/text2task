@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import {
   HOMEPAGE_DEMO_CLAIM_AUTH_INTENT,
@@ -685,11 +685,19 @@ export default function HomepageDemoReviewClient() {
     }
   }
 
-  useEffect(() => {
+  const handleFragmentChange = useEffectEvent(() => {
     processCurrentFragment();
+  });
+
+  const handleReviewCleanup = useEffectEvent(() => {
+    cancelActiveReviewWork();
+  });
+
+  useEffect(() => {
+    handleFragmentChange();
 
     const handleHashChange = () => {
-      processCurrentFragment();
+      handleFragmentChange();
     };
 
     window.addEventListener("hashchange", handleHashChange);
@@ -697,7 +705,7 @@ export default function HomepageDemoReviewClient() {
     return () => {
       window.removeEventListener("hashchange", handleHashChange);
       runIdRef.current += 1;
-      cancelActiveReviewWork();
+      handleReviewCleanup();
       publicTokenRef.current = null;
     };
   }, []);
