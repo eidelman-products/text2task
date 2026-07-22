@@ -605,7 +605,8 @@ export const imagePreview: CSSProperties = {
 };
 
 export const imageFrame: CSSProperties = {
-  minHeight: 118,
+  position: "relative",
+  height: 142,
   borderRadius: 16,
   border: "1px solid rgba(226, 232, 240, 0.84)",
   background: "rgba(248, 250, 252, 0.9)",
@@ -615,9 +616,6 @@ export const imageFrame: CSSProperties = {
 };
 
 export const image: CSSProperties = {
-  width: "100%",
-  height: "100%",
-  maxHeight: 142,
   objectFit: "cover",
   display: "block",
 };

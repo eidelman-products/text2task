@@ -222,8 +222,8 @@ function ScreenshotUpdateInput({
             <Image
               src={selectedImage.previewUrl}
               alt="Selected client update screenshot"
-              width={160}
-              height={142}
+              fill
+              sizes="(max-width: 760px) 100vw, 160px"
               unoptimized
               style={ui.image}
             />
