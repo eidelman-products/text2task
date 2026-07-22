@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { toast } from "sonner";
 import EditablePreviewList, {
@@ -397,6 +397,18 @@ export default function ExtractWorkspace({
   );
   const [imageProgress, setImageProgress] = useState(0);
 
+  const selectedImagePreviewUrl = selectedImage?.previewUrl ?? null;
+
+  useEffect(() => {
+    if (!selectedImagePreviewUrl) {
+      return;
+    }
+
+    return () => {
+      URL.revokeObjectURL(selectedImagePreviewUrl);
+    };
+  }, [selectedImagePreviewUrl]);
+
   const [duplicateSaveState, setDuplicateSaveState] =
     useState<DuplicateSaveState | null>(null);
   const [isSavingDuplicateAnyway, setIsSavingDuplicateAnyway] = useState(false);
@@ -422,12 +434,7 @@ export default function ExtractWorkspace({
   }
 
   function clearSelectedImage() {
-    setSelectedImage((prev) => {
-      if (prev?.previewUrl) {
-        URL.revokeObjectURL(prev.previewUrl);
-      }
-      return null;
-    });
+    setSelectedImage(null);
     setImageProgress(0);
   }
 
@@ -594,15 +601,9 @@ export default function ExtractWorkspace({
   function handleImageSelected(file: File) {
     const previewUrl = URL.createObjectURL(file);
 
-    setSelectedImage((prev) => {
-      if (prev?.previewUrl) {
-        URL.revokeObjectURL(prev.previewUrl);
-      }
-
-      return {
-        file,
-        previewUrl,
-      };
+    setSelectedImage({
+      file,
+      previewUrl,
     });
 
     setImageProgress(0);
@@ -1167,7 +1168,7 @@ export default function ExtractWorkspace({
             onImageSelected={handleImageSelected}
             onExtractImage={extractFromSelectedImage}
             onRemoveImage={clearSelectedImage}
-            selectedImagePreviewUrl={selectedImage?.previewUrl || null}
+            selectedImagePreviewUrl={selectedImagePreviewUrl}
             selectedImageName={selectedImage?.file?.name || ""}
             isBusy={isExtracting}
             imageProgress={imageProgress}

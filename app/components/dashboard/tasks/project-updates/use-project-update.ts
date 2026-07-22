@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type {
   ClientEntity,
   ProjectEntity,
@@ -208,12 +208,6 @@ function getImageValidationError(file: File) {
   return null;
 }
 
-function revokePreviewUrl(previewUrl?: string | null) {
-  if (previewUrl && typeof URL !== "undefined") {
-    URL.revokeObjectURL(previewUrl);
-  }
-}
-
 function getApplyFocusTaskId(payload: ApplyProjectUpdateResult) {
   const timelineEvents = Array.isArray(payload.timelineEvents)
     ? payload.timelineEvents
@@ -263,10 +257,21 @@ export function useProjectUpdate() {
     },
   });
 
+  const selectedImagePreviewUrl =
+    uiState.form.selectedImage?.previewUrl ?? null;
+
+  useEffect(() => {
+    if (!selectedImagePreviewUrl) {
+      return;
+    }
+
+    return () => {
+      URL.revokeObjectURL(selectedImagePreviewUrl);
+    };
+  }, [selectedImagePreviewUrl]);
+
   const openModal = useCallback((project: TaskProjectGroup) => {
     setUIState((prev) => {
-      revokePreviewUrl(prev.form.selectedImage?.previewUrl);
-
       return {
         ...prev,
         modal: {
@@ -295,8 +300,6 @@ export function useProjectUpdate() {
 
   const closeModal = useCallback(() => {
     setUIState((prev) => {
-      revokePreviewUrl(prev.form.selectedImage?.previewUrl);
-
       return {
         ...prev,
         modal: {
@@ -400,8 +403,6 @@ export function useProjectUpdate() {
 
   const resetForm = useCallback(() => {
     setUIState((prev) => {
-      revokePreviewUrl(prev.form.selectedImage?.previewUrl);
-
       return {
         ...prev,
         form: {
@@ -429,8 +430,6 @@ export function useProjectUpdate() {
 
     if (validationError) {
       setUIState((prev) => {
-        revokePreviewUrl(prev.form.selectedImage?.previewUrl);
-
         return {
           ...prev,
           form: {
@@ -454,8 +453,6 @@ export function useProjectUpdate() {
     const previewUrl = URL.createObjectURL(file);
 
     setUIState((prev) => {
-      revokePreviewUrl(prev.form.selectedImage?.previewUrl);
-
       return {
         ...prev,
         form: {
@@ -480,8 +477,6 @@ export function useProjectUpdate() {
 
   const removeSelectedImage = useCallback(() => {
     setUIState((prev) => {
-      revokePreviewUrl(prev.form.selectedImage?.previewUrl);
-
       return {
         ...prev,
         form: {
