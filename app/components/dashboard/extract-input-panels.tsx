@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
@@ -307,9 +308,12 @@ Budget is around $2000 and I need the first draft by Friday.`}
             {selectedImagePreviewUrl ? (
               <div style={selectedImageShellStyle}>
                 <div style={selectedImagePreviewFrameStyle}>
-                  <img
+                  <Image
                     src={selectedImagePreviewUrl}
                     alt={selectedImageName || "Selected image"}
+                    width={800}
+                    height={600}
+                    unoptimized
                     style={selectedImagePreviewStyle}
                   />
                 </div>
@@ -678,6 +682,7 @@ const selectedImagePreviewFrameStyle: CSSProperties = {
 
 const selectedImagePreviewStyle: CSSProperties = {
   width: "100%",
+  height: "auto",
   maxHeight: 280,
   objectFit: "contain",
   display: "block",

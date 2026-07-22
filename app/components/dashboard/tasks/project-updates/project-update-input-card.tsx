@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRef, type ChangeEvent, type ClipboardEvent, type DragEvent } from "react";
 
 import * as ui from "./project-update-ui-styles";
@@ -218,9 +219,12 @@ function ScreenshotUpdateInput({
       <div style={{ display: "grid", gap: 10 }}>
         <div className={ui.responsiveClassNames.imagePreview} style={ui.imagePreview}>
           <div style={ui.imageFrame}>
-            <img
+            <Image
               src={selectedImage.previewUrl}
               alt="Selected client update screenshot"
+              width={160}
+              height={142}
+              unoptimized
               style={ui.image}
             />
           </div>
