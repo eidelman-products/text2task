@@ -353,9 +353,6 @@ export default function DashboardClient({
   const copyTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>(
     {}
   );
-  const archiveTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>(
-    {}
-  );
   const dashboardTaskSnapshotRef = useRef<DashboardTaskSnapshotPatch | null>(
     null
   );
@@ -800,16 +797,12 @@ export default function DashboardClient({
   }
 
   useEffect(() => {
+    const saveTimers = saveTimersRef.current;
+    const copyTimers = copyTimersRef.current;
+
     return () => {
-      Object.values(saveTimersRef.current).forEach((timer) =>
-        clearTimeout(timer)
-      );
-      Object.values(copyTimersRef.current).forEach((timer) =>
-        clearTimeout(timer)
-      );
-      Object.values(archiveTimersRef.current).forEach((timer) =>
-        clearTimeout(timer)
-      );
+      Object.values(saveTimers).forEach((timer) => clearTimeout(timer));
+      Object.values(copyTimers).forEach((timer) => clearTimeout(timer));
     };
   }, []);
 
