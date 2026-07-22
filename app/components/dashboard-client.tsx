@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { toast } from "sonner";
 import TasksView, {
@@ -306,6 +306,46 @@ function mergeTaskStatsSources({
   });
 }
 
+async function fetchTasksSnapshot(
+  view: TaskArchiveView
+): Promise<TasksSnapshot> {
+  const res = await fetch(`/api/tasks/snapshot?view=${view}`, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to load task snapshot");
+  }
+
+  const normalizeRows = (rows: unknown) =>
+    Array.isArray(rows) ? rows.map(normalizeTaskFromApi) : [];
+  const rawSavedWork =
+    data.savedWork && typeof data.savedWork === "object"
+      ? data.savedWork
+      : null;
+  const projectCount = Number(rawSavedWork?.projectCount);
+  const taskCount = Number(rawSavedWork?.taskCount);
+  const normalizedSavedWork =
+    Number.isFinite(projectCount) && Number.isFinite(taskCount)
+      ? {
+          projectCount,
+          taskCount,
+          hasSavedWork: projectCount > 0 || taskCount > 0,
+        }
+      : null;
+
+  return {
+    tasks: normalizeRows(data.tasks),
+    activeTasks: normalizeRows(data.activeTasks),
+    archivedTasks: normalizeRows(data.archivedTasks),
+    statsTasks: normalizeRows(data.statsTasks),
+    savedWork: normalizedSavedWork,
+  };
+}
+
 export default function DashboardClient({
   email,
   userId,
@@ -466,109 +506,72 @@ export default function DashboardClient({
     return (data.tasks || []).map(normalizeTaskFromApi);
   }
 
-  async function fetchTasksSnapshot(
-    viewOverride: TaskArchiveView = archiveView
-  ): Promise<TasksSnapshot> {
-    const res = await fetch(`/api/tasks/snapshot?view=${viewOverride}`, {
-      method: "GET",
-      cache: "no-store",
-    });
+  const refreshTasks = useCallback(
+    async (
+      viewOverride: TaskArchiveView = archiveView,
+      patch?: ProjectRefreshPatch
+    ) => {
+      const {
+        tasks: mappedTasks,
+        statsTasks: mappedStatsTasks,
+        activeTasks: mappedActiveTasks,
+        archivedTasks: mappedArchivedTasks,
+        savedWork: mappedSavedWork,
+      } = await fetchTasksSnapshot(viewOverride);
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || "Failed to load task snapshot");
-    }
-
-    const normalizeRows = (rows: unknown) =>
-      Array.isArray(rows) ? rows.map(normalizeTaskFromApi) : [];
-    const rawSavedWork =
-      data.savedWork && typeof data.savedWork === "object"
-        ? data.savedWork
-        : null;
-    const projectCount = Number(rawSavedWork?.projectCount);
-    const taskCount = Number(rawSavedWork?.taskCount);
-    const normalizedSavedWork =
-      Number.isFinite(projectCount) && Number.isFinite(taskCount)
-        ? {
-            projectCount,
-            taskCount,
-            hasSavedWork: projectCount > 0 || taskCount > 0,
-          }
-        : null;
-
-    return {
-      tasks: normalizeRows(data.tasks),
-      activeTasks: normalizeRows(data.activeTasks),
-      archivedTasks: normalizeRows(data.archivedTasks),
-      statsTasks: normalizeRows(data.statsTasks),
-      savedWork: normalizedSavedWork,
-    };
-  }
-
-  async function refreshTasks(
-    viewOverride: TaskArchiveView = archiveView,
-    patch?: ProjectRefreshPatch
-  ) {
-    const {
-      tasks: mappedTasks,
-      statsTasks: mappedStatsTasks,
-      activeTasks: mappedActiveTasks,
-      archivedTasks: mappedArchivedTasks,
-      savedWork: mappedSavedWork,
-    } = await fetchTasksSnapshot(viewOverride);
-
-    const pendingDashboardSnapshot = dashboardTaskSnapshotRef.current;
-    const pendingSnapshot = projectTaskSnapshotRef.current;
-    const patchProjectId = patch?.projectId || null;
-    const patchProject = patch?.project || null;
-    const nextAllTasksForStats = mergeTaskStatsSources({
-      statsTasks: mappedStatsTasks,
-      activeTasks: mappedActiveTasks,
-      archivedTasks: mappedArchivedTasks,
-    });
-    const nextTasks = pendingDashboardSnapshot
-      ? pendingDashboardSnapshot.tasks
-      : pendingSnapshot
-      ? replaceProjectTaskRowsInList(
-          mappedTasks,
-          pendingSnapshot.projectId,
-          pendingSnapshot.tasks
-        )
-      : patchProjectId && patchProject
-        ? replaceProjectInTaskList(mappedTasks, patchProjectId, patchProject)
-        : mappedTasks;
-    const nextStatsTasks = pendingDashboardSnapshot
-      ? replaceActiveTaskRowsInStatsList(
-          nextAllTasksForStats,
-          pendingDashboardSnapshot.tasks
-        )
-      : pendingSnapshot
-      ? replaceProjectTaskRowsInList(
-          nextAllTasksForStats,
-          pendingSnapshot.projectId,
-          pendingSnapshot.tasks
-        )
-      : patchProjectId && patchProject
-        ? replaceProjectInTaskList(
-            nextAllTasksForStats,
-            patchProjectId,
-            patchProject
+      const pendingDashboardSnapshot = dashboardTaskSnapshotRef.current;
+      const pendingSnapshot = projectTaskSnapshotRef.current;
+      const patchProjectId = patch?.projectId || null;
+      const patchProject = patch?.project || null;
+      const nextAllTasksForStats = mergeTaskStatsSources({
+        statsTasks: mappedStatsTasks,
+        activeTasks: mappedActiveTasks,
+        archivedTasks: mappedArchivedTasks,
+      });
+      const nextTasks = pendingDashboardSnapshot
+        ? pendingDashboardSnapshot.tasks
+        : pendingSnapshot
+        ? replaceProjectTaskRowsInList(
+            mappedTasks,
+            pendingSnapshot.projectId,
+            pendingSnapshot.tasks
           )
-        : nextAllTasksForStats;
+        : patchProjectId && patchProject
+          ? replaceProjectInTaskList(mappedTasks, patchProjectId, patchProject)
+          : mappedTasks;
+      const nextStatsTasks = pendingDashboardSnapshot
+        ? replaceActiveTaskRowsInStatsList(
+            nextAllTasksForStats,
+            pendingDashboardSnapshot.tasks
+          )
+        : pendingSnapshot
+        ? replaceProjectTaskRowsInList(
+            nextAllTasksForStats,
+            pendingSnapshot.projectId,
+            pendingSnapshot.tasks
+          )
+        : patchProjectId && patchProject
+          ? replaceProjectInTaskList(
+              nextAllTasksForStats,
+              patchProjectId,
+              patchProject
+            )
+          : nextAllTasksForStats;
 
-    setTasks(nextTasks);
-    setAllTasksForStats(nextStatsTasks);
-    setSavedWork(mappedSavedWork);
+      setTasks(nextTasks);
+      setAllTasksForStats(nextStatsTasks);
+      setSavedWork(mappedSavedWork);
 
-    if (pendingDashboardSnapshot) {
-      dashboardTaskSnapshotRef.current = null;
-    }
+      if (pendingDashboardSnapshot) {
+        dashboardTaskSnapshotRef.current = null;
+      }
 
-    if (pendingSnapshot) {
-      projectTaskSnapshotRef.current = null;
-    }
-  }
+      if (pendingSnapshot) {
+        projectTaskSnapshotRef.current = null;
+      }
+    },
+    [archiveView]
+  );
 
   async function handleProjectUpdateApplied(result: ProjectUpdateAppliedResult) {
     const focusTaskId =
@@ -872,7 +875,7 @@ export default function DashboardClient({
     }
 
     void loadTasks();
-  }, [userId, archiveView]);
+  }, [userId, refreshTasks]);
 
   // Owner-analytics only: records that this user opened the dashboard, at
   // most once per 4-hour window (rate-limited server-side). Fire-and-forget
