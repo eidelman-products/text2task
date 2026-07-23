@@ -26,6 +26,7 @@ import {
   type TextExtractedProjectMetadata,
 } from "@/lib/extraction/schemas";
 import type { DuplicateProjectMatch } from "@/lib/tasks/project-duplicate-detection";
+import { classifySaveProjectBatchResponse } from "./save-project-batch-result";
 import type { TaskRow } from "./tasks-view";
 
 type PreviewItem = ExtractedPreview & {
@@ -68,11 +69,9 @@ type DuplicateSaveState = {
   importMode: ProjectImportMode | null;
 };
 
-type DuplicateProjectSaveError = Error & {
-  code: "DUPLICATE_PROJECT_DETECTED";
-  duplicate: DuplicateProjectMatch;
-  groupIndex: number;
-};
+type SaveProjectBatchResult =
+  | { status: "saved"; savedRows: TaskRow[] }
+  | { status: "duplicate"; duplicate: DuplicateProjectMatch; groupIndex: number };
 
 function normalizePriority(value: unknown): "Low" | "Medium" | "High" {
   const clean = String(value || "").trim().toLowerCase();
@@ -268,18 +267,6 @@ function getProjectStatusFromGroup(group: PreviewProjectGroup) {
   }
 
   return "New";
-}
-
-function isDuplicateProjectSaveError(
-  error: unknown
-): error is DuplicateProjectSaveError {
-  return (
-    Boolean(error) &&
-    typeof error === "object" &&
-    (error as DuplicateProjectSaveError).code ===
-      "DUPLICATE_PROJECT_DETECTED" &&
-    Boolean((error as DuplicateProjectSaveError).duplicate)
-  );
 }
 
 function mapSavedProject(saved: any) {
@@ -932,7 +919,7 @@ export default function ExtractWorkspace({
     idempotencyKey: string,
     duplicateOverrideGroupIndexes: number[] = [],
     importMode: ProjectImportMode | null = null
-  ) {
+  ): Promise<SaveProjectBatchResult> {
     const res = await fetch("/api/projects/import", {
       method: "POST",
       headers: {
@@ -949,35 +936,29 @@ export default function ExtractWorkspace({
     });
 
     const data = await res.json();
+    const outcome = classifySaveProjectBatchResponse({
+      ok: res.ok,
+      status: res.status,
+      data,
+    });
 
-    if (!res.ok) {
-      const firstDuplicate = Array.isArray(data?.duplicates)
-        ? data.duplicates[0]
-        : null;
-
-      if (
-        res.status === 409 &&
-        data?.code === "DUPLICATE_PROJECT_DETECTED" &&
-        firstDuplicate?.duplicate &&
-        Number.isSafeInteger(firstDuplicate.groupIndex)
-      ) {
-        const duplicateError = new Error(
-          "Duplicate project detected"
-        ) as DuplicateProjectSaveError;
-
-        duplicateError.code = "DUPLICATE_PROJECT_DETECTED";
-        duplicateError.duplicate = firstDuplicate.duplicate;
-        duplicateError.groupIndex = firstDuplicate.groupIndex;
-
-        throw duplicateError;
-      }
-
-      throw new Error(data.message || data.error || "Failed to save project");
+    // A duplicate result is an expected business outcome (the user is asked
+    // to view the existing project or save anyway), never a thrown error --
+    // only a genuine "error" outcome (malformed response, unexpected error
+    // code, 5xx, etc.) surfaces as a thrown Error for the existing
+    // genuine-failure handling in callers.
+    if (outcome.status === "error") {
+      throw new Error(outcome.message);
     }
 
-    const savedTasks = Array.isArray(data.createdTasks) ? data.createdTasks : [];
+    if (outcome.status === "duplicate") {
+      return outcome;
+    }
 
-    return savedTasks.map(mapSavedTaskToRow);
+    return {
+      status: "saved",
+      savedRows: outcome.createdTasks.map(mapSavedTaskToRow),
+    };
   }
 
   function finishSuccessfulSaveFlow() {
@@ -1033,28 +1014,27 @@ export default function ExtractWorkspace({
       setDuplicateSaveState(null);
 
       const importAttemptId = getOrCreateImportAttemptId();
-      const allSavedRows = await saveProjectBatch(
+      const result = await saveProjectBatch(
         projectGroups,
         importAttemptId,
         [],
         importMode
       );
 
-      synchronizeCommittedImport(allSavedRows);
-    } catch (error: any) {
-      console.error(error);
-
-      if (isDuplicateProjectSaveError(error)) {
+      if (result.status === "duplicate") {
         setDuplicateSaveState({
-          duplicate: error.duplicate,
+          duplicate: result.duplicate,
           projectGroups,
-          duplicateGroupIndex: error.groupIndex,
+          duplicateGroupIndex: result.groupIndex,
           overrideGroupIndexes: [],
           importMode,
         });
         return;
       }
 
+      synchronizeCommittedImport(result.savedRows);
+    } catch (error: any) {
+      console.error(error);
       toast.error(error.message || "Failed to save project");
     } finally {
       setIsSavingAll(false);
@@ -1076,25 +1056,20 @@ export default function ExtractWorkspace({
         ])
       );
       const importAttemptId = getOrCreateImportAttemptId();
-      const allSavedRows = await saveProjectBatch(
+      const result = await saveProjectBatch(
         duplicateSaveState.projectGroups,
         importAttemptId,
         nextOverrideGroupIndexes,
         duplicateSaveState.importMode
       );
 
-      setDuplicateSaveState(null);
-      synchronizeCommittedImport(allSavedRows);
-    } catch (error: any) {
-      console.error(error);
-
-      if (isDuplicateProjectSaveError(error)) {
+      if (result.status === "duplicate") {
         setDuplicateSaveState((current) =>
           current
             ? {
                 ...current,
-                duplicate: error.duplicate,
-                duplicateGroupIndex: error.groupIndex,
+                duplicate: result.duplicate,
+                duplicateGroupIndex: result.groupIndex,
                 overrideGroupIndexes: Array.from(
                   new Set([
                     ...current.overrideGroupIndexes,
@@ -1107,6 +1082,10 @@ export default function ExtractWorkspace({
         return;
       }
 
+      setDuplicateSaveState(null);
+      synchronizeCommittedImport(result.savedRows);
+    } catch (error: any) {
+      console.error(error);
       toast.error(error.message || "Failed to save project");
     } finally {
       setIsSavingDuplicateAnyway(false);
