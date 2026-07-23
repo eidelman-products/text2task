@@ -388,7 +388,8 @@ function getSelectedApplyableItemCount(form: ProjectUpdateFormState) {
     (item) =>
       selectedIds.has(item.id) &&
       item.type !== "duplicate_warning" &&
-      item.type !== "no_action"
+      item.type !== "no_action" &&
+      item.type !== "needs_review"
   ).length;
 }
 

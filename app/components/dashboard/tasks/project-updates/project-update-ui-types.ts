@@ -6,6 +6,7 @@ import type {
 
 export type ProjectUpdateReviewGroupKey =
   | "ready"
+  | "needsReview"
   | "alreadyExists"
   | "alreadyMatches";
 
@@ -19,6 +20,7 @@ export type ProjectUpdateReviewGroup = {
 
 export type ProjectUpdateReviewModel = {
   readyItems: SuggestedProjectUpdateItem[];
+  needsReviewItems: SuggestedProjectUpdateItem[];
   alreadyExistsItems: SuggestedProjectUpdateItem[];
   alreadyMatchesItems: SuggestedProjectUpdateItem[];
   selectedReadyCount: number;
@@ -52,7 +54,17 @@ export type ProjectUpdateInputV2Props = ProjectUpdateV2SharedProps & {
 export type EditableSuggestionValue = JsonRecord;
 
 export function isApplyableProjectUpdateItem(item: SuggestedProjectUpdateItem) {
-  return item.type !== "duplicate_warning" && item.type !== "no_action";
+  return (
+    item.type !== "duplicate_warning" &&
+    item.type !== "no_action" &&
+    item.type !== "needs_review"
+  );
+}
+
+export function isNeedsReviewProjectUpdateItem(
+  item: SuggestedProjectUpdateItem
+) {
+  return item.type === "needs_review";
 }
 
 export function isAlreadyExistsProjectUpdateItem(
@@ -81,6 +93,7 @@ export function buildProjectUpdateReviewModel(
   const selectedIds = new Set(form.selectedItemIds);
 
   const readyItems = visibleItems.filter(isApplyableProjectUpdateItem);
+  const needsReviewItems = visibleItems.filter(isNeedsReviewProjectUpdateItem);
   const alreadyExistsItems = visibleItems.filter(isAlreadyExistsProjectUpdateItem);
   const alreadyMatchesItems = visibleItems.filter(isAlreadyMatchesProjectUpdateItem);
 
@@ -95,6 +108,14 @@ export function buildProjectUpdateReviewModel(
       subtitle: "These updates will be applied to the project.",
       count: readyItems.length,
       items: readyItems,
+    },
+    {
+      key: "needsReview",
+      title: "Needs review",
+      subtitle:
+        "Text2Task found a possible related task but could not safely decide on its own.",
+      count: needsReviewItems.length,
+      items: needsReviewItems,
     },
     {
       key: "alreadyExists",
@@ -117,12 +138,14 @@ export function buildProjectUpdateReviewModel(
 
   return {
     readyItems,
+    needsReviewItems,
     alreadyExistsItems,
     alreadyMatchesItems,
     selectedReadyCount,
     totalVisibleCount: visibleItems.length,
     headline: buildReviewHeadline({
       readyCount: readyItems.length,
+      needsReviewCount: needsReviewItems.length,
       alreadyExistsCount: alreadyExistsItems.length,
       alreadyMatchesCount: alreadyMatchesItems.length,
     }),
@@ -132,16 +155,21 @@ export function buildProjectUpdateReviewModel(
 
 function buildReviewHeadline({
   readyCount,
+  needsReviewCount,
   alreadyExistsCount,
   alreadyMatchesCount,
 }: {
   readyCount: number;
+  needsReviewCount: number;
   alreadyExistsCount: number;
   alreadyMatchesCount: number;
 }) {
   const parts = [
     readyCount > 0
       ? `${readyCount} ${readyCount === 1 ? "update" : "updates"} ready`
+      : null,
+    needsReviewCount > 0
+      ? `${needsReviewCount} ${needsReviewCount === 1 ? "item needs" : "items need"} review`
       : null,
     alreadyExistsCount > 0
       ? `${alreadyExistsCount} already ${alreadyExistsCount === 1 ? "exists" : "exist"}`
@@ -166,8 +194,31 @@ export function getProjectUpdateItemLabel(item: SuggestedProjectUpdateItem) {
   if (item.type === "client_note") return "Client note";
   if (item.type === "duplicate_warning") return "Already exists";
   if (item.type === "no_action") return "Already matches";
+  if (item.type === "needs_review") return "Needs review";
 
   return "Project update";
+}
+
+export type ProjectUpdateSummaryVariant = "ready" | "needsReview" | "handled";
+
+/**
+ * Decides which of the three compact-summary states applies. Pulled out as
+ * a pure function (no JSX) so this decision -- specifically, that
+ * "everything is already handled" must never be shown while unresolved
+ * needs-review items exist -- is directly unit-testable without rendering
+ * the review card.
+ */
+export function resolveProjectUpdateSummaryVariant({
+  readyCount,
+  needsReviewCount,
+}: {
+  readyCount: number;
+  needsReviewCount: number;
+}): ProjectUpdateSummaryVariant {
+  if (readyCount > 0) return "ready";
+  if (needsReviewCount > 0) return "needsReview";
+
+  return "handled";
 }
 
 export function getStringValue(record: JsonRecord | null, keys: string[]) {

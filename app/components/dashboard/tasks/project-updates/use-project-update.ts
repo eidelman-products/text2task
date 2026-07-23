@@ -184,12 +184,21 @@ function getDefaultSelectedItemIds(result: AnalyzeProjectUpdateResult | null) {
   if (!result) return [];
 
   return result.items
-    .filter((item) => item.type !== "duplicate_warning" && item.type !== "no_action")
+    .filter(
+      (item) =>
+        item.type !== "duplicate_warning" &&
+        item.type !== "no_action" &&
+        item.type !== "needs_review"
+    )
     .map((item) => item.id);
 }
 
 function isApplyableSuggestedItem(item: AnalyzeProjectUpdateResult["items"][number]) {
-  return item.type !== "duplicate_warning" && item.type !== "no_action";
+  return (
+    item.type !== "duplicate_warning" &&
+    item.type !== "no_action" &&
+    item.type !== "needs_review"
+  );
 }
 
 function getImageValidationError(file: File) {

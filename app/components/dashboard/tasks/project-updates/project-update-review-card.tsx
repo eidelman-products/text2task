@@ -11,8 +11,15 @@ import {
   buildProjectUpdateReviewModel,
   getProjectUpdateItemLabel,
   getStringValue,
+  resolveProjectUpdateSummaryVariant,
   type ProjectUpdateReviewV2Props,
 } from "./project-update-ui-types";
+
+const NEEDS_REVIEW_CONTEXT_KEYS = [
+  "existing_title",
+  "existingTitle",
+  "existing_task_title",
+];
 
 const STATUS_OPTIONS = ["New", "In Progress", "Review", "Urgent", "Done"];
 const PRIORITY_OPTIONS = ["Low", "Medium", "High"];
@@ -93,6 +100,7 @@ export default function ProjectUpdateReviewCard({
             readyItems={reviewModel.readyItems}
             selectedItemIds={selectedItemIds}
             handledCount={handledCount}
+            needsReviewCount={reviewModel.needsReviewItems.length}
           />
 
           {reviewModel.readyItems.length > 0 ? (
@@ -122,6 +130,8 @@ export default function ProjectUpdateReviewCard({
               </div>
             </section>
           ) : null}
+
+          <NeedsReviewFindings items={reviewModel.needsReviewItems} />
 
           <SecondaryFindings
             alreadyExistsItems={reviewModel.alreadyExistsItems}
@@ -185,28 +195,51 @@ function CompactSummary({
   readyItems,
   selectedItemIds,
   handledCount,
+  needsReviewCount,
 }: {
   readyItems: SuggestedProjectUpdateItem[];
   selectedItemIds: Set<string>;
   handledCount: number;
+  needsReviewCount: number;
 }) {
   const readyCount = readyItems.length;
   const selectedReady = readyItems.filter((item) => selectedItemIds.has(item.id)).length;
   const noReady = readyCount === 0;
+  const variant = resolveProjectUpdateSummaryVariant({
+    readyCount,
+    needsReviewCount,
+  });
+  const needsReview = variant === "needsReview";
 
-  const title = noReady ? "Everything is already handled" : "Ready to save";
+  const title =
+    variant === "needsReview"
+      ? "Review required"
+      : variant === "handled"
+        ? "Everything is already handled"
+        : "Ready to save";
 
-  const subtitle = noReady
-    ? handledCount > 0
-      ? `${handledCount} existing item${handledCount === 1 ? "" : "s"} detected. No duplicates will be created.`
-      : "No new changes need to be saved."
-    : getReadyHeroSubtitle(readyItems, selectedItemIds);
+  const subtitle =
+    variant === "needsReview"
+      ? `Text2Task found ${needsReviewCount} item${needsReviewCount === 1 ? "" : "s"} that could not be matched safely. Review ${needsReviewCount === 1 ? "it" : "them"} below before saving.`
+      : variant === "handled"
+        ? handledCount > 0
+          ? `${handledCount} existing item${handledCount === 1 ? "" : "s"} detected. No duplicates will be created.`
+          : "No new changes need to be saved."
+        : getReadyHeroSubtitle(readyItems, selectedItemIds);
 
   return (
     <section className={ui.responsiveClassNames.reviewSummary} style={summaryRowStyle}>
       <div style={summaryLeftStyle}>
-        <span style={noReady ? summaryIconDoneStyle : summaryIconReadyStyle}>
-          {noReady ? "✓" : "→"}
+        <span
+          style={
+            needsReview
+              ? summaryIconReviewStyle
+              : noReady
+                ? summaryIconDoneStyle
+                : summaryIconReadyStyle
+          }
+        >
+          {needsReview ? "!" : noReady ? "✓" : "→"}
         </span>
 
         <div style={{ minWidth: 0 }}>
@@ -219,6 +252,8 @@ function CompactSummary({
         <span style={summaryMetaPillStyle}>
           {selectedReady}/{readyCount} selected
         </span>
+      ) : needsReview ? (
+        <span style={summaryReviewPillStyle}>Needs review</span>
       ) : (
         <span style={summaryDonePillStyle}>Protected</span>
       )}
@@ -553,6 +588,65 @@ function SecondaryFindings({
   );
 }
 
+function NeedsReviewFindings({
+  items,
+}: {
+  items: SuggestedProjectUpdateItem[];
+}) {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <section style={needsReviewSectionStyle}>
+      <div style={needsReviewHeaderStyle}>
+        <div style={needsReviewTitleGroupStyle}>
+          <span style={needsReviewIconStyle}>!</span>
+
+          <div>
+            <h4 style={needsReviewTitleStyle}>Needs review</h4>
+            <p style={needsReviewTextStyle}>
+              Text2Task found a possible related task but couldn&apos;t safely
+              decide on its own. These are not saved automatically.
+            </p>
+          </div>
+        </div>
+
+        <span style={needsReviewCountStyle}>{items.length}</span>
+      </div>
+
+      <div style={needsReviewListStyle}>
+        {items.map((item) => {
+          const nearestTaskTitle = getStringValue(
+            item.old_value,
+            NEEDS_REVIEW_CONTEXT_KEYS
+          );
+
+          return (
+            <div key={item.id} style={needsReviewRowStyle}>
+              <span style={needsReviewDotStyle}>!</span>
+
+              <div style={{ minWidth: 0 }}>
+                <div style={needsReviewItemTitleStyle}>{item.title}</div>
+
+                {item.description ? (
+                  <p style={needsReviewReasonStyle}>{item.description}</p>
+                ) : null}
+
+                {nearestTaskTitle ? (
+                  <p style={needsReviewReasonStyle}>
+                    Nearest existing task: {nearestTaskTitle}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function TextField({
   label,
   value,
@@ -852,6 +946,20 @@ const summaryDonePillStyle: CSSProperties = {
   border: "1px solid #bbf7d0",
   background: "#f0fdf4",
   color: "#15803d",
+};
+
+const summaryIconReviewStyle: CSSProperties = {
+  ...summaryIconReadyStyle,
+  background: "#d97706",
+  border: "1px solid rgba(217, 119, 6, 0.28)",
+  boxShadow: "0 8px 18px rgba(217, 119, 6, 0.14)",
+};
+
+const summaryReviewPillStyle: CSSProperties = {
+  ...summaryMetaPillStyle,
+  border: "1px solid #fde68a",
+  background: "#fffbeb",
+  color: "#b45309",
 };
 
 const readySectionStyle: CSSProperties = {
@@ -1154,4 +1262,115 @@ const findingTitleStyle: CSSProperties = {
   fontSize: 12,
   lineHeight: 1.35,
   fontWeight: 780,
+};
+
+const needsReviewSectionStyle: CSSProperties = {
+  display: "grid",
+  gap: 12,
+  borderRadius: 18,
+  border: "1px solid rgba(253, 230, 138, 0.9)",
+  background: "linear-gradient(180deg, #fffbeb 0%, #ffffff 100%)",
+  padding: 14,
+  boxShadow: "0 12px 28px rgba(217, 119, 6, 0.06)",
+};
+
+const needsReviewHeaderStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
+const needsReviewTitleGroupStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 10,
+  minWidth: 0,
+};
+
+const needsReviewIconStyle: CSSProperties = {
+  width: 30,
+  height: 30,
+  borderRadius: 12,
+  display: "grid",
+  placeItems: "center",
+  flexShrink: 0,
+  border: "1px solid rgba(253, 230, 138, 0.9)",
+  background: "#fef3c7",
+  color: "#b45309",
+  fontSize: 13,
+  fontWeight: 950,
+};
+
+const needsReviewTitleStyle: CSSProperties = {
+  margin: 0,
+  color: "#92400e",
+  fontSize: 15,
+  lineHeight: 1.2,
+  fontWeight: 950,
+  letterSpacing: "-0.02em",
+};
+
+const needsReviewTextStyle: CSSProperties = {
+  margin: "4px 0 0",
+  color: "#334155",
+  fontSize: 12,
+  lineHeight: 1.4,
+  fontWeight: 720,
+};
+
+const needsReviewCountStyle: CSSProperties = {
+  minWidth: 24,
+  height: 24,
+  padding: "0 7px",
+  display: "grid",
+  placeItems: "center",
+  flexShrink: 0,
+  borderRadius: 999,
+  border: "1px solid rgba(253, 230, 138, 0.9)",
+  background: "#ffffff",
+  color: "#b45309",
+  fontSize: 11,
+  fontWeight: 900,
+};
+
+const needsReviewListStyle: CSSProperties = {
+  display: "grid",
+  gap: 10,
+};
+
+const needsReviewRowStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "22px minmax(0, 1fr)",
+  alignItems: "start",
+  gap: 8,
+  padding: "4px 0",
+};
+
+const needsReviewDotStyle: CSSProperties = {
+  width: 18,
+  height: 18,
+  borderRadius: 999,
+  display: "grid",
+  placeItems: "center",
+  fontSize: 10,
+  fontWeight: 950,
+  border: "1px solid rgba(253, 230, 138, 0.9)",
+  background: "#ffffff",
+  color: "#b45309",
+};
+
+const needsReviewItemTitleStyle: CSSProperties = {
+  color: "#0f172a",
+  fontSize: 12,
+  lineHeight: 1.35,
+  fontWeight: 780,
+};
+
+const needsReviewReasonStyle: CSSProperties = {
+  margin: "3px 0 0",
+  color: "#64748b",
+  fontSize: 11,
+  lineHeight: 1.4,
+  fontWeight: 650,
 };

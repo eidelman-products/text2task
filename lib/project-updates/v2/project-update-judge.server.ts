@@ -6,7 +6,7 @@ import {
   normalizeProjectUpdateBudget,
   resolveProjectUpdateDeadline,
 } from "@/lib/project-updates/project-update-field-normalizers";
-import { compareSubtaskTitles } from "@/lib/tasks/task-title-similarity";
+import { resolveSubtaskReference } from "@/lib/project-updates/v2/project-update-subtask-reference.server";
 
 import type {
   ProjectUpdateExtractedFacts,
@@ -17,14 +17,6 @@ import type {
   ProjectUpdateV2AnalysisSummary,
   ProjectUpdateV2JudgeResult,
 } from "@/lib/project-updates/v2/project-update-facts.types";
-type DuplicateMatch = {
-  existingTaskId: number;
-  existingTitle: string;
-  existingStatus: string | null;
-  proposedTitle: string;
-  score: number;
-  reason: string;
-};
 
 type JudgeProjectUpdateInput = {
   facts: ProjectUpdateExtractedFacts;
@@ -118,6 +110,31 @@ export function judgeProjectUpdateFacts({
   };
 }
 
+function findSubtaskById(
+  subtasks: ExistingProjectUpdateContext["subtasks"],
+  taskId: number
+) {
+  return subtasks.find((subtask) => Number(subtask.id) === taskId) ?? null;
+}
+
+/**
+ * Project Update V2 subtask matching:
+ *
+ * Identity resolution (is this extracted reference the same deliverable as
+ * an existing subtask?) is fully delegated to resolveSubtaskReference,
+ * which never receives or trusts a client/AI-supplied id -- it only reads
+ * project-owned subtask ids from `context.subtasks`.
+ *
+ * This function is only responsible for turning that resolution, plus the
+ * extracted fact's own fields (status, deadline, amount, priority), into
+ * the correct ProjectUpdateJudgeDecision.
+ *
+ * A claimed-complete/approved fact (subtask.status === "Done") is treated
+ * specially: unless the reference is confidently identified, it must never
+ * become a brand-new subtask that is already marked Done. A client does
+ * not report brand-new work as already finished, so an unmatched
+ * completion claim always needs human review instead.
+ */
 function judgeRequestedSubtask({
   subtask,
   context,
@@ -128,99 +145,180 @@ function judgeRequestedSubtask({
   index: number;
 }): ProjectUpdateJudgeDecision {
   const title = cleanTitle(subtask.title);
-  const duplicate = findDuplicateSubtask({
-    subtasks: context.subtasks,
+  const isCompletionFact = subtask.status === "Done";
+  const decisionId = `subtask-${index + 1}`;
+
+  const resolution = resolveSubtaskReference({
     candidateTitle: title,
+    subtasks: context.subtasks,
   });
 
-  if (duplicate) {
-    const doneDecision = judgeCompletedExistingSubtask({
-      subtask,
-      match: duplicate,
-      index,
-    });
+  if (resolution.outcome === "confident_match") {
+    const matchedSubtask = findSubtaskById(
+      context.subtasks,
+      resolution.targetTaskId
+    );
+    const existingTitle = matchedSubtask?.task_title?.trim() || title;
 
-    if (doneDecision) {
-      return doneDecision;
+    if (isCompletionFact) {
+      const existingStatus = normalizeStatus(matchedSubtask?.status ?? null);
+
+      if (existingStatus === "Done") {
+        return {
+          id: decisionId,
+          kind: "no_change",
+          itemType: "no_action",
+          title: "Subtask is already Done",
+          description:
+            "The client approved or completed this deliverable, and the matching subtask is already marked Done.",
+          targetTaskId: resolution.targetTaskId,
+          targetField: "status",
+          oldValue: {
+            existing_task_id: resolution.targetTaskId,
+            existing_title: existingTitle,
+            status: matchedSubtask?.status ?? null,
+          },
+          newValue: {
+            status: "Done",
+          },
+          confidence: resolution.confidenceScore,
+          reason: resolution.reason,
+          reviewLabel: "No change",
+        };
+      }
+
+      return {
+        id: decisionId,
+        kind: "apply",
+        itemType: "update_subtask",
+        title: `Mark ${existingTitle} as Done`,
+        description:
+          subtask.description ||
+          "Client approval or completion language matches this existing subtask.",
+        targetTaskId: resolution.targetTaskId,
+        targetField: "status",
+        oldValue: {
+          existing_task_id: resolution.targetTaskId,
+          existing_title: existingTitle,
+          status: matchedSubtask?.status ?? null,
+        },
+        newValue: {
+          status: "Done",
+        },
+        confidence: resolution.confidenceScore,
+        reason: resolution.reason,
+        reviewLabel: "Apply",
+      };
     }
 
-    const exact = isExactDuplicate(duplicate);
-
-    return {
-      id: `subtask-${index + 1}`,
-      kind: "already_exists",
-      itemType: "duplicate_warning",
-      title: exact ? "This task already exists" : "Possible duplicate subtask",
-      description: exact
-        ? "Text2Task found this requested work already in the project, so it will not create another subtask."
-        : "Text2Task found a similar existing subtask. Review before creating anything new.",
-      targetTaskId: duplicate.existingTaskId,
-      targetField: "task_title",
-      oldValue: {
-        existing_task_id: duplicate.existingTaskId,
-        existing_title: duplicate.existingTitle,
-      },
-      newValue: {
-        proposed_title: duplicate.proposedTitle,
-        existing_task_id: duplicate.existingTaskId,
-        existing_title: duplicate.existingTitle,
-        score: duplicate.score,
-        reason: duplicate.reason,
-      },
-      confidence: exact ? 0.98 : 0.82,
-      reason: exact
-        ? "The requested subtask title matches an existing subtask."
-        : "The requested subtask title is similar to an existing subtask.",
-      reviewLabel: "Already exists",
-    };
-  }
-
-  const relatedSubtask = findRelatedSubtask({
-    subtasks: context.subtasks,
-    candidateTitle: title,
-  });
-
-  if (relatedSubtask) {
-    const doneDecision = judgeCompletedExistingSubtask({
-      subtask,
-      match: relatedSubtask,
-      index,
+    const newValue = compactRecord({
+      task_title: title,
+      deadline_text: subtask.deadlineText,
+      amount: subtask.amount,
+      priority: subtask.priority,
+      status: subtask.status,
     });
 
-    if (doneDecision) {
-      return doneDecision;
+    if (Object.keys(newValue).length === 0) {
+      return {
+        id: decisionId,
+        kind: "no_change",
+        itemType: "no_action",
+        title: "This task already exists",
+        description:
+          "Text2Task found this requested work already in the project, so it will not create another subtask.",
+        targetTaskId: resolution.targetTaskId,
+        targetField: "task_title",
+        oldValue: {
+          existing_task_id: resolution.targetTaskId,
+          existing_title: existingTitle,
+        },
+        newValue: null,
+        confidence: resolution.confidenceScore,
+        reason: resolution.reason,
+        reviewLabel: "Already exists",
+      };
     }
 
     return {
-      id: `subtask-${index + 1}`,
+      id: decisionId,
       kind: "apply",
       itemType: "update_subtask",
       title,
       description:
         subtask.description ||
-        `Client requested an update to existing subtask: ${relatedSubtask.existingTitle}.`,
-      targetTaskId: relatedSubtask.existingTaskId,
+        `Client requested an update to existing subtask: ${existingTitle}.`,
+      targetTaskId: resolution.targetTaskId,
       targetField: "task_title",
       oldValue: {
-        existing_task_id: relatedSubtask.existingTaskId,
-        existing_title: relatedSubtask.existingTitle,
+        existing_task_id: resolution.targetTaskId,
+        existing_title: existingTitle,
       },
-      newValue: compactRecord({
-        task_title: title,
-        deadline_text: subtask.deadlineText,
-        amount: subtask.amount,
-        priority: subtask.priority,
-        status: subtask.status,
-      }),
-      confidence: 0.84,
-      reason:
-        "The requested work appears to update an existing subtask with additional detail rather than create a completely new subtask.",
+      newValue,
+      confidence: resolution.confidenceScore,
+      reason: resolution.reason,
       reviewLabel: "Apply",
     };
   }
 
+  if (resolution.outcome === "ambiguous_match") {
+    const bestCandidate =
+      resolution.bestCandidateTaskId !== null
+        ? findSubtaskById(context.subtasks, resolution.bestCandidateTaskId)
+        : null;
+
+    return {
+      id: decisionId,
+      kind: "needs_review",
+      itemType: "needs_review",
+      title: isCompletionFact
+        ? `Review before marking "${title}" as Done`
+        : `Review before creating "${title}"`,
+      description: isCompletionFact
+        ? "The client referenced a deliverable as approved or complete, but Text2Task could not confidently identify a single matching subtask. Review before applying."
+        : "Text2Task found a possible related subtask but is not confident enough to update it automatically. Review before applying.",
+      targetTaskId: resolution.bestCandidateTaskId,
+      targetField: "task_title",
+      oldValue: resolution.bestCandidateTaskId
+        ? {
+            existing_task_id: resolution.bestCandidateTaskId,
+            existing_title: bestCandidate?.task_title ?? null,
+          }
+        : null,
+      newValue: {
+        proposed_title: title,
+        status: subtask.status,
+      },
+      confidence: resolution.confidenceScore,
+      reason: resolution.reason,
+      reviewLabel: "Needs review",
+    };
+  }
+
+  // resolution.outcome === "no_match"
+  if (isCompletionFact) {
+    return {
+      id: decisionId,
+      kind: "needs_review",
+      itemType: "needs_review",
+      title: `Review before marking "${title}" as Done`,
+      description:
+        "The client referenced a deliverable as approved or complete, but Text2Task could not find a matching existing subtask. A claimed-complete item with no confident match is not safe to create as new, already-finished work.",
+      targetTaskId: null,
+      targetField: "task_title",
+      oldValue: null,
+      newValue: {
+        proposed_title: title,
+        status: subtask.status,
+      },
+      confidence: null,
+      reason: resolution.reason,
+      reviewLabel: "Needs review",
+    };
+  }
+
   return {
-    id: `subtask-${index + 1}`,
+    id: decisionId,
     kind: "apply",
     itemType: "new_subtask",
     title,
@@ -239,71 +337,6 @@ function judgeRequestedSubtask({
     confidence: 0.9,
     reason:
       "This requested work item does not match an existing subtask in the project.",
-    reviewLabel: "Apply",
-  };
-}
-
-function judgeCompletedExistingSubtask({
-  subtask,
-  match,
-  index,
-}: {
-  subtask: ProjectUpdateExtractedSubtaskFact;
-  match: DuplicateMatch;
-  index: number;
-}): ProjectUpdateJudgeDecision | null {
-  if (subtask.status !== "Done") {
-    return null;
-  }
-
-  const existingStatus = normalizeStatus(match.existingStatus);
-
-  if (existingStatus === "Done") {
-    return {
-      id: `subtask-${index + 1}`,
-      kind: "no_change",
-      itemType: "no_action",
-      title: "Subtask is already Done",
-      description:
-        "The client approved or completed this deliverable, and the matching subtask is already marked Done.",
-      targetTaskId: match.existingTaskId,
-      targetField: "status",
-      oldValue: {
-        existing_task_id: match.existingTaskId,
-        existing_title: match.existingTitle,
-        status: match.existingStatus,
-      },
-      newValue: {
-        status: "Done",
-      },
-      confidence: 0.95,
-      reason:
-        "The completion language matches an existing subtask that is already Done.",
-      reviewLabel: "No change",
-    };
-  }
-
-  return {
-    id: `subtask-${index + 1}`,
-    kind: "apply",
-    itemType: "update_subtask",
-    title: `Mark ${match.existingTitle} as Done`,
-    description:
-      subtask.description ||
-      "Client approval or completion language matches this existing subtask.",
-    targetTaskId: match.existingTaskId,
-    targetField: "status",
-    oldValue: {
-      existing_task_id: match.existingTaskId,
-      existing_title: match.existingTitle,
-      status: match.existingStatus,
-    },
-    newValue: {
-      status: "Done",
-    },
-    confidence: 0.92,
-    reason:
-      "The client approved or completed a deliverable that matches an existing subtask, so the subtask should be marked Done instead of treated as a duplicate.",
     reviewLabel: "Apply",
   };
 }
@@ -714,163 +747,6 @@ function buildDetectedChanges(decisions: ProjectUpdateJudgeDecision[]) {
   });
 
   return Array.from(labels);
-}
-
-function findDuplicateSubtask({
-  subtasks,
-  candidateTitle,
-}: {
-  subtasks: ExistingProjectUpdateContext["subtasks"];
-  candidateTitle: string;
-}): DuplicateMatch | null {
-  let bestMatch: DuplicateMatch | null = null;
-
-  for (const subtask of subtasks) {
-    const existingTitle = subtask.task_title?.trim();
-
-    if (!existingTitle) continue;
-
-    const comparison = compareSubtaskTitles(candidateTitle, existingTitle);
-
-    if (!comparison.isDuplicate) continue;
-
-    const match: DuplicateMatch = {
-      existingTaskId: Number(subtask.id),
-      existingTitle,
-      existingStatus: subtask.status,
-      proposedTitle: candidateTitle,
-      score: comparison.score,
-      reason: comparison.reason,
-    };
-
-    if (!bestMatch || match.score > bestMatch.score) {
-      bestMatch = match;
-    }
-  }
-
-  return bestMatch;
-}
-
-function findRelatedSubtask({
-  subtasks,
-  candidateTitle,
-}: {
-  subtasks: ExistingProjectUpdateContext["subtasks"];
-  candidateTitle: string;
-}): DuplicateMatch | null {
-  const candidateTokens = getRelationTokens(candidateTitle);
-
-  if (candidateTokens.length < 2) {
-    return null;
-  }
-
-  let bestMatch: DuplicateMatch | null = null;
-
-  for (const subtask of subtasks) {
-    const existingTitle = subtask.task_title?.trim();
-
-    if (!existingTitle) continue;
-
-    const comparison = compareSubtaskTitles(candidateTitle, existingTitle);
-
-    if (comparison.isDuplicate) continue;
-
-    const existingTokens = getRelationTokens(existingTitle);
-    const sharedScore = getTokenOverlapScore(candidateTokens, existingTokens);
-
-    if (sharedScore < 2) continue;
-
-    const candidateContainsExisting = existingTokens.every((token) =>
-      candidateTokens.includes(token)
-    );
-    const existingCoversCandidate =
-      candidateTokens.length > 0 &&
-      sharedScore / candidateTokens.length >= 0.7;
-
-    if (!candidateContainsExisting && !existingCoversCandidate) {
-      continue;
-    }
-
-    const match: DuplicateMatch = {
-      existingTaskId: Number(subtask.id),
-      existingTitle,
-      existingStatus: subtask.status,
-      proposedTitle: candidateTitle,
-      score: sharedScore,
-      reason: "related title match",
-    };
-
-    if (!bestMatch || match.score > bestMatch.score) {
-      bestMatch = match;
-    }
-  }
-
-  return bestMatch;
-}
-
-function getRelationTokens(value: string): string[] {
-  const ignoredTokens = new Set([
-    "the",
-    "a",
-    "an",
-    "to",
-    "for",
-    "with",
-    "new",
-    "update",
-    "approved",
-    "approve",
-    "approval",
-    "signed",
-    "off",
-    "done",
-    "complete",
-    "completed",
-    "looks",
-    "look",
-    "good",
-    "ready",
-    "now",
-    "is",
-    "are",
-    "was",
-    "were",
-    "add",
-    "create",
-    "build",
-    "make",
-    "website",
-    "site",
-    "web",
-    "page",
-    "homepage",
-    "section",
-  ]);
-
-  return Array.from(
-    new Set(
-      String(value || "")
-        .toLowerCase()
-        .replace(/[^ -]/g, " ")
-        .replace(/[^a-z0-9]+/g, " ")
-        .trim()
-        .split(/\s+/)
-        .filter((token) => token && !ignoredTokens.has(token))
-    )
-  );
-}
-
-function getTokenOverlapScore(
-  candidateTokens: string[],
-  existingTokens: string[]
-): number {
-  const existingSet = new Set(existingTokens);
-
-  return candidateTokens.filter((token) => existingSet.has(token)).length;
-}
-
-function isExactDuplicate(duplicate: DuplicateMatch) {
-  return duplicate.score >= 100 || duplicate.reason === "normalized title match";
 }
 
 function compactRecord(record: Record<string, unknown>): JsonRecord {

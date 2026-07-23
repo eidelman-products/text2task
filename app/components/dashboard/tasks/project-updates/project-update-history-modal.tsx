@@ -495,6 +495,10 @@ function getItemDisplayTitle(item: SuggestedProjectUpdateItem) {
     return "No project changes";
   }
 
+  if (item.type === "needs_review") {
+    return item.title;
+  }
+
   if (item.status === "rejected") {
     return `Skipped: ${item.title}`;
   }
@@ -539,6 +543,13 @@ function getItemHelperText(item: SuggestedProjectUpdateItem) {
 
   if (item.type === "no_action") {
     return "Text2Task did not find a new change to add.";
+  }
+
+  if (item.type === "needs_review") {
+    return (
+      item.description ||
+      "Text2Task found a possible related task but could not safely decide on its own."
+    );
   }
 
   if (item.type === "new_subtask" || item.type === "update_subtask") {
@@ -644,6 +655,24 @@ function getItemValueRows(item: SuggestedProjectUpdateItem): ProjectUpdateHistor
         {
           label: "Requested",
           value: getStringValue(newValue, ["proposed_title", "proposedTitle", "task_title"]),
+        },
+      ]);
+
+    case "needs_review":
+      return compactRows([
+        {
+          label: "Nearest existing task",
+          value:
+            getStringValue(oldValue, ["existing_title", "existingTitle"]) ||
+            getStringValue(newValue, ["existing_title", "existingTitle"]),
+        },
+        {
+          label: "Requested",
+          value: getStringValue(newValue, ["proposed_title", "proposedTitle", "task_title"]),
+        },
+        {
+          label: "Review reason",
+          value: item.description,
         },
       ]);
 
@@ -840,7 +869,13 @@ function formatUpdateStatusLabel(status: ProjectUpdateHistoryStatus) {
 }
 
 function formatItemStatusLabel(item: SuggestedProjectUpdateItem) {
-  if (item.type === "duplicate_warning" || item.type === "no_action") return null;
+  if (
+    item.type === "duplicate_warning" ||
+    item.type === "no_action" ||
+    item.type === "needs_review"
+  ) {
+    return null;
+  }
 
   switch (item.status) {
     case "applied":
@@ -880,6 +915,8 @@ function formatItemTypeLabel(type: ProjectUpdateItemType) {
       return "Duplicate";
     case "no_action":
       return "No project changes";
+    case "needs_review":
+      return "Needs review";
     default:
       return "Update";
   }

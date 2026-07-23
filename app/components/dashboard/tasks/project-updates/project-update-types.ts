@@ -20,7 +20,8 @@ export type ProjectUpdateItemType =
   | "project_note"
   | "client_note"
   | "duplicate_warning"
-  | "no_action";
+  | "no_action"
+  | "needs_review";
 
 export type JsonRecord = Record<string, unknown>;
 
