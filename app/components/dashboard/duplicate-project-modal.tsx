@@ -1,6 +1,10 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import {
+  formatDuplicateProjectAmount,
+  formatDuplicateProjectDeadline,
+} from "./duplicate-project-view";
 import type { DuplicateProjectMatch } from "@/lib/tasks/project-duplicate-detection";
 
 type DuplicateProjectModalProps = {
@@ -30,8 +34,8 @@ export default function DuplicateProjectModal({
       ? "This looks very similar to a project already saved in your CRM."
       : "This may be similar to an existing project in your CRM.";
 
-  const deadline =
-    duplicate.deadline_text || duplicate.deadline_date || "No deadline saved";
+  const amount = formatDuplicateProjectAmount(duplicate);
+  const deadline = formatDuplicateProjectDeadline(duplicate);
   const safeScore = Math.min(Number(duplicate.score) || 0, 100);
 
   return (
@@ -87,7 +91,7 @@ export default function DuplicateProjectModal({
             </div>
 
             <div style={metricsGridStyle}>
-              <Metric label="Project value" value={duplicate.amount || "—"} />
+              <Metric label="Project value" value={amount} />
               <Metric label="Deadline" value={deadline} />
               <Metric
                 label="Tasks"

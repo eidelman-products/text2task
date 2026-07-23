@@ -27,6 +27,8 @@ export type DuplicateProjectMatch = {
   client_name: string;
   contact_name: string | null;
   amount: string | null;
+  amount_value: number | null;
+  currency_code: string | null;
   deadline_text: string | null;
   deadline_date: string | null;
   created_at: string | null;
@@ -64,6 +66,24 @@ type ExistingTaskRow = {
     notes?: string | null;
     created_at?: string | null;
   } | null;
+  /*
+    The canonical, authoritative amount/currency/deadline for a project live
+    on the parent `projects` row -- not on every individual task row. Text
+    extraction intentionally leaves per-task amount/deadline blank when a
+    project-level value already covers the whole request (see
+    lib/extraction/text-extraction.server.ts's "Do not force project-level
+    amount, deadline, or priority into task fields" instruction), so reading
+    only `row.amount`/`row.deadline_text` here would silently lose real,
+    already-saved project data. This embedded relation is the source of
+    truth whenever it is present.
+  */
+  projects?: {
+    amount?: string | null;
+    amount_value?: number | null;
+    currency_code?: string | null;
+    deadline_text?: string | null;
+    deadline_date?: string | null;
+  } | null;
 };
 
 type ExistingProjectGroup = {
@@ -72,6 +92,8 @@ type ExistingProjectGroup = {
   client_name: string;
   contact_name: string | null;
   amount: string | null;
+  amount_value: number | null;
+  currency_code: string | null;
   deadline_text: string | null;
   deadline_date: string | null;
   created_at: string | null;
@@ -174,6 +196,13 @@ async function findDuplicateProjectInternal({
         email,
         notes,
         created_at
+      ),
+      projects (
+        amount,
+        amount_value,
+        currency_code,
+        deadline_text,
+        deadline_date
       )
     `
     )
@@ -283,15 +312,47 @@ function buildExistingProjectGroups(rows: ExistingTaskRow[]) {
       project_id: row.project_id || null,
       client_name: clientName,
       contact_name: getExistingContactName(row),
-      amount: row.amount || null,
-      deadline_text: row.deadline_text || null,
-      deadline_date: row.deadline_date || null,
+      amount: getExistingProjectAmount(row),
+      amount_value: getExistingProjectAmountValue(row),
+      currency_code: getExistingProjectCurrencyCode(row),
+      deadline_text: getExistingProjectDeadlineText(row),
+      deadline_date: getExistingProjectDeadlineDate(row),
       created_at: row.created_at || null,
       tasks: [row],
     });
   }
 
   return Array.from(groups.values());
+}
+
+/*
+  Each of these prefers the joined `projects` row (the canonical,
+  authoritative source for a project's own amount/currency/deadline) and
+  falls back to the individual task row's own column only when the project
+  is not linked (e.g. legacy/orphaned tasks with no project_id). It never
+  substitutes a different task's or a candidate's value.
+*/
+function getExistingProjectAmount(row: ExistingTaskRow) {
+  return row.projects?.amount || row.amount || null;
+}
+
+function getExistingProjectAmountValue(row: ExistingTaskRow) {
+  return typeof row.projects?.amount_value === "number" &&
+    Number.isFinite(row.projects.amount_value)
+    ? row.projects.amount_value
+    : null;
+}
+
+function getExistingProjectCurrencyCode(row: ExistingTaskRow) {
+  return row.projects?.currency_code || null;
+}
+
+function getExistingProjectDeadlineText(row: ExistingTaskRow) {
+  return row.projects?.deadline_text || row.deadline_text || null;
+}
+
+function getExistingProjectDeadlineDate(row: ExistingTaskRow) {
+  return row.projects?.deadline_date || row.deadline_date || null;
 }
 
 function scoreExistingProjectGroup(
@@ -421,6 +482,8 @@ function scoreExistingProjectGroup(
     client_name: group.client_name,
     contact_name: group.contact_name,
     amount: group.amount,
+    amount_value: group.amount_value,
+    currency_code: group.currency_code,
     deadline_text: group.deadline_text,
     deadline_date: group.deadline_date,
     created_at: group.created_at,
