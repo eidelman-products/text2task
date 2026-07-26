@@ -416,7 +416,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let updateData: Record<string, unknown> = {};
+    const updateData: Record<string, unknown> = {};
     let transactionalStatus: "Done" | "In Progress" | null = null;
     const nowIso = new Date().toISOString();
 
