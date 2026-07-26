@@ -30,6 +30,31 @@ export default function ProjectUpdateHistoryModal({
 }: ProjectUpdateHistoryModalProps) {
   const [expandedUpdateIds, setExpandedUpdateIds] = useState<Record<string, boolean>>({});
 
+  /*
+    Collapses every history entry whenever the modal (re)opens or is opened
+    for a different project. Mirrors the previous useEffect's exact
+    dependency semantics ([state.isOpen, state.project]), but applies the
+    reset during render instead of in an effect -- React explicitly
+    supports calling a setState setter while rendering to adjust state in
+    response to a prop change, avoiding the extra committed render pass an
+    effect would cause without changing what is shown.
+  */
+  const [resetSnapshot, setResetSnapshot] = useState({
+    isOpen: state.isOpen,
+    project: state.project,
+  });
+
+  if (
+    resetSnapshot.isOpen !== state.isOpen ||
+    resetSnapshot.project !== state.project
+  ) {
+    setResetSnapshot({ isOpen: state.isOpen, project: state.project });
+
+    if (state.isOpen) {
+      setExpandedUpdateIds({});
+    }
+  }
+
   useEffect(() => {
     if (!state.isOpen) return;
 
@@ -40,12 +65,6 @@ export default function ProjectUpdateHistoryModal({
       document.body.style.overflow = previousOverflow;
     };
   }, [state.isOpen]);
-
-  useEffect(() => {
-    if (state.isOpen) {
-      setExpandedUpdateIds({});
-    }
-  }, [state.isOpen, state.project]);
 
   if (!state.isOpen || !state.project) {
     return null;

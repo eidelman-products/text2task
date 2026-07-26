@@ -2,12 +2,12 @@
 
 import {
   useEffect,
-  useState,
   type CSSProperties,
   type MouseEvent,
 } from "react";
 import { createPortal } from "react-dom";
 
+import { useHasMounted } from "../../use-has-mounted";
 import type { TaskProjectGroup } from "../task-types";
 import type { ProjectUpdateFormState } from "./project-update-types";
 import ProjectUpdateInputCard from "./project-update-input-card";
@@ -54,7 +54,7 @@ export default function ProjectUpdateModalV2({
   onToggleSuggestedItem,
   onUpdateSuggestedItemValue,
 }: ProjectUpdateModalV2Props) {
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useHasMounted();
 
   const clientName = getModalClientName(project);
   const projectTitle = getModalProjectTitle(project);
@@ -81,10 +81,6 @@ export default function ProjectUpdateModalV2({
     canAnalyze,
     canApply,
   });
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!isOpen) return;

@@ -39,6 +39,24 @@ export default function ExtractInputPanels({
   const [pasteHintVisible, setPasteHintVisible] = useState(false);
   const [imageValidationError, setImageValidationError] = useState("");
 
+  /*
+    Clears any stale validation error whenever the selected image identity
+    changes for a reason outside this component's own handlers (for
+    example, the parent auto-clearing the selection after a successful text
+    extraction). handleFile/handleRemoveImage below already clear the error
+    synchronously for their own locally-triggered changes, so this is only
+    ever a no-op in those cases. Mirrors the previous useEffect's exact
+    dependency ([selectedImagePreviewUrl]) but applies the reset during
+    render instead of in an effect, avoiding an extra committed render pass.
+  */
+  const [previousSelectedImagePreviewUrl, setPreviousSelectedImagePreviewUrl] =
+    useState(selectedImagePreviewUrl);
+
+  if (previousSelectedImagePreviewUrl !== selectedImagePreviewUrl) {
+    setPreviousSelectedImagePreviewUrl(selectedImagePreviewUrl);
+    setImageValidationError("");
+  }
+
   const hasText = Boolean(text.trim());
   const hasImage = Boolean(selectedImagePreviewUrl);
 
@@ -110,10 +128,6 @@ export default function ExtractInputPanels({
 
     return () => clearTimeout(timer);
   }, [pasteHintVisible]);
-
-  useEffect(() => {
-    setImageValidationError("");
-  }, [selectedImagePreviewUrl]);
 
   return (
     <>

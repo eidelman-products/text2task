@@ -1,6 +1,11 @@
 import Link from "next/link";
 
 import { requireOwner } from "@/lib/auth/owner.server";
+import {
+  buildAdminAnalyticsPeriodWindows,
+  getDateTimePart,
+  OWNER_ANALYTICS_TIME_ZONE,
+} from "@/lib/analytics/owner-analytics-window";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type AnalyticsEventRow = {
@@ -75,7 +80,6 @@ type ProductActivationData = {
   recentUsers: RecentUserSummary[];
 };
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const TRAFFIC_ROWS_LIMIT = 5000;
 const LIVE_DEMO_ROWS_LIMIT = 5000;
 const RECENT_USERS_LIMIT = 25;
@@ -89,7 +93,6 @@ const LIVE_DEMO_ANALYTICS_EVENTS = [
   "homepage_demo_extract_succeeded",
   "homepage_demo_extract_failed",
 ] as const satisfies readonly LiveDemoAnalyticsEventName[];
-const OWNER_ANALYTICS_TIME_ZONE = "Asia/Jerusalem";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -100,16 +103,6 @@ const analyticsTimestampFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
   hour: "2-digit",
   minute: "2-digit",
-  hourCycle: "h23",
-});
-const ownerTimeZonePartsFormatter = new Intl.DateTimeFormat("en-US", {
-  timeZone: OWNER_ANALYTICS_TIME_ZONE,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
   hourCycle: "h23",
 });
 
@@ -133,87 +126,6 @@ function parseTimestamp(value: string | null | undefined) {
 
 function parseEventDate(row: { occurred_at: string }) {
   return parseTimestamp(row.occurred_at) ?? 0;
-}
-
-function getDateTimePart(parts: Intl.DateTimeFormatPart[], type: string) {
-  return parts.find((part) => part.type === type)?.value ?? "";
-}
-
-function getOwnerTimeZoneDateParts(timestamp: number) {
-  const parts = ownerTimeZonePartsFormatter.formatToParts(new Date(timestamp));
-  const year = Number(getDateTimePart(parts, "year"));
-  const month = Number(getDateTimePart(parts, "month"));
-  const day = Number(getDateTimePart(parts, "day"));
-  const hour = Number(getDateTimePart(parts, "hour"));
-  const minute = Number(getDateTimePart(parts, "minute"));
-  const second = Number(getDateTimePart(parts, "second"));
-
-  if (
-    !Number.isInteger(year) ||
-    !Number.isInteger(month) ||
-    !Number.isInteger(day) ||
-    !Number.isInteger(hour) ||
-    !Number.isInteger(minute) ||
-    !Number.isInteger(second)
-  ) {
-    return null;
-  }
-
-  return {
-    year,
-    month,
-    day,
-    hour,
-    minute,
-    second,
-  };
-}
-
-function getOwnerTimeZoneOffsetMs(timestamp: number) {
-  const parts = getOwnerTimeZoneDateParts(timestamp);
-
-  if (!parts) {
-    return 0;
-  }
-
-  return (
-    Date.UTC(
-      parts.year,
-      parts.month - 1,
-      parts.day,
-      parts.hour,
-      parts.minute,
-      parts.second
-    ) - timestamp
-  );
-}
-
-function getStartOfOwnerAnalyticsDay(timestamp: number) {
-  const parts = getOwnerTimeZoneDateParts(timestamp);
-
-  if (!parts) {
-    const fallback = new Date(timestamp);
-    fallback.setUTCHours(0, 0, 0, 0);
-
-    return fallback.getTime();
-  }
-
-  const localMidnightAsUtc = Date.UTC(parts.year, parts.month - 1, parts.day);
-  let startOfDay =
-    localMidnightAsUtc - getOwnerTimeZoneOffsetMs(localMidnightAsUtc);
-
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const adjusted =
-      localMidnightAsUtc - getOwnerTimeZoneOffsetMs(startOfDay);
-
-    if (adjusted === startOfDay) {
-      return startOfDay;
-    }
-
-    startOfDay = adjusted;
-  }
-
-  return startOfDay;
 }
 
 function buildPeriodStats(
@@ -520,9 +432,9 @@ function parseProductActivationData(
   };
 }
 
-async function loadTrafficRows(now: number) {
+async function loadTrafficRows(sinceMs: number) {
   try {
-    const since = new Date(now - 30 * DAY_MS).toISOString();
+    const since = new Date(sinceMs).toISOString();
     const { data, error } = await supabaseAdmin
       .from("analytics_events")
       .select(
@@ -548,9 +460,9 @@ async function loadTrafficRows(now: number) {
   }
 }
 
-async function loadLiveDemoAnalyticsRows(now: number) {
+async function loadLiveDemoAnalyticsRows(sinceMs: number) {
   try {
-    const since = new Date(now - 30 * DAY_MS).toISOString();
+    const since = new Date(sinceMs).toISOString();
     const { data, error } = await supabaseAdmin
       .from("analytics_events")
       .select("event_name, occurred_at, metadata")
@@ -830,21 +742,109 @@ function UnavailablePanel({ message }: { message: string }) {
   );
 }
 
-export default async function AdminAnalyticsPage() {
-  await requireOwner();
+type AdminAnalyticsViewModel = {
+  trafficRows: AnalyticsEventRow[] | null;
+  productData: ProductActivationData | null;
+  liveDemoRows: LiveDemoAnalyticsRow[] | null;
+  signupAttributionRows: SignupAttributionRow[] | null;
+  periodStats: PeriodStats[];
+  sourceRows: ReturnType<typeof buildSourceRows>;
+  countryRows: ReturnType<typeof buildCountryRows>;
+  recentRows: AnalyticsEventRow[];
+  liveDemoPeriodStats: LiveDemoPeriodStats[];
+  liveDemoFailureStageRows: LiveDemoFailureStageRow[];
+  recentLiveDemoRows: LiveDemoAnalyticsRow[];
+  signupAttributionByUser: Map<string, SignupAttributionRow>;
+};
 
-  const now = Date.now();
+/*
+  The single server-side data-loading boundary for this page. It captures
+  the request timestamp exactly once (Date.now() is read right here, not in
+  the page component), derives every query window and every in-memory
+  period-filter boundary from that one timestamp via
+  buildAdminAnalyticsPeriodWindows, runs every analytics query, and returns
+  a fully-computed view model. AdminAnalyticsPage below only renders the
+  result -- it never reads the clock or performs any other non-deterministic
+  work itself.
+*/
+async function loadAdminAnalyticsViewModel(): Promise<AdminAnalyticsViewModel> {
+  const nowMs = Date.now();
+  const { startOfTodayMs, sevenDaysAgoMs, thirtyDaysAgoMs } =
+    buildAdminAnalyticsPeriodWindows(nowMs);
 
   const [trafficRows, productData, liveDemoRows] = await Promise.all([
-    loadTrafficRows(now),
+    loadTrafficRows(thirtyDaysAgoMs),
     loadProductActivationData(),
-    loadLiveDemoAnalyticsRows(now),
+    loadLiveDemoAnalyticsRows(thirtyDaysAgoMs),
   ]);
   const signupAttributionRows = productData
     ? await loadSignupAttributionRows(
         productData.recentUsers.map((user) => user.id)
       )
     : null;
+
+  const periodStats = trafficRows
+    ? [
+        buildPeriodStats("Today", trafficRows, startOfTodayMs),
+        buildPeriodStats("Last 7 days", trafficRows, sevenDaysAgoMs),
+        buildPeriodStats("Last 30 days", trafficRows, thirtyDaysAgoMs),
+      ]
+    : [];
+  const sourceRows = trafficRows ? buildSourceRows(trafficRows) : [];
+  const countryRows = trafficRows ? buildCountryRows(trafficRows) : [];
+  const recentRows = trafficRows ? trafficRows.slice(0, 25) : [];
+  const liveDemoPeriodStats = liveDemoRows
+    ? [
+        buildLiveDemoPeriodStats("Today", liveDemoRows, startOfTodayMs),
+        buildLiveDemoPeriodStats("Last 7 days", liveDemoRows, sevenDaysAgoMs),
+        buildLiveDemoPeriodStats(
+          "Last 30 days",
+          liveDemoRows,
+          thirtyDaysAgoMs
+        ),
+      ]
+    : [];
+  const liveDemoFailureStageRows = liveDemoRows
+    ? buildLiveDemoFailureStageRows(liveDemoRows)
+    : [];
+  const recentLiveDemoRows = liveDemoRows ? liveDemoRows.slice(0, 25) : [];
+  const signupAttributionByUser = buildSignupAttributionByUser(
+    signupAttributionRows ?? []
+  );
+
+  return {
+    trafficRows,
+    productData,
+    liveDemoRows,
+    signupAttributionRows,
+    periodStats,
+    sourceRows,
+    countryRows,
+    recentRows,
+    liveDemoPeriodStats,
+    liveDemoFailureStageRows,
+    recentLiveDemoRows,
+    signupAttributionByUser,
+  };
+}
+
+export default async function AdminAnalyticsPage() {
+  await requireOwner();
+
+  const {
+    trafficRows,
+    productData,
+    liveDemoRows,
+    signupAttributionRows,
+    periodStats,
+    sourceRows,
+    countryRows,
+    recentRows,
+    liveDemoPeriodStats,
+    liveDemoFailureStageRows,
+    recentLiveDemoRows,
+    signupAttributionByUser,
+  } = await loadAdminAnalyticsViewModel();
 
   if (!trafficRows && !productData && !liveDemoRows) {
     return (
@@ -861,41 +861,6 @@ export default async function AdminAnalyticsPage() {
       </main>
     );
   }
-
-  const startOfToday = getStartOfOwnerAnalyticsDay(now);
-
-  const periodStats = trafficRows
-    ? [
-        buildPeriodStats("Today", trafficRows, startOfToday),
-        buildPeriodStats("Last 7 days", trafficRows, now - 7 * DAY_MS),
-        buildPeriodStats("Last 30 days", trafficRows, now - 30 * DAY_MS),
-      ]
-    : [];
-  const sourceRows = trafficRows ? buildSourceRows(trafficRows) : [];
-  const countryRows = trafficRows ? buildCountryRows(trafficRows) : [];
-  const recentRows = trafficRows ? trafficRows.slice(0, 25) : [];
-  const liveDemoPeriodStats = liveDemoRows
-    ? [
-        buildLiveDemoPeriodStats("Today", liveDemoRows, startOfToday),
-        buildLiveDemoPeriodStats(
-          "Last 7 days",
-          liveDemoRows,
-          now - 7 * DAY_MS
-        ),
-        buildLiveDemoPeriodStats(
-          "Last 30 days",
-          liveDemoRows,
-          now - 30 * DAY_MS
-        ),
-      ]
-    : [];
-  const liveDemoFailureStageRows = liveDemoRows
-    ? buildLiveDemoFailureStageRows(liveDemoRows)
-    : [];
-  const recentLiveDemoRows = liveDemoRows ? liveDemoRows.slice(0, 25) : [];
-  const signupAttributionByUser = buildSignupAttributionByUser(
-    signupAttributionRows ?? []
-  );
 
   return (
     <main className="admin-analytics-page">

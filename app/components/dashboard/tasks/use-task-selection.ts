@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { TaskArchiveView, TaskRow } from "./task-types";
 
 type UseTaskSelectionArgs = {
@@ -6,28 +6,63 @@ type UseTaskSelectionArgs = {
   archiveView: TaskArchiveView;
 };
 
+/**
+ * The effective (displayed) selection: raw selected ids, pruned down to
+ * only ids that are still in the current visible set. Extracted as a pure
+ * function so this filtering -- the actual behavior previously produced by
+ * an effect one render late -- is directly testable without rendering.
+ */
+export function getVisibleSelectedTaskIds(
+  rawSelectedTaskIds: number[],
+  visibleTaskIds: number[]
+): number[] {
+  const visibleIds = new Set(visibleTaskIds);
+
+  return rawSelectedTaskIds.filter((id) => visibleIds.has(id));
+}
+
 export function useTaskSelection({
   visibleTasks,
   archiveView,
 }: UseTaskSelectionArgs) {
-  const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
+  const [rawSelectedTaskIds, setRawSelectedTaskIds] = useState<number[]>([]);
 
   const visibleTaskIds = useMemo(() => {
     return visibleTasks.map((task) => task.id);
   }, [visibleTasks]);
 
-  useEffect(() => {
-    const visibleIds = new Set(visibleTaskIds);
+  /*
+    A task that scrolls out of the visible set (filtering, search, pagination,
+    etc.) should no longer count as selected. Rather than pruning the stored
+    selection in an effect (which would let a stale, still-hidden id remain
+    "selected" for one extra render before the effect catches up), the
+    effective selection is derived fresh on every render from the raw stored
+    ids plus the current visible set.
+  */
+  const selectedTaskIds = useMemo(
+    () => getVisibleSelectedTaskIds(rawSelectedTaskIds, visibleTaskIds),
+    [rawSelectedTaskIds, visibleTaskIds]
+  );
 
-    setSelectedTaskIds((prev) => prev.filter((id) => visibleIds.has(id)));
-  }, [visibleTaskIds]);
+  /*
+    Switching between the active/archived task views should always start
+    with an empty selection -- selecting an archived task does not carry a
+    meaningful intent once you are looking at active tasks, and vice versa.
+    This clears the raw stored selection (not just the derived view above)
+    so a previously selected id does not silently reappear as selected if
+    the user switches back to the view it belongs to. Mirrors the previous
+    useEffect's exact dependency ([archiveView]), applied during render
+    instead of in an effect to avoid an extra committed render pass.
+  */
+  const [previousArchiveView, setPreviousArchiveView] = useState(archiveView);
 
-  useEffect(() => {
-    setSelectedTaskIds([]);
-  }, [archiveView]);
+  if (previousArchiveView !== archiveView) {
+    setPreviousArchiveView(archiveView);
+    setRawSelectedTaskIds([]);
+  }
 
   function toggleSelect(taskId: number) {
-    setSelectedTaskIds((prev) =>
+    setRawSelectedTaskIds((prev) =>
       prev.includes(taskId)
         ? prev.filter((id) => id !== taskId)
         : [...prev, taskId]
@@ -35,7 +70,7 @@ export function useTaskSelection({
   }
 
   function clearSelection() {
-    setSelectedTaskIds([]);
+    setRawSelectedTaskIds([]);
   }
 
   function toggleSelectAllVisible() {
@@ -44,13 +79,13 @@ export function useTaskSelection({
       visibleTaskIds.every((id) => selectedTaskIds.includes(id));
 
     if (allVisibleSelected) {
-      setSelectedTaskIds((prev) =>
+      setRawSelectedTaskIds((prev) =>
         prev.filter((id) => !visibleTaskIds.includes(id))
       );
       return;
     }
 
-    setSelectedTaskIds((prev) => {
+    setRawSelectedTaskIds((prev) => {
       const next = new Set(prev);
       visibleTaskIds.forEach((id) => next.add(id));
       return Array.from(next);
@@ -65,7 +100,7 @@ export function useTaskSelection({
 
   return {
     selectedTaskIds,
-    setSelectedTaskIds,
+    setSelectedTaskIds: setRawSelectedTaskIds,
     hasSelection,
     allVisibleSelected,
     toggleSelect,

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { MouseEvent } from "react";
+import { useHasMounted } from "../use-has-mounted";
 import type { TaskResource } from "./resource-api";
 
 type ResourceNoteEditorModalProps = {
@@ -22,20 +23,29 @@ export default function ResourceNoteEditorModal({
   onClose,
   onSave,
 }: ResourceNoteEditorModalProps) {
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useHasMounted();
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  /*
+    Loads the resource's title/notes into the editable fields whenever the
+    modal opens for a (possibly different) resource. This mirrors the
+    previous useEffect's exact dependency semantics ([isOpen, resource]) but
+    applies the reset during render -- React explicitly supports calling a
+    setState setter while rendering to adjust state in response to a prop
+    change, and doing so here avoids the extra committed render pass an
+    effect would cause without changing what is shown.
+  */
+  const [resetSnapshot, setResetSnapshot] = useState({ isOpen, resource });
 
-  useEffect(() => {
-    if (!isOpen || !resource) return;
+  if (resetSnapshot.isOpen !== isOpen || resetSnapshot.resource !== resource) {
+    setResetSnapshot({ isOpen, resource });
 
-    setTitle(resource.title || "");
-    setNotes(resource.notes || "");
-  }, [isOpen, resource]);
+    if (isOpen && resource) {
+      setTitle(resource.title || "");
+      setNotes(resource.notes || "");
+    }
+  }
 
   useEffect(() => {
     if (!isOpen) return;
