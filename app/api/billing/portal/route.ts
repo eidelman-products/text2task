@@ -2,41 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-
-function getReadableCreemError(data: unknown) {
-  if (!data || typeof data !== "object") {
-    return "Failed to create billing portal";
-  }
-
-  const value = data as Record<string, unknown>;
-
-  if (Array.isArray(value.message)) {
-    return value.message.join(", ");
-  }
-
-  if (typeof value.message === "string") return value.message;
-  if (typeof value.error === "string") return value.error;
-  if (typeof value.detail === "string") return value.detail;
-
-  return "Failed to create billing portal";
-}
-
-function getPortalUrl(data: any) {
-  const url =
-    data?.customer_portal_link ||
-    data?.customerPortalLink ||
-    data?.customer_portal_url ||
-    data?.customerPortalUrl ||
-    data?.url ||
-    data?.portal_url ||
-    data?.portalUrl ||
-    data?.billing_url ||
-    data?.billingUrl ||
-    data?.customer_portal_url ||
-    data?.link;
-
-  return typeof url === "string" && url.trim() ? url.trim() : null;
-}
+import { getPortalUrl, getReadableCreemError } from "./creem-response";
 
 export async function POST() {
   try {

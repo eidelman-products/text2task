@@ -90,11 +90,13 @@ export async function POST(req: NextRequest) {
       mode: "archive",
       archivedTaskId: data.id,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Delete task route error:", error);
 
     return NextResponse.json(
-      { error: error.message || "Failed to update task" },
+      {
+        error: error instanceof Error ? error.message : "Failed to update task",
+      },
       { status: 500 }
     );
   }

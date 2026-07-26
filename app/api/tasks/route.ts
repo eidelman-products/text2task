@@ -10,9 +10,35 @@ import {
   buildDuplicateCandidateFromProjectPayload,
   findDuplicateProject,
 } from "@/lib/tasks/project-duplicate-detection";
+import {
+  normalizeEmbeddedRelation,
+  type EmbeddedClientRow,
+} from "@/lib/supabase/joined-row";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+/** Raw parsed JSON request body: shape is untrusted until read. */
+type RequestBody = Record<string, unknown>;
+
+type JoinedTaskRow = RequestBody & {
+  clients?: EmbeddedClientRow | EmbeddedClientRow[] | null;
+  projects?: RequestBody | RequestBody[] | null;
+};
+
+type TaskResourceInsertRow = {
+  user_id: string;
+  project_id: string;
+  task_id: string | null;
+  resource_type: string;
+  title: string | null;
+  url: string | null;
+  storage_path: null;
+  file_name: null;
+  mime_type: null;
+  size_bytes: null;
+  notes: string | null;
+};
 
 type TasksView = "active" | "archived" | "all" | "stats";
 
@@ -75,6 +101,23 @@ function pickFirstString(...values: unknown[]): string {
   return "";
 }
 
+function asNullableId(value: unknown): string | null {
+  return typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : null;
+}
+
+/**
+ * A request body may nest the project fields under a `project` key, or
+ * carry them directly at the top level. Narrows to whichever object
+ * actually holds them.
+ */
+function getRequestBodyProjectFields(body: RequestBody): RequestBody {
+  return body.project && typeof body.project === "object"
+    ? (body.project as RequestBody)
+    : body;
+}
+
 function normalizeEmail(value: unknown): string {
   const email = normalizeOptionalClientField(value);
 
@@ -102,22 +145,24 @@ function isDoneStatus(status: string | null | undefined) {
   return String(status || "").trim().toLowerCase() === "done";
 }
 
-function cleanTaskWithClientFallback(task: any, clientData: any = null) {
+function cleanTaskWithClientFallback(
+  task: JoinedTaskRow,
+  clientData: EmbeddedClientRow | null = null
+): RequestBody & {
+  client: EmbeddedClientRow | null;
+  project: RequestBody | null;
+} {
   const taskWithClient = {
     ...task,
-    client: Array.isArray(task.clients)
-      ? task.clients[0] ?? clientData
-      : task.clients ?? clientData,
-    project: Array.isArray(task.projects)
-      ? task.projects[0] ?? null
-      : task.projects ?? null,
+    client: normalizeEmbeddedRelation(task.clients) ?? clientData,
+    project: normalizeEmbeddedRelation(task.projects),
   };
 
   const { clients, projects, ...cleanTask } = taskWithClient;
   return cleanTask;
 }
 
-function getContactNameFromBody(body: any): string {
+function getContactNameFromBody(body: RequestBody): string {
   return pickFirstString(
     body.contact_name,
     body.contactName,
@@ -132,7 +177,7 @@ function getContactNameFromBody(body: any): string {
   );
 }
 
-function getClientPayloadFromBody(body: any) {
+function getClientPayloadFromBody(body: RequestBody) {
   const client_name = pickFirstString(
     body.client_name,
     body.clientName,
@@ -182,7 +227,7 @@ function getClientPayloadFromBody(body: any) {
   };
 }
 
-function getTaskTitleFromBody(body: any): string {
+function getTaskTitleFromBody(body: RequestBody): string {
   return pickFirstString(
     body.task_title,
     body.taskTitle,
@@ -192,7 +237,7 @@ function getTaskTitleFromBody(body: any): string {
   );
 }
 
-function getDeadlineTextFromBody(body: any): string {
+function getDeadlineTextFromBody(body: RequestBody): string {
   return pickFirstString(
     body.deadline_text,
     body.deadlineText,
@@ -204,7 +249,7 @@ function getDeadlineTextFromBody(body: any): string {
   );
 }
 
-function getSourceFromBody(body: any): string {
+function getSourceFromBody(body: RequestBody): string {
   return (
     pickFirstString(
       body.source,
@@ -215,7 +260,7 @@ function getSourceFromBody(body: any): string {
   );
 }
 
-function getRawInputFromBody(body: any): string {
+function getRawInputFromBody(body: RequestBody): string {
   return pickFirstString(
     body.raw_input,
     body.rawInput,
@@ -226,9 +271,8 @@ function getRawInputFromBody(body: any): string {
   );
 }
 
-function getProjectPayloadFromBody(body: any) {
-  const projectBody =
-    body.project && typeof body.project === "object" ? body.project : body;
+function getProjectPayloadFromBody(body: RequestBody) {
+  const projectBody = getRequestBodyProjectFields(body);
 
   const clientPayload = getClientPayloadFromBody(projectBody);
 
@@ -305,9 +349,8 @@ function getProjectPayloadFromBody(body: any) {
   };
 }
 
-function extractProjectSubtasks(body: any): ProjectSubtaskInput[] {
-  const projectBody =
-    body.project && typeof body.project === "object" ? body.project : body;
+function extractProjectSubtasks(body: RequestBody): ProjectSubtaskInput[] {
+  const projectBody = getRequestBodyProjectFields(body);
 
   const possibleArrays = [
     body.subtasks,
@@ -322,18 +365,21 @@ function extractProjectSubtasks(body: any): ProjectSubtaskInput[] {
 
   for (const value of possibleArrays) {
     if (Array.isArray(value)) {
-      return value.filter((item) => item && typeof item === "object");
+      return value.filter(
+        (item) => item && typeof item === "object"
+      ) as ProjectSubtaskInput[];
     }
   }
 
   return [];
 }
 
-function isProjectCreateRequest(body: any) {
+function isProjectCreateRequest(body: RequestBody) {
   if (!body || typeof body !== "object") return false;
 
-  const projectBody =
-    body.project && typeof body.project === "object" ? body.project : null;
+  const hasProjectBody = Boolean(
+    body.project && typeof body.project === "object"
+  );
 
   const hasProjectFlag =
     body.mode === "project" ||
@@ -342,14 +388,14 @@ function isProjectCreateRequest(body: any) {
     body.saveAs === "project" ||
     body.create_project === true ||
     body.createProject === true ||
-    Boolean(projectBody);
+    hasProjectBody;
 
   const hasSubtasks = extractProjectSubtasks(body).length > 0;
 
   return hasProjectFlag || hasSubtasks;
 }
 
-function shouldSkipDuplicateCheck(body: any) {
+function shouldSkipDuplicateCheck(body: RequestBody) {
   return (
     body?.skip_duplicate_check === true ||
     body?.skipDuplicateCheck === true ||
@@ -395,7 +441,7 @@ async function checkProjectDuplicateBeforeSave({
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
-  body: any;
+  body: RequestBody;
 }) {
   if (shouldSkipDuplicateCheck(body)) {
     return null;
@@ -442,7 +488,7 @@ async function upsertClientForUser({
   client_notes: string;
 }) {
   let clientId: string | null = null;
-  let clientData: any = null;
+  let clientData: EmbeddedClientRow | null = null;
 
   if (!client_name) {
     return { clientId, clientData };
@@ -532,7 +578,7 @@ async function createProjectWithSubtasks({
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
-  body: any;
+  body: RequestBody;
 }) {
   const projectPayload = getProjectPayloadFromBody(body);
   const subtasks = extractProjectSubtasks(body);
@@ -728,7 +774,7 @@ async function createProjectWithSubtasks({
     cleanTaskWithClientFallback(task, clientData)
   );
 
-  const resourceRows: any[] = [];
+  const resourceRows: TaskResourceInsertRow[] = [];
 
   normalizedSubtasks.forEach((subtask, index) => {
     const task = cleanTasks[index];
@@ -746,7 +792,7 @@ async function createProjectWithSubtasks({
       resourceRows.push({
         user_id: userId,
         project_id: project.id,
-        task_id: task?.id ?? null,
+        task_id: asNullableId(task?.id),
         resource_type: normalizeResourceType(resource.resource_type),
         title: title || null,
         url: url || null,
@@ -759,7 +805,7 @@ async function createProjectWithSubtasks({
     });
   });
 
-  let resources: any[] = [];
+  let resources: RequestBody[] = [];
 
   if (resourceRows.length > 0) {
     const { data: insertedResources, error: resourcesError } = await supabase
@@ -817,11 +863,14 @@ export async function GET(req: NextRequest) {
         headers: dashboardTasksNoStoreHeaders,
       }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("tasks GET unexpected error:", error);
 
     return NextResponse.json(
-      { error: error.message || "Unexpected server error" },
+      {
+        error:
+          error instanceof Error ? error.message : "Unexpected server error",
+      },
       { status: 500, headers: dashboardTasksNoStoreHeaders }
     );
   }
@@ -873,13 +922,15 @@ export async function POST(req: NextRequest) {
           tasks: result.tasks,
           resources: result.resources,
         });
-      } catch (projectError: any) {
+      } catch (projectError) {
         console.error("project create error:", projectError);
 
         return NextResponse.json(
           {
             error:
-              projectError.message || "Failed to save project with subtasks",
+              projectError instanceof Error
+                ? projectError.message
+                : "Failed to save project with subtasks",
           },
           { status: 500 }
         );
@@ -939,7 +990,7 @@ export async function POST(req: NextRequest) {
     const { deadlineDate } = parseDeadline(deadline_text);
 
     let clientId: string | null = null;
-    let clientData: any = null;
+    let clientData: EmbeddedClientRow | null = null;
 
     try {
       const clientResult = await upsertClientForUser({
@@ -954,11 +1005,16 @@ export async function POST(req: NextRequest) {
 
       clientId = clientResult.clientId;
       clientData = clientResult.clientData;
-    } catch (clientError: any) {
+    } catch (clientError) {
       console.error("client save error:", clientError);
 
       return NextResponse.json(
-        { error: clientError.message || "Failed to save client" },
+        {
+          error:
+            clientError instanceof Error
+              ? clientError.message
+              : "Failed to save client",
+        },
         { status: 500 }
       );
     }
@@ -1042,11 +1098,14 @@ export async function POST(req: NextRequest) {
     const cleanTask = cleanTaskWithClientFallback(data, clientData);
 
     return NextResponse.json({ task: cleanTask });
-  } catch (error: any) {
+  } catch (error) {
     console.error("tasks POST unexpected error:", error);
 
     return NextResponse.json(
-      { error: error.message || "Unexpected server error" },
+      {
+        error:
+          error instanceof Error ? error.message : "Unexpected server error",
+      },
       { status: 500 }
     );
   }

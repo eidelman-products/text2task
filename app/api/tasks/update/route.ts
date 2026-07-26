@@ -3,6 +3,21 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { parseDeadline } from "@/lib/tasks/parse-deadline";
 import { parseAmount } from "@/lib/tasks/parse-amount";
+import {
+  normalizeEmbeddedRelation,
+  type EmbeddedClientRow,
+} from "@/lib/supabase/joined-row";
+
+type JoinedTaskRow = Record<string, unknown> & {
+  clients?: EmbeddedClientRow | EmbeddedClientRow[] | null;
+  projects?: Record<string, unknown> | Record<string, unknown>[] | null;
+};
+
+type ExistingTaskRow = JoinedTaskRow & {
+  client_id: string | null;
+  completed_at: string | null;
+  archived_at: string | null;
+};
 
 const UpdateTaskSchema = z.object({
   taskId: z.number(),
@@ -84,15 +99,17 @@ function isDoneStatus(status: unknown) {
   return String(status || "").trim().toLowerCase() === "done";
 }
 
-function cleanJoinedTask(data: any, fallbackClient: any = null) {
+function cleanJoinedTask(
+  data: JoinedTaskRow,
+  fallbackClient: EmbeddedClientRow | null = null
+): Record<string, unknown> & {
+  client: EmbeddedClientRow | null;
+  project: Record<string, unknown> | null;
+} {
   const task = {
     ...data,
-    client: Array.isArray(data?.clients)
-      ? data.clients[0] ?? fallbackClient
-      : data?.clients ?? fallbackClient,
-    project: Array.isArray(data?.projects)
-      ? data.projects[0] ?? null
-      : data?.projects ?? null,
+    client: normalizeEmbeddedRelation(data.clients) ?? fallbackClient,
+    project: normalizeEmbeddedRelation(data.projects),
   };
 
   const { clients, projects, ...cleanTask } = task;
@@ -108,7 +125,7 @@ async function reloadTask({
   supabase: Awaited<ReturnType<typeof createClient>>;
   taskId: number;
   userId: string;
-  fallbackClient?: any;
+  fallbackClient?: EmbeddedClientRow | null;
 }) {
   const { data, error } = await supabase
     .from("tasks")
@@ -148,10 +165,8 @@ async function touchTaskForActivity({
   }
 }
 
-function getJoinedProject(data: any) {
-  return Array.isArray(data?.projects)
-    ? data.projects[0] ?? null
-    : data?.projects ?? null;
+function getJoinedProject(data: JoinedTaskRow) {
+  return normalizeEmbeddedRelation(data.projects);
 }
 
 async function completeProjectIfEveryTaskDone({
@@ -165,7 +180,7 @@ async function completeProjectIfEveryTaskDone({
   projectId: string;
   userId: string;
   nowIso: string;
-  currentProject?: any;
+  currentProject?: Record<string, unknown> | null;
 }) {
   const { data: projectTasks, error: projectTasksError } = await supabase
     .from("tasks")
@@ -184,7 +199,7 @@ async function completeProjectIfEveryTaskDone({
   if (!projectTasks?.length) return false;
 
   const everyTaskDone = projectTasks.every((task) =>
-    isDoneStatus((task as any).status)
+    isDoneStatus(task.status)
   );
 
   if (!everyTaskDone) return false;
@@ -240,7 +255,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: existingTask, error: existingTaskError } = await supabase
+    const { data: existingTaskRow, error: existingTaskError } = await supabase
       .from("tasks")
       .select(
         `
@@ -305,16 +320,15 @@ export async function POST(req: NextRequest) {
       .is("deleted_at", null)
       .single();
 
-    if (existingTaskError || !existingTask) {
+    if (existingTaskError || !existingTaskRow) {
       return NextResponse.json(
         { error: existingTaskError?.message || "Task not found" },
         { status: 404 }
       );
     }
 
-    const currentClient = Array.isArray((existingTask as any).clients)
-      ? (existingTask as any).clients[0] ?? null
-      : (existingTask as any).clients ?? null;
+    const existingTask = existingTaskRow as ExistingTaskRow;
+    const currentClient = normalizeEmbeddedRelation(existingTask.clients);
 
     if (field === "phone" || field === "email" || field === "notes") {
       if (!existingTask.client_id) {
@@ -578,21 +592,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const shouldCheckProjectCompletion =
-      field === "status" &&
-      isDoneStatus(value) &&
-      typeof (data as any)?.project_id === "string" &&
-      Boolean((data as any).project_id);
+    const updatedTaskRow = data as JoinedTaskRow;
+    const updatedTaskProjectId =
+      typeof updatedTaskRow.project_id === "string"
+        ? updatedTaskRow.project_id
+        : null;
 
-    const projectWasCompleted = shouldCheckProjectCompletion
-      ? await completeProjectIfEveryTaskDone({
-          supabase,
-          projectId: (data as any).project_id,
-          userId: user.id,
-          nowIso,
-          currentProject: getJoinedProject(data),
-        })
-      : false;
+    const shouldCheckProjectCompletion =
+      field === "status" && isDoneStatus(value) && Boolean(updatedTaskProjectId);
+
+    const projectWasCompleted =
+      shouldCheckProjectCompletion && updatedTaskProjectId
+        ? await completeProjectIfEveryTaskDone({
+            supabase,
+            projectId: updatedTaskProjectId,
+            userId: user.id,
+            nowIso,
+            currentProject: getJoinedProject(updatedTaskRow),
+          })
+        : false;
 
     const cleanTask = projectWasCompleted
       ? await reloadTask({
@@ -607,11 +625,13 @@ export async function POST(req: NextRequest) {
       success: true,
       task: cleanTask,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Update task route error:", error);
 
     return NextResponse.json(
-      { error: error.message || "Failed to update task" },
+      {
+        error: error instanceof Error ? error.message : "Failed to update task",
+      },
       { status: 500 }
     );
   }

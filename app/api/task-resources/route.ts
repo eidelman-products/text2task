@@ -165,11 +165,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       resources: data ?? [],
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("task resources GET unexpected error:", error);
 
     return NextResponse.json(
-      { error: error.message || "Unexpected server error" },
+      {
+        error:
+          error instanceof Error ? error.message : "Unexpected server error",
+      },
       { status: 500 }
     );
   }
@@ -288,11 +291,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       resource: data,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("task resources POST unexpected error:", error);
 
     return NextResponse.json(
-      { error: error.message || "Unexpected server error" },
+      {
+        error:
+          error instanceof Error ? error.message : "Unexpected server error",
+      },
       { status: 500 }
     );
   }
@@ -418,11 +424,14 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({
       resource: data,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("task resources PATCH unexpected error:", error);
 
     return NextResponse.json(
-      { error: error.message || "Unexpected server error" },
+      {
+        error:
+          error instanceof Error ? error.message : "Unexpected server error",
+      },
       { status: 500 }
     );
   }
@@ -529,11 +538,14 @@ export async function DELETE(req: NextRequest) {
     }
 
     return NextResponse.json(response);
-  } catch (error: any) {
+  } catch (error) {
     console.error("task resources DELETE unexpected error:", error);
 
     return NextResponse.json(
-      { error: error.message || "Unexpected server error" },
+      {
+        error:
+          error instanceof Error ? error.message : "Unexpected server error",
+      },
       { status: 500 }
     );
   }

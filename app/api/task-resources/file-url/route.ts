@@ -112,11 +112,14 @@ export async function GET(req: NextRequest) {
         size_bytes: resource.size_bytes,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("task resource file-url unexpected error:", error);
 
     return NextResponse.json(
-      { error: error.message || "Unexpected server error" },
+      {
+        error:
+          error instanceof Error ? error.message : "Unexpected server error",
+      },
       { status: 500 }
     );
   }

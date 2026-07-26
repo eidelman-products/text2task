@@ -4,6 +4,8 @@ import {
   normalizeText,
 } from "./task-title-similarity";
 
+import type { SupabaseLikeClient } from "@/lib/supabase/query-builder-like";
+
 export type DuplicateProjectSubtaskCandidate = {
   task_title?: string | null;
   task?: string | null;
@@ -41,10 +43,6 @@ export type DuplicateProjectMatch = {
     id: number;
     task_title: string;
   }>;
-};
-
-type SupabaseLikeClient = {
-  from: (table: string) => any;
 };
 
 type ExistingTaskRow = {
@@ -107,34 +105,48 @@ export class DuplicateProjectLookupError extends Error {
   }
 }
 
-export async function findDuplicateProject({
+/*
+  supabase is accepted through an unconstrained generic and narrowed with a
+  single `as` assertion, rather than typed as SupabaseLikeClient directly:
+  this repo's real Supabase client has no Database schema generic, which
+  makes its query-builder methods (particularly `.eq()`) resolve to a very
+  deep type. Comparing that real type structurally against any interface
+  that also declares an `eq` member overflows TypeScript's
+  type-instantiation depth limit at real call sites (verified directly).
+  An unconstrained generic parameter has nothing concrete to structurally
+  compare at the call boundary, so both the real client and small test
+  fakes are accepted; findDuplicateProjectInternal (below) still receives a
+  precisely-typed SupabaseLikeClient and does the actual query with full
+  type checking on every method it calls.
+*/
+export async function findDuplicateProject<Client>({
   supabase,
   userId,
   candidate,
 }: {
-  supabase: SupabaseLikeClient;
+  supabase: Client;
   userId: string;
   candidate: DuplicateProjectCandidate;
 }): Promise<DuplicateProjectMatch | null> {
   return findDuplicateProjectInternal({
-    supabase,
+    supabase: supabase as SupabaseLikeClient,
     userId,
     candidate,
     failOpenOnQueryError: true,
   });
 }
 
-export async function findDuplicateProjectStrict({
+export async function findDuplicateProjectStrict<Client>({
   supabase,
   userId,
   candidate,
 }: {
-  supabase: SupabaseLikeClient;
+  supabase: Client;
   userId: string;
   candidate: DuplicateProjectCandidate;
 }): Promise<DuplicateProjectMatch | null> {
   return findDuplicateProjectInternal({
-    supabase,
+    supabase: supabase as SupabaseLikeClient,
     userId,
     candidate,
     failOpenOnQueryError: false,

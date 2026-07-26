@@ -1,8 +1,6 @@
 import { compareSubtaskTitles } from "./task-title-similarity";
 
-type SupabaseLikeClient = {
-  from: (table: string) => any;
-};
+import type { SupabaseLikeClient } from "@/lib/supabase/query-builder-like";
 
 type ExistingSubtaskRow = {
   id: number;
@@ -17,13 +15,26 @@ export type DuplicateSubtaskMatch = {
   reason: string;
 };
 
-export async function findDuplicateSubtaskInProject({
-  supabase,
+/*
+  supabase is accepted through an unconstrained generic and narrowed with a
+  single `as` assertion, rather than typed as SupabaseLikeClient directly:
+  this repo's real Supabase client has no Database schema generic, which
+  makes its query-builder methods (particularly `.eq()`) resolve to a very
+  deep type. Comparing that real type structurally against any interface
+  that also declares an `eq` member overflows TypeScript's
+  type-instantiation depth limit at real call sites (verified directly).
+  An unconstrained generic parameter has nothing concrete to structurally
+  compare at the call boundary, so both the real client and small test
+  fakes are accepted; the query below is still fully type-checked against
+  the precise SupabaseLikeClient shape once narrowed.
+*/
+export async function findDuplicateSubtaskInProject<Client>({
+  supabase: supabaseClient,
   userId,
   projectId,
   candidateTitle,
 }: {
-  supabase: SupabaseLikeClient;
+  supabase: Client;
   userId: string;
   projectId: string;
   candidateTitle: string;
@@ -32,6 +43,7 @@ export async function findDuplicateSubtaskInProject({
 
   if (!title) return null;
 
+  const supabase = supabaseClient as SupabaseLikeClient;
   const { data, error } = await supabase
     .from("tasks")
     .select("id, task_title")

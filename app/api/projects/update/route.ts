@@ -3,6 +3,10 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { parseDeadline } from "@/lib/tasks/parse-deadline";
 import { parseAmount } from "@/lib/tasks/parse-amount";
+import {
+  normalizeEmbeddedRelation,
+  type EmbeddedClientRow,
+} from "@/lib/supabase/joined-row";
 
 const UpdateProjectSchema = z.object({
   projectId: z.string().uuid(),
@@ -60,6 +64,10 @@ function isDoneStatus(status: unknown) {
   return String(status || "").trim().toLowerCase() === "done";
 }
 
+type ReloadedProjectRow = {
+  clients: EmbeddedClientRow[] | EmbeddedClientRow | null;
+} & Record<string, unknown>;
+
 async function reloadProject({
   supabase,
   projectId,
@@ -94,11 +102,10 @@ async function reloadProject({
     throw new Error(error?.message || "Failed to reload updated project");
   }
 
+  const projectRow = data as ReloadedProjectRow;
   const project = {
-    ...data,
-    client: Array.isArray((data as any).clients)
-      ? (data as any).clients[0] ?? null
-      : (data as any).clients ?? null,
+    ...projectRow,
+    client: normalizeEmbeddedRelation(projectRow.clients),
   };
 
   const { clients, ...cleanProject } = project;
@@ -382,11 +389,14 @@ export async function POST(req: NextRequest) {
         project: updatedProject,
       });
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Update project route error:", error);
 
     return NextResponse.json(
-      { error: error.message || "Failed to update project" },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to update project",
+      },
       { status: 500 }
     );
   }

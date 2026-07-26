@@ -1,13 +1,60 @@
+import { normalizeEmbeddedRelation } from "@/lib/supabase/joined-row";
+import type { EmbeddedClientRow } from "@/lib/supabase/joined-row";
+
+export function getQueryErrorMessage(error: unknown, fallback: string): string {
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message: unknown }).message === "string" &&
+    (error as { message: string }).message
+  ) {
+    return (error as { message: string }).message;
+  }
+
+  return fallback;
+}
+
 export type DashboardTasksView = "active" | "archived" | "all" | "stats";
 
 export type DashboardTaskRow = Record<string, unknown>;
 
-type DashboardTaskLoaderClient = {
-  from: (table: "tasks") => any;
+type JoinedDashboardTaskRow = DashboardTaskRow & {
+  clients?: EmbeddedClientRow | EmbeddedClientRow[] | null;
+  projects?: Record<string, unknown> | Record<string, unknown>[] | null;
 };
 
-type LoadDashboardTasksInput = {
-  supabase: DashboardTaskLoaderClient;
+type DashboardTaskQueryResult = {
+  data: JoinedDashboardTaskRow[] | null;
+  error: unknown;
+};
+
+/*
+  Precise local shape of the query chain this loader actually builds --
+  distinct from lib/supabase/query-builder-like.ts's SupabaseFilterBuilderLike
+  because here order() is the terminal, awaited call (there is no limit()
+  after it), whereas the duplicate-detection queries always call limit()
+  last. Reusing the same shared interface for both would force order() to
+  serve two incompatible roles.
+*/
+interface DashboardTaskFilterBuilder {
+  eq(column: string, value: unknown): this;
+  is(column: string, value: unknown): this;
+  or(filters: string): this;
+  order(
+    column: string,
+    options?: { ascending?: boolean }
+  ): PromiseLike<DashboardTaskQueryResult>;
+}
+
+type DashboardTaskLoaderClient = {
+  from: (table: "tasks") => {
+    select: (columns: string) => DashboardTaskFilterBuilder;
+  };
+};
+
+type LoadDashboardTasksInput<Client> = {
+  supabase: Client;
   userId: string;
   view: DashboardTasksView;
   projectId?: string | null;
@@ -56,16 +103,32 @@ const dashboardTaskSelect = `
   )
 `;
 
-export async function loadDashboardTasksForUser({
+/*
+  supabase is accepted through an unconstrained generic and narrowed with a
+  single `as` assertion, rather than typed as DashboardTaskLoaderClient
+  directly: this repo's real Supabase client has no Database schema
+  generic, which makes its query-builder methods (particularly `.eq()`)
+  resolve to a very deep type. Comparing that real type structurally
+  against any interface that also declares an `eq` member overflows
+  TypeScript's type-instantiation depth limit at real call sites (verified
+  directly against this exact loader). An unconstrained generic parameter
+  has nothing concrete to structurally compare at the call boundary, so
+  both the real client and test fakes are accepted, while the query below
+  is still fully type-checked against the precise DashboardTaskLoaderClient
+  shape once narrowed.
+*/
+export async function loadDashboardTasksForUser<Client>({
   supabase,
   userId,
   view,
   projectId,
-}: LoadDashboardTasksInput): Promise<DashboardTaskRow[]> {
-  let query = supabase
-    .from("tasks")
-    .select(dashboardTaskSelect)
-    .eq("user_id", userId);
+}: LoadDashboardTasksInput<Client>): Promise<DashboardTaskRow[]> {
+  const client = supabase as DashboardTaskLoaderClient;
+
+  let query = client.from("tasks").select(dashboardTaskSelect).eq(
+    "user_id",
+    userId
+  );
 
   if (projectId) {
     query = query.eq("project_id", projectId);
@@ -88,21 +151,17 @@ export async function loadDashboardTasksForUser({
   });
 
   if (error) {
-    throw new Error(error.message || "Failed to load dashboard tasks.");
+    throw new Error(getQueryErrorMessage(error, "Failed to load dashboard tasks."));
   }
 
   return (data ?? []).map(cleanDashboardTaskRow);
 }
 
-function cleanDashboardTaskRow(task: any): DashboardTaskRow {
+function cleanDashboardTaskRow(task: JoinedDashboardTaskRow): DashboardTaskRow {
   const taskWithRelations = {
     ...task,
-    client: Array.isArray(task.clients)
-      ? task.clients[0] ?? null
-      : task.clients ?? null,
-    project: Array.isArray(task.projects)
-      ? task.projects[0] ?? null
-      : task.projects ?? null,
+    client: normalizeEmbeddedRelation(task.clients),
+    project: normalizeEmbeddedRelation(task.projects),
   };
 
   const { clients, projects, ...cleanTask } = taskWithRelations;

@@ -7,13 +7,15 @@ import {
 } from "./project-duplicate-detection";
 
 /**
- * Minimal fake Supabase query builder. Every chain method returns the
- * builder itself and the builder is thenable, so
+ * Minimal fake Supabase query builder. Every filter method returns the
+ * builder itself, and limit() returns a real Promise (matching the
+ * PromiseLike contract required by SupabaseFilterBuilderLike['limit']), so
  * `await supabase.from(...).select(...).eq(...).is(...).gte(...).order(...).limit(...)`
  * resolves with the configured { data, error } exactly like the real
  * Postgrest client, without needing a live database.
  */
 function buildFakeSupabase(rows: unknown[], error: unknown = null) {
+  const result = error ? { data: null, error } : { data: rows, error: null };
   const builder = {
     from() {
       return builder;
@@ -34,10 +36,7 @@ function buildFakeSupabase(rows: unknown[], error: unknown = null) {
       return builder;
     },
     limit() {
-      return builder;
-    },
-    then(resolve: (value: { data: unknown; error: unknown }) => void) {
-      resolve(error ? { data: null, error } : { data: rows, error: null });
+      return Promise.resolve(result);
     },
   };
 
