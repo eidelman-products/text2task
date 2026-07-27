@@ -165,71 +165,6 @@ async function touchTaskForActivity({
   }
 }
 
-function getJoinedProject(data: JoinedTaskRow) {
-  return normalizeEmbeddedRelation(data.projects);
-}
-
-async function completeProjectIfEveryTaskDone({
-  supabase,
-  projectId,
-  userId,
-  nowIso,
-  currentProject,
-}: {
-  supabase: Awaited<ReturnType<typeof createClient>>;
-  projectId: string;
-  userId: string;
-  nowIso: string;
-  currentProject?: Record<string, unknown> | null;
-}) {
-  const { data: projectTasks, error: projectTasksError } = await supabase
-    .from("tasks")
-    .select("id,status")
-    .eq("project_id", projectId)
-    .eq("user_id", userId)
-    .or("is_archived.eq.false,is_archived.is.null")
-    .is("deleted_at", null);
-
-  if (projectTasksError) {
-    throw new Error(
-      projectTasksError.message || "Failed to check project subtasks"
-    );
-  }
-
-  if (!projectTasks?.length) return false;
-
-  const everyTaskDone = projectTasks.every((task) =>
-    isDoneStatus(task.status)
-  );
-
-  if (!everyTaskDone) return false;
-
-  const projectUpdateData: Record<string, unknown> = {
-    status: "Done",
-    priority: "Low",
-    updated_at: nowIso,
-  };
-
-  if (!currentProject?.completed_at) {
-    projectUpdateData.completed_at = nowIso;
-  }
-
-  const { error: projectUpdateError } = await supabase
-    .from("projects")
-    .update(projectUpdateData)
-    .eq("id", projectId)
-    .eq("user_id", userId)
-    .is("deleted_at", null);
-
-  if (projectUpdateError) {
-    throw new Error(
-      projectUpdateError.message || "Failed to complete project"
-    );
-  }
-
-  return true;
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -592,38 +527,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const updatedTaskRow = data as JoinedTaskRow;
-    const updatedTaskProjectId =
-      typeof updatedTaskRow.project_id === "string"
-        ? updatedTaskRow.project_id
-        : null;
-
-    const shouldCheckProjectCompletion =
-      field === "status" && isDoneStatus(value) && Boolean(updatedTaskProjectId);
-
-    const projectWasCompleted =
-      shouldCheckProjectCompletion && updatedTaskProjectId
-        ? await completeProjectIfEveryTaskDone({
-            supabase,
-            projectId: updatedTaskProjectId,
-            userId: user.id,
-            nowIso,
-            currentProject: getJoinedProject(updatedTaskRow),
-          })
-        : false;
-
-    const cleanTask = projectWasCompleted
-      ? await reloadTask({
-          supabase,
-          taskId,
-          userId: user.id,
-          fallbackClient: currentClient,
-        })
-      : cleanJoinedTask(data, currentClient);
-
     return NextResponse.json({
       success: true,
-      task: cleanTask,
+      task: cleanJoinedTask(data, currentClient),
     });
   } catch (error) {
     console.error("Update task route error:", error);
