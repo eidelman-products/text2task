@@ -219,10 +219,11 @@ export default function ProfilePage() {
         ...initialFeedbackForm,
         displayName: cleanDisplayName,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
       setFeedbackError(
-        error?.message || "Could not submit feedback right now."
+        (error instanceof Error && error.message) ||
+          "Could not submit feedback right now."
       );
     } finally {
       setIsSubmittingFeedback(false);

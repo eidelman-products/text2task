@@ -28,6 +28,7 @@ import {
 import type { DuplicateProjectMatch } from "@/lib/tasks/project-duplicate-detection";
 import { classifySaveProjectBatchResponse } from "./save-project-batch-result";
 import type { TaskRow } from "./tasks-view";
+import type { ProjectEntity } from "./tasks/task-types";
 
 type PreviewItem = ExtractedPreview & {
   contact_name?: string;
@@ -108,11 +109,43 @@ function isJsonRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function getExtractResponseTasks(data: unknown) {
+function asJsonRecordOf(value: unknown): Record<string, unknown> {
+  return isJsonRecord(value) ? value : {};
+}
+
+function pickString(...candidates: unknown[]): string {
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate) return candidate;
+  }
+  return "";
+}
+
+function pickStringOrNull(...candidates: unknown[]): string | null {
+  return pickString(...candidates) || null;
+}
+
+/** Preserves an empty-string value rather than treating it as absent. */
+function firstTypedString<T>(candidates: unknown[], fallback: T): string | T {
+  for (const candidate of candidates) {
+    if (typeof candidate === "string") return candidate;
+  }
+  return fallback;
+}
+
+/** Nullish-coalescing pick: only null/undefined fall through, "" is kept. */
+function firstDefinedString(...candidates: unknown[]): string | null {
+  for (const candidate of candidates) {
+    if (candidate === null || candidate === undefined) continue;
+    return typeof candidate === "string" ? candidate : null;
+  }
+  return null;
+}
+
+export function getExtractResponseTasks(data: unknown) {
   return isJsonRecord(data) && Array.isArray(data.tasks) ? data.tasks : [];
 }
 
-function getExtractResponseProjectMetadata(
+export function getExtractResponseProjectMetadata(
   data: unknown
 ): TextExtractedProjectMetadata | null {
   if (
@@ -155,14 +188,15 @@ function isGenericContactValue(value: unknown) {
   );
 }
 
-function getNormalizedExtractedContactName(task: any) {
+export function getNormalizedExtractedContactName(task: unknown) {
+  const record = asJsonRecordOf(task);
   const rawContact =
-    task.contact_name ||
-    task.contactName ||
-    task.contact_person ||
-    task.contactPerson ||
+    record.contact_name ||
+    record.contactName ||
+    record.contact_person ||
+    record.contactPerson ||
     "";
-  const clientName = normalizeOptionalText(task.client_name);
+  const clientName = normalizeOptionalText(record.client_name);
 
   if (isGenericContactValue(rawContact)) {
     return clientName || "";
@@ -269,49 +303,56 @@ function getProjectStatusFromGroup(group: PreviewProjectGroup) {
   return "New";
 }
 
-function mapSavedProject(saved: any) {
-  const project = saved.project || saved.projects || null;
+export function mapSavedProject(saved: unknown) {
+  const savedRecord = asJsonRecordOf(saved);
+  const rawProjectValue = savedRecord.project ?? savedRecord.projects ?? null;
 
-  if (!project || typeof project !== "object") {
+  if (!isJsonRecord(rawProjectValue)) {
     return null;
   }
 
+  const project = rawProjectValue;
+
   return {
-    id: String(project.id || saved.project_id || ""),
-    client_id: project.client_id || null,
-    client_name: project.client_name || null,
-    contact_name: project.contact_name || null,
-    title: project.title || null,
-    summary: project.summary || null,
+    id: pickString(project.id, savedRecord.project_id),
+    client_id: pickStringOrNull(project.client_id),
+    client_name: pickStringOrNull(project.client_name),
+    contact_name: pickStringOrNull(project.contact_name),
+    title: pickStringOrNull(project.title),
+    summary: pickStringOrNull(project.summary),
     amount:
       project.amount !== null && project.amount !== undefined
         ? String(project.amount)
         : null,
     amount_value:
       typeof project.amount_value === "number" ? project.amount_value : null,
-    currency_code: project.currency_code || null,
-    deadline_text: project.deadline_text || null,
-    deadline_date: project.deadline_date || null,
-    priority: project.priority || null,
-    priority_source: project.priority_source || null,
-    status: project.status || null,
-    source: project.source || null,
-    raw_input: project.raw_input || null,
-    created_at: project.created_at || null,
-    updated_at: project.updated_at || null,
-    completed_at: project.completed_at || null,
+    currency_code: pickStringOrNull(project.currency_code),
+    deadline_text: pickStringOrNull(project.deadline_text),
+    deadline_date: pickStringOrNull(project.deadline_date),
+    priority: pickStringOrNull(project.priority),
+    priority_source: pickStringOrNull(project.priority_source) as
+      | ProjectEntity["priority_source"]
+      | null,
+    status: pickStringOrNull(project.status),
+    source: pickStringOrNull(project.source),
+    raw_input: pickStringOrNull(project.raw_input),
+    created_at: pickStringOrNull(project.created_at),
+    updated_at: pickStringOrNull(project.updated_at),
+    completed_at: pickStringOrNull(project.completed_at),
     is_archived:
       typeof project.is_archived === "boolean" ? project.is_archived : null,
-    archived_at: project.archived_at || null,
-    deleted_at: project.deleted_at || null,
+    archived_at: pickStringOrNull(project.archived_at),
+    deleted_at: pickStringOrNull(project.deleted_at),
   };
 }
 
-function mapSavedTaskToRow(saved: any): TaskRow {
-  const rawDeadlineText =
-    typeof saved.deadline_text === "string" ? saved.deadline_text : "";
-  const rawDeadlineDate =
-    typeof saved.deadline_date === "string" ? saved.deadline_date : null;
+export function mapSavedTaskToRow(saved: unknown): TaskRow {
+  const record = asJsonRecordOf(saved);
+  const client = asJsonRecordOf(record.client);
+  const hasClient = isJsonRecord(record.client);
+
+  const rawDeadlineText = firstTypedString([record.deadline_text], "");
+  const rawDeadlineDate = firstTypedString([record.deadline_date], null);
 
   const displayDeadline =
     formatDeadline(rawDeadlineText, rawDeadlineDate) ||
@@ -322,43 +363,44 @@ function mapSavedTaskToRow(saved: any): TaskRow {
   const project = mapSavedProject(saved);
 
   return {
-    id: saved.id,
-    client: saved.client
+    id: typeof record.id === "number" ? record.id : Number(record.id),
+    client: hasClient
       ? {
-          id: saved.client.id,
-          name: saved.client.name,
-          contact_name: saved.client.contact_name ?? null,
-          phone: saved.client.phone ?? null,
-          email: saved.client.email ?? null,
-          notes: saved.client.notes ?? null,
+          id: pickString(client.id),
+          name: pickString(client.name),
+          contact_name: firstDefinedString(client.contact_name),
+          phone: firstDefinedString(client.phone),
+          email: firstDefinedString(client.email),
+          notes: firstDefinedString(client.notes),
         }
       : null,
     project,
-    task: saved.task_title || "",
+    task: pickString(record.task_title),
     amount:
-      saved.amount !== null && saved.amount !== undefined
-        ? String(saved.amount)
+      record.amount !== null && record.amount !== undefined
+        ? String(record.amount)
         : "",
     deadline: displayDeadline,
     deadline_date: rawDeadlineDate,
     deadline_original_text: rawDeadlineText || null,
-    priority: saved.priority || "Medium",
-    status: saved.status || "New",
-    source: saved.source || "Project extraction",
-    raw_input: saved.raw_input || "",
-    created_at: saved.created_at || null,
-    updated_at: saved.updated_at || null,
-    is_archived: Boolean(saved.is_archived),
-    completed_at: saved.completed_at || null,
-    archived_at: saved.archived_at || null,
-    deleted_at: saved.deleted_at || null,
-    project_id: saved.project_id || project?.id || null,
-    subtask_order: saved.subtask_order ?? null,
-    contact_name: saved.contact_name ?? saved.client?.contact_name ?? null,
-    client_phone: saved.client?.phone ?? null,
-    client_email: saved.client?.email ?? null,
-    client_notes: saved.client?.notes ?? null,
-  } as TaskRow;
+    priority: pickString(record.priority) || "Medium",
+    status: pickString(record.status) || "New",
+    source: pickString(record.source) || "Project extraction",
+    raw_input: pickString(record.raw_input),
+    created_at: pickStringOrNull(record.created_at),
+    updated_at: pickStringOrNull(record.updated_at),
+    is_archived: Boolean(record.is_archived),
+    completed_at: pickStringOrNull(record.completed_at),
+    archived_at: pickStringOrNull(record.archived_at),
+    deleted_at: pickStringOrNull(record.deleted_at),
+    project_id: pickStringOrNull(record.project_id) || project?.id || null,
+    subtask_order:
+      typeof record.subtask_order === "number" ? record.subtask_order : null,
+    contact_name: firstDefinedString(record.contact_name, client.contact_name),
+    client_phone: firstDefinedString(client.phone),
+    client_email: firstDefinedString(client.email),
+    client_notes: firstDefinedString(client.notes),
+  };
 }
 
 export default function ExtractWorkspace({
@@ -448,8 +490,9 @@ export default function ExtractWorkspace({
     return importAttemptIdRef.current;
   }
 
-  function mapTaskToPreview(task: any, source: string): PreviewItem {
-    const originalDeadlineText = task.deadline_text || "";
+  function mapTaskToPreview(task: unknown, source: string): PreviewItem {
+    const record = asJsonRecordOf(task);
+    const originalDeadlineText = pickString(record.deadline_text);
     const parsedDeadline = parseDeadline(originalDeadlineText);
     const contactName = getNormalizedExtractedContactName(task);
 
@@ -459,24 +502,24 @@ export default function ExtractWorkspace({
 
     return {
       previewId: createPreviewId(),
-      client: task.client_name || "",
+      client: pickString(record.client_name),
       contact_name: contactName,
       contactName,
       contact_person: contactName,
       contactPerson: contactName,
-      client_phone: task.client_phone || task.phone || "",
-      client_email: task.client_email || task.email || "",
-      client_notes: task.client_notes || task.notes || "",
-      task: task.task_title || "",
-      amount: task.amount || "",
+      client_phone: pickString(record.client_phone, record.phone),
+      client_email: pickString(record.client_email, record.email),
+      client_notes: pickString(record.client_notes, record.notes),
+      task: pickString(record.task_title),
+      amount: pickString(record.amount),
       deadline: displayDeadline,
       deadline_date: parsedDeadline.deadlineDate,
       deadline_original_text: originalDeadlineText || null,
-      priority: normalizePriority(task.priority),
+      priority: normalizePriority(record.priority),
       status: "Not Started",
       source,
-      raw_input: task.raw_input || "",
-    } as PreviewItem;
+      raw_input: pickString(record.raw_input),
+    };
   }
 
   function removeDeadlineChanges(
@@ -530,13 +573,13 @@ export default function ExtractWorkspace({
   }
 
   async function buildHybridPreviewsFromTasks(
-    extractedTasks: any[],
+    extractedTasks: unknown[],
     source: string
   ): Promise<{
     previewItems: PreviewItem[];
     aiMetaByPreviewId: Record<string, HybridPreviewMeta>;
   }> {
-    const mappedPreviews = extractedTasks.map((task: any) =>
+    const mappedPreviews = extractedTasks.map((task) =>
       mapTaskToPreview(task, source)
     );
 
@@ -596,13 +639,18 @@ export default function ExtractWorkspace({
     setImageProgress(0);
   }
 
-  function handleExtractError(data: any, fallbackMessage: string) {
-    if (data?.upgrade_required || data?.error === "FREE_EXTRACT_LIMIT_REACHED") {
+  function handleExtractError(data: unknown, fallbackMessage: string) {
+    const record = asJsonRecordOf(data);
+
+    if (
+      record.upgrade_required ||
+      record.error === "FREE_EXTRACT_LIMIT_REACHED"
+    ) {
       setShowUpgrade(true);
       return true;
     }
 
-    throw new Error(data?.message || data?.error || fallbackMessage);
+    throw new Error(pickString(record.message, record.error) || fallbackMessage);
   }
 
   async function extractWithAI() {
@@ -649,9 +697,11 @@ export default function ExtractWorkspace({
       setPreviewItems(hybridResult.previewItems);
       setPreviewAiMeta(hybridResult.aiMetaByPreviewId);
       clearSelectedImage();
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      toast.error(error.message || "Extraction failed");
+      toast.error(
+        (error instanceof Error && error.message) || "Extraction failed"
+      );
     } finally {
       setIsExtracting(false);
     }
@@ -710,10 +760,12 @@ export default function ExtractWorkspace({
       setTimeout(() => {
         setImageProgress(0);
       }, 700);
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
       setImageProgress(0);
-      toast.error(error.message || "Image extraction failed");
+      toast.error(
+        (error instanceof Error && error.message) || "Image extraction failed"
+      );
     } finally {
       setIsExtracting(false);
     }
@@ -1033,9 +1085,11 @@ export default function ExtractWorkspace({
       }
 
       synchronizeCommittedImport(result.savedRows);
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      toast.error(error.message || "Failed to save project");
+      toast.error(
+        (error instanceof Error && error.message) || "Failed to save project"
+      );
     } finally {
       setIsSavingAll(false);
     }
@@ -1084,9 +1138,11 @@ export default function ExtractWorkspace({
 
       setDuplicateSaveState(null);
       synchronizeCommittedImport(result.savedRows);
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      toast.error(error.message || "Failed to save project");
+      toast.error(
+        (error instanceof Error && error.message) || "Failed to save project"
+      );
     } finally {
       setIsSavingDuplicateAnyway(false);
       setIsSavingAll(false);

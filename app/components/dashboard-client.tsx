@@ -679,10 +679,12 @@ export default function DashboardClient({
       }
 
       throw new Error("Billing URL missing");
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
       toast.error("Billing failed", {
-        description: error?.message || "Could not open billing right now.",
+        description:
+          (error instanceof Error && error.message) ||
+          "Could not open billing right now.",
       });
     } finally {
       setIsBillingLoading(false);
@@ -863,8 +865,9 @@ export default function DashboardClient({
         setTasksError("");
 
         await refreshTasks();
-      } catch (error: any) {
-        const message = error.message || "Failed to load tasks";
+      } catch (error) {
+        const message =
+          (error instanceof Error && error.message) || "Failed to load tasks";
         setTasksError(message);
         toast.error("Could not load tasks", {
           description: message,
@@ -1013,8 +1016,10 @@ export default function DashboardClient({
       }
 
       markTaskSaved(taskId);
-    } catch (error: any) {
-      const message = error.message || "Failed to update task status";
+    } catch (error) {
+      const message =
+        (error instanceof Error && error.message) ||
+        "Failed to update task status";
       console.error(error);
       setTasks(previousTasks);
       setAllTasksForStats(previousAllTasks);
@@ -1040,7 +1045,11 @@ export default function DashboardClient({
     }
   }
 
-  async function updateTaskField(taskId: number, field: string, value: any) {
+  async function updateTaskField(
+    taskId: number,
+    field: string,
+    value: string
+  ) {
     const currentTask = tasks.find((task) => task.id === taskId);
     if (!currentTask) return;
 
@@ -1216,8 +1225,9 @@ export default function DashboardClient({
       toast.success("Task updated", {
         description: "Your change was saved successfully.",
       });
-    } catch (error: any) {
-      const message = error.message || "Failed to update task";
+    } catch (error) {
+      const message =
+        (error instanceof Error && error.message) || "Failed to update task";
       console.error(error);
       setTasks(previousTasks);
       setAllTasksForStats(previousAllTasks);
@@ -1240,7 +1250,7 @@ export default function DashboardClient({
   async function updateProjectField(
     projectId: string,
     field: string,
-    value: any
+    value: string
   ) {
     if (!projectId) return;
 
@@ -1351,8 +1361,10 @@ export default function DashboardClient({
       toast.success("Project updated", {
         description: "Your project changes were saved successfully.",
       });
-    } catch (error: any) {
-      const message = error.message || "Failed to update project";
+    } catch (error) {
+      const message =
+        (error instanceof Error && error.message) ||
+        "Failed to update project";
       console.error(error);
 
       setTasks(previousTasks);
@@ -1512,8 +1524,9 @@ export default function DashboardClient({
           "Task archived, but dashboard statistics could not refresh. Please refresh the workspace."
         );
       }
-    } catch (error: any) {
-      const message = error.message || "Failed to archive task";
+    } catch (error) {
+      const message =
+        (error instanceof Error && error.message) || "Failed to archive task";
       console.error(error);
 
       setTasks(previousTasks);
@@ -1614,8 +1627,9 @@ export default function DashboardClient({
           "Task restored, but dashboard statistics could not refresh. Please refresh the workspace."
         );
       }
-    } catch (error: any) {
-      const message = error.message || "Failed to restore task";
+    } catch (error) {
+      const message =
+        (error instanceof Error && error.message) || "Failed to restore task";
       console.error(error);
 
       setTasks(previousTasks);
@@ -1666,7 +1680,7 @@ export default function DashboardClient({
         if (!res.ok) {
           throw new Error(data.error || "Failed to permanently delete task");
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error(error);
 
         setTasks(previousTasks);

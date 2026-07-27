@@ -1,4 +1,5 @@
 import type { TaskRow } from "./tasks-view";
+import type { ProjectEntity } from "./tasks/task-types";
 import { formatDeadline } from "@/lib/tasks/format-deadline";
 import { getDashboardAlerts } from "@/lib/tasks/get-dashboard-alerts";
 
@@ -28,16 +29,50 @@ export function getClientDisplayName(task: TaskRow) {
   return task.client?.name?.trim() || "Unassigned";
 }
 
-export function normalizeTaskFromApi(item: any): TaskRow {
-  const rawDeadlineText =
-    typeof item.deadline_text === "string"
-      ? item.deadline_text
-      : typeof item.deadline_original_text === "string"
-        ? item.deadline_original_text
-        : "";
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
 
-  const rawDeadlineDate =
-    typeof item.deadline_date === "string" ? item.deadline_date : null;
+function asRecord(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
+
+function pickString(...candidates: unknown[]): string {
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate) return candidate;
+  }
+  return "";
+}
+
+function pickStringOrNull(...candidates: unknown[]): string | null {
+  return pickString(...candidates) || null;
+}
+
+/** Preserves an empty-string value rather than treating it as absent. */
+function firstTypedString<T>(
+  candidates: unknown[],
+  fallback: T
+): string | T {
+  for (const candidate of candidates) {
+    if (typeof candidate === "string") return candidate;
+  }
+  return fallback;
+}
+
+/**
+ * Raw API rows for a task (and its embedded client/project) are untrusted
+ * JSON from `/api/tasks` and `/api/tasks/snapshot` -- every field is read
+ * defensively and coerced to TaskRow's real shape rather than assumed.
+ */
+export function normalizeTaskFromApi(rawItem: unknown): TaskRow {
+  const item = asRecord(rawItem);
+  const client = asRecord(item.client);
+
+  const rawDeadlineText = firstTypedString(
+    [item.deadline_text, item.deadline_original_text],
+    ""
+  );
+  const rawDeadlineDate = firstTypedString([item.deadline_date], null);
 
   const displayDeadline =
     formatDeadline(rawDeadlineText, rawDeadlineDate) ||
@@ -45,63 +80,83 @@ export function normalizeTaskFromApi(item: any): TaskRow {
     (rawDeadlineDate ? formatDeadline(rawDeadlineDate) : "") ||
     "";
 
-  const clientId = item.client?.id || item.client_id || "";
-  const clientName =
-    item.client?.name || item.client_name || item.clientName || "Unassigned";
+  const clientId = pickString(client.id, item.client_id);
+  const clientName = pickString(
+    client.name,
+    item.client_name,
+    item.clientName
+  ) || "Unassigned";
 
-  const contactName =
-    item.client?.contact_name || item.contact_name || item.contactName || null;
+  const contactName = pickStringOrNull(
+    client.contact_name,
+    item.contact_name,
+    item.contactName
+  );
 
-  const clientPhone =
-    item.client?.phone || item.client_phone || item.clientPhone || null;
+  const clientPhone = pickStringOrNull(
+    client.phone,
+    item.client_phone,
+    item.clientPhone
+  );
 
-  const clientEmail =
-    item.client?.email || item.client_email || item.clientEmail || null;
+  const clientEmail = pickStringOrNull(
+    client.email,
+    item.client_email,
+    item.clientEmail
+  );
 
-  const clientNotes =
-    item.client?.notes || item.client_notes || item.clientNotes || null;
+  const clientNotes = pickStringOrNull(
+    client.notes,
+    item.client_notes,
+    item.clientNotes
+  );
 
-  const rawProject = item.project || item.projects || null;
+  const rawProjectValue = item.project ?? item.projects;
+  const hasProject = isRecord(rawProjectValue);
+  const rawProject = asRecord(rawProjectValue);
 
-  const project =
-    rawProject && typeof rawProject === "object"
-      ? {
-          id: String(rawProject.id || item.project_id || ""),
-          client_id: rawProject.client_id || null,
-          client_name: rawProject.client_name || null,
-          contact_name: rawProject.contact_name || null,
-          title: rawProject.title || null,
-          summary: rawProject.summary || null,
-          amount:
-            rawProject.amount !== null && rawProject.amount !== undefined
-              ? String(rawProject.amount)
-              : null,
-          amount_value:
-            typeof rawProject.amount_value === "number"
-              ? rawProject.amount_value
-              : null,
-          currency_code: rawProject.currency_code || null,
-          deadline_text: rawProject.deadline_text || null,
-          deadline_date: rawProject.deadline_date || null,
-          priority: rawProject.priority || null,
-          priority_source: rawProject.priority_source || null,
-          status: rawProject.status || null,
-          source: rawProject.source || null,
-          raw_input: rawProject.raw_input || null,
-          created_at: rawProject.created_at || null,
-          updated_at: rawProject.updated_at || null,
-          completed_at: rawProject.completed_at || null,
-          is_archived:
-            typeof rawProject.is_archived === "boolean"
-              ? rawProject.is_archived
-              : null,
-          archived_at: rawProject.archived_at || null,
-          deleted_at: rawProject.deleted_at || null,
-        }
-      : null;
+  const project = hasProject
+    ? {
+        id: pickString(rawProject.id, item.project_id),
+        client_id: pickStringOrNull(rawProject.client_id),
+        client_name: pickStringOrNull(rawProject.client_name),
+        contact_name: pickStringOrNull(rawProject.contact_name),
+        title: pickStringOrNull(rawProject.title),
+        summary: pickStringOrNull(rawProject.summary),
+        amount:
+          rawProject.amount !== null && rawProject.amount !== undefined
+            ? String(rawProject.amount)
+            : null,
+        amount_value:
+          typeof rawProject.amount_value === "number"
+            ? rawProject.amount_value
+            : null,
+        currency_code: pickStringOrNull(rawProject.currency_code),
+        deadline_text: pickStringOrNull(rawProject.deadline_text),
+        deadline_date: pickStringOrNull(rawProject.deadline_date),
+        priority: pickStringOrNull(rawProject.priority),
+        priority_source: pickStringOrNull(rawProject.priority_source) as
+          | ProjectEntity["priority_source"]
+          | null,
+        status: pickStringOrNull(rawProject.status),
+        source: pickStringOrNull(rawProject.source),
+        raw_input: pickStringOrNull(rawProject.raw_input),
+        created_at: pickStringOrNull(rawProject.created_at),
+        updated_at: pickStringOrNull(rawProject.updated_at),
+        completed_at: pickStringOrNull(rawProject.completed_at),
+        is_archived:
+          typeof rawProject.is_archived === "boolean"
+            ? rawProject.is_archived
+            : null,
+        archived_at: pickStringOrNull(rawProject.archived_at),
+        deleted_at: pickStringOrNull(rawProject.deleted_at),
+      }
+    : null;
+
+  const rawStatus = item.status;
 
   return {
-    id: item.id,
+    id: typeof item.id === "number" ? item.id : Number(item.id),
 
     client: clientName
       ? {
@@ -116,7 +171,7 @@ export function normalizeTaskFromApi(item: any): TaskRow {
 
     project,
 
-    task: item.task || item.task_title || "",
+    task: pickString(item.task, item.task_title),
     amount:
       item.amount !== null && item.amount !== undefined
         ? String(item.amount)
@@ -126,28 +181,25 @@ export function normalizeTaskFromApi(item: any): TaskRow {
     deadline_date: rawDeadlineDate,
     deadline_original_text: rawDeadlineText || null,
 
-    priority: item.priority || "Medium",
-    status:
-      item.status === "Not Started"
-        ? "New"
-        : item.status || "New",
+    priority: pickString(item.priority) || "Medium",
+    status: rawStatus === "Not Started" ? "New" : pickString(rawStatus) || "New",
 
-    source: item.source || "Pasted text",
-    raw_input: item.raw_input || "",
+    source: pickString(item.source) || "Pasted text",
+    raw_input: pickString(item.raw_input),
 
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-    completed_at: item.completed_at || null,
+    created_at: pickStringOrNull(item.created_at),
+    updated_at: pickStringOrNull(item.updated_at),
+    completed_at: pickStringOrNull(item.completed_at),
     is_archived: Boolean(item.is_archived),
-    archived_at: item.archived_at || null,
-    deleted_at: item.deleted_at || null,
+    archived_at: pickStringOrNull(item.archived_at),
+    deleted_at: pickStringOrNull(item.deleted_at),
 
     contact_name: contactName,
     client_phone: clientPhone,
     client_email: clientEmail,
     client_notes: clientNotes,
 
-    project_id: item.project_id || project?.id || null,
+    project_id: pickStringOrNull(item.project_id) || project?.id || null,
     subtask_order:
       typeof item.subtask_order === "number" ? item.subtask_order : null,
   };
