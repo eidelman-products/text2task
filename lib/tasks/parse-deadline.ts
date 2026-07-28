@@ -1,5 +1,7 @@
-type ParseDeadlineResult = {
-  deadlineDate: string | null;
+import { localDateToDateOnly, type DateOnly } from "./date-only";
+
+export type ParseDeadlineResult = {
+  deadlineDate: DateOnly | null;
   matched: boolean;
 };
 
@@ -384,7 +386,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
 
     if (isValidDate(parsed)) {
       return {
-        deadlineDate: parsed.toISOString(),
+        deadlineDate: localDateToDateOnly(parsed),
         matched: true,
       };
     }
@@ -400,7 +402,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
 
     if (parsed) {
       return {
-        deadlineDate: parsed.toISOString(),
+        deadlineDate: localDateToDateOnly(parsed),
         matched: true,
       };
     }
@@ -412,7 +414,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
     const withTime = applyTime(numericDate.parsed, raw);
 
     return {
-      deadlineDate: withTime.toISOString(),
+      deadlineDate: localDateToDateOnly(withTime),
       matched: true,
     };
   }
@@ -424,14 +426,14 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
     const todayWithTime = applyTime(startOfDay(now), text);
 
     return {
-      deadlineDate: todayWithTime.toISOString(),
+      deadlineDate: localDateToDateOnly(todayWithTime),
       matched: true,
     };
   }
 
   if (text === "today") {
     return {
-      deadlineDate: startOfDay(now).toISOString(),
+      deadlineDate: localDateToDateOnly(startOfDay(now)),
       matched: true,
     };
   }
@@ -440,7 +442,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
     const d = addDays(startOfDay(now), 1);
 
     return {
-      deadlineDate: d.toISOString(),
+      deadlineDate: localDateToDateOnly(d),
       matched: true,
     };
   }
@@ -449,7 +451,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
     const d = addDays(startOfDay(now), 2);
 
     return {
-      deadlineDate: d.toISOString(),
+      deadlineDate: localDateToDateOnly(d),
       matched: true,
     };
   }
@@ -459,14 +461,14 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
     d.setHours(20, 0, 0, 0);
 
     return {
-      deadlineDate: d.toISOString(),
+      deadlineDate: localDateToDateOnly(d),
       matched: true,
     };
   }
 
   if (text === "this week") {
     return {
-      deadlineDate: endOfWeek(now).toISOString(),
+      deadlineDate: localDateToDateOnly(endOfWeek(now)),
       matched: true,
     };
   }
@@ -475,7 +477,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
     const d = endOfWeek(addWeeks(now, 1));
 
     return {
-      deadlineDate: d.toISOString(),
+      deadlineDate: localDateToDateOnly(d),
       matched: true,
     };
   }
@@ -487,21 +489,21 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
     text === "by end of week"
   ) {
     return {
-      deadlineDate: endOfWeek(now).toISOString(),
+      deadlineDate: localDateToDateOnly(endOfWeek(now)),
       matched: true,
     };
   }
 
   if (text === "this month") {
     return {
-      deadlineDate: endOfMonth(now).toISOString(),
+      deadlineDate: localDateToDateOnly(endOfMonth(now)),
       matched: true,
     };
   }
 
   if (text === "next month") {
     return {
-      deadlineDate: endOfMonth(addMonths(now, 1)).toISOString(),
+      deadlineDate: localDateToDateOnly(endOfMonth(addMonths(now, 1))),
       matched: true,
     };
   }
@@ -512,7 +514,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
     text === "eom next month"
   ) {
     return {
-      deadlineDate: endOfMonth(addMonths(now, 1)).toISOString(),
+      deadlineDate: localDateToDateOnly(endOfMonth(addMonths(now, 1))),
       matched: true,
     };
   }
@@ -524,7 +526,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
     text === "by end of month"
   ) {
     return {
-      deadlineDate: endOfMonth(now).toISOString(),
+      deadlineDate: localDateToDateOnly(endOfMonth(now)),
       matched: true,
     };
   }
@@ -536,14 +538,14 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
     text === "by end of year"
   ) {
     return {
-      deadlineDate: endOfYear(now).toISOString(),
+      deadlineDate: localDateToDateOnly(endOfYear(now)),
       matched: true,
     };
   }
 
   if (text === "next year") {
     return {
-      deadlineDate: endOfYear(addYears(now, 1)).toISOString(),
+      deadlineDate: localDateToDateOnly(endOfYear(addYears(now, 1))),
       matched: true,
     };
   }
@@ -565,7 +567,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
     d = applyTime(d, text);
 
     return {
-      deadlineDate: d.toISOString(),
+      deadlineDate: localDateToDateOnly(d),
       matched: true,
     };
   }
@@ -587,7 +589,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
     d = applyTime(d, text);
 
     return {
-      deadlineDate: d.toISOString(),
+      deadlineDate: localDateToDateOnly(d),
       matched: true,
     };
   }
@@ -599,7 +601,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
       const d = applyTime(resolveNextWeekday(now, dayIndex), text);
 
       return {
-        deadlineDate: d.toISOString(),
+        deadlineDate: localDateToDateOnly(d),
         matched: true,
       };
     }
@@ -608,7 +610,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
       const d = applyTime(resolveNextWeekday(now, dayIndex), text);
 
       return {
-        deadlineDate: d.toISOString(),
+        deadlineDate: localDateToDateOnly(d),
         matched: true,
       };
     }
@@ -617,7 +619,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
       const d = applyTime(resolveThisWeekday(now, dayIndex), text);
 
       return {
-        deadlineDate: d.toISOString(),
+        deadlineDate: localDateToDateOnly(d),
         matched: true,
       };
     }
@@ -638,7 +640,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
       const withTime = applyTime(d, text);
 
       return {
-        deadlineDate: withTime.toISOString(),
+        deadlineDate: localDateToDateOnly(withTime),
         matched: true,
       };
     }
@@ -657,7 +659,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
       const withTime = applyTime(d, text);
 
       return {
-        deadlineDate: withTime.toISOString(),
+        deadlineDate: localDateToDateOnly(withTime),
         matched: true,
       };
     }
@@ -679,7 +681,7 @@ function parseDeadlineCore(deadlineText: string): ParseDeadlineResult {
     d.setHours(23, 59, 59, 999);
 
     return {
-      deadlineDate: d.toISOString(),
+      deadlineDate: localDateToDateOnly(d),
       matched: true,
     };
   }

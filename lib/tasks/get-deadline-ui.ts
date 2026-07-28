@@ -1,5 +1,6 @@
 import { parseDeadline } from "./parse-deadline";
 import { formatDeadline } from "./format-deadline";
+import { dateOnlyToLocalDate, parseDateOnly } from "./date-only";
 
 export type DeadlineUiTone =
   | "neutral"
@@ -44,13 +45,22 @@ function differenceInCalendarDays(target: Date, base: Date) {
   return Math.round((targetStart - baseStart) / msPerDay);
 }
 
+/*
+  `value` here is always either the Postgres `date`-column `deadline_date`
+  (always a bare YYYY-MM-DD string) or parseDeadline()'s DateOnly-typed
+  result (see lib/tasks/date-only.ts) -- never a full timestamp. Routing
+  through parseDateOnly + dateOnlyToLocalDate (local-noon anchored, read
+  back via local getters) instead of `new Date(value)` avoids the UTC-
+  midnight day-shift that a bare date-only string triggers in `new Date()`
+  for any timezone west of UTC.
+*/
 function tryParseDate(value?: string | null) {
   if (!value || !value.trim()) return null;
 
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
+  const dateOnly = parseDateOnly(value.trim());
+  if (!dateOnly) return null;
 
-  return startOfDay(parsed);
+  return startOfDay(dateOnlyToLocalDate(dateOnly));
 }
 
 export function getDeadlineUi(

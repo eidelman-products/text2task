@@ -2,6 +2,9 @@
 
 import type { CSSProperties, ReactNode } from "react";
 
+import { parseDateOnly, formatDateOnlyForDisplay } from "@/lib/tasks/date-only";
+import { parseDeadline } from "@/lib/tasks/parse-deadline";
+import { DeadlineField } from "../deadline-field";
 import type {
   JsonRecord,
   SuggestedProjectUpdateItem,
@@ -377,23 +380,62 @@ function EditableFields({
   }
 
   if (item.type === "deadline_change") {
-    const current =
+    // "Current deadline" is audit/history context: prefer the canonical
+    // deadline_date when it resolves to a real calendar day, but never
+    // discard the raw deadline_text provenance if it doesn't parse as a
+    // strict YYYY-MM-DD value (see docs/TEXT2TASK_DATE_PICKER_MAPPING.md
+    // §3.1 finding #3 and the locked product decision to preserve original
+    // suggested/current text for audit history).
+    const currentDeadlineRawText =
       getStringValue(item.old_value, ["deadline_text", "deadline", "value"]) ||
       "Not set";
 
-    const next =
+    const currentDeadlineDateOnly =
+      parseDateOnly(getStringValue(item.old_value, ["deadline_date"])) ??
+      parseDateOnly(
+        getStringValue(item.old_value, ["deadline_text", "deadline", "value"])
+      );
+
+    const current = currentDeadlineDateOnly
+      ? formatDateOnlyForDisplay(currentDeadlineDateOnly)
+      : currentDeadlineRawText;
+
+    // The suggested value may already be a canonical date, or it may still
+    // be natural-language AI-suggested text (e.g. "next Friday") that needs
+    // resolving through the same safe parser used everywhere else before it
+    // can be shown in the picker.
+    const suggestedRawText =
       getStringValue(editedValue, ["deadline_text", "deadline", "value"]) || "";
+
+    const suggestedDeadlineValue =
+      parseDateOnly(suggestedRawText) ?? parseDeadline(suggestedRawText).deadlineDate;
 
     return (
       <div style={inlineEditStyle}>
         <div className={ui.responsiveClassNames.reviewFields} style={twoColumnStyle}>
           <ReadOnlyField label="Current deadline" value={current} />
 
-          <TextField
-            label="Suggested deadline"
-            value={next.replace(/^by\s+/i, "")}
+          <DeadlineField
+            value={suggestedDeadlineValue}
             disabled={disabled}
-            onChange={(value) => onUpdate("deadline_text", value)}
+            label="Suggested deadline"
+            onCommit={(nextDate) => {
+              // The apply-time RPC (apply_project_update_transaction, via
+              // lib/project-updates/project-update-apply.server.ts) requires
+              // a non-empty deadline_text and re-derives deadline_date from
+              // it server-side; it never reads a client-sent deadline_date
+              // for this item type. Sending the canonical YYYY-MM-DD text
+              // keeps deadline_text meaningful for provenance/display while
+              // guaranteeing the server-side re-derivation resolves back to
+              // exactly the picked day (parseDeadline's strict-date-only
+              // branch is a lossless round trip for this shape). deadline_date
+              // is also set to the same value so the edited item's own
+              // shape stays consistent with the AI's newValue contract,
+              // which documents both fields for deadline_change items.
+              const nextText = nextDate ?? "";
+              onUpdate("deadline_text", nextText);
+              onUpdate("deadline_date", nextText);
+            }}
           />
         </div>
       </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import type { HybridPreviewMeta } from "@/lib/preview/hybrid-preview";
-import { formatDeadline } from "@/lib/tasks/format-deadline";
+import { parseDateOnly, type DateOnly } from "@/lib/tasks/date-only";
+import { DeadlineField } from "../tasks/deadline-field";
 import type {
   PreviewProjectGroup,
   PreviewProjectPriority,
@@ -68,9 +69,7 @@ export default function AiProjectReviewPanel({
 }: AiProjectReviewPanelProps) {
   const visibleTasks = group.items.slice(0, 7);
   const hiddenTasks = Math.max(group.items.length - visibleTasks.length, 0);
-  const normalizedDeadlineDisplay = group.deadlineDate
-    ? formatDeadline(undefined, group.deadlineDate)
-    : "";
+  const deadlineValue = parseDateOnly(group.deadlineDate ?? null);
   const priorityValue = group.priority || PROJECT_PRIORITY_NOT_SPECIFIED;
   const priorityOptions =
     group.priority === ""
@@ -81,6 +80,22 @@ export default function AiProjectReviewPanel({
     group.items.forEach((item) => {
       onChange(item.originalIndex, field, value);
     });
+  }
+
+  function commitDeadline(next: DateOnly | null) {
+    /*
+      Commit through "deadline_date" (not "deadline"): extract-workspace.tsx's
+      updatePreviewItem has no special case for "deadline_date", so it falls
+      to the generic `{ ...item, deadline_date: value }` branch -- setting
+      only the canonical date and leaving deadline/deadline_original_text
+      (AI-extracted or previously typed provenance text) untouched, per
+      docs/TEXT2TASK_DATE_PICKER_MAPPING.md's locked product decision. `""` is
+      the explicit "cleared" sentinel (see buildSaveSubtaskDeadlineText /
+      the project-level deadlineExplicitlyCleared check in
+      extract-workspace.tsx's buildProjectPayload), distinct from the `null`/
+      absent value an item has when no date was ever resolved for it.
+    */
+    updateGroupField("deadline_date", next ?? "");
   }
 
   function updateTask(originalIndex: number, value: string) {
@@ -140,19 +155,7 @@ export default function AiProjectReviewPanel({
             onChange={(value) => updateGroupField("amount", value)}
           />
 
-          <ProjectPreviewMetricInput
-            label="Deadline"
-            value={group.deadline}
-            placeholder="Deadline"
-            accent="#2563eb"
-            tone="blue"
-            helperText={
-              normalizedDeadlineDisplay
-                ? `Date: ${normalizedDeadlineDisplay}`
-                : undefined
-              }
-            onChange={(value) => updateGroupField("deadline", value)}
-          />
+          <DeadlineField value={deadlineValue} onCommit={commitDeadline} />
 
           <ProjectPreviewMetricSelect
             label="Priority"

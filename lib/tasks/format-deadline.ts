@@ -1,4 +1,5 @@
 import { parseDeadline } from "./parse-deadline";
+import { dateOnlyToLocalDate, parseDateOnly } from "./date-only";
 
 function pad(value: number) {
   return String(value).padStart(2, "0");
@@ -15,6 +16,20 @@ function formatDateToMMDDYY(date: Date) {
 function tryParseIsoLike(value: string) {
   if (!value) return null;
 
+  // A bare date-only "YYYY-MM-DD" string must NEVER be passed to
+  // `new Date(value)` — the JS spec parses that as UTC midnight, and
+  // reading local getters on it shifts the displayed day backward by one
+  // for any timezone west of UTC. Route it through the validated DateOnly
+  // path instead, which always constructs via local-time Date arguments.
+  const dateOnly = parseDateOnly(value);
+  if (dateOnly) {
+    return dateOnlyToLocalDate(dateOnly);
+  }
+
+  // Fallback for anything that is NOT a bare date-only string (e.g. a full
+  // ISO datetime with an explicit time/zone component from some other
+  // legitimate timestamp field) — this is safe because such strings are
+  // already fully timezone-qualified by the time they reach `new Date()`.
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
 

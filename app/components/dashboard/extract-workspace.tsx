@@ -15,6 +15,7 @@ import UpgradeModal from "../upgrade-modal";
 import ExtractWorkspaceHero from "./extract/extract-workspace-hero";
 import { formatDeadline } from "@/lib/tasks/format-deadline";
 import { parseDeadline } from "@/lib/tasks/parse-deadline";
+import { parseDateOnly } from "@/lib/tasks/date-only";
 import {
   buildHybridPreviewItems,
   type ExtractedPreview,
@@ -30,7 +31,7 @@ import { classifySaveProjectBatchResponse } from "./save-project-batch-result";
 import type { TaskRow } from "./tasks-view";
 import type { ProjectEntity } from "./tasks/task-types";
 
-type PreviewItem = ExtractedPreview & {
+export type PreviewItem = ExtractedPreview & {
   contact_name?: string;
   contactName?: string;
   contact_person?: string;
@@ -213,6 +214,52 @@ function buildSaveDeadlineValue(preview: PreviewItem) {
   return preview.deadline.trim();
 }
 
+/*
+  Per-subtask deadline_text sent to /api/projects/import. import-persistence.
+  server.ts (not owned by this integration) always re-derives each
+  *subtask's* own persisted deadline_date by re-parsing this deadline_text
+  server-side -- it never trusts a client-supplied per-subtask deadline_date
+  the way it does for the project-level payload (see buildProjectPayload's
+  `deadline_date: buildSaveDeadlineDate(group.deadlineDate)`, which the
+  import RPC/route does respect).
+
+  A DeadlineField picker commit intentionally leaves deadline_original_text/
+  deadline (AI provenance) untouched on every item in the group -- only
+  deadline_date is updated (see updatePreviewItem's generic field-name
+  fallback for "deadline_date"). Without this helper, a subtask's saved
+  deadline would silently diverge from the date the user just picked: it
+  would stay pinned to whatever free-text was extracted (e.g. "next Friday"),
+  re-parsed server-side at save time rather than reflecting the picked date.
+
+  `""` is the explicit-clear sentinel a picker "Clear" commit writes to
+  every item's deadline_date (see the same fallback branch) -- distinct from
+  `null`/`undefined`, which means "no date was ever resolved for this item."
+  Preferring the canonical deadline_date whenever it is set to a real value,
+  and short-circuiting to an empty deadline_text when it was explicitly
+  cleared, keeps every subtask's saved deadline consistent with what the
+  picker shows, without touching the provenance fields themselves.
+*/
+export function buildSaveSubtaskDeadlineText(
+  preview: PreviewItem,
+  group: PreviewProjectGroup,
+  usesProjectMetadata: boolean
+) {
+  if (preview.deadline_date === "") {
+    return "";
+  }
+
+  const canonicalDeadlineDate = parseDateOnly(preview.deadline_date ?? null);
+
+  if (canonicalDeadlineDate) {
+    return canonicalDeadlineDate;
+  }
+
+  return (
+    buildSaveDeadlineValue(preview) ||
+    (usesProjectMetadata ? "" : group.deadline || "")
+  );
+}
+
 function formatDateOnly(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -221,7 +268,7 @@ function formatDateOnly(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function buildSaveDeadlineDate(deadlineDate?: string | null) {
+export function buildSaveDeadlineDate(deadlineDate?: string | null) {
   const raw = deadlineDate?.trim();
 
   if (!raw) {
@@ -900,6 +947,22 @@ export default function ExtractWorkspace({
       group,
       usesProjectMetadata
     );
+    /*
+      import-persistence.server.ts's project-level deadline resolution is
+      `suppliedDeadlineDate ?? <re-parsed from deadline_text>` -- since `??`
+      treats an explicit `null` as "not supplied," sending
+      `deadline_date: null` alone does NOT clear an existing deadline_text;
+      it silently falls back to re-parsing whatever deadline_text is still
+      present. A picker "Clear" commit deliberately leaves deadline/
+      deadline_original_text (AI provenance) untouched and only resets every
+      item's deadline_date to "" (see updatePreviewItem's generic
+      "deadline_date" fallback), so group.deadline can still hold stale free
+      text after a clear. Detect that explicit-clear state here so a cleared
+      deadline is actually saved as cleared, not silently resurrected.
+    */
+    const deadlineExplicitlyCleared = group.items.every(
+      (item) => item.preview.deadline_date === ""
+    );
 
     return {
       create_project: true,
@@ -915,7 +978,7 @@ export default function ExtractWorkspace({
         project_title: group.projectTitle || "Client project",
         summary: group.projectSummary || "",
         amount: group.amount || "",
-        deadline_text: group.deadline || "",
+        deadline_text: deadlineExplicitlyCleared ? "" : group.deadline || "",
         deadline_date: buildSaveDeadlineDate(group.deadlineDate),
         priority: usesProjectMetadata
           ? group.priority || ""
@@ -944,9 +1007,11 @@ export default function ExtractWorkspace({
             amount: usesProjectMetadata
               ? preview.amount || ""
               : preview.amount || group.amount || "",
-            deadline_text:
-              buildSaveDeadlineValue(preview) ||
-              (usesProjectMetadata ? "" : group.deadline || ""),
+            deadline_text: buildSaveSubtaskDeadlineText(
+              preview,
+              group,
+              usesProjectMetadata
+            ),
             priority: usesProjectMetadata
               ? preview.priority || "Medium"
               : preview.priority || group.priority || "Medium",

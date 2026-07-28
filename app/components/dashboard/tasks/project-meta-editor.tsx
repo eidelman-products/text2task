@@ -5,6 +5,8 @@ import {
   getProjectPrioritySelectValue,
   getSemanticProjectPriorityLabel,
 } from "./task-utils";
+import { compareDateOnly, parseDateOnly, type DateOnly } from "@/lib/tasks/date-only";
+import { DeadlineField } from "./deadline-field";
 
 type ProjectMetaEditorProps = {
   project: TaskProjectGroup;
@@ -31,11 +33,7 @@ export default function ProjectMetaEditor({
   const canEditProject = Boolean(projectId) && !isDeleting;
 
   const amount = project.amount || "";
-  const deadline = formatDeadlineDisplay(
-    project.deadline_date,
-    project.deadline,
-    project.deadline_original_text
-  );
+  const deadlineValue = parseDateOnly(project.deadline_date);
   const priorityDisplay = getSemanticProjectPriorityLabel({
     priority: project.priority,
     prioritySource: project.priority_source,
@@ -55,6 +53,19 @@ export default function ProjectMetaEditor({
     if (cleanCurrent === cleanNext) return;
 
     updateProjectField(projectId, field, cleanNext);
+  }
+
+  function commitProjectDeadline(next: DateOnly | null) {
+    if (!projectId) return;
+
+    const unchanged =
+      deadlineValue === null || next === null
+        ? deadlineValue === next
+        : compareDateOnly(deadlineValue, next) === 0;
+
+    if (unchanged) return;
+
+    updateProjectField(projectId, "deadline", next ?? "");
   }
 
   function updateProjectPriority(priority: string) {
@@ -78,16 +89,10 @@ export default function ProjectMetaEditor({
         onCommit={(nextValue) => commitProjectField("amount", amount, nextValue)}
       />
 
-      <EditableMetaTextField
-        label="Deadline"
-        placeholder="May 15, 2026"
-        defaultValue={deadline}
-        variant="deadline"
+      <DeadlineField
+        value={deadlineValue}
+        onCommit={commitProjectDeadline}
         disabled={!canEditProject}
-        onEnterBlur={onEnterBlur}
-        onCommit={(nextValue) =>
-          commitProjectField("deadline", deadline, nextValue)
-        }
       />
 
       <label style={metaFieldStyle}>
@@ -144,26 +149,6 @@ export default function ProjectMetaEditor({
       </label>
     </div>
   );
-}
-
-function formatDeadlineDisplay(
-  deadlineDate?: string | null,
-  formattedDeadline?: string | null,
-  originalText?: string | null
-) {
-  if (deadlineDate) {
-    const parsed = new Date(deadlineDate);
-
-    if (!Number.isNaN(parsed.getTime())) {
-      const year = parsed.getFullYear();
-      const month = String(parsed.getMonth() + 1).padStart(2, "0");
-      const day = String(parsed.getDate()).padStart(2, "0");
-
-      return `${year}-${month}-${day}`;
-    }
-  }
-
-  return formattedDeadline || originalText || "";
 }
 
 function EditableMetaTextField({

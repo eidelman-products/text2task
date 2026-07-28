@@ -7,6 +7,8 @@ import {
   resolveProjectUpdateDeadline,
 } from "@/lib/project-updates/project-update-field-normalizers";
 import { resolveSubtaskReference } from "@/lib/project-updates/v2/project-update-subtask-reference.server";
+import { parseDateOnly } from "@/lib/tasks/date-only";
+import { parseDeadline } from "@/lib/tasks/parse-deadline";
 
 import type {
   ProjectUpdateExtractedFacts,
@@ -886,15 +888,21 @@ function normalizeDeadlineDateKey(value: unknown) {
 
   if (!raw) return "";
 
-  const dateOnly = raw.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  // Already-canonical case: a strict, validated YYYY-MM-DD DateOnly value
+  // (this is what every real caller passes today — both
+  // `context.project.deadline_date` and `resolveProjectUpdateDeadline`'s
+  // result are already clean date-only strings).
+  const alreadyCanonical = parseDateOnly(raw);
+  if (alreadyCanonical) return alreadyCanonical;
 
-  if (dateOnly) return dateOnly;
+  // Natural-language / other fallback: resolve via the same parser used
+  // everywhere else in the app, which safely collapses to a DateOnly via
+  // local Date getters — never `new Date(raw).toISOString().slice(0, 10)`,
+  // which is UTC-naive and can misjudge the comparison at day boundaries.
+  const parsed = parseDeadline(raw);
+  if (parsed.deadlineDate) return parsed.deadlineDate;
 
-  const parsed = new Date(raw);
-
-  if (Number.isNaN(parsed.getTime())) return "";
-
-  return parsed.toISOString().slice(0, 10);
+  return "";
 }
 
 function normalizeMoneyishValue(value: unknown) {
