@@ -62,6 +62,9 @@ function buildSubtaskFact(
     amount: null,
     status: null,
     priority: null,
+    completedEvidence: [],
+    incompleteEvidence: [],
+    completionScope: null,
     ...overrides,
   };
 }
@@ -102,6 +105,8 @@ describe("judgeProjectUpdateFacts - existing subtask matching", () => {
       buildSubtaskFact({
         title: "Design downloadable business planning checklist",
         status: "Done",
+        completedEvidence: ["the checklist is done"],
+        completionScope: "full",
       }),
     ]);
 
@@ -122,7 +127,12 @@ describe("judgeProjectUpdateFacts - existing subtask matching", () => {
       }),
     ]);
     const facts = buildFacts([
-      buildSubtaskFact({ title: "Hero section", status: "Done" }),
+      buildSubtaskFact({
+        title: "Hero section",
+        status: "Done",
+        completedEvidence: ["the hero section is done"],
+        completionScope: "full",
+      }),
     ]);
 
     const result = judgeProjectUpdateFacts({ facts, context });
@@ -141,7 +151,12 @@ describe("judgeProjectUpdateFacts - existing subtask matching", () => {
       }),
     ]);
     const facts = buildFacts([
-      buildSubtaskFact({ title: "Landing page", status: "Done" }),
+      buildSubtaskFact({
+        title: "Landing page",
+        status: "Done",
+        completedEvidence: ["the landing page is done"],
+        completionScope: "full",
+      }),
     ]);
 
     const result = judgeProjectUpdateFacts({ facts, context });
@@ -175,7 +190,12 @@ describe("judgeProjectUpdateFacts - existing subtask matching", () => {
       }),
     ]);
     const facts = buildFacts([
-      buildSubtaskFact({ title: "Bathroom remodeling section", status: "Done" }),
+      buildSubtaskFact({
+        title: "Bathroom remodeling section",
+        status: "Done",
+        completedEvidence: ["the bathroom remodeling section is done"],
+        completionScope: "full",
+      }),
     ]);
 
     const result = judgeProjectUpdateFacts({ facts, context });
@@ -252,7 +272,12 @@ describe("judgeProjectUpdateFacts - existing subtask matching", () => {
       }),
     ]);
     const facts = buildFacts([
-      buildSubtaskFact({ title: "Hero section", status: "Done" }),
+      buildSubtaskFact({
+        title: "Hero section",
+        status: "Done",
+        completedEvidence: ["the hero section is done"],
+        completionScope: "full",
+      }),
       buildSubtaskFact({ title: "Add View Our Recent Projects button" }),
     ]);
 
@@ -350,7 +375,12 @@ describe("judgeProjectUpdateFacts - existing subtask matching", () => {
       }),
     ]);
     const facts = buildFacts([
-      buildSubtaskFact({ title: "Homepage hero section", status: "Done" }),
+      buildSubtaskFact({
+        title: "Homepage hero section",
+        status: "Done",
+        completedEvidence: ["the homepage hero section is done"],
+        completionScope: "full",
+      }),
     ]);
 
     const result = judgeProjectUpdateFacts({ facts, context });
@@ -450,5 +480,217 @@ describe("judgeProjectUpdateFacts - existing subtask matching", () => {
     expect(decision.itemType).toBe("new_subtask");
     expect(decision.itemType).not.toBe("needs_review");
     expect(decision.targetTaskId).toBeNull();
+  });
+});
+
+describe("judgeProjectUpdateFacts - completion evidence gate", () => {
+  it("exact reproduction: mixed evidence on a confidently matched compound task routes to needs_review, never apply", () => {
+    const context = buildContext([
+      buildSubtask({
+        id: 1,
+        task_title: "Design desktop and mobile landing page layouts",
+      }),
+    ]);
+    const facts = buildFacts([
+      buildSubtaskFact({
+        title: "Design desktop and mobile landing page layouts",
+        description:
+          "The desktop design is complete, and the mobile layout is still in progress.",
+        status: "Done",
+        completedEvidence: ["The desktop design is complete"],
+        incompleteEvidence: ["the mobile layout is still in progress"],
+        completionScope: "partial",
+      }),
+    ]);
+
+    const result = judgeProjectUpdateFacts({ facts, context });
+    const [decision] = result.decisions;
+
+    expect(decision.kind).toBe("needs_review");
+    expect(decision.itemType).toBe("needs_review");
+    expect(decision.kind).not.toBe("apply");
+    // The evidence is still preserved for the reviewer, not discarded --
+    // both as a readable description and as structured newValue arrays the
+    // review UI can render as distinguishable lists.
+    expect(decision.description).toContain("The desktop design is complete");
+    expect(decision.description).toContain(
+      "the mobile layout is still in progress"
+    );
+    expect(decision.newValue).toEqual({
+      status: "Done",
+      completed_evidence: ["The desktop design is complete"],
+      incomplete_evidence: ["the mobile layout is still in progress"],
+    });
+  });
+
+  it("both components complete: full scope with clean evidence auto-applies Done", () => {
+    const context = buildContext([
+      buildSubtask({
+        id: 1,
+        task_title: "Design desktop and mobile landing page layouts",
+      }),
+    ]);
+    const facts = buildFacts([
+      buildSubtaskFact({
+        title: "Design desktop and mobile landing page layouts",
+        status: "Done",
+        completedEvidence: ["The desktop and mobile layouts are complete"],
+        incompleteEvidence: [],
+        completionScope: "full",
+      }),
+    ]);
+
+    const result = judgeProjectUpdateFacts({ facts, context });
+    const [decision] = result.decisions;
+
+    expect(decision.kind).toBe("apply");
+    expect(decision.itemType).toBe("update_subtask");
+    expect(decision.newValue).toEqual({ status: "Done" });
+  });
+
+  it("explicit partial completion: needs_review even with a confident title match", () => {
+    const context = buildContext([
+      buildSubtask({ id: 1, task_title: "Report" }),
+    ]);
+    const facts = buildFacts([
+      buildSubtaskFact({
+        title: "Report",
+        status: "Done",
+        completedEvidence: ["the first section is finished"],
+        incompleteEvidence: ["only the first section, the rest is pending"],
+        completionScope: "partial",
+      }),
+    ]);
+
+    const result = judgeProjectUpdateFacts({ facts, context });
+    const [decision] = result.decisions;
+
+    expect(decision.kind).toBe("needs_review");
+  });
+
+  it("exception clause: needs_review", () => {
+    const context = buildContext([
+      buildSubtask({ id: 1, task_title: "Pricing page" }),
+    ]);
+    const facts = buildFacts([
+      buildSubtaskFact({
+        title: "Pricing page",
+        status: "Done",
+        completedEvidence: ["the pricing page is complete"],
+        incompleteEvidence: ["except for the FAQ section, which still needs to be added"],
+        completionScope: "partial",
+      }),
+    ]);
+
+    const result = judgeProjectUpdateFacts({ facts, context });
+    const [decision] = result.decisions;
+
+    expect(decision.kind).toBe("needs_review");
+  });
+
+  it("approval pending: needs_review", () => {
+    const context = buildContext([
+      buildSubtask({ id: 1, task_title: "Draft" }),
+    ]);
+    const facts = buildFacts([
+      buildSubtaskFact({
+        title: "Draft",
+        status: "Done",
+        completedEvidence: ["the draft is finished"],
+        incompleteEvidence: ["waiting on the client's final approval"],
+        completionScope: "partial",
+      }),
+    ]);
+
+    const result = judgeProjectUpdateFacts({ facts, context });
+    const [decision] = result.decisions;
+
+    expect(decision.kind).toBe("needs_review");
+  });
+
+  it("missing evidence on a proposed Done: needs_review, fails safe instead of auto-applying", () => {
+    const context = buildContext([
+      buildSubtask({ id: 1, task_title: "Homepage" }),
+    ]);
+    const facts = buildFacts([
+      buildSubtaskFact({
+        title: "Homepage",
+        status: "Done",
+        completedEvidence: [],
+        incompleteEvidence: [],
+        completionScope: null,
+      }),
+    ]);
+
+    const result = judgeProjectUpdateFacts({ facts, context });
+    const [decision] = result.decisions;
+
+    expect(decision.kind).toBe("needs_review");
+  });
+
+  it("one atomic full completion, decoupled from title-matching fuzziness: apply Done", () => {
+    const context = buildContext([
+      buildSubtask({ id: 1, task_title: "Send invoice" }),
+    ]);
+    const facts = buildFacts([
+      buildSubtaskFact({
+        title: "Send invoice",
+        status: "Done",
+        completedEvidence: ["the invoice has been sent"],
+        incompleteEvidence: [],
+        completionScope: "full",
+      }),
+    ]);
+
+    const result = judgeProjectUpdateFacts({ facts, context });
+    const [decision] = result.decisions;
+
+    expect(decision.kind).toBe("apply");
+    expect(decision.newValue).toEqual({ status: "Done" });
+  });
+
+  it("contradictory evidence with a self-reported full scope: still needs_review (evidence wins over self-reported scope)", () => {
+    const context = buildContext([
+      buildSubtask({ id: 1, task_title: "Onboarding flow" }),
+    ]);
+    const facts = buildFacts([
+      buildSubtaskFact({
+        title: "Onboarding flow",
+        status: "Done",
+        completedEvidence: ["the onboarding flow is done"],
+        incompleteEvidence: ["still needs QA testing"],
+        completionScope: "full",
+      }),
+    ]);
+
+    const result = judgeProjectUpdateFacts({ facts, context });
+    const [decision] = result.decisions;
+
+    expect(decision.kind).toBe("needs_review");
+  });
+
+  it("similarly named tasks cannot receive another task's completion evidence: ambiguous match still routes to needs_review regardless of evidence quality", () => {
+    const context = buildContext([
+      buildSubtask({ id: 1, task_title: "Create hero section for the homepage" }),
+      buildSubtask({ id: 2, task_title: "Create hero section for the pricing page" }),
+    ]);
+    const facts = buildFacts([
+      buildSubtaskFact({
+        title: "Hero section",
+        status: "Done",
+        completedEvidence: ["the hero section is done"],
+        incompleteEvidence: [],
+        completionScope: "full",
+      }),
+    ]);
+
+    const result = judgeProjectUpdateFacts({ facts, context });
+    const [decision] = result.decisions;
+
+    // Ambiguous title matching is decided before the completion-evidence
+    // gate ever runs, so no candidate is silently mutated even though the
+    // evidence itself was clean.
+    expect(decision.kind).toBe("needs_review");
+    expect(decision.kind).not.toBe("apply");
   });
 });

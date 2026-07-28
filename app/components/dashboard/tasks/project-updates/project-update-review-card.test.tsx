@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 
 import ProjectUpdateReviewCard from "./project-update-review-card";
 import type {
+  JsonRecord,
   ProjectUpdateFormState,
   SuggestedProjectUpdateItem,
 } from "./project-update-types";
@@ -295,5 +296,194 @@ describe("ProjectUpdateReviewCard deadline_change integration", () => {
 
     expect(screen.getByText("Suggested priority")).toBeInTheDocument();
     expect(screen.queryByLabelText("Suggested deadline")).not.toBeInTheDocument();
+  });
+});
+
+function buildNeedsReviewCompletionItem(
+  overrides: Partial<SuggestedProjectUpdateItem> = {}
+): SuggestedProjectUpdateItem {
+  return {
+    id: "item-review-1",
+    project_update_id: "update-1",
+    project_id: "project-1",
+    target_task_id: 1,
+    type: "needs_review",
+    title: "Review before marking Design desktop and mobile landing page layouts as Done",
+    description:
+      "Completed: The desktop design is complete Still incomplete: the mobile layout is still in progress",
+    target_field: "status",
+    old_value: {
+      existing_task_id: 1,
+      existing_title: "Design desktop and mobile landing page layouts",
+      status: "New",
+    },
+    new_value: {
+      status: "Done",
+      completed_evidence: ["The desktop design is complete"],
+      incomplete_evidence: ["the mobile layout is still in progress"],
+    },
+    confidence: 0.9,
+    status: "suggested",
+    ai_reason:
+      "The update contains both completed and still-incomplete evidence for this subtask, so it was not automatically marked Done.",
+    created_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+function buildFormStateWithItems(
+  items: SuggestedProjectUpdateItem[],
+  overrides: Partial<ProjectUpdateFormState> = {}
+): ProjectUpdateFormState {
+  return {
+    rawInput: "The desktop design is complete, and the mobile layout is still in progress.",
+    inputMethod: "text",
+    selectedImage: null,
+    imageError: null,
+    isAnalyzing: false,
+    isApplying: false,
+    analysisError: null,
+    applyError: null,
+    applyDuplicate: null,
+    applySuccessMessage: null,
+    analysisResult: {
+      update: {
+        id: "update-1",
+        project_id: "project-1",
+        client_id: null,
+        source_type: "text",
+        raw_input:
+          "The desktop design is complete, and the mobile layout is still in progress.",
+        ai_summary: null,
+        status: "analyzed",
+        created_at: new Date().toISOString(),
+        analyzed_at: new Date().toISOString(),
+      },
+      items,
+      timelineEvent: null,
+      analysis: { headline: "Review required" },
+    },
+    selectedItemIds: items.map((item) => item.id),
+    editedItemValues: {},
+    applyPlaceholderMessage: null,
+    ...overrides,
+  };
+}
+
+describe("ProjectUpdateReviewCard partial/mixed completion evidence", () => {
+  it("surfaces both completed and incomplete evidence for a mixed-completion needs_review item", () => {
+    const item = buildNeedsReviewCompletionItem();
+
+    render(
+      <ProjectUpdateReviewCard
+        form={buildFormStateWithItems([item])}
+        isBusy={false}
+        onToggleSuggestedItem={vi.fn()}
+        onUpdateSuggestedItemValue={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("Partial or conflicting completion — proposed: Done")).toBeInTheDocument();
+    expect(screen.getByText("The desktop design is complete")).toBeInTheDocument();
+    expect(
+      screen.getByText("the mobile layout is still in progress")
+    ).toBeInTheDocument();
+  });
+
+  it("labels the two evidence groups distinguishably as Completed and Still incomplete", () => {
+    const item = buildNeedsReviewCompletionItem();
+
+    render(
+      <ProjectUpdateReviewCard
+        form={buildFormStateWithItems([item])}
+        isBusy={false}
+        onToggleSuggestedItem={vi.fn()}
+        onUpdateSuggestedItemValue={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.getByText("Still incomplete")).toBeInTheDocument();
+  });
+
+  it("never presents a mixed-completion item as ready-to-apply", () => {
+    const item = buildNeedsReviewCompletionItem();
+
+    render(
+      <ProjectUpdateReviewCard
+        form={buildFormStateWithItems([item])}
+        isBusy={false}
+        onToggleSuggestedItem={vi.fn()}
+        onUpdateSuggestedItemValue={vi.fn()}
+      />
+    );
+
+    // "Will be saved" / "Not saved" only render inside ReadyUpdateRow, which
+    // a needs_review item never enters.
+    expect(screen.queryByText("Will be saved")).not.toBeInTheDocument();
+    expect(screen.queryByText("Not saved")).not.toBeInTheDocument();
+    expect(screen.getByText("Review required")).toBeInTheDocument();
+  });
+
+  it("historical needs_review rows without evidence fields still render safely via the description fallback", () => {
+    const item = buildNeedsReviewCompletionItem({
+      new_value: null,
+      description: "Text2Task found a possible related task but wasn't confident enough.",
+    });
+
+    render(
+      <ProjectUpdateReviewCard
+        form={buildFormStateWithItems([item])}
+        isBusy={false}
+        onToggleSuggestedItem={vi.fn()}
+        onUpdateSuggestedItemValue={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByText(
+        "Text2Task found a possible related task but wasn't confident enough."
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Partial or conflicting completion/)
+    ).not.toBeInTheDocument();
+  });
+
+  it("a ready item's status field stays editable when a needs_review completion-conflict item is also present", async () => {
+    const user = userEvent.setup();
+    const readyItem: SuggestedProjectUpdateItem = {
+      id: "item-ready-1",
+      project_update_id: "update-1",
+      project_id: "project-1",
+      target_task_id: 2,
+      type: "update_subtask",
+      title: "Update contact form recipient",
+      description: null,
+      target_field: "task_title",
+      old_value: null,
+      new_value: { task_title: "Update contact form recipient" } as JsonRecord,
+      confidence: 0.9,
+      status: "suggested",
+      ai_reason: null,
+      created_at: new Date().toISOString(),
+    };
+    const reviewItem = buildNeedsReviewCompletionItem();
+
+    render(
+      <ProjectUpdateReviewCard
+        form={buildFormStateWithItems([readyItem, reviewItem])}
+        isBusy={false}
+        onToggleSuggestedItem={vi.fn()}
+        onUpdateSuggestedItemValue={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByText("Edit saved details"));
+
+    expect(screen.getByLabelText("Status")).toBeInTheDocument();
+    expect(
+      screen.getByText("Partial or conflicting completion — proposed: Done")
+    ).toBeInTheDocument();
   });
 });

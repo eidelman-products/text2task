@@ -189,6 +189,37 @@ function judgeRequestedSubtask({
         };
       }
 
+      const gate = evaluateSubtaskCompletionGate(subtask);
+
+      if (!gate.passesGate) {
+        return {
+          id: decisionId,
+          kind: "needs_review",
+          itemType: "needs_review",
+          title: `Review before marking ${existingTitle} as Done`,
+          description: buildCompletionConflictDescription({
+            completedEvidence: gate.completedEvidence,
+            incompleteEvidence: gate.incompleteEvidence,
+            fallbackDescription: subtask.description,
+          }),
+          targetTaskId: resolution.targetTaskId,
+          targetField: "status",
+          oldValue: {
+            existing_task_id: resolution.targetTaskId,
+            existing_title: existingTitle,
+            status: matchedSubtask?.status ?? null,
+          },
+          newValue: {
+            status: "Done",
+            completed_evidence: gate.completedEvidence,
+            incomplete_evidence: gate.incompleteEvidence,
+          },
+          confidence: resolution.confidenceScore,
+          reason: buildCompletionGateReason(gate, subtask.completionScope),
+          reviewLabel: "Needs review",
+        };
+      }
+
       return {
         id: decisionId,
         kind: "apply",
@@ -341,6 +372,80 @@ function judgeRequestedSubtask({
       "This requested work item does not match an existing subtask in the project.",
     reviewLabel: "Apply",
   };
+}
+
+/**
+ * The authoritative deterministic gate for auto-applying a Done status
+ * update to an existing subtask. A proposed Done only becomes an automatic
+ * "apply" decision when the evidence clearly and exclusively supports full
+ * completion. Conflict is derived from the evidence arrays themselves, not
+ * trusted from any model-reported boolean -- an inconsistent
+ * completionScope never overrides what the arrays actually contain.
+ */
+function evaluateSubtaskCompletionGate(subtask: ProjectUpdateExtractedSubtaskFact) {
+  const completedEvidence = subtask.completedEvidence ?? [];
+  const incompleteEvidence = subtask.incompleteEvidence ?? [];
+  const hasConflict = completedEvidence.length > 0 && incompleteEvidence.length > 0;
+
+  const passesGate =
+    !hasConflict &&
+    completedEvidence.length > 0 &&
+    incompleteEvidence.length === 0 &&
+    subtask.completionScope === "full";
+
+  return { passesGate, hasConflict, completedEvidence, incompleteEvidence };
+}
+
+function buildCompletionConflictDescription({
+  completedEvidence,
+  incompleteEvidence,
+  fallbackDescription,
+}: {
+  completedEvidence: string[];
+  incompleteEvidence: string[];
+  fallbackDescription: string | null;
+}) {
+  const parts: string[] = [];
+
+  if (completedEvidence.length > 0) {
+    parts.push(`Completed: ${completedEvidence.join("; ")}`);
+  }
+
+  if (incompleteEvidence.length > 0) {
+    parts.push(`Still incomplete: ${incompleteEvidence.join("; ")}`);
+  }
+
+  if (parts.length > 0) {
+    return parts.join(" ");
+  }
+
+  return (
+    fallbackDescription ||
+    "The client update did not include enough evidence to confirm this subtask is fully complete."
+  );
+}
+
+function buildCompletionGateReason(
+  gate: {
+    hasConflict: boolean;
+    completedEvidence: string[];
+    incompleteEvidence: string[];
+  },
+  completionScope: string | null
+) {
+  if (gate.hasConflict) {
+    return "The update contains both completed and still-incomplete evidence for this subtask, so it was not automatically marked Done.";
+  }
+
+  if (gate.completedEvidence.length === 0) {
+    return "The update did not include a clear, source-grounded statement that this subtask is fully complete, so it was not automatically marked Done.";
+  }
+
+  if (completionScope !== "full") {
+    return "The update indicates this subtask is not fully complete, so it was not automatically marked Done.";
+  }
+
+  return "This subtask's completion could not be automatically confirmed, so it was not marked Done.";
 }
 
 function judgeProjectDeadlineChange({

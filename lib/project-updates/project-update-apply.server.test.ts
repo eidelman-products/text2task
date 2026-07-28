@@ -142,6 +142,27 @@ describe("findNonApplicableAcceptedItem (fail-closed apply guard)", () => {
     expect(flagged).not.toBeNull();
     expect(flagged?.id).toBe("item-review");
   });
+
+  it("a mixed/partial-completion needs_review item (as produced by the Judge's completion evidence gate) is still fail-closed rejected, never silently applied as Done", () => {
+    const items = [
+      buildItem({
+        id: "item-mixed-completion",
+        type: "needs_review",
+        target_task_id: 42,
+        title: "Review before marking Design desktop and mobile landing page layouts as Done",
+        new_value: {
+          status: "Done",
+          completed_evidence: ["The desktop design is complete"],
+          incomplete_evidence: ["the mobile layout is still in progress"],
+        },
+      }),
+    ];
+
+    const flagged = findNonApplicableAcceptedItem(items);
+
+    expect(flagged).not.toBeNull();
+    expect(flagged?.id).toBe("item-mixed-completion");
+  });
 });
 
 describe("buildTransactionalApplyPayloadItem - target id safety", () => {

@@ -12,8 +12,14 @@ const PROJECT_UPDATE_FACTS_MODEL = "gpt-4.1-mini";
 
 const PrioritySchema = z.enum(["Low", "Medium", "High"]);
 const StatusSchema = z.enum(["New", "In Progress", "Review", "Urgent", "Done"]);
+const CompletionScopeSchema = z.enum(["full", "partial", "unclear"]);
 
 const NullableStringSchema = z.string().trim().min(1).nullable();
+
+// Evidence array elements intentionally skip `.min(1)` so a single blank
+// entry from the model can't fail the whole response's zod parse -- empty
+// entries are dropped during normalization in repairFactsShape instead.
+const EvidenceListSchema = z.array(z.string()).default([]);
 
 const ExtractedSubtaskFactSchema = z.object({
   title: z.string().trim().min(1).max(240),
@@ -22,6 +28,9 @@ const ExtractedSubtaskFactSchema = z.object({
   amount: NullableStringSchema,
   status: StatusSchema.nullable(),
   priority: PrioritySchema.nullable(),
+  completedEvidence: EvidenceListSchema,
+  incompleteEvidence: EvidenceListSchema,
+  completionScope: CompletionScopeSchema.nullable(),
 });
 
 const ExtractedProjectChangesSchema = z.object({
@@ -168,6 +177,75 @@ function hasTaskCompletionCue(value: string | null) {
   ].some((pattern) => pattern.test(normalized));
 }
 
+function normalizeForGroundingComparison(value: string) {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Evidence excerpts are only trustworthy if they actually appear in the
+ * client's own text. This is a groundedness check, not a scope/negation
+ * classifier -- it never decides completion status, it only discards
+ * evidence strings the model invented instead of quoting.
+ */
+function normalizeEvidenceEntries(values: string[], normalizedRawInput: string) {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const raw of values) {
+    const trimmed = String(raw || "").trim();
+    if (!trimmed || trimmed.length > 300) continue;
+
+    const comparable = normalizeForGroundingComparison(trimmed);
+    if (!comparable || !normalizedRawInput.includes(comparable)) continue;
+    if (seen.has(comparable)) continue;
+
+    seen.add(comparable);
+    result.push(trimmed);
+    if (result.length >= 8) break;
+  }
+
+  return result;
+}
+
+/**
+ * The model's self-reported completionScope is trusted only when it isn't
+ * contradicted by its own evidence arrays, and only when there is at least
+ * one grounded completedEvidence excerpt. This is the fail-safe net for
+ * requirement 6 of the partial-completion fix: a proposed Done with missing
+ * or self-contradictory evidence must normalize to "unclear" rather than
+ * being taken at face value, so the Judge blocks it instead of an
+ * automatic apply.
+ */
+function normalizeCompletionScope({
+  status,
+  modelScope,
+  completedEvidence,
+  incompleteEvidence,
+}: {
+  status: string | null;
+  modelScope: "full" | "partial" | "unclear" | null;
+  completedEvidence: string[];
+  incompleteEvidence: string[];
+}): "full" | "partial" | "unclear" | null {
+  if (status !== "Done") {
+    return null;
+  }
+
+  if (completedEvidence.length > 0 && incompleteEvidence.length > 0) {
+    return "partial";
+  }
+
+  if (completedEvidence.length === 0) {
+    return "unclear";
+  }
+
+  if (modelScope === "full") {
+    return "full";
+  }
+
+  return modelScope === "partial" ? "partial" : "unclear";
+}
+
 function cleanCompletionCueFromTitle(value: string) {
   const cleaned = String(value || "")
     .trim()
@@ -257,6 +335,9 @@ function buildProjectUpdateFactsPrompt(input: {
     '      "deadlineText": "deadline for this specific work item or null",',
     '      "amount": "budget/price for this specific work item or null",',
     '      "status": "New | In Progress | Review | Urgent | Done | null",',
+    '      "completedEvidence": ["short verbatim excerpt(s) from the client update that support completion, or []"],',
+    '      "incompleteEvidence": ["short verbatim excerpt(s) from the client update showing remaining, pending, or excluded work, or []"],',
+    '      "completionScope": "full | partial | unclear | null",',
     '      "priority": "Low | Medium | High | null"',
     "    }",
     "  ],",
@@ -294,6 +375,18 @@ function buildProjectUpdateFactsPrompt(input: {
     "- For completion/approval language, keep the title focused on the deliverable itself and do not include status filler like approved now, signed off, done, completed, looks good, ready, or now in the title.",
     "- Use requestedSubtasks[].status = \"Done\" for task-specific approval/completion. Only use projectChanges.status when the whole project status changed.",
     "- Do not decide whether it already exists. Just extract the requested work.",
+    "",
+    "1a. Completion evidence (completedEvidence, incompleteEvidence, completionScope)",
+    "- Whenever you set status to \"Done\" for a requestedSubtask, you must also fill in completedEvidence, incompleteEvidence, and completionScope for that item. For every other status, leave completedEvidence and incompleteEvidence as [] and completionScope as null.",
+    "- completedEvidence: one or more short excerpts copied from the client update, as close to verbatim as possible, that state or clearly imply this deliverable (or the part of it being described) is finished/approved/signed off/ready.",
+    "- incompleteEvidence: one or more short excerpts copied from the client update that show part of this same deliverable is NOT yet finished -- for example remaining work, an exception, a pending approval, or a stated fraction/quantity that is not the whole thing. Leave this [] only when nothing in the update qualifies or limits the completion claim.",
+    "- Never invent, infer, or paraphrase evidence that is not actually present in the update text. If you cannot find a real excerpt, leave the array empty rather than making one up.",
+    "- completionScope:",
+    '  - "full" -- the entire deliverable is described as complete, with no stated exception, remaining piece, or pending step.',
+    '  - "partial" -- part of the deliverable is complete while another part, aspect, or exception is still remaining, pending, or excluded, even within the same sentence.',
+    '  - "unclear" -- completion language is present but the text does not make it clear whether the whole deliverable is covered.',
+    "- Watch for language that limits or qualifies a completion claim even when strong completion words are also present in the same sentence -- for example: but, however, still, only, partially, not yet, remaining, except, excluding, aside from, pending, waiting on, yet to, in progress, left to do. When you see this kind of language describing the same deliverable, this is a partial completion: keep status \"Done\" only if that reflects what the text actually says about the completed part, but you must also populate incompleteEvidence and set completionScope to \"partial\". Do not silently drop the remaining/exception part.",
+    "- A deliverable can be reported complete for one described component while remaining incomplete for another described component of the same deliverable (for example, one language version, platform, or section finished while another is still in progress). When that happens, extract it as ONE requestedSubtask with both completedEvidence and incompleteEvidence populated, unless the client's wording clearly describes two independent, separately-titled deliverables.",
     "",
     "2. Project-level changes",
     "- Use projectChanges.deadlineText for a project-wide deadline.",
@@ -412,6 +505,9 @@ function buildProjectUpdateFactsPrompt(input: {
     '      "deadlineText": null,',
     '      "amount": null,',
     '      "status": "Done",',
+    '      "completedEvidence": ["approved now"],',
+    '      "incompleteEvidence": [],',
+    '      "completionScope": "full",',
     '      "priority": null',
     "    }",
     "  ],",
@@ -432,12 +528,51 @@ function buildProjectUpdateFactsPrompt(input: {
     '  "confidence": 0.94',
     "}",
     "",
+    "Partial/mixed completion example input:",
+    "The English version of the brochure is complete, and the Spanish version is still in progress.",
+    "",
+    "Partial/mixed completion example JSON:",
+    "{",
+    '  "summary": "Client reported the English brochure is complete while the Spanish version is still in progress.",',
+    '  "requestedSubtasks": [',
+    "    {",
+    '      "title": "Brochure (English and Spanish versions)",',
+    '      "description": "English version of the brochure is complete; Spanish version is still in progress.",',
+    '      "deadlineText": null,',
+    '      "amount": null,',
+    '      "status": "Done",',
+    '      "completedEvidence": ["The English version of the brochure is complete"],',
+    '      "incompleteEvidence": ["the Spanish version is still in progress"],',
+    '      "completionScope": "partial",',
+    '      "priority": null',
+    "    }",
+    "  ],",
+    '  "projectChanges": {',
+    '    "deadlineText": null,',
+    '    "amount": null,',
+    '    "priority": null,',
+    '    "status": null',
+    "  },",
+    '  "clientChanges": {',
+    '    "clientName": null,',
+    '    "contactName": null,',
+    '    "phone": null,',
+    '    "email": null,',
+    '    "notes": null',
+    "  },",
+    '  "notes": [],',
+    '  "confidence": 0.9',
+    "}",
+    "",
+    "Note on the partial/mixed example above: even though the status is \"Done\" and completion language is present, this is NOT a clean full completion, because the same update also states that part of the same deliverable is still in progress. That is exactly why completedEvidence, incompleteEvidence, and completionScope exist -- so the next system step can tell full completion apart from partial completion instead of only seeing a single status value.",
+    "",
     "Client update input:",
     input.rawInput,
   ].join("\n");
 }
 
 function repairFactsShape(value: ProjectUpdateExtractedFacts, rawInput: string) {
+  const normalizedRawInputForGrounding = normalizeForGroundingComparison(rawInput);
   const clientName = value.clientChanges.clientName?.trim() || null;
   const contactName = value.clientChanges.contactName?.trim() || null;
   const phone = value.clientChanges.phone?.trim() || null;
@@ -464,16 +599,41 @@ function repairFactsShape(value: ProjectUpdateExtractedFacts, rawInput: string) 
     requestedSubtasks: value.requestedSubtasks.map((subtask) => {
       const title = subtask.title.trim();
       const description = subtask.description?.trim() || null;
-      const hasCompletionCue =
+
+      // hasTaskCompletionCue is title-cleanup only (stripping filler like
+      // "is approved now" out of the extracted title). It must never decide
+      // status -- the model's own `status` field is trusted as-is, and
+      // whether a Done is safe to auto-apply is decided later by the Judge,
+      // based on the evidence fields normalized below.
+      const hasCompletionCueForTitleCleanup =
         hasTaskCompletionCue(title) || hasTaskCompletionCue(description);
+
+      const completedEvidence = normalizeEvidenceEntries(
+        subtask.completedEvidence,
+        normalizedRawInputForGrounding
+      );
+      const incompleteEvidence = normalizeEvidenceEntries(
+        subtask.incompleteEvidence,
+        normalizedRawInputForGrounding
+      );
 
       return {
         ...subtask,
-        title: hasCompletionCue ? cleanCompletionCueFromTitle(title) : title,
+        title: hasCompletionCueForTitleCleanup
+          ? cleanCompletionCueFromTitle(title)
+          : title,
         description,
         deadlineText: subtask.deadlineText?.trim() || null,
         amount: subtask.amount?.trim() || null,
-        status: hasCompletionCue ? "Done" : subtask.status,
+        status: subtask.status,
+        completedEvidence,
+        incompleteEvidence,
+        completionScope: normalizeCompletionScope({
+          status: subtask.status,
+          modelScope: subtask.completionScope,
+          completedEvidence,
+          incompleteEvidence,
+        }),
       };
     }),
     projectChanges: {

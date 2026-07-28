@@ -13,6 +13,7 @@ import * as ui from "./project-update-ui-styles";
 import {
   buildProjectUpdateReviewModel,
   getProjectUpdateItemLabel,
+  getStringArrayValue,
   getStringValue,
   resolveProjectUpdateSummaryVariant,
   type ProjectUpdateReviewV2Props,
@@ -663,6 +664,15 @@ function NeedsReviewFindings({
             item.old_value,
             NEEDS_REVIEW_CONTEXT_KEYS
           );
+          const completedEvidence = getStringArrayValue(item.new_value, [
+            "completed_evidence",
+          ]);
+          const incompleteEvidence = getStringArrayValue(item.new_value, [
+            "incomplete_evidence",
+          ]);
+          const hasCompletionConflict =
+            completedEvidence.length > 0 || incompleteEvidence.length > 0;
+          const proposedStatus = getStringValue(item.new_value, ["status"]);
 
           return (
             <div key={item.id} style={needsReviewRowStyle}>
@@ -671,7 +681,13 @@ function NeedsReviewFindings({
               <div style={{ minWidth: 0 }}>
                 <div style={needsReviewItemTitleStyle}>{item.title}</div>
 
-                {item.description ? (
+                {hasCompletionConflict ? (
+                  <CompletionConflictEvidence
+                    completedEvidence={completedEvidence}
+                    incompleteEvidence={incompleteEvidence}
+                    proposedStatus={proposedStatus}
+                  />
+                ) : item.description ? (
                   <p style={needsReviewReasonStyle}>{item.description}</p>
                 ) : null}
 
@@ -686,6 +702,54 @@ function NeedsReviewFindings({
         })}
       </div>
     </section>
+  );
+}
+
+function CompletionConflictEvidence({
+  completedEvidence,
+  incompleteEvidence,
+  proposedStatus,
+}: {
+  completedEvidence: string[];
+  incompleteEvidence: string[];
+  proposedStatus: string | null;
+}) {
+  return (
+    <div style={completionConflictBoxStyle}>
+      <p style={completionConflictLabelStyle}>
+        Partial or conflicting completion
+        {proposedStatus ? ` — proposed: ${proposedStatus}` : ""}
+      </p>
+
+      {completedEvidence.length > 0 ? (
+        <EvidenceGroup label="Completed" entries={completedEvidence} />
+      ) : null}
+
+      {incompleteEvidence.length > 0 ? (
+        <EvidenceGroup label="Still incomplete" entries={incompleteEvidence} />
+      ) : null}
+    </div>
+  );
+}
+
+function EvidenceGroup({
+  label,
+  entries,
+}: {
+  label: string;
+  entries: string[];
+}) {
+  return (
+    <div style={completionEvidenceGroupStyle}>
+      <span style={completionEvidenceGroupLabelStyle}>{label}</span>
+      <ul style={completionEvidenceListStyle}>
+        {entries.map((entry, index) => (
+          <li key={`${label}-${index}`} style={completionEvidenceItemStyle}>
+            {entry}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -1412,6 +1476,51 @@ const needsReviewItemTitleStyle: CSSProperties = {
 const needsReviewReasonStyle: CSSProperties = {
   margin: "3px 0 0",
   color: "#64748b",
+  fontSize: 11,
+  lineHeight: 1.4,
+  fontWeight: 650,
+};
+
+const completionConflictBoxStyle: CSSProperties = {
+  marginTop: 6,
+  display: "grid",
+  gap: 6,
+  padding: "8px 10px",
+  borderRadius: 12,
+  border: "1px solid rgba(253, 230, 138, 0.9)",
+  background: "#fffbeb",
+};
+
+const completionConflictLabelStyle: CSSProperties = {
+  margin: 0,
+  color: "#92400e",
+  fontSize: 11,
+  lineHeight: 1.35,
+  fontWeight: 850,
+};
+
+const completionEvidenceGroupStyle: CSSProperties = {
+  display: "grid",
+  gap: 2,
+};
+
+const completionEvidenceGroupLabelStyle: CSSProperties = {
+  color: "#92400e",
+  fontSize: 9.5,
+  fontWeight: 850,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+};
+
+const completionEvidenceListStyle: CSSProperties = {
+  margin: 0,
+  paddingLeft: 16,
+  display: "grid",
+  gap: 2,
+};
+
+const completionEvidenceItemStyle: CSSProperties = {
+  color: "#334155",
   fontSize: 11,
   lineHeight: 1.4,
   fontWeight: 650,

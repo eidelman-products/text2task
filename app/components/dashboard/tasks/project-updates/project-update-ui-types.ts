@@ -239,6 +239,27 @@ export function getStringValue(record: JsonRecord | null, keys: string[]) {
   return null;
 }
 
+export function getStringArrayValue(record: JsonRecord | null, keys: string[]) {
+  if (!record) return [];
+
+  for (const key of keys) {
+    const value = record[key];
+
+    if (Array.isArray(value)) {
+      const strings = value.filter(
+        (entry): entry is string =>
+          typeof entry === "string" && entry.trim().length > 0
+      );
+
+      if (strings.length > 0) {
+        return strings;
+      }
+    }
+  }
+
+  return [];
+}
+
 export function truncateProjectUpdateText(value: string, maxLength: number) {
   const normalized = value.trim().replace(/\s+/g, " ");
 

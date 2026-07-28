@@ -56,6 +56,29 @@ export type ProjectUpdateExtractedSubtaskFact = {
   status: ProjectUpdateFactStatus | null;
 
   /**
+   * Short, source-grounded excerpts from the client update supporting
+   * completion of this deliverable (or the part of it being described).
+   * Only meaningful when status is "Done". Always [] otherwise.
+   */
+  completedEvidence: string[];
+
+  /**
+   * Short, source-grounded excerpts from the client update showing part of
+   * this same deliverable is NOT yet finished (remaining work, an
+   * exception, a pending approval, a stated fraction). Always [] when
+   * status is not "Done", or when nothing qualifies the completion claim.
+   */
+  incompleteEvidence: string[];
+
+  /**
+   * Whether the completion claim (if any) covers the whole deliverable.
+   * null unless status is "Done". "unclear" is the fail-safe default when
+   * evidence is missing or self-contradictory -- see
+   * normalizeCompletionScope in project-update-facts.server.ts.
+   */
+  completionScope: "full" | "partial" | "unclear" | null;
+
+  /**
    * Optional priority requested for this specific deliverable.
    */
   priority: ProjectUpdateFactPriority | null;
