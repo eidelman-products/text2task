@@ -32,6 +32,30 @@ function offsetFromToday(offsetDays: number): DateOnly {
   return localDateToDateOnly(shifted);
 }
 
+/*
+  Returns a DateOnly for a day in the *current* calendar month, guaranteed
+  distinct from today -- unlike `offsetFromToday`, this never crosses a
+  month boundary, so it stays valid regardless of where in the month "today"
+  falls. This matters specifically for a test that opens DateField with
+  `value={null}`: Calendar's `defaultMonth` then falls back to today's real
+  month (see calendar.tsx: `defaultMonth = selected ?? today`), so any day
+  cell the test looks up must be guaranteed to fall within that same month.
+  `offsetFromToday(N)` cannot make that guarantee for a fixed N -- near
+  month-end it lands in the next month, which is exactly what made this test
+  flaky. Picking day 1 (or day 2, when today already is day 1) instead of an
+  offset works for every month length, every leap year, and every
+  month/year boundary, since every real month has at least 28 days -- no
+  month-length lookup is needed. Uses local `Date` arithmetic anchored at
+  noon, matching `offsetFromToday`'s own timezone-safety convention (never
+  `.toISOString()`/UTC).
+*/
+function anotherDayInCurrentMonth(): DateOnly {
+  const now = new Date();
+  const targetDay = now.getDate() === 1 ? 2 : 1;
+  const target = new Date(now.getFullYear(), now.getMonth(), targetDay, 12, 0, 0, 0);
+  return localDateToDateOnly(target);
+}
+
 function getDayCellButton(dateOnly: DateOnly): HTMLElement {
   const cell = document.querySelector(`[data-day="${dateOnly}"]`);
   if (!cell) {
@@ -78,7 +102,7 @@ describe("DateField", () => {
     render(<DateField value={null} onChange={onChange} label="Deadline" />);
 
     await user.click(screen.getByLabelText("Deadline"));
-    const target = offsetFromToday(3);
+    const target = anotherDayInCurrentMonth();
     const dayButton = getDayCellButton(target);
 
     await user.click(dayButton);
