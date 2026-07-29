@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import RoutedDashboardShell from "@/app/components/dashboard/routed-dashboard-shell";
-import { DashboardEmptyState } from "@/app/components/dashboard/ui/empty-state";
+import { WorkCalendarClient } from "@/app/components/dashboard/calendar/work-calendar-client";
 import {
   dashboardColors,
   dashboardSpacing,
@@ -9,11 +9,10 @@ import {
 import { requireDashboardUser } from "@/lib/supabase/requireDashboardUser";
 
 /**
- * Route-and-shell foundation for the Work Calendar feature. Deliberately no
- * calendar data, no month grid, and no manual-event UI yet -- those are the
- * next milestone. This page's job is only to prove the route, auth guard,
- * and shared dashboard shell are wired correctly, with a neutral internal
- * placeholder body rather than a fake finished feature.
+ * Read-only Work Calendar route: real project deadlines and manual events in
+ * a month view, via the shared dashboard shell. This page stays a server
+ * component (auth guard + shell only); all interactive month/agenda UI lives
+ * in `WorkCalendarClient`.
  */
 export default async function CalendarPage() {
   const appUser = await requireDashboardUser();
@@ -33,10 +32,7 @@ export default async function CalendarPage() {
           </p>
         </div>
 
-        <DashboardEmptyState
-          title="Calendar workspace route is live"
-          description="This page renders through the shared dashboard shell with real authentication and navigation. The month view, showing project deadlines and manual events together, is built in the next implementation milestone."
-        />
+        <WorkCalendarClient />
       </div>
     </RoutedDashboardShell>
   );

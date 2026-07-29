@@ -48,7 +48,7 @@ describe("DashboardSidebarProfile - workspace mode (rendered inside DashboardCli
     );
   });
 
-  it("renders exactly the three workspace nav items, all as buttons", () => {
+  it("renders exactly the three workspace nav items as buttons, plus Calendar as a real link", () => {
     render(
       <DashboardSidebarProfile
         email="person@example.com"
@@ -61,7 +61,42 @@ describe("DashboardSidebarProfile - workspace mode (rendered inside DashboardCli
 
     const nav = screen.getByRole("navigation", { name: "Workspace navigation" });
     expect(nav.querySelectorAll("button")).toHaveLength(3);
-    expect(nav.querySelectorAll("a")).toHaveLength(0);
+    expect(nav.querySelectorAll("a")).toHaveLength(1);
+  });
+
+  it("renders Calendar as a real link, never active, in workspace mode", () => {
+    render(
+      <DashboardSidebarProfile
+        email="person@example.com"
+        plan="free"
+        mode="workspace"
+        activeItem={{ kind: "workspace", view: "dashboard" }}
+        onWorkspaceViewChange={vi.fn()}
+      />
+    );
+
+    const calendarLink = screen.getByRole("link", { name: "Calendar" });
+    expect(calendarLink).toHaveAttribute("href", "/dashboard/calendar");
+    expect(calendarLink).not.toHaveAttribute("aria-current");
+    expect(screen.queryByRole("button", { name: "Calendar" })).not.toBeInTheDocument();
+  });
+
+  it("renders Calendar after Tasks in workspace mode", () => {
+    render(
+      <DashboardSidebarProfile
+        email="person@example.com"
+        plan="free"
+        mode="workspace"
+        activeItem={{ kind: "workspace", view: "dashboard" }}
+        onWorkspaceViewChange={vi.fn()}
+      />
+    );
+
+    const nav = screen.getByRole("navigation", { name: "Workspace navigation" });
+    const items = Array.from(nav.querySelectorAll("button, a")).map(
+      (el) => el.textContent
+    );
+    expect(items).toEqual(["▦Dashboard", "✦Extract", "✓Tasks", "▤Calendar"]);
   });
 });
 
@@ -107,7 +142,7 @@ describe("DashboardSidebarProfile - routed mode (rendered inside a routed shell)
     }
   });
 
-  it("uses the same navigation definition (same labels, same order) as workspace mode", () => {
+  it("uses the same navigation definition (same labels, same order) as workspace mode, plus Calendar last", () => {
     render(
       <DashboardSidebarProfile
         email="person@example.com"
@@ -119,7 +154,31 @@ describe("DashboardSidebarProfile - routed mode (rendered inside a routed shell)
 
     const nav = screen.getByRole("navigation", { name: "Workspace navigation" });
     const labels = Array.from(nav.querySelectorAll("a")).map((a) => a.textContent);
-    expect(labels).toEqual(["▦Dashboard", "✦Extract", "✓Tasks"]);
+    expect(labels).toEqual(["▦Dashboard", "✦Extract", "✓Tasks", "▤Calendar"]);
+  });
+
+  it("marks the Calendar link active with aria-current when it is the active routed destination", () => {
+    render(
+      <DashboardSidebarProfile
+        email="person@example.com"
+        plan="free"
+        mode="routed"
+        activeItem={{ kind: "routed", destination: "calendar" }}
+      />
+    );
+
+    expect(screen.getByRole("link", { name: "Calendar" })).toHaveAttribute(
+      "href",
+      "/dashboard/calendar"
+    );
+    expect(screen.getByRole("link", { name: "Calendar" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+
+    for (const name of ["Dashboard", "Extract", "Tasks"]) {
+      expect(screen.getByRole("link", { name })).not.toHaveAttribute("aria-current");
+    }
   });
 });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Matcher } from "@daypicker/react";
+import type { Labels, Matcher } from "@daypicker/react";
 import { DayPicker } from "@daypicker/react";
 
 import {
@@ -55,6 +55,38 @@ export type CalendarProps = {
   autoFocus?: boolean;
   id?: string;
   "aria-label"?: string;
+  /**
+   * Optional controlled visible month, for callers (e.g. the Work Calendar's
+   * mobile compact selector) that need the displayed month to follow
+   * external state rather than DayPicker's own internal month state.
+   * Omitted by every existing caller -- falls back to the original
+   * `defaultMonth` (uncontrolled) behavior with zero change.
+   */
+  month?: DateOnly;
+  /** Required alongside `month` -- fires when DayPicker's own nav/keyboard interaction moves the displayed month. */
+  onMonthChange?: (next: DateOnly) => void;
+  /** Optional passthrough to DayPicker's own `modifiers` prop, e.g. to flag days that have scheduled items. */
+  modifiers?: Record<string, Matcher | Matcher[]>;
+  /** Optional passthrough to DayPicker's own `modifiersClassNames` prop, paired with `modifiers`. */
+  modifiersClassNames?: Record<string, string>;
+  /** Optional passthrough to DayPicker's own `labels` prop, e.g. to customize the day button's accessible name. */
+  labels?: Partial<Labels>;
+  /**
+   * Suppresses DayPicker's own Previous/Next navigation buttons (passthrough
+   * to DayPicker's `hideNavigation`). Omitted (`false`) by every existing
+   * caller -- only a caller that renders its own external navigation
+   * (e.g. the Work Calendar's `CalendarCompactSelector`, which sits below
+   * the shared `CalendarToolbar`) opts in, to avoid two sets of Previous/Next
+   * controls on screen at once.
+   */
+  hideNavigation?: boolean;
+  /**
+   * Suppresses DayPicker's own visible month/year caption (and its dropdown
+   * selects, when `captionLayout="dropdown"`). Omitted (`false`) by every
+   * existing caller. Pairs with `hideNavigation` for a caller that already
+   * renders its own external month/year label.
+   */
+  hideCaption?: boolean;
 };
 
 export function Calendar({
@@ -65,9 +97,17 @@ export function Calendar({
   autoFocus = true,
   id,
   "aria-label": ariaLabel,
+  month,
+  onMonthChange,
+  modifiers,
+  modifiersClassNames,
+  labels,
+  hideNavigation = false,
+  hideCaption = false,
 }: CalendarProps) {
   const today = dateOnlyToLocalDate(todayDateOnly());
   const selected = value ? dateOnlyToLocalDate(value) : undefined;
+  const controlledMonth = month ? dateOnlyToLocalDate(month) : undefined;
   const defaultMonth = selected ?? today;
 
   const startMonth = minDate
@@ -94,7 +134,11 @@ export function Calendar({
         mode="single"
         selected={selected}
         onSelect={(day) => onSelect(day ? localDateToDateOnly(day) : null)}
-        defaultMonth={defaultMonth}
+        month={controlledMonth}
+        defaultMonth={controlledMonth ? undefined : defaultMonth}
+        onMonthChange={
+          onMonthChange ? (next) => onMonthChange(localDateToDateOnly(next)) : undefined
+        }
         today={today}
         startMonth={startMonth}
         endMonth={endMonth}
@@ -102,6 +146,11 @@ export function Calendar({
         showOutsideDays
         autoFocus={autoFocus}
         disabled={disabledMatchers.length ? disabledMatchers : undefined}
+        modifiers={modifiers}
+        modifiersClassNames={modifiersClassNames}
+        labels={labels}
+        hideNavigation={hideNavigation}
+        components={hideCaption ? { MonthCaption: () => <></> } : undefined}
         aria-label={ariaLabel}
         classNames={{
           day: "t2t-cal-day",
@@ -110,6 +159,7 @@ export function Calendar({
           button_next: "t2t-cal-nav-btn",
           dropdown: "t2t-cal-dropdown",
           chevron: "t2t-cal-chevron",
+          month_grid: "t2t-cal-grid",
         }}
         styles={{
           root: {

@@ -298,4 +298,21 @@ describe("DateField", () => {
     // present rather than re-deriving the exact string here.
     expect(screen.getByText(/Selected [A-Z][a-z]+ \d{1,2}, \d{4}/)).toBeInTheDocument();
   });
+
+  it("[Work Calendar mobile corrective pass] retains its own navigation and month/year caption unchanged -- DateField never passes hideNavigation/hideCaption", async () => {
+    const user = userEvent.setup();
+    render(<DateField value={null} onChange={vi.fn()} label="Deadline" />);
+
+    await user.click(screen.getByLabelText("Deadline"));
+
+    // Both of Calendar's own nav buttons and both dropdown selects remain
+    // present -- proving the new, additive `hideNavigation`/`hideCaption`
+    // props (added for the Work Calendar's mobile compact selector) default
+    // to false/undefined and leave every other caller of the shared
+    // Calendar primitive completely unaffected.
+    expect(screen.getByRole("button", { name: "Go to the Previous Month" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Go to the Next Month" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Choose the Month" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Choose the Year" })).toBeInTheDocument();
+  });
 });

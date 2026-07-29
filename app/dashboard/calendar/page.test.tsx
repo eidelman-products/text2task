@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 
 const requireDashboardUserMock = vi.fn();
 
@@ -17,7 +17,7 @@ beforeEach(() => {
     vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: () => Promise.resolve({ email: "person@example.com", plan: "free" }),
+      json: () => Promise.resolve({ success: true, items: [] }),
     })
   );
 });
@@ -61,29 +61,37 @@ describe("CalendarPage - authenticated render", () => {
     ).toBeInTheDocument();
   });
 
-  it("makes no request to any Calendar API endpoint", async () => {
+  it("makes a real request to the Calendar API for the visible month's range, no event-mutation calls", async () => {
     const page = await CalendarPage();
     render(page);
 
     const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
-    const calendarApiCalls = fetchMock.mock.calls.filter(([url]) =>
+    await waitFor(() => {
+      const calendarApiCalls = fetchMock.mock.calls.filter(([url]) =>
+        String(url).includes("/api/calendar")
+      );
+      expect(calendarApiCalls).toHaveLength(1);
+    });
+
+    const [, requestInit] = fetchMock.mock.calls.find(([url]) =>
       String(url).includes("/api/calendar")
-    );
-    expect(calendarApiCalls).toHaveLength(0);
+    ) as [string, RequestInit | undefined];
+    expect(requestInit?.method ?? "GET").toBe("GET");
+
+    const mutationCalls = fetchMock.mock.calls.filter(([, init]) => {
+      const method = (init as RequestInit | undefined)?.method;
+      return method === "POST" || method === "PATCH" || method === "DELETE";
+    });
+    expect(mutationCalls).toHaveLength(0);
   });
 
-  it("does not show a visible Calendar nav item in the sidebar", async () => {
+  it("shows a visible Calendar nav item in the sidebar, active on this page", async () => {
     const page = await CalendarPage();
     render(page);
 
-    // The only "Calendar" text on the page should be the H1 (a heading, not
-    // a nav link/button) and the mobile header's active-section label.
-    expect(
-      screen.queryByRole("link", { name: "Calendar" })
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Calendar" })
-    ).not.toBeInTheDocument();
+    const calendarLink = screen.getByRole("link", { name: "Calendar" });
+    expect(calendarLink).toHaveAttribute("href", "/dashboard/calendar");
+    expect(calendarLink).toHaveAttribute("aria-current", "page");
   });
 
   it("still renders the real Dashboard/Extract/Tasks sidebar destinations", async () => {
@@ -104,11 +112,23 @@ describe("CalendarPage - authenticated render", () => {
     );
   });
 
-  it("does not render any interactive Calendar controls (no add-event button, no filters)", async () => {
+  it("does not render any interactive Calendar controls beyond read-only navigation (no add-event button, no filters)", async () => {
     const page = await CalendarPage();
     render(page);
 
+    await waitFor(() =>
+      expect(screen.getByText("Nothing scheduled for this day.")).toBeInTheDocument()
+    );
+
     expect(screen.queryByRole("button", { name: /add event/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("grid")).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.queryByText(/unscheduled projects/i)).not.toBeInTheDocument();
+  });
+
+  it("renders the real month grid with weekday headings (not the old placeholder)", async () => {
+    const page = await CalendarPage();
+    render(page);
+
+    await waitFor(() => expect(screen.getAllByRole("grid").length).toBeGreaterThan(0));
   });
 });

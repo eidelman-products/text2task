@@ -6,8 +6,10 @@ import { trackBeginCheckout } from "@/lib/analytics/events";
 import SidebarButton from "./sidebar-button";
 import {
   DASHBOARD_WORKSPACE_VIEWS,
+  getDashboardRoutedHref,
   getDashboardWorkspaceHref,
   getDashboardWorkspaceViewLabel,
+  isRoutedDestinationActive,
   isWorkspaceViewActive,
   type DashboardActiveNavItem,
   type DashboardWorkspaceView,
@@ -129,6 +131,13 @@ export default function DashboardSidebarProfile(
                 />
               );
             })}
+
+            <SidebarButton
+              as="link"
+              label="Calendar"
+              active={isRoutedDestinationActive(activeItem, "calendar")}
+              href={getDashboardRoutedHref("calendar")}
+            />
           </div>
         </nav>
       </div>
