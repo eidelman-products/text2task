@@ -59,6 +59,44 @@ export type CalendarRangeQuery = {
   end: DateOnly;
 };
 
+/**
+ * One selectable Project option for the Add/Edit Manual Event form's
+ * picker, returned by `GET /api/calendar/options`
+ * (lib/calendar/load-calendar-options.server.ts). Deliberately not just
+ * `{id, title}` -- `clientId`/`clientName` let the form preview/lock the
+ * Client field from the project's own current client without a second
+ * round-trip, and `isArchived` distinguishes an already-linked archived
+ * project (still returned so an existing event stays editable) from a
+ * normal, newly-selectable one.
+ */
+export type CalendarProjectOption = {
+  id: string;
+  title: string;
+  clientId: string | null;
+  clientName: string | null;
+  isArchived: boolean;
+};
+
+/** One selectable Client option for the same picker. */
+export type CalendarClientOption = {
+  id: string;
+  name: string;
+};
+
+/**
+ * `projectsTruncated`/`clientsTruncated` are `true` only when the *normal*
+ * (non-included) result for that type actually exceeded the endpoint's cap
+ * -- never inferred from array length alone, since an included
+ * currently-linked value can be appended on top of an already-full page
+ * without that appended value indicating truncation on its own.
+ */
+export type CalendarOptionsResult = {
+  projects: CalendarProjectOption[];
+  clients: CalendarClientOption[];
+  projectsTruncated: boolean;
+  clientsTruncated: boolean;
+};
+
 export type CreateCalendarEventInput = {
   title: string;
   eventDate: DateOnly;
