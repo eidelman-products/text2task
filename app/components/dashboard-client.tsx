@@ -28,14 +28,27 @@ import {
   getPaidCompletedProgress,
   normalizeTaskFromApi,
 } from "./dashboard/dashboard-helpers";
+import {
+  DEFAULT_DASHBOARD_WORKSPACE_VIEW,
+  getDashboardWorkspaceViewLabel,
+  type DashboardWorkspaceView,
+} from "@/lib/dashboard/workspace-navigation";
 
 type DashboardClientProps = {
   email: string;
   userId: string;
   initialPlan: "free" | "pro";
+  /**
+   * The workspace view to render on mount, already validated by the server
+   * boundary (app/dashboard/page.tsx) from `?view=`. Defaults to the
+   * standard dashboard view when omitted, preserving every existing
+   * caller's behavior. Only consulted once, on initial state -- normal
+   * in-page tab clicks never touch the URL (see handleNavChange below).
+   */
+  initialView?: DashboardWorkspaceView;
 };
 
-type DashboardNav = "dashboard" | "extract" | "tasks";
+type DashboardNav = DashboardWorkspaceView;
 type TasksApiView = TaskArchiveView | "stats";
 
 type TasksSnapshot = {
@@ -77,12 +90,6 @@ type ProjectTaskSnapshotPatch = {
 type DashboardTaskSnapshotPatch = {
   tasks: TaskRow[];
 };
-
-function getActiveNavLabel(activeNav: DashboardNav) {
-  if (activeNav === "extract") return "Extract";
-  if (activeNav === "tasks") return "Tasks";
-  return "Dashboard";
-}
 
 function isDoneTask(task: TaskRow) {
   return String(task.status || "").trim().toLowerCase() === "done";
@@ -350,8 +357,11 @@ export default function DashboardClient({
   email,
   userId,
   initialPlan,
+  initialView,
 }: DashboardClientProps) {
-  const [activeNav, setActiveNav] = useState<DashboardNav>("dashboard");
+  const [activeNav, setActiveNav] = useState<DashboardNav>(
+    initialView ?? DEFAULT_DASHBOARD_WORKSPACE_VIEW
+  );
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [plan] = useState<"free" | "pro">(initialPlan);
 
@@ -1812,15 +1822,16 @@ export default function DashboardClient({
     <DashboardSidebarProfile
       email={email}
       plan={plan}
-      activeNav={activeNav}
-      onNavChange={handleNavChange}
+      mode="workspace"
+      activeItem={{ kind: "workspace", view: activeNav }}
+      onWorkspaceViewChange={handleNavChange}
     />
   );
 
   return (
     <DashboardShell
       sidebar={sidebar}
-      activeNavLabel={getActiveNavLabel(activeNav)}
+      activeNavLabel={getDashboardWorkspaceViewLabel(activeNav)}
       isMobileSidebarOpen={isMobileSidebarOpen}
       onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
       onCloseMobileSidebar={() => setIsMobileSidebarOpen(false)}

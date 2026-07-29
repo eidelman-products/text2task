@@ -5,6 +5,14 @@ import Image from "next/image";
 import { trackBeginCheckout } from "@/lib/analytics/events";
 import SidebarButton from "./sidebar-button";
 import {
+  DASHBOARD_WORKSPACE_VIEWS,
+  getDashboardWorkspaceHref,
+  getDashboardWorkspaceViewLabel,
+  isWorkspaceViewActive,
+  type DashboardActiveNavItem,
+  type DashboardWorkspaceView,
+} from "@/lib/dashboard/workspace-navigation";
+import {
   dashboardColors,
   dashboardRadii,
   dashboardSpacing,
@@ -12,19 +20,29 @@ import {
   dashboardTypography,
 } from "./ui/tokens";
 
-type DashboardNav = "dashboard" | "extract" | "tasks";
-
-export default function DashboardSidebarProfile({
-  email,
-  plan,
-  activeNav,
-  onNavChange,
-}: {
+/**
+ * Two mutually-exclusive rendering modes, matching SidebarButton's own
+ * button-vs-link split:
+ * - "workspace": rendered inside DashboardClient at /dashboard. Clicking
+ *   Dashboard/Extract/Tasks switches the in-page SPA view via a callback --
+ *   no URL change, no navigation.
+ * - "routed": rendered inside a routed shell (e.g. the Calendar page).
+ *   Dashboard/Extract/Tasks are real links back into /dashboard's
+ *   workspace views; there is no SPA state here to update directly.
+ */
+type DashboardSidebarProfileProps = {
   email: string;
   plan: "free" | "pro";
-  activeNav: DashboardNav;
-  onNavChange: (nav: DashboardNav) => void;
-}) {
+  activeItem: DashboardActiveNavItem;
+} & (
+  | { mode: "workspace"; onWorkspaceViewChange: (view: DashboardWorkspaceView) => void }
+  | { mode: "routed" }
+);
+
+export default function DashboardSidebarProfile(
+  props: DashboardSidebarProfileProps
+) {
+  const { email, plan, activeItem } = props;
   const [upgradeHovered, setUpgradeHovered] = useState(false);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
@@ -86,23 +104,31 @@ export default function DashboardSidebarProfile({
           <div style={navLabelStyle}>Workspace</div>
 
           <div style={navListStyle}>
-            <SidebarButton
-              label="Dashboard"
-              active={activeNav === "dashboard"}
-              onClick={() => onNavChange("dashboard")}
-            />
+            {DASHBOARD_WORKSPACE_VIEWS.map((view) => {
+              const active = isWorkspaceViewActive(activeItem, view);
+              const label = getDashboardWorkspaceViewLabel(view);
 
-            <SidebarButton
-              label="Extract"
-              active={activeNav === "extract"}
-              onClick={() => onNavChange("extract")}
-            />
+              if (props.mode === "workspace") {
+                return (
+                  <SidebarButton
+                    key={view}
+                    label={label}
+                    active={active}
+                    onClick={() => props.onWorkspaceViewChange(view)}
+                  />
+                );
+              }
 
-            <SidebarButton
-              label="Tasks"
-              active={activeNav === "tasks"}
-              onClick={() => onNavChange("tasks")}
-            />
+              return (
+                <SidebarButton
+                  key={view}
+                  as="link"
+                  label={label}
+                  active={active}
+                  href={getDashboardWorkspaceHref(view)}
+                />
+              );
+            })}
           </div>
         </nav>
       </div>
