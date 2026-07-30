@@ -2,8 +2,9 @@
 
 import {
   useEffect,
+  useId,
+  useLayoutEffect,
   useRef,
-  useState,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
@@ -13,14 +14,17 @@ import { createPortal } from "react-dom";
 import { autoUpdate, flip, offset, shift, useFloating } from "@floating-ui/react";
 
 import { useHasMounted } from "../../use-has-mounted";
+import { acquireDocumentScrollLock } from "../document-scroll-lock";
+import { getFocusableElements } from "../focus-trap";
+import { useNestedOverlayHost } from "../responsive-dialog";
 import {
-  dashboardBreakpoints,
   dashboardColors,
   dashboardRadii,
   dashboardShadows,
   dashboardSpacing,
   dashboardZIndex,
 } from "../tokens";
+import { useIsMobile } from "../use-is-mobile";
 
 /*
   Anchored popover (desktop) / bottom sheet (mobile) container for a date
@@ -50,9 +54,6 @@ export type DatePickerPopoverProps = {
   children: ReactNode;
 };
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 export function DatePickerPopover({
   open,
   onRequestClose,
@@ -63,6 +64,8 @@ export function DatePickerPopover({
   const isMounted = useHasMounted();
   const isMobile = useIsMobile();
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const nestedOverlay = useNestedOverlayHost();
+  const nestedRegistrationId = useId();
 
   const { refs, floatingStyles } = useFloating({
     open,
@@ -75,9 +78,12 @@ export function DatePickerPopover({
     refs.setReference(triggerRef.current);
   }, [refs, triggerRef, open]);
 
-  // Escape-to-cancel: never calls onChange, only requests close.
+  // Escape-to-cancel, standalone only: default bubble phase, unchanged from
+  // before nesting existed. When nested, ownership moves to the capture-
+  // phase listener below instead (event-phase separation, not effect
+  // ordering, is what makes a nested Escape deterministically win).
   useEffect(() => {
-    if (!open) return;
+    if (!open || nestedOverlay !== null) return;
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -87,7 +93,32 @@ export function DatePickerPopover({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, onRequestClose]);
+  }, [open, onRequestClose, nestedOverlay]);
+
+  // Nested-mode only: registration and capture-phase Escape ownership are
+  // established together, in a useLayoutEffect (before paint) rather than
+  // useEffect, so the outer ResponsiveDialog's own Escape/backdrop/focus-
+  // trap suppression is already active by the time this popover is actually
+  // visible to the user -- no frame where it's on screen but unregistered.
+  useLayoutEffect(() => {
+    if (!open || nestedOverlay === null || nestedOverlay.hostElement === null) {
+      return;
+    }
+
+    nestedOverlay.registerNestedOverlay(nestedRegistrationId);
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      onRequestClose();
+    }
+
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
+      nestedOverlay.unregisterNestedOverlay(nestedRegistrationId);
+    };
+  }, [open, nestedOverlay, nestedRegistrationId, onRequestClose]);
 
   // Focus return: whenever `open` transitions from true -> false (any close
   // path -- Escape, click-outside, or a commit from the caller), return
@@ -100,9 +131,19 @@ export function DatePickerPopover({
     wasOpenRef.current = open;
   }, [open, triggerRef]);
 
-  // Scroll locking while the mobile bottom sheet is open.
+  // Scroll locking while the mobile bottom sheet is open. Standalone keeps
+  // its own local capture/restore, unchanged. Nested uses the shared,
+  // reference-counted utility instead: the outer ResponsiveDialog may close
+  // (programmatically, or via unmount from navigation) while this popover is
+  // still open, and two independent local capture/restore effects aren't
+  // safe against that release order -- see document-scroll-lock.ts.
   useEffect(() => {
     if (!open || !isMobile) return;
+
+    if (nestedOverlay !== null) {
+      const lock = acquireDocumentScrollLock();
+      return () => lock.release();
+    }
 
     const previousBodyOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -110,20 +151,16 @@ export function DatePickerPopover({
     return () => {
       document.body.style.overflow = previousBodyOverflow;
     };
-  }, [open, isMobile]);
+  }, [open, isMobile, nestedOverlay]);
 
-  // Lightweight Tab/Shift+Tab focus containment within the panel. No
-  // focus-trap utility exists elsewhere in this codebase, so this is built
-  // explicitly here rather than assumed/reused from anywhere.
+  // Lightweight Tab/Shift+Tab focus containment within the panel.
   useEffect(() => {
     if (!open) return;
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== "Tab" || !panelRef.current) return;
 
-      const focusable = Array.from(
-        panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-      );
+      const focusable = getFocusableElements(panelRef.current);
       if (focusable.length === 0) return;
 
       const first = focusable[0];
@@ -131,7 +168,11 @@ export function DatePickerPopover({
       const active = document.activeElement;
 
       if (event.shiftKey) {
-        if (active === first || !panelRef.current.contains(active)) {
+        if (
+          active === first ||
+          !(active instanceof Node) ||
+          !panelRef.current.contains(active)
+        ) {
           event.preventDefault();
           last.focus();
         }
@@ -147,6 +188,19 @@ export function DatePickerPopover({
 
   if (!isMounted || !open) {
     return null;
+  }
+
+  // Nested but the ResponsiveDialog host <div> hasn't committed yet (a
+  // brief window on the first render or two): wait, never fall back to
+  // document.body -- that would put this content outside the sibling-host
+  // stacking structure the nesting contract depends on.
+  let portalTarget: HTMLElement;
+  if (nestedOverlay === null) {
+    portalTarget = document.body;
+  } else if (nestedOverlay.hostElement === null) {
+    return null;
+  } else {
+    portalTarget = nestedOverlay.hostElement;
   }
 
   function handleOverlayMouseDown(event: ReactMouseEvent<HTMLDivElement>) {
@@ -196,27 +250,7 @@ export function DatePickerPopover({
     </div>
   );
 
-  return createPortal(content, document.body);
-}
-
-function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia(
-      `(max-width: ${dashboardBreakpoints.mobile - 1}px)`
-    );
-
-    function handleChange() {
-      setIsMobile(query.matches);
-    }
-
-    handleChange();
-    query.addEventListener("change", handleChange);
-    return () => query.removeEventListener("change", handleChange);
-  }, []);
-
-  return isMobile;
+  return createPortal(content, portalTarget);
 }
 
 const desktopOverlayStyle: CSSProperties = {
