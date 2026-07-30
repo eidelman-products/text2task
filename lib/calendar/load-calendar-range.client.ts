@@ -1,6 +1,10 @@
 import { parseDateOnly } from "@/lib/tasks/date-only";
 import { parseTimeOnly } from "@/lib/calendar/time-only";
-import type { CalendarItem, CalendarRangeQuery } from "@/lib/calendar/calendar-types";
+import type {
+  CalendarItem,
+  CalendarRangeQuery,
+  ManualCalendarEventItem,
+} from "@/lib/calendar/calendar-types";
 
 /**
  * Client-side fetch + response validation for `GET /api/calendar`.
@@ -91,6 +95,22 @@ function narrowCalendarItem(value: unknown): CalendarItem | null {
   if (raw.kind === "project_deadline") return narrowProjectDeadlineItem(raw);
   if (raw.kind === "manual_event") return narrowManualEventItem(raw);
   return null;
+}
+
+/**
+ * Additive export (Phase C, `lib/calendar/mutate-calendar-event.client.ts`):
+ * narrows a single, already-`JSON.parse`d value into a `ManualCalendarEventItem`,
+ * reusing the exact same field-by-field validation `narrowManualEventItem`
+ * already applies to every item in a `GET /api/calendar` response -- not a
+ * second, independently-maintained validator. Behavior of the existing
+ * private helpers above is unchanged; this only exposes a typed, single-item
+ * entry point for POST/PATCH response bodies (which return one `item`, not
+ * an `items` array).
+ */
+export function narrowManualCalendarEventItem(value: unknown): ManualCalendarEventItem | null {
+  if (typeof value !== "object" || value === null) return null;
+  const item = narrowManualEventItem(value as Record<string, unknown>);
+  return item?.kind === "manual_event" ? item : null;
 }
 
 /**
