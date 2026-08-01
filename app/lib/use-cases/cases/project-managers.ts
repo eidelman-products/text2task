@@ -132,6 +132,16 @@ export const projectManagersUseCase = {
     "virtual-assistants",
     "web-designers"
   ],
+  "relatedLinks": {
+    "title": "Related reading",
+    "links": [
+      {
+        "label": "Project deadline calendar",
+        "href": "/features/project-deadline-calendar",
+        "description": "Review project deadlines and scheduled client work in one calendar."
+      }
+    ]
+  },
   "finalCta": {
     "title": "Skip the manual project setup on your next stakeholder request.",
     "description": "Paste the message, review the proposed project and action items, and save only the work you approve.",

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import HomepageCrmImageViewer from "./homepage-crm-image-viewer";
 
 const capabilities = [
@@ -19,6 +20,13 @@ const capabilities = [
     title: "Attach resources and notes",
     description:
       "Keep relevant links, files, and notes with the project.",
+  },
+  {
+    title: "Plan client work on a calendar",
+    description:
+      "Plan project deadlines and scheduled client work in one calendar.",
+    linkHref: "/features/project-deadline-calendar",
+    linkLabel: "Explore the Work Calendar",
   },
 ] as const;
 
@@ -62,6 +70,15 @@ export default function HomepagePostExtractionSection() {
                     <p className="mt-1 text-sm leading-6 text-slate-600">
                       {capability.description}
                     </p>
+                    {"linkHref" in capability ? (
+                      <Link
+                        href={capability.linkHref}
+                        className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-blue-700 transition-colors hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-4"
+                      >
+                        {capability.linkLabel}
+                        <span aria-hidden="true">{"→"}</span>
+                      </Link>
+                    ) : null}
                   </div>
                 </li>
               ))}

@@ -211,6 +211,11 @@ export const wordpressFreelancersUseCase = {
         "label": "How to turn screenshots into tasks",
         "href": "/resources/how-to-turn-screenshots-into-tasks",
         "description": "A practical workflow for organizing requests that arrive as images."
+      },
+      {
+        "label": "Client work calendar",
+        "href": "/features/project-deadline-calendar",
+        "description": "Keep maintenance deadlines and scheduled client work visible in one calendar."
       }
     ]
   },

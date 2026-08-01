@@ -13,6 +13,7 @@ const plans = [
       "Client updates and history",
       "Resource attachments",
       "Deadlines, priorities, budgets, and status tracking",
+      "Work Calendar",
     ],
     cta: "CREATE FREE WORKSPACE",
     helper:
@@ -31,6 +32,7 @@ const plans = [
       "Client updates and history",
       "Resource attachments",
       "Deadlines, priorities, budgets, and status tracking",
+      "Work Calendar",
       "CSV export",
     ],
     cta: "START PRO",

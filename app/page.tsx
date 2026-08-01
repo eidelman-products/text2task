@@ -90,6 +90,11 @@ const softwareApplicationJsonLd = {
   },
   description:
     "Text2Task is an AI task CRM for freelancers and service teams. It turns messy client messages into organized work with tasks, budgets, deadlines, and client details.",
+  featureList: [
+    "Project deadline calendar",
+    "Manual calendar events",
+    "Project and client scheduling",
+  ],
   offers: {
     "@type": "Offer",
     price: "12.90",

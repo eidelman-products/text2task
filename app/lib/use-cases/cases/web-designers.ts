@@ -216,6 +216,11 @@ export const webDesignersUseCase = {
         "label": "How web designers can manage client revisions faster",
         "href": "/resources/manage-client-revisions-web-designers",
         "description": "A closer look at separating revisions from new scope, round by round."
+      },
+      {
+        "label": "Calendar for project deadlines",
+        "href": "/features/project-deadline-calendar",
+        "description": "Track review rounds, handoffs, and launch dates alongside project deadlines."
       }
     ]
   },

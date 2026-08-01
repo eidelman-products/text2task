@@ -74,6 +74,11 @@ const featureRoutes = [
     priority: 0.84,
     changeFrequency: "monthly" as const,
   },
+  {
+    path: "/features/project-deadline-calendar",
+    priority: 0.84,
+    changeFrequency: "monthly" as const,
+  },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

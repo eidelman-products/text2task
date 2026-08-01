@@ -178,6 +178,11 @@ export const smallAgenciesUseCase = {
         "label": "How to organize client requests as a freelancer",
         "href": "/resources/how-to-organize-client-requests-as-a-freelancer",
         "description": "A workflow for capturing and prioritizing requests before they get lost."
+      },
+      {
+        "label": "Plan client deadlines in one calendar",
+        "href": "/features/project-deadline-calendar",
+        "description": "Keep project deadlines and scheduled client work visible across active accounts."
       }
     ]
   },
