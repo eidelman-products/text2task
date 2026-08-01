@@ -5,8 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { parseDateOnly, type DateOnly } from "@/lib/tasks/date-only";
-import type { ManualCalendarEventItem } from "@/lib/calendar/calendar-types";
-import { AddEditCalendarEventDialog } from "./add-edit-calendar-event-dialog";
+import type { CalendarItem, ManualCalendarEventItem } from "@/lib/calendar/calendar-types";
+import { CalendarDayDialog, type CalendarDialogMode } from "./calendar-day-dialog";
 
 function toDateOnly(value: string): DateOnly {
   const parsed = parseDateOnly(value);
@@ -15,6 +15,7 @@ function toDateOnly(value: string): DateOnly {
 }
 
 const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
+const DAY = toDateOnly("2027-01-12");
 const SAMPLE_EVENT: ManualCalendarEventItem = {
   kind: "manual_event",
   id: `event:${VALID_UUID}`,
@@ -23,8 +24,10 @@ const SAMPLE_EVENT: ManualCalendarEventItem = {
   title: "Client call",
   notes: null,
   projectId: null,
+  customProjectName: null,
   projectTitle: null,
   clientId: null,
+  customClientName: null,
   clientName: null,
 };
 
@@ -41,13 +44,25 @@ function itemResponse(overrides: Partial<ManualCalendarEventItem> = {}) {
 }
 
 type DialogHarnessProps = {
-  mode: "create" | "edit";
+  mode: "day" | "create" | "edit";
+  items?: CalendarItem[];
   onClose?: () => void;
   onSaved?: (item: ManualCalendarEventItem) => void;
   onDeleted?: (itemId: string) => void;
+  onEditFromDay?: (item: ManualCalendarEventItem) => void;
+  onCreateFromDay?: (date: DateOnly) => void;
 };
 
-function DialogHarness({ mode, onClose, onSaved, onDeleted }: DialogHarnessProps) {
+/** Fixed-mode harness -- mirrors AddEditCalendarEventDialogTest's original shape for create/edit coverage, plus a "day" variant. */
+function DialogHarness({
+  mode,
+  items = [],
+  onClose,
+  onSaved,
+  onDeleted,
+  onEditFromDay,
+  onCreateFromDay,
+}: DialogHarnessProps) {
   const triggerRef = createRef<HTMLButtonElement>();
   const [open, setOpen] = useState(true);
 
@@ -56,44 +71,72 @@ function DialogHarness({ mode, onClose, onSaved, onDeleted }: DialogHarnessProps
     onClose?.();
   }
 
+  const modeProps: CalendarDialogMode =
+    mode === "create"
+      ? { mode: "create", defaultDate: toDateOnly("2027-02-01") }
+      : mode === "edit"
+        ? { mode: "edit", event: SAMPLE_EVENT }
+        : { mode: "day", date: DAY };
+
   return (
     <>
       <button ref={triggerRef}>Open trigger</button>
-      {mode === "create" ? (
-        <AddEditCalendarEventDialog
-          mode="create"
-          defaultDate={toDateOnly("2027-02-01")}
-          open={open}
-          triggerRef={triggerRef}
-          onClose={handleClose}
-          onSaved={onSaved ?? vi.fn()}
-          onDeleted={onDeleted ?? vi.fn()}
-          projectOptions={[]}
-          clientOptions={[]}
-          projectsTruncated={false}
-          clientsTruncated={false}
-          optionsLoading={false}
-          optionsError={null}
-          onRetryOptions={vi.fn()}
-        />
-      ) : (
-        <AddEditCalendarEventDialog
-          mode="edit"
-          event={SAMPLE_EVENT}
-          open={open}
-          triggerRef={triggerRef}
-          onClose={handleClose}
-          onSaved={onSaved ?? vi.fn()}
-          onDeleted={onDeleted ?? vi.fn()}
-          projectOptions={[]}
-          clientOptions={[]}
-          projectsTruncated={false}
-          clientsTruncated={false}
-          optionsLoading={false}
-          optionsError={null}
-          onRetryOptions={vi.fn()}
-        />
-      )}
+      <CalendarDayDialog
+        {...modeProps}
+        open={open}
+        triggerRef={triggerRef}
+        items={items}
+        onClose={handleClose}
+        onSaved={onSaved ?? vi.fn()}
+        onDeleted={onDeleted ?? vi.fn()}
+        onEditFromDay={onEditFromDay ?? vi.fn()}
+        onCreateFromDay={onCreateFromDay ?? vi.fn()}
+        projectOptions={[]}
+        clientOptions={[]}
+        projectsTruncated={false}
+        clientsTruncated={false}
+        optionsLoading={false}
+        optionsError={null}
+        onRetryOptions={vi.fn()}
+      />
+    </>
+  );
+}
+
+/**
+ * Stateful harness that actually drives the "day" -> "edit"/"create" mode
+ * transition the way WorkCalendarClient does -- onEditFromDay/onCreateFromDay
+ * change `dialogState` to a new non-null mode while `open` stays true the
+ * whole time, so CalendarDayDialog's single ResponsiveDialog instance never
+ * unmounts/remounts. Exists specifically to prove that architectural claim,
+ * not just each mode's content in isolation.
+ */
+function TransitionHarness({ items = [SAMPLE_EVENT] }: { items?: CalendarItem[] }) {
+  const triggerRef = createRef<HTMLButtonElement>();
+  const [open, setOpen] = useState(true);
+  const [dialogState, setDialogState] = useState<CalendarDialogMode>({ mode: "day", date: DAY });
+
+  return (
+    <>
+      <button ref={triggerRef}>Day trigger</button>
+      <CalendarDayDialog
+        {...dialogState}
+        open={open}
+        triggerRef={triggerRef}
+        items={items}
+        onClose={() => setOpen(false)}
+        onSaved={vi.fn()}
+        onDeleted={vi.fn()}
+        onEditFromDay={(item) => setDialogState({ mode: "edit", event: item })}
+        onCreateFromDay={(date) => setDialogState({ mode: "create", defaultDate: date })}
+        projectOptions={[]}
+        clientOptions={[]}
+        projectsTruncated={false}
+        clientsTruncated={false}
+        optionsLoading={false}
+        optionsError={null}
+        onRetryOptions={vi.fn()}
+      />
     </>
   );
 }
@@ -102,7 +145,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("AddEditCalendarEventDialog — headings and accessible name", () => {
+describe("CalendarDayDialog — headings and accessible name", () => {
   it("shows the 'Add event' heading in create mode, wired via aria-labelledby", () => {
     render(<DialogHarness mode="create" />);
     expect(screen.getByRole("dialog", { name: "Add event" })).toBeInTheDocument();
@@ -113,13 +156,18 @@ describe("AddEditCalendarEventDialog — headings and accessible name", () => {
     expect(screen.getByRole("dialog", { name: "Edit event" })).toBeInTheDocument();
   });
 
-  it("focuses the Title input on open", () => {
+  it("focuses the Title input on open in create/edit mode", () => {
     render(<DialogHarness mode="create" />);
     expect(screen.getByLabelText("Title")).toHaveFocus();
   });
+
+  it("shows the formatted date as the heading in day mode, wired via aria-labelledby", () => {
+    render(<DialogHarness mode="day" />);
+    expect(screen.getByRole("dialog", { name: "January 12, 2027" })).toBeInTheDocument();
+  });
 });
 
-describe("AddEditCalendarEventDialog — dismissal", () => {
+describe("CalendarDayDialog — dismissal", () => {
   it("closes on Escape when not busy and not delete-confirming", () => {
     const onClose = vi.fn();
     render(<DialogHarness mode="create" onClose={onClose} />);
@@ -190,9 +238,18 @@ describe("AddEditCalendarEventDialog — dismissal", () => {
     resolveFetch(itemResponse({ title: "Team sync" }));
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
+
+  it("day mode closes on Escape, backdrop click, and its own Close button", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<DialogHarness mode="day" onClose={onClose} />);
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });
 
-describe("AddEditCalendarEventDialog — save/delete callbacks", () => {
+describe("CalendarDayDialog — save/delete callbacks", () => {
   it("invokes onSaved and closes on a successful save", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(itemResponse({ title: "Team sync" })));
@@ -225,7 +282,7 @@ describe("AddEditCalendarEventDialog — save/delete callbacks", () => {
   });
 });
 
-describe("AddEditCalendarEventDialog — nested DatePicker integration", () => {
+describe("CalendarDayDialog — nested DatePicker integration", () => {
   it("opens the Date field's popover inside the nested-overlay host", async () => {
     const user = userEvent.setup();
     render(<DialogHarness mode="create" />);
@@ -268,5 +325,82 @@ describe("AddEditCalendarEventDialog — nested DatePicker integration", () => {
     await user.keyboard("{Escape}");
 
     expect(screen.getByLabelText("Date")).toHaveFocus();
+  });
+});
+
+describe("CalendarDayDialog — day mode content", () => {
+  it("shows a clean, intentional empty state when the day has no items", () => {
+    render(<DialogHarness mode="day" items={[]} />);
+    expect(screen.getByText("Nothing scheduled for this day.")).toBeInTheDocument();
+  });
+
+  it("shows the day's items, and Edit calls onEditFromDay with the exact item", async () => {
+    const user = userEvent.setup();
+    const onEditFromDay = vi.fn();
+    render(<DialogHarness mode="day" items={[SAMPLE_EVENT]} onEditFromDay={onEditFromDay} />);
+
+    expect(screen.getByText("Client call")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Edit Client call" }));
+
+    expect(onEditFromDay).toHaveBeenCalledTimes(1);
+    expect(onEditFromDay).toHaveBeenCalledWith(SAMPLE_EVENT);
+  });
+
+  it("its own Add event affordance calls onCreateFromDay with the day's date", async () => {
+    const user = userEvent.setup();
+    const onCreateFromDay = vi.fn();
+    render(<DialogHarness mode="day" onCreateFromDay={onCreateFromDay} />);
+
+    await user.click(screen.getByRole("button", { name: "+ Add event" }));
+
+    expect(onCreateFromDay).toHaveBeenCalledTimes(1);
+    expect(onCreateFromDay).toHaveBeenCalledWith(DAY);
+  });
+});
+
+describe("CalendarDayDialog — day-to-edit/create mode transition, single dialog instance", () => {
+  it("switching from day view to edit view keeps exactly one dialog/backdrop mounted and refocuses Title", async () => {
+    const user = userEvent.setup();
+    render(<TransitionHarness />);
+
+    expect(screen.getByRole("dialog", { name: "January 12, 2027" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Edit Client call" }));
+
+    expect(screen.getByRole("dialog", { name: "Edit event" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "January 12, 2027" })).toBeNull();
+    expect(document.querySelectorAll("[data-responsive-dialog-backdrop]")).toHaveLength(1);
+    expect(screen.getByLabelText("Title")).toHaveFocus();
+  });
+
+  it("a single Escape from the edit view reached via day mode closes the dialog exactly once", async () => {
+    const user = userEvent.setup();
+    render(<TransitionHarness />);
+
+    await user.click(screen.getByRole("button", { name: "Edit Client call" }));
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("a successful save reached via day mode closes the whole dialog (does not return to day view)", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(itemResponse({ title: "Client call" })));
+    render(<TransitionHarness />);
+
+    await user.click(screen.getByRole("button", { name: "Edit Client call" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("switching from day view to create view (its own Add event) also refocuses Title", async () => {
+    const user = userEvent.setup();
+    render(<TransitionHarness />);
+
+    await user.click(screen.getByRole("button", { name: "+ Add event" }));
+
+    expect(screen.getByRole("dialog", { name: "Add event" })).toBeInTheDocument();
+    expect(document.querySelectorAll("[data-responsive-dialog-backdrop]")).toHaveLength(1);
+    expect(screen.getByLabelText("Title")).toHaveFocus();
   });
 });

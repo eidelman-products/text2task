@@ -33,12 +33,26 @@ export type CalendarEventLinkValidationResult =
       /** The project id to persist, unchanged from input (already validated). */
       projectId: string | null;
       /**
+       * The free-text Project name to persist -- always `null` when
+       * `projectId` is non-null (a linked project is never paired with a
+       * custom name), otherwise passed through as given (already
+       * trimmed/blank-normalized by the Zod schema).
+       */
+      customProjectName: string | null;
+      /**
        * The client id to persist -- normalized to the linked project's
        * current `client_id` when a project is provided (even if a
        * different `clientId` was supplied), or the independently-validated
        * `clientId` when no project is linked, or `null` when neither is.
        */
       clientId: string | null;
+      /**
+       * The free-text Client name to persist -- always `null` when
+       * `clientId` is non-null OR when a project is linked (a linked
+       * project's client is always derived, never custom), otherwise
+       * passed through as given.
+       */
+      customClientName: string | null;
     }
   | {
       ok: false;
@@ -50,12 +64,16 @@ export async function validateCalendarEventLinks<Client>({
   supabase,
   userId,
   projectId,
+  customProjectName = null,
   clientId,
+  customClientName = null,
 }: {
   supabase: Client;
   userId: string;
   projectId: string | null;
+  customProjectName?: string | null;
   clientId: string | null;
+  customClientName?: string | null;
 }): Promise<CalendarEventLinkValidationResult> {
   const client = supabase as LinkValidationSupabaseLikeClient;
 
@@ -81,10 +99,20 @@ export async function validateCalendarEventLinks<Client>({
     // what clientId was supplied alongside it. Mirrors
     // enforce_calendar_event_relationship_integrity in the migration
     // exactly -- both must agree, since the database re-validates this
-    // independently on every write either way.
-    return { ok: true, projectId: project.id, clientId: project.client_id };
+    // independently on every write either way. A linked project is never
+    // paired with either custom name.
+    return {
+      ok: true,
+      projectId: project.id,
+      customProjectName: null,
+      clientId: project.client_id,
+      customClientName: null,
+    };
   }
 
+  // No linked project -- customProjectName (if any) passes straight
+  // through, and Client remains independently editable (a linked client,
+  // a custom name, or neither).
   if (clientId !== null) {
     const { data, error } = await client
       .from("clients")
@@ -99,8 +127,20 @@ export async function validateCalendarEventLinks<Client>({
 
     const clientRow = data as { id: string };
 
-    return { ok: true, projectId: null, clientId: clientRow.id };
+    return {
+      ok: true,
+      projectId: null,
+      customProjectName,
+      clientId: clientRow.id,
+      customClientName: null,
+    };
   }
 
-  return { ok: true, projectId: null, clientId: null };
+  return {
+    ok: true,
+    projectId: null,
+    customProjectName,
+    clientId: null,
+    customClientName,
+  };
 }

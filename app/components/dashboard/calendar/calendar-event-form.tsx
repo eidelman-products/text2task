@@ -29,6 +29,7 @@ import { CalendarEventDateField } from "./calendar-event-date-field";
 import { CalendarEventTimeField } from "./calendar-event-time-field";
 import { CalendarEventProjectField } from "./calendar-event-project-field";
 import { CalendarEventClientField } from "./calendar-event-client-field";
+import type { CalendarEntityComboboxValue } from "./calendar-entity-combobox";
 
 /*
   Owns all Add/Edit Manual Event form field state, client-side validation,
@@ -76,7 +77,9 @@ type FormState = {
   /** UI-level string; "" (never null) represents "no notes entered yet". */
   notes: string;
   projectId: string | null;
+  customProjectName: string | null;
   clientId: string | null;
+  customClientName: string | null;
 };
 
 type InitialValues = {
@@ -86,7 +89,17 @@ type InitialValues = {
   /** Normalized (trimmed, blank -> null) -- matches what the server stores. */
   notes: string | null;
   projectId: string | null;
+  customProjectName: string | null;
   clientId: string | null;
+  customClientName: string | null;
+};
+
+/** The four relationship fields, independent of whatever else FormState/InitialValues carry. */
+type RelationshipFields = {
+  projectId: string | null;
+  customProjectName: string | null;
+  clientId: string | null;
+  customClientName: string | null;
 };
 
 function buildInitialState(props: CalendarEventFormMode): { form: FormState; initial: InitialValues } {
@@ -98,7 +111,9 @@ function buildInitialState(props: CalendarEventFormMode): { form: FormState; ini
         time: null,
         notes: "",
         projectId: null,
+        customProjectName: null,
         clientId: null,
+        customClientName: null,
       },
       initial: {
         title: "",
@@ -106,7 +121,9 @@ function buildInitialState(props: CalendarEventFormMode): { form: FormState; ini
         time: null,
         notes: null,
         projectId: null,
+        customProjectName: null,
         clientId: null,
+        customClientName: null,
       },
     };
   }
@@ -119,7 +136,9 @@ function buildInitialState(props: CalendarEventFormMode): { form: FormState; ini
       time: event.time,
       notes: event.notes ?? "",
       projectId: event.projectId,
+      customProjectName: event.customProjectName,
       clientId: event.clientId,
+      customClientName: event.customClientName,
     },
     initial: {
       title: event.title,
@@ -127,7 +146,9 @@ function buildInitialState(props: CalendarEventFormMode): { form: FormState; ini
       time: event.time,
       notes: event.notes,
       projectId: event.projectId,
+      customProjectName: event.customProjectName,
       clientId: event.clientId,
+      customClientName: event.customClientName,
     },
   };
 }
@@ -138,35 +159,49 @@ function normalizeNotes(raw: string): string | null {
 }
 
 /**
- * Derives the `projectId`/`clientId` keys (if any) an edit-mode PATCH body
- * should include, following the four locked scenarios exactly (§9 of the
- * manual events mapping) via two independent value-comparison flags --
- * never a single combined relationship-dirty boolean, never falsy coercion.
+ * Derives the `projectId`/`customProjectName`/`clientId`/`customClientName`
+ * keys (if any) an edit-mode PATCH body should include, per this feature's
+ * locked relationship rules -- via independent per-field value comparisons,
+ * never falsy coercion, and never collapsing an explicit clear into
+ * omission.
+ *
+ * Project and its custom name are treated as one relationship: unchanged
+ * (both fields identical to initial) omits both keys entirely, preserving
+ * whatever the server already has (including a clear-then-reselect-original
+ * round trip). A genuinely different, non-null (existing) project sends
+ * `projectId` (and `customProjectName` only if it also changed, e.g. moving
+ * off a previous custom name) but deliberately never a client-derived
+ * `clientId`/`customClientName` -- the server always re-derives/clears the
+ * client side unconditionally whenever a non-null `projectId` is part of a
+ * relationship-touching write (calendar-link-validation.server.ts), and
+ * remains authoritative there. Only once the project side is either
+ * unchanged or cleared/custom (never a newly-linked existing project) is
+ * Client's own pair independently diffed the same way.
  */
 function deriveRelationshipPatch(
-  initial: Pick<InitialValues, "projectId" | "clientId">,
-  current: Pick<FormState, "projectId" | "clientId">
-): Pick<UpdateCalendarEventInput, "projectId" | "clientId"> {
-  const projectChanged = current.projectId !== initial.projectId;
+  initial: RelationshipFields,
+  current: RelationshipFields
+): Pick<UpdateCalendarEventInput, "projectId" | "customProjectName" | "clientId" | "customClientName"> {
+  const patch: Pick<UpdateCalendarEventInput, "projectId" | "customProjectName" | "clientId" | "customClientName"> = {};
 
-  if (!projectChanged) {
-    // Scenario 2: relationship untouched (including clear-then-reselect-
-    // original) -- omit both keys entirely, preserving the stored relationship.
-    return {};
+  const projectChanged =
+    current.projectId !== initial.projectId || current.customProjectName !== initial.customProjectName;
+
+  if (projectChanged) {
+    if (current.projectId !== initial.projectId) patch.projectId = current.projectId;
+    if (current.customProjectName !== initial.customProjectName) {
+      patch.customProjectName = current.customProjectName;
+    }
+
+    if (current.projectId !== null) {
+      return patch;
+    }
   }
 
-  if (current.projectId !== null) {
-    // Scenario 3: a genuinely different, non-null project -- projectId only,
-    // never a client-derived clientId. The server remains authoritative.
-    return { projectId: current.projectId };
-  }
+  if (current.clientId !== initial.clientId) patch.clientId = current.clientId;
+  if (current.customClientName !== initial.customClientName) patch.customClientName = current.customClientName;
 
-  // Scenario 4: project cleared.
-  const clientChanged = current.clientId !== initial.clientId;
-  if (!clientChanged) {
-    return { projectId: null };
-  }
-  return { projectId: null, clientId: current.clientId };
+  return patch;
 }
 
 function combineIds(...ids: Array<string | undefined | false>): string | undefined {
@@ -201,7 +236,9 @@ export function CalendarEventForm(props: CalendarEventFormProps) {
   const [time, setTime] = useState<TimeOnly | null>(initialForm.time);
   const [notes, setNotes] = useState(initialForm.notes);
   const [projectId, setProjectId] = useState<string | null>(initialForm.projectId);
+  const [customProjectName, setCustomProjectName] = useState<string | null>(initialForm.customProjectName);
   const [clientId, setClientId] = useState<string | null>(initialForm.clientId);
+  const [customClientName, setCustomClientName] = useState<string | null>(initialForm.customClientName);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -255,18 +292,28 @@ export function CalendarEventForm(props: CalendarEventFormProps) {
     ? (projectOptionsById.get(projectId)?.clientName ?? null)
     : null;
 
-  function handleProjectIdChange(nextProjectId: string | null) {
-    if (nextProjectId === projectId) return; // reselecting the same value is a no-op
-    setProjectId(nextProjectId);
-    if (nextProjectId !== null) {
-      // Selecting a project always resets the effective client to that
-      // project's own current client -- discarding any client value chosen
-      // while Client was briefly unlocked during an intervening clear.
-      const selected = projectOptionsById.get(nextProjectId);
+  function handleProjectChange(next: CalendarEntityComboboxValue) {
+    if (next.id === projectId && next.customName === customProjectName) return; // no-op
+    setProjectId(next.id);
+    setCustomProjectName(next.customName);
+    if (next.id !== null) {
+      // Selecting an existing project always resets the effective client to
+      // that project's own current client -- discarding any client value
+      // chosen while Client was briefly unlocked during an intervening
+      // clear -- and a linked project is never paired with a custom Client
+      // name.
+      const selected = projectOptionsById.get(next.id);
       setClientId(selected?.clientId ?? null);
+      setCustomClientName(null);
     }
-    // Clearing (nextProjectId === null) intentionally leaves `clientId`
-    // untouched -- Client unlocks and retains whatever it was showing.
+    // Clearing, or typing a custom Project name (next.id === null either
+    // way), intentionally leaves Client's own state untouched -- it
+    // unlocks (if it was locked) and retains whatever it was showing.
+  }
+
+  function handleClientChange(next: CalendarEntityComboboxValue) {
+    setClientId(next.id);
+    setCustomClientName(next.customName);
   }
 
   const titleErrorId = `${idPrefix}-title-error`;
@@ -296,7 +343,9 @@ export function CalendarEventForm(props: CalendarEventFormProps) {
       eventTime: time,
       notes: normalizeNotes(notes),
       projectId,
+      customProjectName,
       clientId,
+      customClientName,
     };
     const result = CreateCalendarEventInputSchema.safeParse(candidate);
     if (!result.success) {
@@ -326,7 +375,12 @@ export function CalendarEventForm(props: CalendarEventFormProps) {
     setSaveError(null);
 
     if (props.mode === "edit" && existingEvent) {
-      const relationshipPatch = deriveRelationshipPatch(initial, { projectId, clientId });
+      const relationshipPatch = deriveRelationshipPatch(initial, {
+        projectId,
+        customProjectName,
+        clientId,
+        customClientName,
+      });
       const patch: UpdateCalendarEventInput = { ...relationshipPatch };
 
       const trimmedTitle = title.trim();
@@ -365,7 +419,9 @@ export function CalendarEventForm(props: CalendarEventFormProps) {
       eventTime: time,
       notes: normalizeNotes(notes),
       projectId,
+      customProjectName,
       clientId,
+      customClientName,
     });
     onBusyChange(false);
 
@@ -479,7 +535,8 @@ export function CalendarEventForm(props: CalendarEventFormProps) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <CalendarEventProjectField
             value={projectId}
-            onChange={handleProjectIdChange}
+            customValue={customProjectName}
+            onChange={handleProjectChange}
             options={projectOptionsForDisplay}
             disabled={busy || optionsDisabled}
             aria-describedby={combineIds(projectsTruncated && projectTruncatedId)}
@@ -493,7 +550,8 @@ export function CalendarEventForm(props: CalendarEventFormProps) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <CalendarEventClientField
             value={clientId}
-            onChange={setClientId}
+            customValue={customClientName}
+            onChange={handleClientChange}
             options={clientOptionsForDisplay}
             locked={isClientLocked}
             lockedClientName={lockedClientName}

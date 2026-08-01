@@ -68,8 +68,10 @@ describe("loadCalendarRangeClient", () => {
       title: "Client call",
       notes: "Discuss scope",
       projectId: null,
+      customProjectName: null,
       projectTitle: null,
       clientId: "c1",
+      customClientName: null,
       clientName: "Acme",
     };
     vi.stubGlobal(
@@ -91,8 +93,10 @@ describe("loadCalendarRangeClient", () => {
       title: "All-day reminder",
       notes: null,
       projectId: null,
+      customProjectName: null,
       projectTitle: null,
       clientId: null,
+      customClientName: null,
       clientName: null,
     };
     vi.stubGlobal(

@@ -12,66 +12,147 @@ const OPTIONS: CalendarProjectOption[] = [
 ];
 
 describe("CalendarEventProjectField", () => {
-  it("renders a select labeled 'Project' with a 'No project' default option", () => {
-    render(<CalendarEventProjectField value={null} onChange={vi.fn()} options={[]} />);
-    const select = screen.getByLabelText("Project");
-    expect(select).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "No project" })).toBeInTheDocument();
+  it("renders a combobox labeled 'Project' with the search-or-enter placeholder", () => {
+    render(<CalendarEventProjectField value={null} customValue={null} onChange={vi.fn()} options={[]} />);
+    const input = screen.getByLabelText("Project");
+    expect(input).toBeInTheDocument();
+    expect(input).toHaveAttribute("role", "combobox");
+    expect(input).toHaveAttribute("placeholder", "Search or enter a project");
   });
 
-  it("renders every option by title", () => {
-    render(<CalendarEventProjectField value={null} onChange={vi.fn()} options={OPTIONS} />);
+  it("shows the linked option's title when value.id is set", () => {
+    render(<CalendarEventProjectField value="p1" customValue={null} onChange={vi.fn()} options={OPTIONS} />);
+    expect(screen.getByLabelText("Project")).toHaveValue("Website redesign");
+  });
+
+  it("shows the custom name directly when customValue is set", () => {
+    render(<CalendarEventProjectField value={null} customValue="Not yet in Text2Task" onChange={vi.fn()} options={OPTIONS} />);
+    expect(screen.getByLabelText("Project")).toHaveValue("Not yet in Text2Task");
+  });
+
+  it("shows an archived option with an '(Archived)' suffix in its suggestion", async () => {
+    const user = userEvent.setup();
+    render(<CalendarEventProjectField value={null} customValue={null} onChange={vi.fn()} options={OPTIONS} />);
+
+    await user.click(screen.getByLabelText("Project"));
+    expect(screen.getByRole("option", { name: /Old campaign\s*\(Archived\)/ })).toBeInTheDocument();
+  });
+
+  it("filters suggestions as the user types", async () => {
+    const user = userEvent.setup();
+    render(<CalendarEventProjectField value={null} customValue={null} onChange={vi.fn()} options={OPTIONS} />);
+
+    await user.type(screen.getByLabelText("Project"), "Website");
+
     expect(screen.getByRole("option", { name: "Website redesign" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /Old campaign/ })).not.toBeInTheDocument();
   });
 
-  it("renders an archived option with an '(Archived)' affix", () => {
-    render(<CalendarEventProjectField value={null} onChange={vi.fn()} options={OPTIONS} />);
-    expect(screen.getByRole("option", { name: "Old campaign (Archived)" })).toBeInTheDocument();
-  });
-
-  it("calls onChange with the selected project id", async () => {
+  it("selecting a suggestion via mouse click calls onChange with its id, never a custom name", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<CalendarEventProjectField value={null} onChange={onChange} options={OPTIONS} />);
+    render(<CalendarEventProjectField value={null} customValue={null} onChange={onChange} options={OPTIONS} />);
 
-    await user.selectOptions(screen.getByLabelText("Project"), "p1");
+    await user.click(screen.getByLabelText("Project"));
+    await user.click(screen.getByRole("option", { name: "Website redesign" }));
 
-    expect(onChange).toHaveBeenCalledWith("p1");
+    expect(onChange).toHaveBeenCalledWith({ id: "p1", customName: null });
+    expect(screen.getByLabelText("Project")).toHaveValue("Website redesign");
   });
 
-  it("calls onChange with null when reset to 'No project'", async () => {
+  it("selecting a suggestion via ArrowDown + Enter calls onChange with its id", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<CalendarEventProjectField value="p1" onChange={onChange} options={OPTIONS} />);
+    render(<CalendarEventProjectField value={null} customValue={null} onChange={onChange} options={OPTIONS} />);
 
-    await user.selectOptions(screen.getByLabelText("Project"), "");
+    const input = screen.getByLabelText("Project");
+    await user.click(input);
+    await user.keyboard("{ArrowDown}{Enter}");
 
-    expect(onChange).toHaveBeenCalledWith(null);
+    expect(onChange).toHaveBeenCalledWith({ id: "p1", customName: null });
+  });
+
+  it("closes the suggestion list on Escape without discarding typed text", async () => {
+    const user = userEvent.setup();
+    render(<CalendarEventProjectField value={null} customValue={null} onChange={vi.fn()} options={OPTIONS} />);
+
+    const input = screen.getByLabelText("Project");
+    await user.type(input, "Web");
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(input).toHaveValue("Web");
+  });
+
+  it("typing a name with no match and blurring commits it as a custom Project name", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<CalendarEventProjectField value={null} customValue={null} onChange={onChange} options={OPTIONS} />);
+
+    await user.type(screen.getByLabelText("Project"), "Brand new project");
+    await user.tab();
+
+    expect(onChange).toHaveBeenCalledWith({ id: null, customName: "Brand new project" });
+  });
+
+  it("typing free text and pressing Enter with nothing highlighted commits it as custom", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<CalendarEventProjectField value={null} customValue={null} onChange={onChange} options={OPTIONS} />);
+
+    await user.type(screen.getByLabelText("Project"), "Brand new project{Enter}");
+
+    expect(onChange).toHaveBeenCalledWith({ id: null, customName: "Brand new project" });
+  });
+
+  it("clearing an existing linked value calls onChange with both fields null", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<CalendarEventProjectField value="p1" customValue={null} onChange={onChange} options={OPTIONS} />);
+
+    await user.click(screen.getByRole("button", { name: "Clear Project" }));
+
+    expect(onChange).toHaveBeenCalledWith({ id: null, customName: null });
+    expect(screen.getByLabelText("Project")).toHaveValue("");
+  });
+
+  it("blurring an emptied field calls onChange with both fields null", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<CalendarEventProjectField value={null} customValue="Something" onChange={onChange} options={OPTIONS} />);
+
+    const input = screen.getByLabelText("Project");
+    await user.clear(input);
+    await user.tab();
+
+    expect(onChange).toHaveBeenCalledWith({ id: null, customName: null });
   });
 
   it("is disabled while options load or fail", () => {
-    render(<CalendarEventProjectField value={null} onChange={vi.fn()} options={[]} disabled />);
+    render(<CalendarEventProjectField value={null} customValue={null} onChange={vi.fn()} options={[]} disabled />);
     expect(screen.getByLabelText("Project")).toBeDisabled();
   });
 
   it("has at least a 44px touch target", () => {
-    render(<CalendarEventProjectField value={null} onChange={vi.fn()} options={[]} />);
-    const select = screen.getByLabelText("Project") as HTMLSelectElement;
-    expect(select.style.minHeight).toBe("44px");
+    render(<CalendarEventProjectField value={null} customValue={null} onChange={vi.fn()} options={[]} />);
+    const input = screen.getByLabelText("Project") as HTMLInputElement;
+    expect(input.style.minHeight).toBe("44px");
   });
 
   it("sets aria-invalid and aria-describedby when invalid", () => {
     render(
       <CalendarEventProjectField
         value={null}
+        customValue={null}
         onChange={vi.fn()}
         options={[]}
         invalid
         aria-describedby="project-error"
       />
     );
-    const select = screen.getByLabelText("Project");
-    expect(select).toHaveAttribute("aria-invalid", "true");
-    expect(select).toHaveAttribute("aria-describedby", "project-error");
+    const input = screen.getByLabelText("Project");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAttribute("aria-describedby", "project-error");
   });
 });

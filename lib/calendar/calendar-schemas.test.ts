@@ -3,6 +3,7 @@ import {
   CalendarRangeQuerySchema,
   CreateCalendarEventInputSchema,
   UpdateCalendarEventInputSchema,
+  CUSTOM_ENTITY_NAME_MAX_LENGTH,
 } from "./calendar-schemas";
 
 describe("CalendarRangeQuerySchema", () => {
@@ -60,14 +61,16 @@ describe("CalendarRangeQuerySchema", () => {
 });
 
 describe("CreateCalendarEventInputSchema", () => {
-  it("accepts a full valid payload", () => {
+  it("accepts a full valid payload with a linked project/client", () => {
     const result = CreateCalendarEventInputSchema.safeParse({
       title: "Send first draft",
       eventDate: "2027-01-10",
       eventTime: "14:30",
       notes: "Remember to attach the invoice.",
       projectId: "11111111-1111-4111-8111-111111111111",
+      customProjectName: null,
       clientId: "22222222-2222-4222-8222-222222222222",
+      customClientName: null,
     });
 
     expect(result.success).toBe(true);
@@ -78,7 +81,9 @@ describe("CreateCalendarEventInputSchema", () => {
         eventTime: "14:30",
         notes: "Remember to attach the invoice.",
         projectId: "11111111-1111-4111-8111-111111111111",
+        customProjectName: null,
         clientId: "22222222-2222-4222-8222-222222222222",
+        customClientName: null,
       });
     }
   });
@@ -90,7 +95,9 @@ describe("CreateCalendarEventInputSchema", () => {
       eventTime: null,
       notes: null,
       projectId: null,
+      customProjectName: null,
       clientId: null,
+      customClientName: null,
     });
 
     expect(result.success).toBe(true);
@@ -103,7 +110,9 @@ describe("CreateCalendarEventInputSchema", () => {
       eventTime: null,
       notes: "   ",
       projectId: null,
+      customProjectName: null,
       clientId: null,
+      customClientName: null,
     });
 
     expect(result.success).toBe(true);
@@ -120,7 +129,9 @@ describe("CreateCalendarEventInputSchema", () => {
       eventTime: null,
       notes: null,
       projectId: null,
+      customProjectName: null,
       clientId: null,
+      customClientName: null,
     });
 
     expect(result.success).toBe(false);
@@ -133,7 +144,9 @@ describe("CreateCalendarEventInputSchema", () => {
       eventTime: null,
       notes: null,
       projectId: null,
+      customProjectName: null,
       clientId: null,
+      customClientName: null,
     });
 
     expect(result.success).toBe(false);
@@ -146,7 +159,9 @@ describe("CreateCalendarEventInputSchema", () => {
       eventTime: null,
       notes: null,
       projectId: null,
+      customProjectName: null,
       clientId: null,
+      customClientName: null,
     });
 
     expect(result.success).toBe(false);
@@ -160,7 +175,9 @@ describe("CreateCalendarEventInputSchema", () => {
         eventTime: "2:30 PM",
         notes: null,
         projectId: null,
+        customProjectName: null,
         clientId: null,
+        customClientName: null,
       }).success
     ).toBe(false);
 
@@ -171,7 +188,9 @@ describe("CreateCalendarEventInputSchema", () => {
         eventTime: "14:30:00",
         notes: null,
         projectId: null,
+        customProjectName: null,
         clientId: null,
+        customClientName: null,
       }).success
     ).toBe(false);
   });
@@ -183,7 +202,9 @@ describe("CreateCalendarEventInputSchema", () => {
       eventTime: null,
       notes: "a".repeat(5001),
       projectId: null,
+      customProjectName: null,
       clientId: null,
+      customClientName: null,
     });
 
     expect(result.success).toBe(false);
@@ -197,7 +218,9 @@ describe("CreateCalendarEventInputSchema", () => {
         eventTime: null,
         notes: null,
         projectId: "not-a-uuid",
+        customProjectName: null,
         clientId: null,
+        customClientName: null,
       }).success
     ).toBe(false);
 
@@ -208,7 +231,9 @@ describe("CreateCalendarEventInputSchema", () => {
         eventTime: null,
         notes: null,
         projectId: null,
+        customProjectName: null,
         clientId: "not-a-uuid",
+        customClientName: null,
       }).success
     ).toBe(false);
   });
@@ -220,8 +245,113 @@ describe("CreateCalendarEventInputSchema", () => {
       eventTime: null,
       notes: null,
       projectId: null,
+      customProjectName: null,
       clientId: null,
+      customClientName: null,
       userId: "11111111-1111-4111-8111-111111111111",
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CreateCalendarEventInputSchema — custom Project/Client names", () => {
+  const BASE = {
+    title: "Send first draft",
+    eventDate: "2027-01-10",
+    eventTime: null,
+    notes: null,
+  };
+
+  it("accepts a custom Project name with no linked project", () => {
+    const result = CreateCalendarEventInputSchema.safeParse({
+      ...BASE,
+      projectId: null,
+      customProjectName: "Not yet in Text2Task",
+      clientId: null,
+      customClientName: null,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.customProjectName).toBe("Not yet in Text2Task");
+    }
+  });
+
+  it("accepts a custom Client name with no linked client", () => {
+    const result = CreateCalendarEventInputSchema.safeParse({
+      ...BASE,
+      projectId: null,
+      customProjectName: null,
+      clientId: null,
+      customClientName: "Brand new client",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.customClientName).toBe("Brand new client");
+    }
+  });
+
+  it("trims a custom name and normalizes blank/whitespace-only to null", () => {
+    const result = CreateCalendarEventInputSchema.safeParse({
+      ...BASE,
+      projectId: null,
+      customProjectName: "  Padded Name  ",
+      clientId: null,
+      customClientName: "   ",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.customProjectName).toBe("Padded Name");
+      expect(result.data.customClientName).toBeNull();
+    }
+  });
+
+  it("rejects a custom name over the shared max length", () => {
+    const result = CreateCalendarEventInputSchema.safeParse({
+      ...BASE,
+      projectId: null,
+      customProjectName: "a".repeat(CUSTOM_ENTITY_NAME_MAX_LENGTH + 1),
+      clientId: null,
+      customClientName: null,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a custom name at exactly the max length", () => {
+    const result = CreateCalendarEventInputSchema.safeParse({
+      ...BASE,
+      projectId: null,
+      customProjectName: "a".repeat(CUSTOM_ENTITY_NAME_MAX_LENGTH),
+      clientId: null,
+      customClientName: null,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a projectId AND a customProjectName both non-null on the same request", () => {
+    const result = CreateCalendarEventInputSchema.safeParse({
+      ...BASE,
+      projectId: "11111111-1111-4111-8111-111111111111",
+      customProjectName: "Conflicting custom name",
+      clientId: null,
+      customClientName: null,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a clientId AND a customClientName both non-null on the same request", () => {
+    const result = CreateCalendarEventInputSchema.safeParse({
+      ...BASE,
+      projectId: null,
+      customProjectName: null,
+      clientId: "22222222-2222-4222-8222-222222222222",
+      customClientName: "Conflicting custom client",
     });
 
     expect(result.success).toBe(false);
@@ -273,6 +403,44 @@ describe("UpdateCalendarEventInputSchema", () => {
         clientId: null,
       });
     }
+  });
+
+  it("allows setting/clearing customProjectName and customClientName independently, key omitted when untouched", () => {
+    const result = UpdateCalendarEventInputSchema.safeParse({
+      customProjectName: "New custom name",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(Object.keys(result.data)).toEqual(["customProjectName"]);
+      expect(result.data.customProjectName).toBe("New custom name");
+    }
+  });
+
+  it("rejects a PATCH that sends both projectId and customProjectName as non-null", () => {
+    const result = UpdateCalendarEventInputSchema.safeParse({
+      projectId: "11111111-1111-4111-8111-111111111111",
+      customProjectName: "Conflicting",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a PATCH that sends both clientId and customClientName as non-null", () => {
+    const result = UpdateCalendarEventInputSchema.safeParse({
+      clientId: "22222222-2222-4222-8222-222222222222",
+      customClientName: "Conflicting",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("does NOT reject a PATCH that only clears one side (projectId: null alone)", () => {
+    const result = UpdateCalendarEventInputSchema.safeParse({
+      projectId: null,
+    });
+
+    expect(result.success).toBe(true);
   });
 
   it("rejects an unknown extra field", () => {

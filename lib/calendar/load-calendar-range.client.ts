@@ -60,8 +60,10 @@ function narrowManualEventItem(raw: Record<string, unknown>): CalendarItem | nul
   if (!isNonEmptyString(raw.title)) return null;
   if (!isNullableString(raw.notes)) return null;
   if (!isNullableString(raw.projectId)) return null;
+  if (!isNullableString(raw.customProjectName)) return null;
   if (!isNullableString(raw.projectTitle)) return null;
   if (!isNullableString(raw.clientId)) return null;
+  if (!isNullableString(raw.customClientName)) return null;
   if (!isNullableString(raw.clientName)) return null;
 
   // A null time is a valid all-day event; a non-null time must parse as a
@@ -82,8 +84,10 @@ function narrowManualEventItem(raw: Record<string, unknown>): CalendarItem | nul
     title: raw.title,
     notes: raw.notes,
     projectId: raw.projectId,
+    customProjectName: raw.customProjectName,
     projectTitle: raw.projectTitle,
     clientId: raw.clientId,
+    customClientName: raw.customClientName,
     clientName: raw.clientName,
   };
 }

@@ -112,15 +112,15 @@ describe("CalendarPage - authenticated render", () => {
     );
   });
 
-  it("does not render any interactive Calendar controls beyond read-only navigation (no add-event button, no filters)", async () => {
+  it("renders the Add event entry point, but no filters or Unscheduled Projects panel (still out of scope)", async () => {
     const page = await CalendarPage();
     render(page);
 
-    await waitFor(() =>
-      expect(screen.getByText("Nothing scheduled for this day.")).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getAllByRole("grid").length).toBeGreaterThan(0));
 
-    expect(screen.queryByRole("button", { name: /add event/i })).not.toBeInTheDocument();
+    // Phase D's own explicit mandate: a standalone Add event entry point.
+    expect(screen.getByRole("button", { name: "Add event" })).toBeInTheDocument();
+    // Filters and Unscheduled Projects remain explicitly out of scope.
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.queryByText(/unscheduled projects/i)).not.toBeInTheDocument();
   });

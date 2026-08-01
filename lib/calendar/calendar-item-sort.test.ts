@@ -41,8 +41,10 @@ function allDayEvent(id: string, title: string): ManualCalendarEventItem {
     title,
     notes: null,
     projectId: null,
+    customProjectName: null,
     projectTitle: null,
     clientId: null,
+    customClientName: null,
     clientName: null,
   };
 }
@@ -56,8 +58,10 @@ function timedEvent(id: string, title: string, time: string): ManualCalendarEven
     title,
     notes: null,
     projectId: null,
+    customProjectName: null,
     projectTitle: null,
     clientId: null,
+    customClientName: null,
     clientName: null,
   };
 }

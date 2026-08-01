@@ -25,8 +25,10 @@ const VALID_ITEM = {
   title: "Client call",
   notes: "Discuss scope",
   projectId: null,
+  customProjectName: null,
   projectTitle: null,
   clientId: null,
+  customClientName: null,
   clientName: null,
 };
 
@@ -36,7 +38,9 @@ const CREATE_INPUT: CreateCalendarEventInput = {
   eventTime: null,
   notes: null,
   projectId: null,
+  customProjectName: null,
   clientId: null,
+  customClientName: null,
 };
 
 function jsonResponse(body: unknown, init?: { status?: number; ok?: boolean }) {

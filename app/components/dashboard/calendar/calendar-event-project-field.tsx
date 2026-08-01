@@ -1,21 +1,21 @@
 "use client";
 
-import { useId, type ChangeEvent } from "react";
-
 import type { CalendarProjectOption } from "@/lib/calendar/calendar-types";
-import { fieldLabel, inputBase } from "../ui/styles";
-import { dashboardSpacing } from "../ui/tokens";
+import { CalendarEntityCombobox, type CalendarEntityComboboxOption, type CalendarEntityComboboxValue } from "./calendar-entity-combobox";
 
 /*
-  Native <select> wrapper for the Project picker. Purely controlled/presentational
-  -- no fetch, no cache, and no Client-lock business logic (that lives in
+  Thin wrapper around the shared CalendarEntityCombobox for the Project
+  picker -- maps CalendarProjectOption[] (title, isArchived) into the
+  combobox's generic {id, label, suffix} shape and back out again. No
+  fetch, no cache, and no Client-lock business logic (that lives in
   CalendarEventForm, which derives the Client field's locked state from
-  this field's own onChange, §9 of the manual events mapping).
+  this field's own onChange, per the manual events mapping's own §9).
 */
 
 export type CalendarEventProjectFieldProps = {
   value: string | null;
-  onChange: (next: string | null) => void;
+  customValue: string | null;
+  onChange: (next: CalendarEntityComboboxValue) => void;
   options: CalendarProjectOption[];
   disabled?: boolean;
   invalid?: boolean;
@@ -25,6 +25,7 @@ export type CalendarEventProjectFieldProps = {
 
 export function CalendarEventProjectField({
   value,
+  customValue,
   onChange,
   options,
   disabled = false,
@@ -32,34 +33,23 @@ export function CalendarEventProjectField({
   "aria-describedby": ariaDescribedBy,
   id,
 }: CalendarEventProjectFieldProps) {
-  const generatedId = useId();
-  const selectId = id ?? generatedId;
-
-  function handleChange(event: ChangeEvent<HTMLSelectElement>) {
-    onChange(event.target.value === "" ? null : event.target.value);
-  }
+  const comboboxOptions: CalendarEntityComboboxOption[] = options.map((option) => ({
+    id: option.id,
+    label: option.title,
+    suffix: option.isArchived ? "(Archived)" : undefined,
+  }));
 
   return (
-    <div style={{ display: "grid", gap: dashboardSpacing[1] }}>
-      <label htmlFor={selectId} style={fieldLabel}>
-        Project
-      </label>
-      <select
-        id={selectId}
-        value={value ?? ""}
-        onChange={handleChange}
-        disabled={disabled}
-        aria-invalid={invalid || undefined}
-        aria-describedby={ariaDescribedBy}
-        style={{ ...inputBase, minHeight: 44 }}
-      >
-        <option value="">No project</option>
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.isArchived ? `${option.title} (Archived)` : option.title}
-          </option>
-        ))}
-      </select>
-    </div>
+    <CalendarEntityCombobox
+      id={id}
+      label="Project"
+      placeholder="Search or enter a project"
+      value={{ id: value, customName: customValue }}
+      onChange={onChange}
+      options={comboboxOptions}
+      disabled={disabled}
+      invalid={invalid}
+      aria-describedby={ariaDescribedBy}
+    />
   );
 }

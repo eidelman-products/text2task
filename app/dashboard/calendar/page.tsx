@@ -40,7 +40,7 @@ export default async function CalendarPage() {
 
 const pageStyle: CSSProperties = {
   display: "grid",
-  gap: dashboardSpacing[6],
+  gap: dashboardSpacing[7],
 };
 
 const headingStyle: CSSProperties = {
@@ -55,7 +55,7 @@ const headingStyle: CSSProperties = {
 const subtitleStyle: CSSProperties = {
   margin: `${dashboardSpacing[2]}px 0 0`,
   color: dashboardColors.text.muted,
-  fontSize: dashboardTypography.size.md,
+  fontSize: dashboardTypography.size.lg,
   lineHeight: dashboardTypography.lineHeight.relaxed,
   fontWeight: dashboardTypography.weight.medium,
 };

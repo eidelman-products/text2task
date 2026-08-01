@@ -34,10 +34,27 @@ export type ManualCalendarEventItem = {
   title: string;
   notes: string | null;
   projectId: string | null;
-  /** Resolved via join for display; null when no project is linked. */
+  /**
+   * Free-text Project name for an event whose Project doesn't exist as a
+   * real project row. Always null when `projectId` is non-null -- the two
+   * are kept mutually exclusive at every layer (Zod, the repository, and a
+   * database CHECK constraint); see calendar-link-validation.server.ts.
+   */
+  customProjectName: string | null;
+  /**
+   * Resolved display value only: the linked project's title when
+   * `projectId` is set, otherwise `customProjectName`, otherwise null. The
+   * UI renders this directly and never needs to know which of the two
+   * produced it.
+   */
   projectTitle: string | null;
   clientId: string | null;
-  /** Resolved via join for display; null when no client is linked. */
+  /** Free-text Client name; mutually exclusive with `clientId` (see above). */
+  customClientName: string | null;
+  /**
+   * Resolved display value only: the linked client's name when `clientId`
+   * is set, otherwise `customClientName`, otherwise null.
+   */
   clientName: string | null;
 };
 
@@ -103,7 +120,9 @@ export type CreateCalendarEventInput = {
   eventTime: TimeOnly | null;
   notes: string | null;
   projectId: string | null;
+  customProjectName: string | null;
   clientId: string | null;
+  customClientName: string | null;
 };
 
 /**
@@ -120,5 +139,7 @@ export type UpdateCalendarEventInput = {
   eventTime?: TimeOnly | null;
   notes?: string | null;
   projectId?: string | null;
+  customProjectName?: string | null;
   clientId?: string | null;
+  customClientName?: string | null;
 };

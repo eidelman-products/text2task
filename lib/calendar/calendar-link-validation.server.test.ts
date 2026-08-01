@@ -53,7 +53,7 @@ const OWNED_CLIENT_ID = "22222222-2222-4222-8222-222222222222";
 const USER_ID = "user-1";
 
 describe("validateCalendarEventLinks - no links", () => {
-  it("returns ok with both null when neither projectId nor clientId is provided", async () => {
+  it("returns ok with everything null when nothing is provided", async () => {
     const { client } = buildFakeClient({});
 
     const result = await validateCalendarEventLinks({
@@ -63,7 +63,13 @@ describe("validateCalendarEventLinks - no links", () => {
       clientId: null,
     });
 
-    expect(result).toEqual({ ok: true, projectId: null, clientId: null });
+    expect(result).toEqual({
+      ok: true,
+      projectId: null,
+      customProjectName: null,
+      clientId: null,
+      customClientName: null,
+    });
   });
 });
 
@@ -85,7 +91,9 @@ describe("validateCalendarEventLinks - project linking", () => {
     expect(result).toEqual({
       ok: true,
       projectId: OWNED_PROJECT_ID,
+      customProjectName: null,
       clientId: OWNED_CLIENT_ID,
+      customClientName: null,
     });
     expect(calls).toContainEqual({
       table: "projects",
@@ -113,7 +121,13 @@ describe("validateCalendarEventLinks - project linking", () => {
       clientId: OWNED_CLIENT_ID,
     });
 
-    expect(result).toEqual({ ok: true, projectId: OWNED_PROJECT_ID, clientId: null });
+    expect(result).toEqual({
+      ok: true,
+      projectId: OWNED_PROJECT_ID,
+      customProjectName: null,
+      clientId: null,
+      customClientName: null,
+    });
   });
 
   it("rejects a project that does not exist or is not owned by this user (indistinguishable, matching RLS)", async () => {
@@ -189,7 +203,13 @@ describe("validateCalendarEventLinks - client-only linking (no project)", () => 
       clientId: OWNED_CLIENT_ID,
     });
 
-    expect(result).toEqual({ ok: true, projectId: null, clientId: OWNED_CLIENT_ID });
+    expect(result).toEqual({
+      ok: true,
+      projectId: null,
+      customProjectName: null,
+      clientId: OWNED_CLIENT_ID,
+      customClientName: null,
+    });
     expect(calls).toContainEqual({
       table: "clients",
       method: "eq",
@@ -232,5 +252,116 @@ describe("validateCalendarEventLinks - client-only linking (no project)", () => 
     });
 
     expect(calls.some((call) => call.table === "clients")).toBe(false);
+  });
+});
+
+describe("validateCalendarEventLinks - custom Project/Client names", () => {
+  it("passes a custom Project name straight through when no project is linked", async () => {
+    const { client } = buildFakeClient({});
+
+    const result = await validateCalendarEventLinks({
+      supabase: client,
+      userId: USER_ID,
+      projectId: null,
+      customProjectName: "Not yet in Text2Task",
+      clientId: null,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      projectId: null,
+      customProjectName: "Not yet in Text2Task",
+      clientId: null,
+      customClientName: null,
+    });
+  });
+
+  it("passes a custom Client name straight through when no client is linked", async () => {
+    const { client } = buildFakeClient({});
+
+    const result = await validateCalendarEventLinks({
+      supabase: client,
+      userId: USER_ID,
+      projectId: null,
+      clientId: null,
+      customClientName: "Brand new client",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      projectId: null,
+      customProjectName: null,
+      clientId: null,
+      customClientName: "Brand new client",
+    });
+  });
+
+  it("supports a custom Project name alongside an independently-linked Client", async () => {
+    const { client } = buildFakeClient({
+      clients: { data: { id: OWNED_CLIENT_ID } },
+    });
+
+    const result = await validateCalendarEventLinks({
+      supabase: client,
+      userId: USER_ID,
+      projectId: null,
+      customProjectName: "Not yet in Text2Task",
+      clientId: OWNED_CLIENT_ID,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      projectId: null,
+      customProjectName: "Not yet in Text2Task",
+      clientId: OWNED_CLIENT_ID,
+      customClientName: null,
+    });
+  });
+
+  it("forces both custom names to null whenever a project is linked -- a linked project's client is always derived, never custom", async () => {
+    const { client } = buildFakeClient({
+      projects: {
+        data: { id: OWNED_PROJECT_ID, client_id: OWNED_CLIENT_ID, deleted_at: null },
+      },
+    });
+
+    const result = await validateCalendarEventLinks({
+      supabase: client,
+      userId: USER_ID,
+      projectId: OWNED_PROJECT_ID,
+      customProjectName: "This must be discarded",
+      clientId: null,
+      customClientName: "This must also be discarded",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      projectId: OWNED_PROJECT_ID,
+      customProjectName: null,
+      clientId: OWNED_CLIENT_ID,
+      customClientName: null,
+    });
+  });
+
+  it("forces customClientName to null whenever a client is linked", async () => {
+    const { client } = buildFakeClient({
+      clients: { data: { id: OWNED_CLIENT_ID } },
+    });
+
+    const result = await validateCalendarEventLinks({
+      supabase: client,
+      userId: USER_ID,
+      projectId: null,
+      clientId: OWNED_CLIENT_ID,
+      customClientName: "This must be discarded",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      projectId: null,
+      customProjectName: null,
+      clientId: OWNED_CLIENT_ID,
+      customClientName: null,
+    });
   });
 });

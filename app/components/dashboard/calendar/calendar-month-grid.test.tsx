@@ -36,8 +36,10 @@ function event(id: string, date: DateOnly, title: string): CalendarItem {
     title,
     notes: null,
     projectId: null,
+    customProjectName: null,
     projectTitle: null,
     clientId: null,
+    customClientName: null,
     clientName: null,
   };
 }

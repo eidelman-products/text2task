@@ -62,7 +62,9 @@ const VALID_BODY = {
   eventTime: null,
   notes: null,
   projectId: null,
+  customProjectName: null,
   clientId: null,
+  customClientName: null,
 };
 
 beforeEach(() => {
@@ -103,6 +105,20 @@ describe("POST /api/calendar/events - authentication and validation", () => {
 
     expect(response.status).toBe(400);
   });
+
+  it("rejects a request with both a linked projectId and a customProjectName", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+
+    const response = await POST(
+      buildRequest({
+        ...VALID_BODY,
+        projectId: "11111111-1111-4111-8111-111111111111",
+        customProjectName: "Conflicting",
+      })
+    );
+
+    expect(response.status).toBe(400);
+  });
 });
 
 describe("POST /api/calendar/events - success and link validation", () => {
@@ -133,6 +149,34 @@ describe("POST /api/calendar/events - success and link validation", () => {
     expect(response.status).toBe(201);
     expect(body.success).toBe(true);
     expect(body.item.id).toBe("event:e1");
+  });
+
+  it("creates an event with a custom (not-yet-linked) Project name", async () => {
+    tables = {
+      calendar_events: {
+        insert: {
+          data: {
+            id: "e1",
+            title: "Send first draft",
+            event_date: "2027-01-10",
+            event_time: null,
+            notes: null,
+            project_id: null,
+            custom_project_name: "Not yet in Text2Task",
+            client_id: null,
+            custom_client_name: null,
+          },
+        },
+      },
+    };
+
+    const response = await POST(
+      buildRequest({ ...VALID_BODY, customProjectName: "Not yet in Text2Task" })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.item.projectTitle).toBe("Not yet in Text2Task");
   });
 
   it("rejects a projectId that does not belong to the authenticated user", async () => {

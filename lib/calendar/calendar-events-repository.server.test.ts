@@ -103,7 +103,9 @@ describe("normalizeCalendarEventRow", () => {
       event_time: "14:30:00",
       notes: "Bring the invoice.",
       project_id: PROJECT_ID,
+      custom_project_name: null,
       client_id: CLIENT_ID,
+      custom_client_name: null,
       projects: { id: PROJECT_ID, title: "Website redesign" },
       clients: { id: CLIENT_ID, name: "Acme Co" },
     };
@@ -118,8 +120,10 @@ describe("normalizeCalendarEventRow", () => {
       title: "Send first draft",
       notes: "Bring the invoice.",
       projectId: PROJECT_ID,
+      customProjectName: null,
       projectTitle: "Website redesign",
       clientId: CLIENT_ID,
+      customClientName: null,
       clientName: "Acme Co",
     });
   });
@@ -132,7 +136,9 @@ describe("normalizeCalendarEventRow", () => {
       event_time: null,
       notes: null,
       project_id: null,
+      custom_project_name: null,
       client_id: null,
+      custom_client_name: null,
     };
 
     expect(normalizeCalendarEventRow(row)?.time).toBeNull();
@@ -146,7 +152,9 @@ describe("normalizeCalendarEventRow", () => {
       event_time: null,
       notes: null,
       project_id: PROJECT_ID,
+      custom_project_name: null,
       client_id: null,
+      custom_client_name: null,
       projects: [{ id: PROJECT_ID, title: "Website redesign" }],
     };
 
@@ -161,7 +169,9 @@ describe("normalizeCalendarEventRow", () => {
       event_time: null,
       notes: null,
       project_id: null,
+      custom_project_name: null,
       client_id: null,
+      custom_client_name: null,
     };
 
     expect(normalizeCalendarEventRow(row)).toBeNull();
@@ -175,7 +185,9 @@ describe("normalizeCalendarEventRow", () => {
       event_time: "14:30:45", // non-zero seconds -- never produced by our own writes
       notes: null,
       project_id: null,
+      custom_project_name: null,
       client_id: null,
+      custom_client_name: null,
     };
 
     // A malformed event_time must never be silently reinterpreted as
@@ -193,7 +205,9 @@ describe("normalizeCalendarEventRow", () => {
       event_time: "not-a-time",
       notes: null,
       project_id: null,
+      custom_project_name: null,
       client_id: null,
+      custom_client_name: null,
     };
 
     expect(normalizeCalendarEventRow(row)).toBeNull();
@@ -207,7 +221,9 @@ describe("normalizeCalendarEventRow", () => {
       event_time: "14:30:00.000000",
       notes: null,
       project_id: null,
+      custom_project_name: null,
       client_id: null,
+      custom_client_name: null,
     };
 
     expect(normalizeCalendarEventRow(row)?.time).toBe("14:30");
@@ -226,7 +242,9 @@ describe("createCalendarEvent", () => {
             event_time: null,
             notes: null,
             project_id: null,
+            custom_project_name: null,
             client_id: null,
+            custom_client_name: null,
           },
         },
       },
@@ -241,7 +259,9 @@ describe("createCalendarEvent", () => {
         eventTime: null,
         notes: null,
         projectId: null,
+        customProjectName: null,
         clientId: null,
+        customClientName: null,
       },
     });
 
@@ -265,7 +285,9 @@ describe("createCalendarEvent", () => {
         eventTime: null,
         notes: null,
         projectId: PROJECT_ID,
+        customProjectName: null,
         clientId: null,
+        customClientName: null,
       },
     });
 
@@ -289,7 +311,9 @@ describe("createCalendarEvent", () => {
         eventTime: null,
         notes: null,
         projectId: null,
+        customProjectName: null,
         clientId: null,
+        customClientName: null,
       },
     });
 
@@ -326,7 +350,9 @@ describe("updateCalendarEvent", () => {
           data: {
             id: EVENT_ID,
             project_id: null,
+            custom_project_name: null,
             client_id: null,
+            custom_client_name: null,
             deleted_at: "2027-01-01T00:00:00.000Z",
           },
         },
@@ -350,7 +376,7 @@ describe("updateCalendarEvent", () => {
     const { client } = buildFakeClient({
       calendar_events: {
         select: {
-          data: { id: EVENT_ID, project_id: null, client_id: null, deleted_at: null },
+          data: { id: EVENT_ID, project_id: null, custom_project_name: null, client_id: null, custom_client_name: null, deleted_at: null },
         },
         update: {
           data: {
@@ -360,7 +386,9 @@ describe("updateCalendarEvent", () => {
             event_time: null,
             notes: null,
             project_id: null,
+            custom_project_name: null,
             client_id: null,
+            custom_client_name: null,
           },
         },
       },
@@ -386,7 +414,9 @@ describe("updateCalendarEvent", () => {
           data: {
             id: EVENT_ID,
             project_id: PROJECT_ID,
+            custom_project_name: null,
             client_id: CLIENT_ID,
+            custom_client_name: null,
             deleted_at: null,
           },
         },
@@ -398,7 +428,9 @@ describe("updateCalendarEvent", () => {
             event_time: null,
             notes: null,
             project_id: null,
+            custom_project_name: null,
             client_id: null,
+            custom_client_name: null,
           },
         },
       },
@@ -426,7 +458,9 @@ describe("updateCalendarEvent", () => {
       event_time: null,
       notes: null,
       project_id: null,
+      custom_project_name: null,
       client_id: null,
+      custom_client_name: null,
     });
   });
 
@@ -437,7 +471,9 @@ describe("updateCalendarEvent", () => {
           data: {
             id: EVENT_ID,
             project_id: PROJECT_ID,
+            custom_project_name: null,
             client_id: CLIENT_ID,
+            custom_client_name: null,
             deleted_at: null,
           },
         },
@@ -449,7 +485,9 @@ describe("updateCalendarEvent", () => {
             event_time: null,
             notes: null,
             project_id: PROJECT_ID,
+            custom_project_name: null,
             client_id: CLIENT_ID,
+            custom_client_name: null,
           },
         },
       },
@@ -474,7 +512,7 @@ describe("updateCalendarEvent", () => {
     const { client } = buildFakeClient({
       calendar_events: {
         select: {
-          data: { id: EVENT_ID, project_id: null, client_id: null, deleted_at: null },
+          data: { id: EVENT_ID, project_id: null, custom_project_name: null, client_id: null, custom_client_name: null, deleted_at: null },
         },
       },
       projects: { select: { data: null } },
@@ -589,7 +627,9 @@ describe("historical client-link preservation (Correction 1 regression suite)", 
             event_time: null,
             notes: null,
             project_id: PROJECT_ID,
+            custom_project_name: null,
             client_id: ORIGINAL_CLIENT_ID,
+            custom_client_name: null,
           },
         },
       },
@@ -604,7 +644,9 @@ describe("historical client-link preservation (Correction 1 regression suite)", 
         eventTime: null,
         notes: null,
         projectId: PROJECT_ID,
+        customProjectName: null,
         clientId: null,
+        customClientName: null,
       },
     });
 
@@ -621,7 +663,9 @@ describe("historical client-link preservation (Correction 1 regression suite)", 
           data: {
             id: EVENT_ID,
             project_id: PROJECT_ID,
+            custom_project_name: null,
             client_id: ORIGINAL_CLIENT_ID,
+            custom_client_name: null,
             deleted_at: null,
           },
         },
@@ -633,7 +677,9 @@ describe("historical client-link preservation (Correction 1 regression suite)", 
             event_time: "09:00:00",
             notes: "Updated notes",
             project_id: PROJECT_ID,
+            custom_project_name: null,
             client_id: ORIGINAL_CLIENT_ID,
+            custom_client_name: null,
           },
         },
       },
@@ -706,7 +752,9 @@ describe("historical client-link preservation (Correction 1 regression suite)", 
           data: {
             id: EVENT_ID,
             project_id: PROJECT_ID,
+            custom_project_name: null,
             client_id: ORIGINAL_CLIENT_ID,
+            custom_client_name: null,
             deleted_at: null,
           },
         },
@@ -718,7 +766,9 @@ describe("historical client-link preservation (Correction 1 regression suite)", 
             event_time: null,
             notes: "Attach the final invoice.",
             project_id: PROJECT_ID,
+            custom_project_name: null,
             client_id: ORIGINAL_CLIENT_ID,
+            custom_client_name: null,
           },
         },
       },
@@ -751,7 +801,9 @@ describe("historical client-link preservation (Correction 1 regression suite)", 
           data: {
             id: EVENT_ID,
             project_id: PROJECT_ID,
+            custom_project_name: null,
             client_id: ORIGINAL_CLIENT_ID,
+            custom_client_name: null,
             deleted_at: null,
           },
         },
@@ -763,7 +815,9 @@ describe("historical client-link preservation (Correction 1 regression suite)", 
             event_time: null,
             notes: null,
             project_id: OTHER_PROJECT_ID,
+            custom_project_name: null,
             client_id: NEW_PROJECT_CLIENT_ID,
+            custom_client_name: null,
           },
         },
       },
@@ -795,7 +849,9 @@ describe("historical client-link preservation (Correction 1 regression suite)", 
           data: {
             id: EVENT_ID,
             project_id: PROJECT_ID,
+            custom_project_name: null,
             client_id: ORIGINAL_CLIENT_ID,
+            custom_client_name: null,
             deleted_at: null,
           },
         },
@@ -807,7 +863,9 @@ describe("historical client-link preservation (Correction 1 regression suite)", 
             event_time: null,
             notes: null,
             project_id: PROJECT_ID,
+            custom_project_name: null,
             client_id: ORIGINAL_CLIENT_ID,
+            custom_client_name: null,
           },
         },
       },
@@ -839,7 +897,9 @@ describe("historical client-link preservation (Correction 1 regression suite)", 
           data: {
             id: EVENT_ID,
             project_id: PROJECT_ID,
+            custom_project_name: null,
             client_id: ORIGINAL_CLIENT_ID,
+            custom_client_name: null,
             deleted_at: null,
           },
         },
@@ -851,7 +911,9 @@ describe("historical client-link preservation (Correction 1 regression suite)", 
             event_time: null,
             notes: null,
             project_id: null,
+            custom_project_name: null,
             client_id: INDEPENDENT_CLIENT_ID,
+            custom_client_name: null,
           },
         },
       },
@@ -869,5 +931,188 @@ describe("historical client-link preservation (Correction 1 regression suite)", 
       expect(result.data.projectId).toBeNull();
       expect(result.data.clientId).toBe(INDEPENDENT_CLIENT_ID);
     }
+  });
+});
+
+describe("custom Project/Client names", () => {
+  it("createCalendarEvent passes a custom Project name through to the insert row and the normalized item", async () => {
+    const { client, calls } = buildFakeClient({
+      calendar_events: {
+        insert: {
+          data: {
+            id: EVENT_ID,
+            title: "Team check-in",
+            event_date: "2027-01-10",
+            event_time: null,
+            notes: null,
+            project_id: null,
+            custom_project_name: "Not yet in Text2Task",
+            client_id: null,
+            custom_client_name: null,
+          },
+        },
+      },
+    });
+
+    const result = await createCalendarEvent({
+      supabase: client,
+      userId: USER_ID,
+      input: {
+        title: "Team check-in",
+        eventDate: toDateOnly("2027-01-10"),
+        eventTime: null,
+        notes: null,
+        projectId: null,
+        customProjectName: "Not yet in Text2Task",
+        clientId: null,
+        customClientName: null,
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.customProjectName).toBe("Not yet in Text2Task");
+      expect(result.data.projectTitle).toBe("Not yet in Text2Task");
+    }
+
+    const insertCall = calls.find((call) => call.table === "calendar_events" && call.method === "insert");
+    const insertedRow = insertCall?.args[0] as Record<string, unknown>;
+    expect(insertedRow.custom_project_name).toBe("Not yet in Text2Task");
+  });
+
+  it("updateCalendarEvent re-validates and writes all four relationship columns when only customProjectName changes", async () => {
+    const { client, calls } = buildFakeClient({
+      calendar_events: {
+        select: {
+          data: {
+            id: EVENT_ID,
+            project_id: null,
+            custom_project_name: null,
+            client_id: null,
+            custom_client_name: null,
+            deleted_at: null,
+          },
+        },
+        update: {
+          data: {
+            id: EVENT_ID,
+            title: "Team check-in",
+            event_date: "2027-01-10",
+            event_time: null,
+            notes: null,
+            project_id: null,
+            custom_project_name: "Now a custom name",
+            client_id: null,
+            custom_client_name: null,
+          },
+        },
+      },
+    });
+
+    const result = await updateCalendarEvent({
+      supabase: client,
+      userId: USER_ID,
+      eventId: EVENT_ID,
+      input: { customProjectName: "Now a custom name" },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.customProjectName).toBe("Now a custom name");
+    }
+
+    const updateCall = calls.find((call) => call.table === "calendar_events" && call.method === "update");
+    const writtenRow = updateCall?.args[0] as Record<string, unknown>;
+    expect(writtenRow.custom_project_name).toBe("Now a custom name");
+    expect("project_id" in writtenRow).toBe(true);
+    expect("client_id" in writtenRow).toBe(true);
+  });
+
+  it("updateCalendarEvent does not touch any of the four relationship columns when none is in the input", async () => {
+    const { client, calls } = buildFakeClient({
+      calendar_events: {
+        select: {
+          data: {
+            id: EVENT_ID,
+            project_id: null,
+            custom_project_name: "Existing custom name",
+            client_id: null,
+            custom_client_name: null,
+            deleted_at: null,
+          },
+        },
+        update: {
+          data: {
+            id: EVENT_ID,
+            title: "Updated title",
+            event_date: "2027-01-10",
+            event_time: null,
+            notes: null,
+            project_id: null,
+            custom_project_name: "Existing custom name",
+            client_id: null,
+            custom_client_name: null,
+          },
+        },
+      },
+    });
+
+    await updateCalendarEvent({
+      supabase: client,
+      userId: USER_ID,
+      eventId: EVENT_ID,
+      input: { title: "Updated title" },
+    });
+
+    const updateCall = calls.find((call) => call.table === "calendar_events" && call.method === "update");
+    const writtenRow = updateCall?.args[0] as Record<string, unknown>;
+    expect("project_id" in writtenRow).toBe(false);
+    expect("custom_project_name" in writtenRow).toBe(false);
+    expect("client_id" in writtenRow).toBe(false);
+    expect("custom_client_name" in writtenRow).toBe(false);
+  });
+
+  it("normalizeCalendarEventRow resolves projectTitle/clientName from custom names when no relation is linked", () => {
+    const row: CalendarEventRelationRow = {
+      id: EVENT_ID,
+      title: "Kickoff call",
+      event_date: "2027-01-10",
+      event_time: null,
+      notes: null,
+      project_id: null,
+      custom_project_name: "Not yet in Text2Task",
+      client_id: null,
+      custom_client_name: "Also not yet in Text2Task",
+    };
+
+    const item = normalizeCalendarEventRow(row);
+
+    expect(item?.projectTitle).toBe("Not yet in Text2Task");
+    expect(item?.clientName).toBe("Also not yet in Text2Task");
+    expect(item?.customProjectName).toBe("Not yet in Text2Task");
+    expect(item?.customClientName).toBe("Also not yet in Text2Task");
+  });
+
+  it("normalizeCalendarEventRow prefers the linked relation's title/name over a stale custom name", () => {
+    const row: CalendarEventRelationRow = {
+      id: EVENT_ID,
+      title: "Kickoff call",
+      event_date: "2027-01-10",
+      event_time: null,
+      notes: null,
+      project_id: PROJECT_ID,
+      custom_project_name: null,
+      client_id: CLIENT_ID,
+      custom_client_name: null,
+      projects: { id: PROJECT_ID, title: "Website redesign" },
+      clients: { id: CLIENT_ID, name: "Acme Co" },
+    };
+
+    const item = normalizeCalendarEventRow(row);
+
+    expect(item?.projectTitle).toBe("Website redesign");
+    expect(item?.clientName).toBe("Acme Co");
+    expect(item?.customProjectName).toBeNull();
+    expect(item?.customClientName).toBeNull();
   });
 });

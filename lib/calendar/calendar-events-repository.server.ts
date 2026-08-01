@@ -57,7 +57,9 @@ export const CALENDAR_EVENT_SELECT = `
   event_time,
   notes,
   project_id,
+  custom_project_name,
   client_id,
+  custom_client_name,
   deleted_at,
   projects:projects ( id, title ),
   clients:clients ( id, name )
@@ -73,7 +75,9 @@ export type CalendarEventRelationRow = {
   event_time: string | null;
   notes: string | null;
   project_id: string | null;
+  custom_project_name: string | null;
   client_id: string | null;
+  custom_client_name: string | null;
   projects?: ProjectRelationRow | ProjectRelationRow[] | null;
   clients?: ClientRelationRow | ClientRelationRow[] | null;
 };
@@ -118,9 +122,11 @@ export function normalizeCalendarEventRow(
     title: row.title,
     notes: row.notes,
     projectId: row.project_id,
-    projectTitle: project?.title ?? null,
+    customProjectName: row.custom_project_name,
+    projectTitle: project?.title ?? row.custom_project_name ?? null,
     clientId: row.client_id,
-    clientName: client?.name ?? null,
+    customClientName: row.custom_client_name,
+    clientName: client?.name ?? row.custom_client_name ?? null,
   };
 }
 
@@ -146,7 +152,9 @@ export async function createCalendarEvent<Client>({
     supabase,
     userId,
     projectId: input.projectId,
+    customProjectName: input.customProjectName,
     clientId: input.clientId,
+    customClientName: input.customClientName,
   });
 
   if (!linkResult.ok) {
@@ -162,7 +170,9 @@ export async function createCalendarEvent<Client>({
       event_time: input.eventTime,
       notes: input.notes,
       project_id: linkResult.projectId,
+      custom_project_name: linkResult.customProjectName,
       client_id: linkResult.clientId,
+      custom_client_name: linkResult.customClientName,
     })
     .select(CALENDAR_EVENT_SELECT)
     .single();
@@ -198,7 +208,7 @@ export async function updateCalendarEvent<Client>({
 
   const { data: existingRaw, error: loadError } = await client
     .from("calendar_events")
-    .select("id, project_id, client_id, deleted_at")
+    .select("id, project_id, custom_project_name, client_id, custom_client_name, deleted_at")
     .eq("id", eventId)
     .eq("user_id", userId)
     .single();
@@ -210,7 +220,9 @@ export async function updateCalendarEvent<Client>({
   const existing = existingRaw as {
     id: string;
     project_id: string | null;
+    custom_project_name: string | null;
     client_id: string | null;
+    custom_client_name: string | null;
     deleted_at: string | null;
   };
 
@@ -218,28 +230,43 @@ export async function updateCalendarEvent<Client>({
     return toSingleErrorResult(404, "Calendar event not found.");
   }
 
-  // Only re-validate/re-derive project_id/client_id when the patch actually
-  // touches one of them -- fields left untouched keep their already-valid
-  // existing value, and the write payload below never includes
-  // project_id/client_id at all in that case. The database trigger
-  // (enforce_calendar_event_relationship_integrity) mirrors this exactly:
-  // it only re-validates/re-normalizes when project_id or client_id is
-  // actually changing, so an update that never sets those columns leaves
-  // the row's relationship untouched at both layers -- neither layer will
-  // silently rewrite client_id just because the linked project's own
-  // client changed since this event was created.
+  // Only re-validate/re-derive the relationship fields when the patch
+  // actually touches at least one of the four -- fields left untouched keep
+  // their already-valid existing value, and the write payload below never
+  // includes any of the four columns at all in that case. The database
+  // trigger (enforce_calendar_event_relationship_integrity) mirrors this
+  // exactly: it only re-validates/re-normalizes when project_id or
+  // client_id is actually changing, so an update that never sets those
+  // columns leaves the row's relationship (including both custom names)
+  // untouched at both layers -- neither layer will silently rewrite
+  // client_id just because the linked project's own client changed since
+  // this event was created.
   let projectIdForWrite = existing.project_id;
+  let customProjectNameForWrite = existing.custom_project_name;
   let clientIdForWrite = existing.client_id;
+  let customClientNameForWrite = existing.custom_client_name;
 
-  if ("projectId" in input || "clientId" in input) {
+  const touchesRelationship =
+    "projectId" in input ||
+    "customProjectName" in input ||
+    "clientId" in input ||
+    "customClientName" in input;
+
+  if (touchesRelationship) {
     const nextProjectId = "projectId" in input ? input.projectId! : existing.project_id;
+    const nextCustomProjectName =
+      "customProjectName" in input ? input.customProjectName! : existing.custom_project_name;
     const nextClientId = "clientId" in input ? input.clientId! : existing.client_id;
+    const nextCustomClientName =
+      "customClientName" in input ? input.customClientName! : existing.custom_client_name;
 
     const linkResult = await validateCalendarEventLinks({
       supabase,
       userId,
       projectId: nextProjectId,
+      customProjectName: nextCustomProjectName,
       clientId: nextClientId,
+      customClientName: nextCustomClientName,
     });
 
     if (!linkResult.ok) {
@@ -247,7 +274,9 @@ export async function updateCalendarEvent<Client>({
     }
 
     projectIdForWrite = linkResult.projectId;
+    customProjectNameForWrite = linkResult.customProjectName;
     clientIdForWrite = linkResult.clientId;
+    customClientNameForWrite = linkResult.customClientName;
   }
 
   const updates: Record<string, unknown> = {};
@@ -256,9 +285,11 @@ export async function updateCalendarEvent<Client>({
   if ("eventDate" in input) updates.event_date = input.eventDate;
   if ("eventTime" in input) updates.event_time = input.eventTime;
   if ("notes" in input) updates.notes = input.notes;
-  if ("projectId" in input || "clientId" in input) {
+  if (touchesRelationship) {
     updates.project_id = projectIdForWrite;
+    updates.custom_project_name = customProjectNameForWrite;
     updates.client_id = clientIdForWrite;
+    updates.custom_client_name = customClientNameForWrite;
   }
 
   const { data, error } = await client

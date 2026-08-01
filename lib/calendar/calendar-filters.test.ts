@@ -39,8 +39,10 @@ function manualEvent(
     time: null,
     notes: null,
     projectId: null,
+    customProjectName: null,
     projectTitle: null,
     clientId: null,
+    customClientName: null,
     clientName: null,
     ...overrides,
   };

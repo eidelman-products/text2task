@@ -45,9 +45,22 @@ const SAMPLE_EVENT: ManualCalendarEventItem = {
   title: "Client call",
   notes: "Some notes",
   projectId: P1,
+  customProjectName: null,
   projectTitle: "Website redesign",
   clientId: C1,
+  customClientName: null,
   clientName: "Acme",
+};
+
+/** An event whose Project/Client are both custom (not-yet-linked) names, for the "untouched custom / custom -> linked" edit-mode tests. */
+const SAMPLE_EVENT_CUSTOM: ManualCalendarEventItem = {
+  ...SAMPLE_EVENT,
+  projectId: null,
+  customProjectName: "Not Yet In Text2Task",
+  projectTitle: "Not Yet In Text2Task",
+  clientId: null,
+  customClientName: "Also Not Yet In Text2Task",
+  clientName: "Also Not Yet In Text2Task",
 };
 
 function jsonResponse(body: unknown, init?: { status?: number; ok?: boolean }) {
@@ -100,6 +113,25 @@ function lastFetchBody(fetchMock: ReturnType<typeof vi.fn>): Record<string, unkn
   return JSON.parse(call[1].body);
 }
 
+/** Opens the combobox and clicks a matching suggestion -- links an existing Project/Client. */
+async function selectExisting(user: ReturnType<typeof userEvent.setup>, label: string, optionName: string) {
+  await user.click(screen.getByLabelText(label));
+  await user.click(screen.getByRole("option", { name: optionName }));
+}
+
+/** Types a name with no matching suggestion, then blurs -- commits it as a custom Project/Client name. */
+async function typeCustom(user: ReturnType<typeof userEvent.setup>, label: string, text: string) {
+  const input = screen.getByLabelText(label);
+  await user.clear(input);
+  await user.type(input, text);
+  await user.tab();
+}
+
+/** Clicks the field's own clear (x) button -- empties both the linked id and the custom name. */
+async function clearField(user: ReturnType<typeof userEvent.setup>, label: string) {
+  await user.click(screen.getByRole("button", { name: `Clear ${label}` }));
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -139,7 +171,7 @@ describe("CalendarEventForm — validation", () => {
 });
 
 describe("CalendarEventForm — create request body", () => {
-  it("uses exactly {title, eventDate, eventTime, notes, projectId, clientId}, never date/time", async () => {
+  it("uses exactly {title, eventDate, eventTime, notes, projectId, customProjectName, clientId, customClientName}, never date/time", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockResolvedValue(itemResponse());
     vi.stubGlobal("fetch", fetchMock);
@@ -151,13 +183,13 @@ describe("CalendarEventForm — create request body", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const body = lastFetchBody(fetchMock);
     expect(Object.keys(body).sort()).toEqual(
-      ["clientId", "eventDate", "eventTime", "notes", "projectId", "title"].sort()
+      ["clientId", "customClientName", "customProjectName", "eventDate", "eventTime", "notes", "projectId", "title"].sort()
     );
     expect(body.date).toBeUndefined();
     expect(body.time).toBeUndefined();
   });
 
-  it("sends explicit null for empty time and empty notes", async () => {
+  it("sends explicit null for empty time, notes, and both custom names", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockResolvedValue(itemResponse());
     vi.stubGlobal("fetch", fetchMock);
@@ -170,6 +202,8 @@ describe("CalendarEventForm — create request body", () => {
     const body = lastFetchBody(fetchMock);
     expect(body.eventTime).toBeNull();
     expect(body.notes).toBeNull();
+    expect(body.customProjectName).toBeNull();
+    expect(body.customClientName).toBeNull();
   });
 
   it("calls onSaved and onClose on success", async () => {
@@ -208,6 +242,132 @@ describe("CalendarEventForm — create request body", () => {
     await waitFor(() => expect(screen.getByText("Linked project not found.")).toBeInTheDocument());
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Title")).toHaveValue("Team sync");
+  });
+});
+
+describe("CalendarEventForm — create: Project/Client existing vs. custom", () => {
+  it("existing Project only: projectId set, both custom names null, clientId derived", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(itemResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FormHarness mode="create" defaultDate={toDateOnly("2027-02-01")} />);
+    await user.type(screen.getByLabelText("Title"), "Team sync");
+    await selectExisting(user, "Project", "Website redesign");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = lastFetchBody(fetchMock);
+    expect(body.projectId).toBe(P1);
+    expect(body.customProjectName).toBeNull();
+    expect(body.clientId).toBe(C1);
+    expect(body.customClientName).toBeNull();
+  });
+
+  it("custom Project only: customProjectName set, projectId null, Client remains independently empty", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(itemResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FormHarness mode="create" defaultDate={toDateOnly("2027-02-01")} />);
+    await user.type(screen.getByLabelText("Title"), "Team sync");
+    await typeCustom(user, "Project", "Not yet in Text2Task");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = lastFetchBody(fetchMock);
+    expect(body.projectId).toBeNull();
+    expect(body.customProjectName).toBe("Not yet in Text2Task");
+    expect(body.clientId).toBeNull();
+    expect(body.customClientName).toBeNull();
+  });
+
+  it("existing Client only: clientId set, customClientName null", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(itemResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FormHarness mode="create" defaultDate={toDateOnly("2027-02-01")} />);
+    await user.type(screen.getByLabelText("Title"), "Team sync");
+    await selectExisting(user, "Client", "Globex");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = lastFetchBody(fetchMock);
+    expect(body.projectId).toBeNull();
+    expect(body.clientId).toBe(C2);
+    expect(body.customClientName).toBeNull();
+  });
+
+  it("custom Client only: customClientName set, clientId null", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(itemResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FormHarness mode="create" defaultDate={toDateOnly("2027-02-01")} />);
+    await user.type(screen.getByLabelText("Title"), "Team sync");
+    await typeCustom(user, "Client", "Brand new client");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = lastFetchBody(fetchMock);
+    expect(body.clientId).toBeNull();
+    expect(body.customClientName).toBe("Brand new client");
+  });
+
+  it("custom Project + existing Client: both independently set", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(itemResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FormHarness mode="create" defaultDate={toDateOnly("2027-02-01")} />);
+    await user.type(screen.getByLabelText("Title"), "Team sync");
+    await typeCustom(user, "Project", "Not yet in Text2Task");
+    await selectExisting(user, "Client", "Globex");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = lastFetchBody(fetchMock);
+    expect(body.projectId).toBeNull();
+    expect(body.customProjectName).toBe("Not yet in Text2Task");
+    expect(body.clientId).toBe(C2);
+    expect(body.customClientName).toBeNull();
+  });
+
+  it("custom Project + custom Client: both independently custom", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(itemResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FormHarness mode="create" defaultDate={toDateOnly("2027-02-01")} />);
+    await user.type(screen.getByLabelText("Title"), "Team sync");
+    await typeCustom(user, "Project", "Custom project");
+    await typeCustom(user, "Client", "Custom client");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = lastFetchBody(fetchMock);
+    expect(body.projectId).toBeNull();
+    expect(body.customProjectName).toBe("Custom project");
+    expect(body.clientId).toBeNull();
+    expect(body.customClientName).toBe("Custom client");
+  });
+
+  it("all empty: every relationship field is explicitly null", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(itemResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FormHarness mode="create" defaultDate={toDateOnly("2027-02-01")} />);
+    await user.type(screen.getByLabelText("Title"), "Team sync");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = lastFetchBody(fetchMock);
+    expect(body.projectId).toBeNull();
+    expect(body.customProjectName).toBeNull();
+    expect(body.clientId).toBeNull();
+    expect(body.customClientName).toBeNull();
   });
 });
 
@@ -281,26 +441,26 @@ describe("CalendarEventForm — Project/Client relationship rules", () => {
     const user = userEvent.setup();
     render(<FormHarness mode="create" defaultDate={toDateOnly("2027-02-01")} />);
 
-    await user.selectOptions(screen.getByLabelText("Project"), P1);
+    await selectExisting(user, "Project", "Website redesign");
 
-    const client = screen.getByLabelText("Client") as HTMLSelectElement;
+    const client = screen.getByLabelText("Client");
     expect(client).toBeDisabled();
-    expect(client).toHaveDisplayValue("Acme");
+    expect(client).toHaveValue("Acme");
   });
 
   it("2. create: clearing project unlocks Client and retains its value", async () => {
     const user = userEvent.setup();
     render(<FormHarness mode="create" defaultDate={toDateOnly("2027-02-01")} />);
 
-    await user.selectOptions(screen.getByLabelText("Project"), P1);
-    await user.selectOptions(screen.getByLabelText("Project"), "");
+    await selectExisting(user, "Project", "Website redesign");
+    await clearField(user, "Project");
 
-    const client = screen.getByLabelText("Client") as HTMLSelectElement;
+    const client = screen.getByLabelText("Client");
     expect(client).not.toBeDisabled();
-    expect(client).toHaveDisplayValue("Acme");
+    expect(client).toHaveValue("Acme");
   });
 
-  it("3. edit: untouched relationship omits both projectId and clientId", async () => {
+  it("3. edit: untouched relationship omits all four relationship keys", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockResolvedValue(itemResponse());
     vi.stubGlobal("fetch", fetchMock);
@@ -316,8 +476,30 @@ describe("CalendarEventForm — Project/Client relationship rules", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const body = lastFetchBody(fetchMock);
     expect(body).not.toHaveProperty("projectId");
+    expect(body).not.toHaveProperty("customProjectName");
     expect(body).not.toHaveProperty("clientId");
+    expect(body).not.toHaveProperty("customClientName");
     expect(body.notes).toBe("Some notes updated");
+  });
+
+  it("3b. edit: an event with custom Project/Client, untouched, also omits all four keys", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(itemResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FormHarness mode="edit" event={SAMPLE_EVENT_CUSTOM} />);
+    expect(screen.getByLabelText("Project")).toHaveValue("Not Yet In Text2Task");
+    expect(screen.getByLabelText("Client")).toHaveValue("Also Not Yet In Text2Task");
+
+    await user.type(screen.getByLabelText("Notes"), " updated");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = lastFetchBody(fetchMock);
+    expect(body).not.toHaveProperty("projectId");
+    expect(body).not.toHaveProperty("customProjectName");
+    expect(body).not.toHaveProperty("clientId");
+    expect(body).not.toHaveProperty("customClientName");
   });
 
   it("4. edit: a genuinely different project sends projectId only", async () => {
@@ -326,46 +508,52 @@ describe("CalendarEventForm — Project/Client relationship rules", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<FormHarness mode="edit" event={SAMPLE_EVENT} />);
-    await user.selectOptions(screen.getByLabelText("Project"), P2);
+    await selectExisting(user, "Project", "No-client project");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const body = lastFetchBody(fetchMock);
     expect(body.projectId).toBe(P2);
+    expect(body).not.toHaveProperty("customProjectName");
     expect(body).not.toHaveProperty("clientId");
+    expect(body).not.toHaveProperty("customClientName");
   });
 
-  it("5. edit: reselecting the already-selected project is a no-op (both keys omitted)", async () => {
+  it("5. edit: reselecting the already-selected project is a no-op (all four keys omitted)", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockResolvedValue(itemResponse());
     vi.stubGlobal("fetch", fetchMock);
 
     render(<FormHarness mode="edit" event={SAMPLE_EVENT} />);
-    await user.selectOptions(screen.getByLabelText("Project"), P1);
+    await selectExisting(user, "Project", "Website redesign");
     await user.type(screen.getByLabelText("Notes"), " updated");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const body = lastFetchBody(fetchMock);
     expect(body).not.toHaveProperty("projectId");
+    expect(body).not.toHaveProperty("customProjectName");
     expect(body).not.toHaveProperty("clientId");
+    expect(body).not.toHaveProperty("customClientName");
   });
 
-  it("6. edit: clear then reselect the original project omits both keys", async () => {
+  it("6. edit: clear then reselect the original project omits all four keys", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockResolvedValue(itemResponse());
     vi.stubGlobal("fetch", fetchMock);
 
     render(<FormHarness mode="edit" event={SAMPLE_EVENT} />);
-    await user.selectOptions(screen.getByLabelText("Project"), "");
-    await user.selectOptions(screen.getByLabelText("Project"), P1);
+    await clearField(user, "Project");
+    await selectExisting(user, "Project", "Website redesign");
     await user.type(screen.getByLabelText("Notes"), " updated");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const body = lastFetchBody(fetchMock);
     expect(body).not.toHaveProperty("projectId");
+    expect(body).not.toHaveProperty("customProjectName");
     expect(body).not.toHaveProperty("clientId");
+    expect(body).not.toHaveProperty("customClientName");
   });
 
   it("7. edit: clear project, leave Client untouched -> projectId: null only", async () => {
@@ -374,23 +562,25 @@ describe("CalendarEventForm — Project/Client relationship rules", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<FormHarness mode="edit" event={SAMPLE_EVENT} />);
-    await user.selectOptions(screen.getByLabelText("Project"), "");
+    await clearField(user, "Project");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const body = lastFetchBody(fetchMock);
-    expect(body).toEqual(expect.objectContaining({ projectId: null }));
+    expect(body.projectId).toBeNull();
+    expect(body).not.toHaveProperty("customProjectName");
     expect(body).not.toHaveProperty("clientId");
+    expect(body).not.toHaveProperty("customClientName");
   });
 
-  it("8. edit: clear project, then change Client -> both keys included", async () => {
+  it("8. edit: clear project, then change Client -> project and client keys included", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockResolvedValue(itemResponse());
     vi.stubGlobal("fetch", fetchMock);
 
     render(<FormHarness mode="edit" event={SAMPLE_EVENT} />);
-    await user.selectOptions(screen.getByLabelText("Project"), "");
-    await user.selectOptions(screen.getByLabelText("Client"), C2);
+    await clearField(user, "Project");
+    await selectExisting(user, "Client", "Globex");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -405,15 +595,126 @@ describe("CalendarEventForm — Project/Client relationship rules", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<FormHarness mode="edit" event={SAMPLE_EVENT} />);
-    await user.selectOptions(screen.getByLabelText("Project"), "");
-    await user.selectOptions(screen.getByLabelText("Client"), C2);
-    await user.selectOptions(screen.getByLabelText("Project"), P2);
+    await clearField(user, "Project");
+    await selectExisting(user, "Client", "Globex");
+    await selectExisting(user, "Project", "No-client project");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const body = lastFetchBody(fetchMock);
     expect(body.projectId).toBe(P2);
     expect(body).not.toHaveProperty("clientId");
+  });
+
+  it("10. edit: linked Project -> custom Project name clears projectId deterministically", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(itemResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FormHarness mode="edit" event={SAMPLE_EVENT} />);
+    await typeCustom(user, "Project", "Now a custom name");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = lastFetchBody(fetchMock);
+    expect(body.projectId).toBeNull();
+    expect(body.customProjectName).toBe("Now a custom name");
+  });
+
+  it("11. edit: custom Project -> linked Project clears customProjectName deterministically", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(itemResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FormHarness mode="edit" event={SAMPLE_EVENT_CUSTOM} />);
+    await selectExisting(user, "Project", "Website redesign");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = lastFetchBody(fetchMock);
+    expect(body.projectId).toBe(P1);
+    expect(body.customProjectName).toBeNull();
+  });
+
+  it("12. edit: clearing a custom Project name sends only customProjectName: null (projectId was already null, so it stays omitted)", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(itemResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FormHarness mode="edit" event={SAMPLE_EVENT_CUSTOM} />);
+    await clearField(user, "Project");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = lastFetchBody(fetchMock);
+    // projectId was null in both the initial event and the cleared state --
+    // genuinely unchanged, so it is correctly omitted rather than resent.
+    expect(body).not.toHaveProperty("projectId");
+    expect(body.customProjectName).toBeNull();
+  });
+
+  it("13. edit: linked Client -> custom Client name clears clientId deterministically", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(itemResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    // Start from an event with no linked Project (Client independently
+    // editable) so this exercises the Client pair in isolation.
+    const noProjectEvent = { ...SAMPLE_EVENT, projectId: null, projectTitle: null };
+    render(<FormHarness mode="edit" event={noProjectEvent} />);
+    await typeCustom(user, "Client", "Now a custom client");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = lastFetchBody(fetchMock);
+    expect(body.clientId).toBeNull();
+    expect(body.customClientName).toBe("Now a custom client");
+  });
+
+  it("14. edit: custom Client -> linked Client clears customClientName deterministically", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(itemResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const customClientEvent = {
+      ...SAMPLE_EVENT,
+      projectId: null,
+      projectTitle: null,
+      clientId: null,
+      customClientName: "Old custom client",
+      clientName: "Old custom client",
+    };
+    render(<FormHarness mode="edit" event={customClientEvent} />);
+    await selectExisting(user, "Client", "Globex");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = lastFetchBody(fetchMock);
+    expect(body.clientId).toBe(C2);
+    expect(body.customClientName).toBeNull();
+  });
+
+  it("15. a linked Project always locks Client, even one already showing a custom name", async () => {
+    const user = userEvent.setup();
+    render(<FormHarness mode="edit" event={SAMPLE_EVENT_CUSTOM} />);
+
+    await selectExisting(user, "Project", "Website redesign");
+
+    const client = screen.getByLabelText("Client");
+    expect(client).toBeDisabled();
+    expect(client).toHaveValue("Acme");
+  });
+
+  it("16. a custom Project keeps Client unlocked and independently editable", async () => {
+    const user = userEvent.setup();
+    render(<FormHarness mode="create" defaultDate={toDateOnly("2027-02-01")} />);
+
+    await typeCustom(user, "Project", "Not yet in Text2Task");
+
+    const client = screen.getByLabelText("Client");
+    expect(client).not.toBeDisabled();
+    await selectExisting(user, "Client", "Globex");
+    expect(client).toHaveValue("Globex");
   });
 });
 

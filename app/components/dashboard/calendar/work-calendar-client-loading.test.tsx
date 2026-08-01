@@ -5,75 +5,25 @@ import userEvent from "@testing-library/user-event";
 import { todayDateOnly } from "@/lib/tasks/date-only";
 import { getCalendarGridRange } from "@/lib/calendar/calendar-grid";
 import { WorkCalendarClient } from "./work-calendar-client";
+import {
+  captureUnhandledRejections,
+  createAbortAwareFetchMock,
+  defer,
+  jsonResponse,
+  readyBody,
+  waitForReady,
+} from "./work-calendar-client.test-helpers";
 
-type Deferred<T> = { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void };
-
-function defer<T>(): Deferred<T> {
-  let resolve!: (value: T) => void;
-  let reject!: (error: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-}
-
-function jsonResponse(body: unknown, init?: { ok?: boolean; status?: number }) {
-  return {
-    ok: init?.ok ?? true,
-    status: init?.status ?? 200,
-    json: async () => body,
-  } as Response;
-}
-
-function readyBody(items: unknown[] = []) {
-  return { success: true, items };
-}
-
-/**
- * A fetch mock that actually respects its AbortSignal, mirroring real
- * browser/Node fetch behavior -- unlike a naive mock that resolves/rejects
- * regardless of the signal, this one rejects with a real `DOMException`
- * AbortError the moment the signal aborts, whether it was already aborted
- * at call time or aborts mid-flight. Without this, a test cannot actually
- * exercise (or catch a regression in) the abort-handling code path at all.
- */
-function createAbortAwareFetchMock(
-  resolveWith: () => Response = () => jsonResponse(readyBody())
-) {
-  return vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
-    return new Promise<Response>((resolve, reject) => {
-      const signal = init?.signal;
-
-      if (signal?.aborted) {
-        reject(new DOMException("signal is aborted without reason", "AbortError"));
-        return;
-      }
-
-      signal?.addEventListener("abort", () => {
-        reject(new DOMException("signal is aborted without reason", "AbortError"));
-      });
-
-      resolve(resolveWith());
-    });
-  });
-}
-
-/**
- * Attaches a real Node-level `unhandledRejection` observer for the duration
- * of one test -- this is what actually proves a promise rejection escaped
- * uncaught (matching what would trigger Next.js's dev overlay), rather than
- * merely inferring safety from the rendered UI never showing an error.
- */
-function captureUnhandledRejections() {
-  const rejections: unknown[] = [];
-  const handler = (reason: unknown) => rejections.push(reason);
-  process.on("unhandledRejection", handler);
-  return {
-    rejections,
-    stop: () => process.off("unhandledRejection", handler),
-  };
-}
+/*
+  Range-load lifecycle and abort-safety coverage for WorkCalendarClient,
+  split out of the original single work-calendar-client.test.tsx (see
+  docs/TEXT2TASK_WORK_CALENDAR_UI_REDESIGN_IMPLEMENTATION_REPORT.md's
+  test-isolation section for why: the single ~1500-line file's cumulative
+  per-test cost grew within one long-lived Vitest environment, not because
+  of any leak -- splitting by concern gives Vitest's own per-file isolation
+  a chance to reset that environment more often). Every test below is a
+  verbatim extraction -- no behavior/assertion change.
+*/
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -106,7 +56,7 @@ describe("WorkCalendarClient", () => {
     await waitFor(() =>
       expect(screen.queryByText(/Loading your calendar/i)).not.toBeInTheDocument()
     );
-    expect(screen.getByText("Nothing scheduled for this day.")).toBeInTheDocument();
+    await waitForReady();
   });
 
   it("shows an inline error with a Retry control on failure, and Retry re-fetches successfully", async () => {
@@ -124,9 +74,7 @@ describe("WorkCalendarClient", () => {
 
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
-    await waitFor(() =>
-      expect(screen.getByText("Nothing scheduled for this day.")).toBeInTheDocument()
-    );
+    await waitForReady();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -217,9 +165,7 @@ describe("WorkCalendarClient", () => {
     // The first (now-superseded) request resolves late, after navigation.
     firstMonthDeferred.resolve(jsonResponse({ error: "stale error, should be ignored" }));
 
-    await waitFor(() =>
-      expect(screen.getByText("Nothing scheduled for this day.")).toBeInTheDocument()
-    );
+    await waitForReady();
     expect(screen.queryByText("stale error, should be ignored")).not.toBeInTheDocument();
   });
 
@@ -266,9 +212,7 @@ describe("WorkCalendarClient - AbortError corrective-pass regression", () => {
     // the second (superseding) request resolve normally.
     await user.click(screen.getByRole("button", { name: /Next month/ }));
 
-    await waitFor(() =>
-      expect(screen.getByText("Nothing scheduled for this day.")).toBeInTheDocument()
-    );
+    await waitForReady();
     expect(screen.queryByText("Could not load your calendar")).not.toBeInTheDocument();
 
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -301,9 +245,7 @@ describe("WorkCalendarClient - AbortError corrective-pass regression", () => {
     await user.click(screen.getByRole("button", { name: /Next month/ }));
     await user.click(screen.getByRole("button", { name: /Next month/ }));
 
-    await waitFor(() =>
-      expect(screen.getByText("Nothing scheduled for this day.")).toBeInTheDocument()
-    );
+    await waitForReady();
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     observer.stop();
@@ -335,9 +277,7 @@ describe("WorkCalendarClient - AbortError corrective-pass regression", () => {
     await user.click(screen.getByRole("button", { name: /Next month/ }));
     await waitFor(() => expect(seenSignals[0]?.aborted).toBe(true));
 
-    await waitFor(() =>
-      expect(screen.getByText("Nothing scheduled for this day.")).toBeInTheDocument()
-    );
+    await waitForReady();
     expect(screen.queryByText("Could not load your calendar")).not.toBeInTheDocument();
 
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -367,9 +307,7 @@ describe("WorkCalendarClient - AbortError corrective-pass regression", () => {
     // fetch resolves normally (no abort this time).
     render(<WorkCalendarClient />);
 
-    await waitFor(() =>
-      expect(screen.getByText("Nothing scheduled for this day.")).toBeInTheDocument()
-    );
+    await waitForReady();
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     observer.stop();
@@ -386,9 +324,7 @@ describe("WorkCalendarClient - AbortError corrective-pass regression", () => {
     unmount();
     render(<WorkCalendarClient />);
 
-    await waitFor(() =>
-      expect(screen.getByText("Nothing scheduled for this day.")).toBeInTheDocument()
-    );
+    await waitForReady();
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     observer.stop();
@@ -401,9 +337,7 @@ describe("WorkCalendarClient - mobile clipping/duplicate-control corrective pass
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(readyBody())));
 
     render(<WorkCalendarClient />);
-    await waitFor(() =>
-      expect(screen.getByText("Nothing scheduled for this day.")).toBeInTheDocument()
-    );
+    await waitForReady();
 
     // Exactly one Previous and one Next control exist across the whole
     // render tree (CalendarToolbar's) -- neither the desktop grid nor the

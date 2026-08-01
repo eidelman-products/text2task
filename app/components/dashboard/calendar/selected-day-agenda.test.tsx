@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { createRef } from "react";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { parseDateOnly, type DateOnly } from "@/lib/tasks/date-only";
 import { parseTimeOnly, type TimeOnly } from "@/lib/calendar/time-only";
 import type {
@@ -46,8 +48,10 @@ function event(
     title: "Event",
     notes: null,
     projectId: null,
+    customProjectName: null,
     projectTitle: null,
     clientId: null,
+    customClientName: null,
     clientName: null,
     ...overrides,
   };
@@ -107,7 +111,7 @@ describe("SelectedDayAgenda", () => {
     expect(screen.getByText("Redesign site")).toBeInTheDocument();
     expect(screen.getByText("Acme Co")).toBeInTheDocument();
     expect(screen.getByText("In Progress")).toBeInTheDocument();
-    expect(screen.getByText("High")).toBeInTheDocument();
+    expect(screen.getByText("High priority")).toBeInTheDocument();
   });
 
   it("shows an Overdue text indicator when isOverdue is true", () => {
@@ -131,7 +135,7 @@ describe("SelectedDayAgenda", () => {
   });
 
   it.each(["done", "Done", " DONE "])(
-    "marks a project deadline with status %j as completed",
+    "shows the status badge in the completed (green) style when status is %j",
     (statusValue) => {
       const items: CalendarItem[] = [
         deadline({ id: "project:a", date: DAY, title: "Finished thing", status: statusValue }),
@@ -139,18 +143,18 @@ describe("SelectedDayAgenda", () => {
 
       render(<SelectedDayAgenda date={DAY} items={items} />);
 
-      expect(screen.getByText("Completed")).toBeInTheDocument();
+      expect(screen.getByText(statusValue.trim())).toHaveStyle({ color: "#16a34a" });
     }
   );
 
-  it("does not mark a non-done status as completed", () => {
+  it("does not use the completed (green) style for a non-done status", () => {
     const items: CalendarItem[] = [
       deadline({ id: "project:a", date: DAY, title: "Ongoing", status: "New" }),
     ];
 
     render(<SelectedDayAgenda date={DAY} items={items} />);
 
-    expect(screen.queryByText("Completed")).not.toBeInTheDocument();
+    expect(screen.getByText("New")).toHaveStyle({ color: "#334155" });
   });
 
   it("renders an Open Task CRM link to the general Tasks view, not claiming to open the specific project", () => {
@@ -184,7 +188,8 @@ describe("SelectedDayAgenda", () => {
     expect(screen.getByText("Kickoff call")).toBeInTheDocument();
     expect(screen.getByText("2:30 PM")).toBeInTheDocument();
     expect(screen.getByText("Beta LLC")).toBeInTheDocument();
-    expect(screen.getByText("Project: Beta Launch")).toBeInTheDocument();
+    expect(screen.getByText("Project")).toBeInTheDocument();
+    expect(screen.getByText("Beta Launch")).toBeInTheDocument();
     expect(screen.getByText("Bring slides")).toBeInTheDocument();
   });
 
@@ -229,7 +234,7 @@ describe("SelectedDayAgenda", () => {
     expect(listItem.textContent).not.toContain("x".repeat(500));
   });
 
-  it("has no edit/delete/Add Event controls anywhere", () => {
+  it("has no Add Event/Delete control, and no Edit control when onEditEvent is not supplied", () => {
     const items: CalendarItem[] = [
       deadline({ id: "project:a", date: DAY, title: "A" }),
       event({ id: "event:b", date: DAY, title: "B", notes: "n" }),
@@ -239,11 +244,10 @@ describe("SelectedDayAgenda", () => {
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(container.textContent).not.toMatch(/add event/i);
-    expect(container.textContent).not.toMatch(/\bedit\b/i);
     expect(container.textContent).not.toMatch(/\bdelete\b/i);
   });
 
-  it("the only link present for a manual event day is none -- manual events have zero interactive elements", () => {
+  it("a manual event has zero interactive elements when onEditEvent is not supplied", () => {
     const items: CalendarItem[] = [
       event({ id: "event:only", date: DAY, title: "Solo event" }),
     ];
@@ -252,5 +256,57 @@ describe("SelectedDayAgenda", () => {
 
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("passes onEditEvent through to a manual event's Edit button", async () => {
+    const user = userEvent.setup();
+    const onEditEvent = vi.fn();
+    const items: CalendarItem[] = [
+      event({ id: "event:only", date: DAY, title: "Solo event" }),
+    ];
+
+    render(<SelectedDayAgenda date={DAY} items={items} onEditEvent={onEditEvent} />);
+
+    await user.click(screen.getByRole("button", { name: "Edit Solo event" }));
+    expect(onEditEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("never adds an Edit control to a Project Deadline row, even when onEditEvent is supplied", () => {
+    const items: CalendarItem[] = [
+      deadline({ id: "project:a", date: DAY, title: "Redesign site" }),
+    ];
+
+    render(<SelectedDayAgenda date={DAY} items={items} onEditEvent={vi.fn()} />);
+
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("keeps the heading's content/aria-live behavior and forwards the supplied ref with tabIndex=-1", () => {
+    const headingRef = createRef<HTMLHeadingElement>();
+
+    render(<SelectedDayAgenda date={DAY} items={[]} headingRef={headingRef} />);
+
+    const heading = screen.getByRole("heading", { level: 2, name: "January 20, 2027" });
+    expect(headingRef.current).toBe(heading);
+    expect(heading).toHaveAttribute("tabindex", "-1");
+    expect(heading.closest('[aria-live="polite"]')).not.toBeNull();
+  });
+
+  it("does not accept an onDeleteEvent prop -- Delete is not this component's concern", () => {
+    // Structural, not behavioral: SelectedDayAgendaProps has no onDeleteEvent
+    // field at all (compile-time enforced) -- this test documents that
+    // intent for anyone reading the suite, exercising the component's real
+    // props exactly as declared.
+    const items: CalendarItem[] = [event({ id: "event:only", date: DAY, title: "Solo event" })];
+    render(<SelectedDayAgenda date={DAY} items={items} onEditEvent={vi.fn()} />);
+
+    expect(screen.queryByRole("button", { name: /delete/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps the empty-state message unchanged when a headingRef/onEditEvent are supplied", () => {
+    const headingRef = createRef<HTMLHeadingElement>();
+    render(<SelectedDayAgenda date={DAY} items={[]} onEditEvent={vi.fn()} headingRef={headingRef} />);
+
+    expect(screen.getByText("Nothing scheduled for this day.")).toBeInTheDocument();
   });
 });

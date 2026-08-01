@@ -61,6 +61,56 @@ const NotesSchema = z
 
 const UuidSchema = z.string().uuid();
 
+/**
+ * Shared limit for both `customProjectName` and `customClientName` -- the
+ * single JS-side source of truth mirrored by the database's own
+ * `calendar_events_custom_{project,client}_name_check` CHECK constraints
+ * (supabase/migrations/202607310001_calendar_events_custom_names.sql).
+ * Matches `TitleSchema`'s own 240-character limit rather than inventing an
+ * unrelated number.
+ */
+export const CUSTOM_ENTITY_NAME_MAX_LENGTH = 240;
+
+// Same blank-to-null normalization idiom as NotesSchema above; a custom
+// Project/Client name is optional free text, never a required field.
+const CustomEntityNameSchema = z
+  .union([z.string(), z.null()])
+  .transform((value) => {
+    if (value === null) return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  })
+  .refine((value) => value === null || value.length <= CUSTOM_ENTITY_NAME_MAX_LENGTH, {
+    message: `Must be ${CUSTOM_ENTITY_NAME_MAX_LENGTH} characters or fewer.`,
+  });
+
+/**
+ * A linked id and a custom name for the same relationship (Project or
+ * Client) must never both be non-null on the same request -- enforced here
+ * (the schema layer), again in lib/calendar/calendar-link-validation.server.ts
+ * (the repository layer), and again by a database CHECK constraint: the
+ * same "enforced at every layer" convention this feature already applies to
+ * project/client ownership.
+ */
+function refineExclusiveRelationships<
+  T extends {
+    projectId?: string | null;
+    customProjectName?: string | null;
+    clientId?: string | null;
+    customClientName?: string | null;
+  },
+>(schema: z.ZodType<T>) {
+  return schema
+    .refine((value) => !(value.projectId != null && value.customProjectName != null), {
+      message: "A Project cannot be both linked and custom.",
+      path: ["customProjectName"],
+    })
+    .refine((value) => !(value.clientId != null && value.customClientName != null), {
+      message: "A Client cannot be both linked and custom.",
+      path: ["customClientName"],
+    });
+}
+
 export const CalendarRangeQuerySchema = z
   .object({
     start: DateOnlySchema,
@@ -72,27 +122,34 @@ export const CalendarRangeQuerySchema = z
     path: ["end"],
   });
 
-export const CreateCalendarEventInputSchema = z
-  .object({
-    title: TitleSchema,
-    eventDate: DateOnlySchema,
-    eventTime: TimeOnlySchema.nullable(),
-    notes: NotesSchema,
-    projectId: UuidSchema.nullable(),
-    clientId: UuidSchema.nullable(),
-  })
-  .strict();
+export const CreateCalendarEventInputSchema = refineExclusiveRelationships(
+  z
+    .object({
+      title: TitleSchema,
+      eventDate: DateOnlySchema,
+      eventTime: TimeOnlySchema.nullable(),
+      notes: NotesSchema,
+      projectId: UuidSchema.nullable(),
+      customProjectName: CustomEntityNameSchema,
+      clientId: UuidSchema.nullable(),
+      customClientName: CustomEntityNameSchema,
+    })
+    .strict()
+);
 
-export const UpdateCalendarEventInputSchema = z
-  .object({
-    title: TitleSchema.optional(),
-    eventDate: DateOnlySchema.optional(),
-    eventTime: TimeOnlySchema.nullable().optional(),
-    notes: NotesSchema.optional(),
-    projectId: UuidSchema.nullable().optional(),
-    clientId: UuidSchema.nullable().optional(),
-  })
-  .strict()
-  .refine((value) => Object.keys(value).length > 0, {
-    message: "At least one field must be provided.",
-  });
+export const UpdateCalendarEventInputSchema = refineExclusiveRelationships(
+  z
+    .object({
+      title: TitleSchema.optional(),
+      eventDate: DateOnlySchema.optional(),
+      eventTime: TimeOnlySchema.nullable().optional(),
+      notes: NotesSchema.optional(),
+      projectId: UuidSchema.nullable().optional(),
+      customProjectName: CustomEntityNameSchema.optional(),
+      clientId: UuidSchema.nullable().optional(),
+      customClientName: CustomEntityNameSchema.optional(),
+    })
+    .strict()
+).refine((value) => Object.keys(value).length > 0, {
+  message: "At least one field must be provided.",
+});

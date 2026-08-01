@@ -10,6 +10,7 @@ import {
 import {
   dashboardColors,
   dashboardRadii,
+  dashboardShadows,
   dashboardSpacing,
   dashboardTypography,
 } from "../ui/tokens";
@@ -98,15 +99,16 @@ const navButtonStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 44,
-  height: 44,
-  minWidth: 44,
-  minHeight: 44,
-  borderRadius: dashboardRadii.sm,
+  width: 40,
+  height: 40,
+  minWidth: 40,
+  minHeight: 40,
+  borderRadius: dashboardRadii.md,
   border: `1px solid ${dashboardColors.border.subtle}`,
   background: dashboardColors.background.surface,
   color: dashboardColors.text.secondary,
   fontSize: dashboardTypography.size.lg,
+  boxShadow: dashboardShadows.xs,
   cursor: "pointer",
 };
 
@@ -114,21 +116,23 @@ const todayButtonStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  minWidth: 44,
-  minHeight: 44,
+  minWidth: 40,
+  minHeight: 40,
   padding: `0 ${dashboardSpacing[4]}px`,
-  borderRadius: dashboardRadii.sm,
+  borderRadius: dashboardRadii.md,
   border: `1px solid ${dashboardColors.border.subtle}`,
   background: dashboardColors.background.surface,
   color: dashboardColors.text.secondary,
   fontSize: dashboardTypography.size.sm,
-  fontWeight: dashboardTypography.weight.semibold,
+  fontWeight: dashboardTypography.weight.bold,
+  boxShadow: dashboardShadows.xs,
   cursor: "pointer",
 };
 
 const monthLabelStyle: CSSProperties = {
-  fontSize: dashboardTypography.size.lg,
-  fontWeight: dashboardTypography.weight.bold,
+  fontSize: dashboardTypography.size["2xl"],
+  fontWeight: dashboardTypography.weight.black,
+  letterSpacing: "-0.02em",
   color: dashboardColors.text.primary,
 };
 
