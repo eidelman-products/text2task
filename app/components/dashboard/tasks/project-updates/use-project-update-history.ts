@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useTrackProductView } from "@/lib/activity/use-track-product-view.client";
 import type { TaskProjectGroup } from "../task-types";
 import type {
   ProjectUpdateHistoryApiResponse,
@@ -53,6 +54,15 @@ export function useProjectUpdateHistory() {
     error: null,
     updates: [],
     events: [],
+  });
+
+  const activeProjectId = getProjectId(state.project);
+  useTrackProductView({
+    eventName: "project_history_viewed",
+    route: "/dashboard",
+    entityType: "project",
+    entityId: activeProjectId ?? "",
+    active: state.isOpen,
   });
 
   const loadHistory = useCallback(async (project: TaskProjectGroup) => {

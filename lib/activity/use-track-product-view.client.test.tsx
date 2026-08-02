@@ -20,7 +20,29 @@ type TrackableView =
   | { eventName: "dashboard_viewed"; route: "/dashboard" }
   | { eventName: "extract_viewed"; route: "/dashboard" }
   | { eventName: "tasks_viewed"; route: "/dashboard" }
-  | { eventName: "calendar_viewed"; route: "/dashboard/calendar" };
+  | { eventName: "calendar_viewed"; route: "/dashboard/calendar" }
+  | {
+      eventName:
+        | "project_details_expanded"
+        | "project_resources_viewed"
+        | "project_history_viewed"
+        | "client_update_opened";
+      route: "/dashboard";
+      entityType: "project";
+      entityId: string;
+    }
+  | {
+      eventName: "calendar_day_viewed";
+      route: "/dashboard/calendar";
+      entityType: "calendar_day";
+      entityId: string;
+    }
+  | {
+      eventName: "calendar_event_viewed";
+      route: "/dashboard/calendar";
+      entityType: "calendar_event";
+      entityId: string;
+    };
 
 function installFetchMock(responseStatus = 204) {
   const fetchMock = vi
@@ -160,7 +182,80 @@ describe("sendProductViewEvent", () => {
     }
   });
 
-  it.each([400, 401, 503])(
+  it("sends project entity events with only the approved entity fields", () => {
+    const fetchMock = installFetchMock();
+
+    sendProductViewEvent({
+      eventName: "project_resources_viewed",
+      route: "/dashboard",
+      entityType: "project",
+      entityId: UUID_A,
+      navigationId: UUID_B,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const body = parseOnlyBody(fetchMock);
+    expect(body).toEqual({
+      event: {
+        eventName: "project_resources_viewed",
+        route: "/dashboard",
+        entityType: "project",
+        entityId: UUID_A,
+      },
+      navigationId: UUID_B,
+    });
+  });
+
+  it("sends calendar day and calendar event entities with their strict ids", () => {
+    const fetchMock = installFetchMock();
+
+    sendProductViewEvent({
+      eventName: "calendar_day_viewed",
+      route: "/dashboard/calendar",
+      entityType: "calendar_day",
+      entityId: "2026-08-03",
+      navigationId: UUID_A,
+    });
+    sendProductViewEvent({
+      eventName: "calendar_event_viewed",
+      route: "/dashboard/calendar",
+      entityType: "calendar_event",
+      entityId: UUID_B,
+      navigationId: UUID_A,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const bodies = fetchMock.mock.calls.map((call) =>
+      JSON.parse(String((call[1] as RequestInit).body))
+    );
+    expect(bodies[0].event.entityType).toBe("calendar_day");
+    expect(bodies[0].event.entityId).toBe("2026-08-03");
+    expect(bodies[1].event.entityType).toBe("calendar_event");
+    expect(bodies[1].event.entityId).toBe(UUID_B);
+  });
+
+  it("does not send malformed entity ids", () => {
+    const fetchMock = installFetchMock();
+
+    sendProductViewEvent({
+      eventName: "project_details_expanded",
+      route: "/dashboard",
+      entityType: "project",
+      entityId: "not-a-project-uuid",
+      navigationId: UUID_A,
+    });
+    sendProductViewEvent({
+      eventName: "calendar_day_viewed",
+      route: "/dashboard/calendar",
+      entityType: "calendar_day",
+      entityId: "2026-02-30",
+      navigationId: UUID_A,
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([400, 401, 413, 415, 503])(
     "does not throw or retry when the endpoint responds %i",
     async (status) => {
       const fetchMock = installFetchMock(status);
@@ -293,6 +388,79 @@ describe("useTrackProductView", () => {
     expect(getEventBody(body).eventName).toBe("extract_viewed");
     expect(body.navigationId).toBe(UUID_B);
   });
+
+  it("cancels a hidden pending entity view when it closes before visibility returns", async () => {
+    setVisibilityState("hidden");
+    const fetchMock = installFetchMock();
+    installRandomUuidMock(UUID_A);
+
+    const { rerender } = render(
+      <TrackingProbe
+        eventName="project_details_expanded"
+        route="/dashboard"
+        entityType="project"
+        entityId={UUID_A}
+        active
+      />
+    );
+    rerender(
+      <TrackingProbe
+        eventName="project_details_expanded"
+        route="/dashboard"
+        entityType="project"
+        entityId={UUID_A}
+        active={false}
+      />
+    );
+
+    setVisibilityState("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("tracks a reopened entity view with a new navigationId", async () => {
+    const fetchMock = installFetchMock();
+    installRandomUuidMock(UUID_A, UUID_B);
+
+    const { rerender } = render(
+      <TrackingProbe
+        eventName="project_history_viewed"
+        route="/dashboard"
+        entityType="project"
+        entityId={UUID_A}
+        active
+      />
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    rerender(
+      <TrackingProbe
+        eventName="project_history_viewed"
+        route="/dashboard"
+        entityType="project"
+        entityId={UUID_A}
+        active={false}
+      />
+    );
+    rerender(
+      <TrackingProbe
+        eventName="project_history_viewed"
+        route="/dashboard"
+        entityType="project"
+        entityId={UUID_A}
+        active
+      />
+    );
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const navigationIds = fetchMock.mock.calls.map((call) => {
+      const body = JSON.parse(String((call[1] as RequestInit).body));
+      return body.navigationId;
+    });
+    expect(navigationIds).toEqual([UUID_A, UUID_B]);
+  });
 });
 
 describe("use-track-product-view.client architecture", () => {
@@ -346,7 +514,7 @@ describe("use-track-product-view.client architecture", () => {
     ]);
   });
 
-  it("does not wire Phase 4 event names into production product components", () => {
+  it("wires Phase 4 event names only into the approved production client files", () => {
     const productComponentFiles = collectProductionSourceFiles([
       path.join(process.cwd(), "app/components/dashboard"),
     ]);
@@ -356,7 +524,14 @@ describe("use-track-product-view.client architecture", () => {
       .filter((filePath) => phase4EventPattern.test(readFileSync(filePath, "utf8")))
       .map((filePath) => path.relative(process.cwd(), filePath).replace(/\\/g, "/"));
 
-    expect(offendingFiles).toEqual([]);
+    expect(offendingFiles.sort()).toEqual([
+      "app/components/dashboard/calendar/work-calendar-client.tsx",
+      "app/components/dashboard/resources/resource-manager-modal.tsx",
+      "app/components/dashboard/tasks/desktop-tasks-table.tsx",
+      "app/components/dashboard/tasks/mobile-task-card.tsx",
+      "app/components/dashboard/tasks/project-updates/use-project-update-history.ts",
+      "app/components/dashboard/tasks/project-updates/use-project-update.ts",
+    ]);
   });
 });
 

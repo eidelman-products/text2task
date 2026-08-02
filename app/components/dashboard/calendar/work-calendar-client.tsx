@@ -14,6 +14,7 @@ import {
   loadCalendarRangeClient,
   type LoadCalendarRangeClientResult,
 } from "@/lib/calendar/load-calendar-range.client";
+import { parseManualCalendarEventId } from "@/lib/calendar/parse-manual-calendar-event-id";
 import { useTrackProductView } from "@/lib/activity/use-track-product-view.client";
 import {
   loadCalendarOptionsClient,
@@ -212,6 +213,28 @@ export function WorkCalendarClient() {
   // ---------------------------------------------------------------------
 
   const [activeDialog, setActiveDialog] = useState<ActiveDialogState>(null);
+  const activeDialogDay =
+    activeDialog?.mode === "day" ? activeDialog.date : null;
+  const activeDialogEventId =
+    activeDialog?.mode === "edit"
+      ? parseManualCalendarEventId(activeDialog.event.id)
+      : null;
+
+  useTrackProductView({
+    eventName: "calendar_day_viewed",
+    route: "/dashboard/calendar",
+    entityType: "calendar_day",
+    entityId: activeDialogDay ?? "",
+    active: activeDialogDay !== null,
+  });
+
+  useTrackProductView({
+    eventName: "calendar_event_viewed",
+    route: "/dashboard/calendar",
+    entityType: "calendar_event",
+    entityId: activeDialogEventId ?? "",
+    active: activeDialog?.mode === "edit",
+  });
 
   // A stable ref object (never recreated) -- ResponsiveDialog's own
   // triggerRef. Only `.current` is ever mutated, never stored in React

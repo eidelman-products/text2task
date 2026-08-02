@@ -4,34 +4,65 @@ import { useEffect, useRef } from "react";
 
 import {
   validateProductEventInput,
+  type ProductEntityType,
   type ProductEventName,
 } from "@/lib/activity/product-event-contracts";
 
-type Phase3ProductViewEventName = Extract<
-  ProductEventName,
-  "dashboard_viewed" | "extract_viewed" | "tasks_viewed" | "calendar_viewed"
->;
-
-const PHASE3_PRODUCT_VIEW_ROUTES = {
+const PRODUCT_VIEW_EVENT_ROUTES = {
   dashboard_viewed: "/dashboard",
   extract_viewed: "/dashboard",
   tasks_viewed: "/dashboard",
   calendar_viewed: "/dashboard/calendar",
-} as const satisfies Record<Phase3ProductViewEventName, string>;
+  project_details_expanded: "/dashboard",
+  project_resources_viewed: "/dashboard",
+  project_history_viewed: "/dashboard",
+  client_update_opened: "/dashboard",
+  calendar_day_viewed: "/dashboard/calendar",
+  calendar_event_viewed: "/dashboard/calendar",
+} as const satisfies Record<ProductEventName, string>;
 
-type ProductViewTrackingConfig = {
-  [EventName in Phase3ProductViewEventName]: Readonly<{
-    eventName: EventName;
-    route: (typeof PHASE3_PRODUCT_VIEW_ROUTES)[EventName];
-  }>;
-}[Phase3ProductViewEventName];
+type NoEntityProductViewEventName = Extract<
+  ProductEventName,
+  "dashboard_viewed" | "extract_viewed" | "tasks_viewed" | "calendar_viewed"
+>;
 
-type ProductViewIdentity = Readonly<{
-  eventName: Phase3ProductViewEventName;
-  route: (typeof PHASE3_PRODUCT_VIEW_ROUTES)[Phase3ProductViewEventName];
+type ProductViewEntityTypeByEvent = Readonly<{
+  project_details_expanded: "project";
+  project_resources_viewed: "project";
+  project_history_viewed: "project";
+  client_update_opened: "project";
+  calendar_day_viewed: "calendar_day";
+  calendar_event_viewed: "calendar_event";
 }>;
 
-type ProductViewSendInput = ProductViewIdentity &
+type EntityProductViewEventName = keyof ProductViewEntityTypeByEvent;
+
+type ProductViewTrackingConfig =
+  | {
+      [EventName in NoEntityProductViewEventName]: Readonly<{
+        eventName: EventName;
+        route: (typeof PRODUCT_VIEW_EVENT_ROUTES)[EventName];
+        entityType?: null;
+        entityId?: null;
+      }>;
+    }[NoEntityProductViewEventName]
+  | {
+      [EventName in EntityProductViewEventName]: Readonly<{
+        eventName: EventName;
+        route: (typeof PRODUCT_VIEW_EVENT_ROUTES)[EventName];
+        entityType: ProductViewEntityTypeByEvent[EventName];
+        entityId: string;
+      }>;
+    }[EntityProductViewEventName];
+
+type ProductViewIdentity = Readonly<{
+  eventName: ProductEventName;
+  route: (typeof PRODUCT_VIEW_EVENT_ROUTES)[ProductEventName];
+  entityType: ProductEntityType | null;
+  entityId: string | null;
+}>;
+
+type ProductViewSendInput = (ProductViewTrackingConfig | ProductViewIdentity) &
   Readonly<{
     navigationId: string;
   }>;
@@ -48,23 +79,37 @@ type LogicalViewState = Readonly<{
 }>;
 
 function getLogicalViewKey(input: ProductViewIdentity): string {
-  return `${input.eventName}|${input.route}`;
+  return [
+    input.eventName,
+    input.route,
+    input.entityType ?? "",
+    input.entityId ?? "",
+  ].join("|");
 }
 
 function isExpectedRouteForEvent(input: ProductViewIdentity): boolean {
-  return PHASE3_PRODUCT_VIEW_ROUTES[input.eventName] === input.route;
+  return PRODUCT_VIEW_EVENT_ROUTES[input.eventName] === input.route;
 }
 
 function buildProductViewRequest(input: ProductViewSendInput) {
-  if (!isExpectedRouteForEvent(input)) {
+  const entityType = input.entityType ?? null;
+  const entityId = input.entityId ?? null;
+  if (
+    !isExpectedRouteForEvent({
+      eventName: input.eventName,
+      route: input.route,
+      entityType,
+      entityId,
+    })
+  ) {
     return null;
   }
 
   const validation = validateProductEventInput({
     eventName: input.eventName,
     route: input.route,
-    entityType: null,
-    entityId: null,
+    entityType,
+    entityId,
   });
 
   if (!validation.ok) {
@@ -105,14 +150,18 @@ export function sendProductViewEvent(input: ProductViewSendInput): void {
 export function useTrackProductView(input: ProductViewHookInput): void {
   const active = input.active ?? true;
   const { eventName, route } = input;
+  const entityType = input.entityType ?? null;
+  const entityId = input.entityId ?? null;
   const stateRef = useRef<LogicalViewState | null>(null);
 
   useEffect(() => {
     if (!active) {
+      stateRef.current = null;
       return;
     }
 
-    const key = getLogicalViewKey({ eventName, route });
+    const identity = { eventName, route, entityType, entityId };
+    const key = getLogicalViewKey(identity);
     const existing = stateRef.current;
 
     if (existing?.key !== key) {
@@ -135,8 +184,7 @@ export function useTrackProductView(input: ProductViewHookInput): void {
       };
 
       sendProductViewEvent({
-        eventName,
-        route,
+        ...identity,
         navigationId: current.navigationId,
       });
     };
@@ -160,5 +208,5 @@ export function useTrackProductView(input: ProductViewHookInput): void {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [active, eventName, route]);
+  }, [active, eventName, route, entityType, entityId]);
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
+import { useTrackProductView } from "@/lib/activity/use-track-product-view.client";
 import type {
   TaskArchiveView,
   TaskProjectGroup,
@@ -55,6 +56,14 @@ export default function MobileTaskCard({
   updateProjectField,
 }: MobileTaskCardProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  useTrackProductView({
+    eventName: "project_details_expanded",
+    route: "/dashboard",
+    entityType: "project",
+    entityId: projectId ?? "",
+    active: isOpen,
+  });
 
   const isBusy = isSaving || isDeleting;
   const actionMode =

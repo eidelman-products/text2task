@@ -6,9 +6,13 @@ import userEvent from "@testing-library/user-event";
 import { WorkCalendarClient } from "./work-calendar-client";
 import {
   anotherDayInCurrentMonth,
+  EVENT_UUID_A,
+  EVENT_UUID_B,
   jsonResponse,
+  manualEvent,
   openDay,
   readyBody,
+  TODAY,
   waitForReady,
 } from "./work-calendar-client.test-helpers";
 
@@ -213,7 +217,53 @@ describe("WorkCalendarClient authenticated view instrumentation", () => {
     expect(productEventCalls(fetchMock)).toHaveLength(1);
   });
 
-  it("date and dialog interactions do not send Phase 4 calendar events", async () => {
+  it("opening a day dialog sends calendar_day_viewed once with the DateOnly entity", async () => {
+    const fetchMock = installCalendarFetchMock();
+    installRandomUuidMock(UUID_A, UUID_B);
+    const user = userEvent.setup({ delay: null });
+
+    render(<WorkCalendarClient />);
+    await waitForReady();
+    await waitFor(() => expect(productEventCalls(fetchMock)).toHaveLength(1));
+
+    const target = anotherDayInCurrentMonth();
+    await openDay(user, target);
+
+    await waitFor(() => expect(productEventCalls(fetchMock)).toHaveLength(2));
+    expect(productEventBodies(fetchMock)[1]).toEqual({
+      event: {
+        eventName: "calendar_day_viewed",
+        route: "/dashboard/calendar",
+        entityType: "calendar_day",
+        entityId: target,
+      },
+      navigationId: UUID_B,
+    });
+  }, 30000);
+
+  it("closing and reopening the same day sends a new calendar_day_viewed navigationId", async () => {
+    const fetchMock = installCalendarFetchMock();
+    installRandomUuidMock(UUID_A, UUID_B, EVENT_UUID_B);
+    const user = userEvent.setup({ delay: null });
+    const target = anotherDayInCurrentMonth();
+
+    render(<WorkCalendarClient />);
+    await waitForReady();
+    await openDay(user, target);
+    await waitFor(() => expect(productEventCalls(fetchMock)).toHaveLength(2));
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await openDay(user, target);
+
+    await waitFor(() => expect(productEventCalls(fetchMock)).toHaveLength(3));
+    expect(productEventBodies(fetchMock).map((body) => body.navigationId)).toEqual([
+      UUID_A,
+      UUID_B,
+      EVENT_UUID_B,
+    ]);
+  }, 30000);
+
+  it("create mode does not send calendar_event_viewed before an event exists", async () => {
     const fetchMock = installCalendarFetchMock();
     installRandomUuidMock(UUID_A, UUID_B);
     const user = userEvent.setup({ delay: null });
@@ -226,16 +276,97 @@ describe("WorkCalendarClient authenticated view instrumentation", () => {
     await user.click(screen.getByRole("button", { name: "+ Add event" }));
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
-    expect(productEventCalls(fetchMock)).toHaveLength(1);
     expect(productEventBodies(fetchMock).map((body) => body.event.eventName)).toEqual([
       "calendar_viewed",
+      "calendar_day_viewed",
     ]);
-    expect(JSON.stringify(productEventBodies(fetchMock))).not.toContain(
-      "calendar_day_viewed"
-    );
     expect(JSON.stringify(productEventBodies(fetchMock))).not.toContain(
       "calendar_event_viewed"
     );
+  }, 30000);
+
+  it("opening edit mode for an existing manual event sends calendar_event_viewed with the bare UUID", async () => {
+    const item = manualEvent({
+      id: `event:${EVENT_UUID_A}`,
+      date: TODAY,
+      title: "Kickoff call",
+    });
+    const fetchMock = installCalendarFetchMock();
+    fetchMock.mockImplementation((url: string) => {
+      if (url === "/api/activity/product-event") {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      if (url.startsWith("/api/calendar/options")) {
+        return Promise.resolve(
+          jsonResponse({
+            success: true,
+            projects: [],
+            clients: [],
+            projectsTruncated: false,
+            clientsTruncated: false,
+          })
+        );
+      }
+      return Promise.resolve(jsonResponse(readyBody([item])));
+    });
+    installRandomUuidMock(UUID_A, UUID_B, EVENT_UUID_B);
+    const user = userEvent.setup({ delay: null });
+
+    render(<WorkCalendarClient />);
+    await waitForReady();
+    await openDay(user, TODAY);
+    await user.click(screen.getByRole("button", { name: "Edit Kickoff call" }));
+
+    await waitFor(() => expect(productEventCalls(fetchMock)).toHaveLength(3));
+    expect(productEventBodies(fetchMock)[2]).toEqual({
+      event: {
+        eventName: "calendar_event_viewed",
+        route: "/dashboard/calendar",
+        entityType: "calendar_event",
+        entityId: EVENT_UUID_A,
+      },
+      navigationId: EVENT_UUID_B,
+    });
+  }, 30000);
+
+  it("opening edit mode for a malformed manual event id fails closed for analytics", async () => {
+    const item = manualEvent({
+      id: "event:not-a-real-uuid",
+      date: TODAY,
+      title: "Malformed event",
+    });
+    const fetchMock = installCalendarFetchMock();
+    fetchMock.mockImplementation((url: string) => {
+      if (url === "/api/activity/product-event") {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      if (url.startsWith("/api/calendar/options")) {
+        return Promise.resolve(
+          jsonResponse({
+            success: true,
+            projects: [],
+            clients: [],
+            projectsTruncated: false,
+            clientsTruncated: false,
+          })
+        );
+      }
+      return Promise.resolve(jsonResponse(readyBody([item])));
+    });
+    installRandomUuidMock(UUID_A, UUID_B, EVENT_UUID_B);
+    const user = userEvent.setup({ delay: null });
+
+    render(<WorkCalendarClient />);
+    await waitForReady();
+    await openDay(user, TODAY);
+    await user.click(screen.getByRole("button", { name: "Edit Malformed event" }));
+
+    expect(screen.getByRole("dialog", { name: "Edit event" })).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(productEventBodies(fetchMock).map((body) => body.event.eventName)).toEqual([
+      "calendar_viewed",
+      "calendar_day_viewed",
+    ]);
   }, 30000);
 
   it("Strict Mode replay does not create a second logical navigation ID", async () => {
@@ -286,5 +417,19 @@ describe("WorkCalendarClient authenticated view instrumentation", () => {
 
     expect(screen.getByRole("button", { name: /Previous month/i })).toBeInTheDocument();
     expect(productEventCalls(fetchMock)).toHaveLength(1);
+  }, 30000);
+
+  it("analytics failure does not prevent opening a calendar day dialog", async () => {
+    const fetchMock = installRejectedProductEventFetchMock();
+    installRandomUuidMock(UUID_A, UUID_B);
+    const user = userEvent.setup({ delay: null });
+    const target = anotherDayInCurrentMonth();
+
+    render(<WorkCalendarClient />);
+    await waitForReady();
+    await openDay(user, target);
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await waitFor(() => expect(productEventCalls(fetchMock)).toHaveLength(2));
   }, 30000);
 });

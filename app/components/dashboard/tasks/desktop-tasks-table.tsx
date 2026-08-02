@@ -7,6 +7,7 @@ import type {
   TaskRow,
 } from "./task-types";
 import { buildTaskProjectGroups } from "./task-utils";
+import { useTrackProductView } from "@/lib/activity/use-track-product-view.client";
 import ClientContactEditor from "./client-contact-editor";
 import ProjectMetaEditor from "./project-meta-editor";
 import ProjectHeaderEditor from "./project-header-editor";
@@ -88,6 +89,9 @@ export default function DesktopTasksTable({
   const [openProjectKeys, setOpenProjectKeys] = useState<
     Record<string, boolean>
   >({});
+  const [trackedProjectDetailsId, setTrackedProjectDetailsId] = useState<
+    string | null
+  >(null);
   const [hoveredProjectKey, setHoveredProjectKey] = useState<string | null>(
     null
   );
@@ -115,11 +119,33 @@ export default function DesktopTasksTable({
     };
   }, [highlightedTaskId, projectGroups]);
 
-  function toggleProject(projectKey: string) {
-    setOpenProjectKeys((current) => ({
-      ...current,
-      [projectKey]: !current[projectKey],
-    }));
+  useTrackProductView({
+    eventName: "project_details_expanded",
+    route: "/dashboard",
+    entityType: "project",
+    entityId: trackedProjectDetailsId ?? "",
+    active: trackedProjectDetailsId !== null,
+  });
+
+  function toggleProject(project: TaskProjectGroup) {
+    const projectId = getResolvedProjectId(project);
+
+    setOpenProjectKeys((current) => {
+      const willOpen = !current[project.key];
+
+      if (willOpen) {
+        setTrackedProjectDetailsId(projectId || null);
+      } else if (projectId) {
+        setTrackedProjectDetailsId((currentTrackedId) =>
+          currentTrackedId === projectId ? null : currentTrackedId
+        );
+      }
+
+      return {
+        ...current,
+        [project.key]: willOpen,
+      };
+    });
   }
 
   function getResolvedProjectId(project: TaskProjectGroup) {
@@ -311,7 +337,7 @@ export default function DesktopTasksTable({
                     <div style={projectQuickActionsStyle}>
                       <button
                         type="button"
-                        onClick={() => toggleProject(project.key)}
+                        onClick={() => toggleProject(project)}
                         className="crm-soft-button-v6"
                         style={{
                           ...detailsButtonStyle,

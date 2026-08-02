@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CSSProperties, ChangeEvent, MouseEvent } from "react";
+import { useTrackProductView } from "@/lib/activity/use-track-product-view.client";
 import ResourceNoteEditorModal from "./resource-note-editor-modal";
 import {
   createLinkResource,
@@ -116,6 +117,14 @@ export default function ResourceManagerModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useTrackProductView({
+    eventName: "project_resources_viewed",
+    route: "/dashboard",
+    entityType: "project",
+    entityId: projectId ?? "",
+    active: isOpen && projectId !== null,
+  });
 
   const hasTarget = Boolean(projectId || taskId);
   const isBusy =

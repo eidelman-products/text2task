@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useTrackProductView } from "@/lib/activity/use-track-product-view.client";
 import type {
   ClientEntity,
   ProjectEntity,
@@ -268,6 +269,15 @@ export function useProjectUpdate() {
 
   const selectedImagePreviewUrl =
     uiState.form.selectedImage?.previewUrl ?? null;
+  const activeProjectId = getProjectId(uiState.modal.project);
+
+  useTrackProductView({
+    eventName: "client_update_opened",
+    route: "/dashboard",
+    entityType: "project",
+    entityId: activeProjectId ?? "",
+    active: uiState.modal.isOpen,
+  });
 
   useEffect(() => {
     if (!selectedImagePreviewUrl) {
