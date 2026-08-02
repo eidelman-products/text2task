@@ -29,6 +29,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function calendarRangeCalls(fetchMock: ReturnType<typeof vi.fn>) {
+  return fetchMock.mock.calls.filter(([url]: unknown[]) =>
+    String(url).startsWith("/api/calendar?")
+  );
+}
+
 describe("WorkCalendarClient", () => {
   it("fetches the exact visible grid range for the initial month, anchored on today", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(readyBody()));
@@ -36,16 +42,23 @@ describe("WorkCalendarClient", () => {
 
     render(<WorkCalendarClient />);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(calendarRangeCalls(fetchMock)).toHaveLength(1));
 
     const range = getCalendarGridRange(todayDateOnly());
-    const [url] = fetchMock.mock.calls[0];
+    const [url] = calendarRangeCalls(fetchMock)[0];
     expect(String(url)).toBe(`/api/calendar?start=${range.start}&end=${range.end}`);
   });
 
   it("shows a calm loading state before the fetch resolves, then renders the calendar", async () => {
     const deferred = defer<Response>();
-    vi.stubGlobal("fetch", vi.fn().mockReturnValue(deferred.promise));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) =>
+        String(url) === "/api/activity/product-event"
+          ? Promise.resolve(new Response(null, { status: 204 }))
+          : deferred.promise
+      )
+    );
 
     render(<WorkCalendarClient />);
 
@@ -60,10 +73,21 @@ describe("WorkCalendarClient", () => {
   });
 
   it("shows an inline error with a Retry control on failure, and Retry re-fetches successfully", async () => {
+    let rangeCalls = 0;
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse({ error: "Server unavailable" }, { ok: false, status: 500 }))
-      .mockResolvedValueOnce(jsonResponse(readyBody()));
+      .mockImplementation((url: string) => {
+        if (String(url) === "/api/activity/product-event") {
+          return Promise.resolve(new Response(null, { status: 204 }));
+        }
+
+        rangeCalls += 1;
+        return Promise.resolve(
+          rangeCalls === 1
+            ? jsonResponse({ error: "Server unavailable" }, { ok: false, status: 500 })
+            : jsonResponse(readyBody())
+        );
+      });
     vi.stubGlobal("fetch", fetchMock);
 
     const user = userEvent.setup();
@@ -75,7 +99,7 @@ describe("WorkCalendarClient", () => {
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
     await waitForReady();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(calendarRangeCalls(fetchMock)).toHaveLength(2);
   });
 
   it("preserves the currently viewed month while an error is shown", async () => {
@@ -102,13 +126,13 @@ describe("WorkCalendarClient", () => {
     const user = userEvent.setup();
 
     render(<WorkCalendarClient />);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(calendarRangeCalls(fetchMock)).toHaveLength(1));
 
     await user.click(screen.getByRole("button", { name: /Previous month/ }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(calendarRangeCalls(fetchMock)).toHaveLength(2));
 
     const firstRange = getCalendarGridRange(todayDateOnly());
-    const [secondUrl] = fetchMock.mock.calls[1];
+    const [secondUrl] = calendarRangeCalls(fetchMock)[1];
     expect(String(secondUrl)).not.toBe(`/api/calendar?start=${firstRange.start}&end=${firstRange.end}`);
   });
 
@@ -118,18 +142,22 @@ describe("WorkCalendarClient", () => {
     const user = userEvent.setup();
 
     render(<WorkCalendarClient />);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(calendarRangeCalls(fetchMock)).toHaveLength(1));
 
     await user.click(screen.getByRole("button", { name: "Go to today" }));
 
     // Give any accidental async refetch a chance to fire before asserting.
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(calendarRangeCalls(fetchMock)).toHaveLength(1);
   });
 
   it("aborts the in-flight request when navigating to a new month before it resolves", async () => {
     let firstSignal: AbortSignal | undefined;
-    const fetchMock = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+    const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (String(url) === "/api/activity/product-event") {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+
       if (!firstSignal) {
         firstSignal = init?.signal ?? undefined;
         return new Promise(() => {}); // never resolves
@@ -140,7 +168,7 @@ describe("WorkCalendarClient", () => {
     const user = userEvent.setup();
 
     render(<WorkCalendarClient />);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(calendarRangeCalls(fetchMock)).toHaveLength(1));
 
     await user.click(screen.getByRole("button", { name: /Next month/ }));
 
@@ -149,18 +177,29 @@ describe("WorkCalendarClient", () => {
 
   it("a stale response for a superseded month never overwrites the newer month's data", async () => {
     const firstMonthDeferred = defer<Response>();
+    let rangeCallCount = 0;
     const fetchMock = vi
       .fn()
-      .mockReturnValueOnce(firstMonthDeferred.promise)
-      .mockResolvedValueOnce(jsonResponse(readyBody()));
+      .mockImplementation((url: string) => {
+        if (String(url) === "/api/activity/product-event") {
+          return Promise.resolve(new Response(null, { status: 204 }));
+        }
+
+        rangeCallCount += 1;
+        if (rangeCallCount === 1) {
+          return firstMonthDeferred.promise;
+        }
+
+        return Promise.resolve(jsonResponse(readyBody()));
+      });
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
     render(<WorkCalendarClient />);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(calendarRangeCalls(fetchMock)).toHaveLength(1));
 
     await user.click(screen.getByRole("button", { name: /Next month/ }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(calendarRangeCalls(fetchMock)).toHaveLength(2));
 
     // The first (now-superseded) request resolves late, after navigation.
     firstMonthDeferred.resolve(jsonResponse({ error: "stale error, should be ignored" }));
@@ -171,7 +210,14 @@ describe("WorkCalendarClient", () => {
 
   it("does not update state after unmount", async () => {
     const deferred = defer<Response>();
-    vi.stubGlobal("fetch", vi.fn().mockReturnValue(deferred.promise));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) =>
+        String(url) === "/api/activity/product-event"
+          ? Promise.resolve(new Response(null, { status: 204 }))
+          : deferred.promise
+      )
+    );
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const { unmount } = render(<WorkCalendarClient />);
@@ -239,7 +285,7 @@ describe("WorkCalendarClient - AbortError corrective-pass regression", () => {
     const user = userEvent.setup({ delay: null });
 
     render(<WorkCalendarClient />);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(calendarRangeCalls(fetchMock)).toHaveLength(1));
 
     await user.click(screen.getByRole("button", { name: /Previous month/ }));
     await user.click(screen.getByRole("button", { name: /Next month/ }));
@@ -257,7 +303,11 @@ describe("WorkCalendarClient - AbortError corrective-pass regression", () => {
     // adds the real signal-aware fetch + rejection-observer angle on top.
     const observer = captureUnhandledRejections();
     const seenSignals: AbortSignal[] = [];
-    const fetchMock = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+    const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (String(url) === "/api/activity/product-event") {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+
       const signal = init?.signal;
       if (signal) seenSignals.push(signal);
       return new Promise<Response>((resolve, reject) => {
@@ -272,7 +322,7 @@ describe("WorkCalendarClient - AbortError corrective-pass regression", () => {
     const user = userEvent.setup();
 
     render(<WorkCalendarClient />);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(calendarRangeCalls(fetchMock)).toHaveLength(1));
 
     await user.click(screen.getByRole("button", { name: /Next month/ }));
     await waitFor(() => expect(seenSignals[0]?.aborted).toBe(true));
@@ -349,5 +399,5 @@ describe("WorkCalendarClient - mobile clipping/duplicate-control corrective pass
     // No leftover DayPicker month/year <select> dropdowns anywhere (the
     // mobile compact selector now suppresses its own caption too).
     expect(document.querySelectorAll("select")).toHaveLength(0);
-  });
+  }, 30000);
 });

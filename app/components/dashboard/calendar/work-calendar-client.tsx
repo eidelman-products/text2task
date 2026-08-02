@@ -14,6 +14,7 @@ import {
   loadCalendarRangeClient,
   type LoadCalendarRangeClientResult,
 } from "@/lib/calendar/load-calendar-range.client";
+import { useTrackProductView } from "@/lib/activity/use-track-product-view.client";
 import {
   loadCalendarOptionsClient,
   type LoadCalendarOptionsClientResult,
@@ -127,6 +128,11 @@ export function WorkCalendarClient() {
   // setState from its async .then/.catch callbacks, never synchronously in
   // the effect body itself.
   const requestKey = `${gridRange.start}|${gridRange.end}|${retryNonce}`;
+
+  useTrackProductView({
+    eventName: "calendar_viewed",
+    route: "/dashboard/calendar",
+  });
 
   const [completedResult, setCompletedResult] = useState<{
     key: string;

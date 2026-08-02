@@ -33,6 +33,7 @@ import {
   getDashboardWorkspaceViewLabel,
   type DashboardWorkspaceView,
 } from "@/lib/dashboard/workspace-navigation";
+import { useTrackProductView } from "@/lib/activity/use-track-product-view.client";
 
 type DashboardClientProps = {
   email: string;
@@ -416,6 +417,14 @@ export default function DashboardClient({
   const activeTasksForStats = useMemo(
     () => allTasksForStats.filter(isActiveTask),
     [allTasksForStats]
+  );
+
+  useTrackProductView(
+    activeNav === "extract"
+      ? { eventName: "extract_viewed", route: "/dashboard" }
+      : activeNav === "tasks"
+        ? { eventName: "tasks_viewed", route: "/dashboard" }
+        : { eventName: "dashboard_viewed", route: "/dashboard" }
   );
 
   const completedTasksForStats = useMemo(

@@ -78,7 +78,11 @@ describe("CalendarPage - authenticated render", () => {
     ) as [string, RequestInit | undefined];
     expect(requestInit?.method ?? "GET").toBe("GET");
 
-    const mutationCalls = fetchMock.mock.calls.filter(([, init]) => {
+    const mutationCalls = fetchMock.mock.calls.filter(([url, init]) => {
+      if (!String(url).startsWith("/api/calendar/events")) {
+        return false;
+      }
+
       const method = (init as RequestInit | undefined)?.method;
       return method === "POST" || method === "PATCH" || method === "DELETE";
     });

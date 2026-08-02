@@ -374,10 +374,11 @@ describe("POST /api/activity/product-event - method and architectural isolation"
 });
 
 /**
- * Walks every .ts/.tsx source file under app/ (excluding node_modules,
- * .next, and this feature's own two Phase 2 files) looking for a pattern.
- * Used to prove, at the whole-repository level, that nothing outside this
- * feature calls it yet -- Phase 2 must remain completely inert.
+ * Walks every production .ts/.tsx source file under app/ (excluding
+ * node_modules, .next, tests, and this feature's own two route files)
+ * looking for a pattern. Phase 3 product components must import the
+ * client helper rather than direct-calling the endpoint or importing the
+ * server logger.
  */
 function collectAppSourceFiles(): string[] {
   const appRoot = path.join(__dirname, "..", "..", "..");
@@ -402,6 +403,8 @@ function collectAppSourceFiles(): string[] {
 
       if (
         (entry.endsWith(".ts") || entry.endsWith(".tsx")) &&
+        !entry.endsWith(".test.ts") &&
+        !entry.endsWith(".test.tsx") &&
         !selfFiles.has(fullPath)
       ) {
         results.push(fullPath);
@@ -414,7 +417,7 @@ function collectAppSourceFiles(): string[] {
 }
 
 describe("POST /api/activity/product-event - repository-wide isolation", () => {
-  it("is not called from any application page or component yet", () => {
+  it("is not direct-called from any production application page or component", () => {
     const offendingFiles = collectAppSourceFiles().filter((filePath) =>
       readFileSync(filePath, "utf8").includes("/api/activity/product-event")
     );
@@ -422,7 +425,7 @@ describe("POST /api/activity/product-event - repository-wide isolation", () => {
     expect(offendingFiles).toEqual([]);
   });
 
-  it("its server logger is not imported by any application page or component yet", () => {
+  it("its server logger is not imported by any production application page or component", () => {
     const offendingFiles = collectAppSourceFiles().filter((filePath) =>
       readFileSync(filePath, "utf8").includes("log-product-event.server")
     );
