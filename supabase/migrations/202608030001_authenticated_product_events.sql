@@ -29,10 +29,11 @@
 -- deliberately no metadata/jsonb column and no free-text content column,
 -- enforcing that discipline structurally rather than by convention alone.
 --
--- This migration is inert on its own: nothing in the application writes to
--- this table yet (that is Phase 2 -- the tracking endpoint -- and Phase 3+
--- -- application instrumentation -- neither of which this migration
--- includes).
+-- This migration is inert until the application commits that contain the
+-- tracking endpoint and instrumentation are pushed and deployed to the
+-- production application. The repository now contains that endpoint and
+-- instrumentation, but production application code will not write here
+-- merely because this migration has been applied manually.
 
 create table if not exists public.authenticated_product_events (
   id uuid primary key default gen_random_uuid(),
@@ -49,8 +50,11 @@ create table if not exists public.authenticated_product_events (
   entity_type text null,
   entity_id text null,
 
-  -- Server-computed short-dedupe-window key; never accepted from client
-  -- input. See the unique partial index below.
+  -- Server-computed deterministic retry key; never accepted from client
+  -- input. The server hashes the authenticated user_id, validated
+  -- navigationId, event_name, normalized route, normalized entity_type,
+  -- and normalized entity_id. Exact retries collide on the unique partial
+  -- index below; later deliberate openings use a different navigationId.
   idempotency_key text null,
 
   created_at timestamptz not null default now(),
@@ -72,8 +76,10 @@ create table if not exists public.authenticated_product_events (
   -- validation exactly (matching this repository's established
   -- "enforced at every layer" convention for relationship invariants):
   --   - both null (a non-entity event, e.g. dashboard_viewed) -- allowed;
-  --   - entity_type = 'calendar_day' requires entity_id to be a strict
-  --     YYYY-MM-DD date string -- never a UUID, never free text;
+  --   - entity_type = 'calendar_day' requires entity_id to match a strict
+  --     YYYY-MM-DD shape -- never a UUID, never free text. Full
+  --     impossible-date validation is performed by the server contract
+  --     before insertion;
   --   - entity_type in ('project', 'calendar_event') requires entity_id to
   --     be a well-formed UUID -- never a date, never free text.
   -- Any other combination (an entity_type with a null/malformed entity_id,
@@ -102,11 +108,13 @@ create index if not exists authenticated_product_events_user_id_created_at_idx
 create index if not exists authenticated_product_events_event_name_idx
   on public.authenticated_product_events (event_name);
 
--- Dedup mechanism: the server computes idempotency_key as
--- user_id + event_name + route + entity_id, bucketed into a short
--- (several-minute) server-clock window, so a genuine repeat view later the
--- same day still gets its own row while accidental double-fires (React
--- re-renders, Strict Mode, rapid double-clicks, retries) collapse into one.
+-- Dedup mechanism: the client supplies a validated navigationId UUID, the
+-- server resolves user_id from the authenticated session, and the server
+-- computes idempotency_key as a deterministic SHA-256 hash of user_id,
+-- navigationId, event_name, normalized route, normalized entity_type, and
+-- normalized entity_id. Exact retries collapse into one row through the
+-- unique partial index; later deliberate openings receive a different
+-- navigationId and therefore a different key.
 create unique index if not exists authenticated_product_events_idempotency_key_unique_idx
   on public.authenticated_product_events (idempotency_key)
   where idempotency_key is not null;
@@ -140,7 +148,7 @@ comment on column public.authenticated_product_events.entity_type is
   'One of project, calendar_event, calendar_day, or null for events with no associated entity (e.g. dashboard_viewed).';
 
 comment on column public.authenticated_product_events.entity_id is
-  'A UUID string when entity_type is project or calendar_event, or a strict YYYY-MM-DD date string when entity_type is calendar_day. Format is validated server-side before insert and backstopped by authenticated_product_events_entity_consistency_check -- never trusted as-is.';
+  'A UUID string when entity_type is project or calendar_event, or a strict YYYY-MM-DD shape when entity_type is calendar_day. Full impossible-date validation is performed server-side before insert; the database constraint backstops the storage shape -- never trusted as-is.';
 
 comment on column public.authenticated_product_events.idempotency_key is
-  'Server-computed short-dedupe-window key (user_id + event_name + route + entity_id + a several-minute server-clock bucket) -- never accepted from client input. See the unique partial index above.';
+  'Server-computed deterministic SHA-256 retry key over user_id, validated navigationId, event_name, normalized route, normalized entity_type, and normalized entity_id -- never accepted from client input. Exact retries collide on the unique partial index above; later deliberate openings receive a different navigationId.';
