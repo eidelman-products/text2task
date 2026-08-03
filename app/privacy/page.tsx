@@ -161,7 +161,7 @@ export default async function PrivacyPage({ searchParams }: PrivacyPageProps) {
               fontWeight: 750,
             }}
           >
-            <span style={pillStyle}>Last updated: June 19, 2026</span>
+            <span style={pillStyle}>Last updated: August 3, 2026</span>
             <span style={pillStyle}>Applies to text2task.com</span>
             <span style={pillStyle}>AI + SaaS product</span>
           </div>
@@ -255,6 +255,16 @@ export default async function PrivacyPage({ searchParams }: PrivacyPageProps) {
               attribution and anonymous visitor identification. You can accept or
               reject non-essential analytics through the cookie banner or any
               available consent settings.
+            </p>
+            <p>
+              Separately, when you are signed in, Text2Task may record minimal
+              authenticated operational activity tied to your account, such as
+              the product surface viewed, route, safe entity type or ID, and
+              timestamp. These records are used for product operation, support,
+              security, and internal usage understanding. They are separate from
+              anonymous marketing or traffic analytics, are not used for
+              advertising attribution, and remain operational if you reject
+              non-essential analytics.
             </p>
             <p>
               Internal analytics events are designed not to store raw client
