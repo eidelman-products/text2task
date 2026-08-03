@@ -252,7 +252,8 @@ Page copy states this explicitly: *"Private internal view. Times shown in Israel
 
 | Metric | Source |
 |---|---|
-| Tracked events today/7d/30d, page views, tracked visitors | Raw `analytics_events` query (30-day window, ≤5000 rows, `/admin` paths excluded), bucketed in-memory by window boundary |
+| Tracked events today/7d/30d, page views, Tracked browser IDs | Raw `analytics_events` query (30-day window, ≤5000 rows, `/admin` paths excluded), bucketed in-memory by window boundary; Tracked browser IDs is `distinct anonymous_id`, not unique people |
+| Unique authenticated users today/7d/30d | One bounded server-side `authenticated_product_events` query (30-day window, ≤10000 rows), bucketed in-memory by the same window boundaries as Overview traffic; counts `distinct user_id` values with at least one authenticated product-view event and excludes owner/test accounts using the existing server-side owner email classification |
 | Source/campaign, Country | Grouped from the same in-memory row set |
 | Recent traffic events | Top 25 of the same row set |
 | Product activation (total/activated users, rate, total projects, recent users) | `get_owner_product_activation_analytics()` RPC — reads `public.users`/`public.projects` directly, **not** `analytics_events` |

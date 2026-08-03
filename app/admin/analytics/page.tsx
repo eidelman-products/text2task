@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { requireOwner } from "@/lib/auth/owner.server";
+import { isOwnerEmail, requireOwner } from "@/lib/auth/owner.server";
 import {
   buildAdminAnalyticsPeriodWindows,
   getDateTimePart,
@@ -48,7 +48,8 @@ type PeriodStats = {
   label: string;
   total: number;
   pageViews: number;
-  uniqueVisitors: number;
+  trackedBrowserIds: number;
+  uniqueAuthenticatedUsers: number;
 };
 
 type LiveDemoPeriodStats = {
@@ -56,6 +57,17 @@ type LiveDemoPeriodStats = {
   attempts: number;
   succeeded: number;
   failed: number;
+};
+
+type AuthenticatedProductEventRow = {
+  user_id: string;
+  created_at: string;
+};
+
+type AuthenticatedUserPeriodCounts = {
+  today: number;
+  last7Days: number;
+  last30Days: number;
 };
 
 type LiveDemoFailureStageRow = {
@@ -81,6 +93,9 @@ type ProductActivationData = {
 };
 
 const TRAFFIC_ROWS_LIMIT = 5000;
+const AUTHENTICATED_ACTIVITY_ROWS_LIMIT = 10000;
+const AUTH_USERS_PAGE_SIZE = 1000;
+const AUTH_USERS_MAX_PAGES = 5; // safety cap: up to 5,000 auth accounts
 const LIVE_DEMO_ROWS_LIMIT = 5000;
 const RECENT_USERS_LIMIT = 25;
 const SIGNUP_ATTRIBUTION_LIMIT = 200;
@@ -128,13 +143,70 @@ function parseEventDate(row: { occurred_at: string }) {
   return parseTimestamp(row.occurred_at) ?? 0;
 }
 
+function parseAuthenticatedEventDate(row: { created_at: string }) {
+  return parseTimestamp(row.created_at) ?? 0;
+}
+
+function countUniqueAuthenticatedUsers(
+  rows: AuthenticatedProductEventRow[],
+  since: number,
+  excludedUserIds: Set<string>
+) {
+  const userIds = new Set<string>();
+
+  for (const row of rows) {
+    const userId = row.user_id.trim();
+
+    if (
+      !userId ||
+      excludedUserIds.has(userId) ||
+      parseAuthenticatedEventDate(row) < since
+    ) {
+      continue;
+    }
+
+    userIds.add(userId);
+  }
+
+  return userIds.size;
+}
+
+function buildAuthenticatedUserPeriodCounts(
+  rows: AuthenticatedProductEventRow[],
+  excludedUserIds: Set<string>,
+  windows: {
+    startOfTodayMs: number;
+    sevenDaysAgoMs: number;
+    thirtyDaysAgoMs: number;
+  }
+): AuthenticatedUserPeriodCounts {
+  return {
+    today: countUniqueAuthenticatedUsers(
+      rows,
+      windows.startOfTodayMs,
+      excludedUserIds
+    ),
+    last7Days: countUniqueAuthenticatedUsers(
+      rows,
+      windows.sevenDaysAgoMs,
+      excludedUserIds
+    ),
+    last30Days: countUniqueAuthenticatedUsers(
+      rows,
+      windows.thirtyDaysAgoMs,
+      excludedUserIds
+    ),
+  };
+}
+
 function buildPeriodStats(
   label: string,
   rows: AnalyticsEventRow[],
-  since: number
+  since: number,
+  uniqueAuthenticatedUsers: number
 ): PeriodStats {
   const periodRows = rows.filter((row) => parseEventDate(row) >= since);
-  const uniqueVisitors = new Set(
+  const trackedBrowserIds = new Set(
     periodRows.map((row) => row.anonymous_id).filter(Boolean)
   );
 
@@ -142,7 +214,8 @@ function buildPeriodStats(
     label,
     total: periodRows.length,
     pageViews: periodRows.filter((row) => row.event_name === "page_view").length,
-    uniqueVisitors: uniqueVisitors.size,
+    trackedBrowserIds: trackedBrowserIds.size,
+    uniqueAuthenticatedUsers,
   };
 }
 
@@ -454,6 +527,94 @@ async function loadTrafficRows(sinceMs: number) {
   } catch (error) {
     console.warn("Owner traffic analytics query failed:", {
       message: error instanceof Error ? error.message : "Unknown analytics error",
+    });
+
+    return null;
+  }
+}
+
+async function loadAuthenticatedProductEventRows(sinceMs: number) {
+  try {
+    const since = new Date(sinceMs).toISOString();
+    const { data, error } = await supabaseAdmin
+      .from("authenticated_product_events")
+      .select("user_id, created_at")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(AUTHENTICATED_ACTIVITY_ROWS_LIMIT);
+
+    if (error) {
+      console.warn(
+        "Owner authenticated user metric query failed:",
+        error.message
+      );
+
+      return null;
+    }
+
+    return ((data ?? []) as Array<Record<string, unknown>>)
+      .map((row) => {
+        const userId = row.user_id;
+        const createdAt = row.created_at;
+
+        if (
+          typeof userId !== "string" ||
+          !UUID_PATTERN.test(userId) ||
+          typeof createdAt !== "string" ||
+          parseTimestamp(createdAt) === null
+        ) {
+          return null;
+        }
+
+        return {
+          user_id: userId,
+          created_at: createdAt,
+        } satisfies AuthenticatedProductEventRow;
+      })
+      .filter((row): row is AuthenticatedProductEventRow => row !== null);
+  } catch (error) {
+    console.warn("Owner authenticated user metric query failed:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    return null;
+  }
+}
+
+async function loadOwnerTestUserIds() {
+  try {
+    const ownerTestUserIds = new Set<string>();
+
+    for (let page = 1; page <= AUTH_USERS_MAX_PAGES; page += 1) {
+      const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage: AUTH_USERS_PAGE_SIZE,
+      });
+
+      if (error) {
+        console.warn(
+          "Owner authenticated user metric Auth Admin query failed:",
+          error.message
+        );
+
+        return null;
+      }
+
+      for (const authUser of data.users) {
+        if (UUID_PATTERN.test(authUser.id) && isOwnerEmail(authUser.email)) {
+          ownerTestUserIds.add(authUser.id);
+        }
+      }
+
+      if (data.users.length < AUTH_USERS_PAGE_SIZE) {
+        break;
+      }
+    }
+
+    return ownerTestUserIds;
+  } catch (error) {
+    console.warn("Owner authenticated user metric Auth Admin query failed:", {
+      message: error instanceof Error ? error.message : "Unknown auth admin error",
     });
 
     return null;
@@ -772,22 +933,53 @@ async function loadAdminAnalyticsViewModel(): Promise<AdminAnalyticsViewModel> {
   const { startOfTodayMs, sevenDaysAgoMs, thirtyDaysAgoMs } =
     buildAdminAnalyticsPeriodWindows(nowMs);
 
-  const [trafficRows, productData, liveDemoRows] = await Promise.all([
+  const [
+    trafficRows,
+    productData,
+    liveDemoRows,
+    authenticatedProductEventRows,
+    ownerTestUserIds,
+  ] = await Promise.all([
     loadTrafficRows(thirtyDaysAgoMs),
     loadProductActivationData(),
     loadLiveDemoAnalyticsRows(thirtyDaysAgoMs),
+    loadAuthenticatedProductEventRows(thirtyDaysAgoMs),
+    loadOwnerTestUserIds(),
   ]);
   const signupAttributionRows = productData
     ? await loadSignupAttributionRows(
         productData.recentUsers.map((user) => user.id)
       )
     : null;
+  const authenticatedUserPeriodCounts =
+    authenticatedProductEventRows && ownerTestUserIds
+      ? buildAuthenticatedUserPeriodCounts(
+          authenticatedProductEventRows,
+          ownerTestUserIds,
+          { startOfTodayMs, sevenDaysAgoMs, thirtyDaysAgoMs }
+        )
+      : null;
 
   const periodStats = trafficRows
     ? [
-        buildPeriodStats("Today", trafficRows, startOfTodayMs),
-        buildPeriodStats("Last 7 days", trafficRows, sevenDaysAgoMs),
-        buildPeriodStats("Last 30 days", trafficRows, thirtyDaysAgoMs),
+        buildPeriodStats(
+          "Today",
+          trafficRows,
+          startOfTodayMs,
+          authenticatedUserPeriodCounts?.today ?? 0
+        ),
+        buildPeriodStats(
+          "Last 7 days",
+          trafficRows,
+          sevenDaysAgoMs,
+          authenticatedUserPeriodCounts?.last7Days ?? 0
+        ),
+        buildPeriodStats(
+          "Last 30 days",
+          trafficRows,
+          thirtyDaysAgoMs,
+          authenticatedUserPeriodCounts?.last30Days ?? 0
+        ),
       ]
     : [];
   const sourceRows = trafficRows ? buildSourceRows(trafficRows) : [];
@@ -889,7 +1081,7 @@ export default async function AdminAnalyticsPage() {
             <div>
               <h2>Tracked traffic</h2>
               <p className="admin-muted">
-                Traffic metrics include visitors who accepted analytics.
+                Traffic metrics include browser IDs that accepted analytics.
               </p>
             </div>
             <span>Last 30 days</span>
@@ -905,7 +1097,10 @@ export default async function AdminAnalyticsPage() {
                     <span>tracked events</span>
                     <span>{formatNumber(stat.pageViews)} page views</span>
                     <span>
-                      {formatNumber(stat.uniqueVisitors)} tracked visitors
+                      {formatNumber(stat.trackedBrowserIds)} Tracked browser IDs
+                    </span>
+                    <span>
+                      {formatNumber(stat.uniqueAuthenticatedUsers)} Unique authenticated users
                     </span>
                   </article>
                 ))}
@@ -924,7 +1119,7 @@ export default async function AdminAnalyticsPage() {
                           <th>Source</th>
                           <th>Campaign</th>
                           <th>Events</th>
-                          <th>Tracked visitors</th>
+                          <th>Tracked browser IDs</th>
                         </tr>
                       </thead>
                       <tbody>
