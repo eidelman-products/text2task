@@ -131,6 +131,9 @@ alter table public.authenticated_product_events enable row level security;
 revoke all on table public.authenticated_product_events from public;
 revoke all on table public.authenticated_product_events from anon;
 revoke all on table public.authenticated_product_events from authenticated;
+revoke all privileges
+on table public.authenticated_product_events
+from service_role;
 
 grant select, insert on table public.authenticated_product_events
   to service_role;

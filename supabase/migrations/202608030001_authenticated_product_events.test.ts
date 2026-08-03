@@ -19,6 +19,11 @@ function readNormalized(filePath: string): string {
 }
 
 const sql = readNormalized(MIGRATION_PATH);
+const normalizedSql = sql.toLowerCase();
+
+function statementIndex(statement: string) {
+  return normalizedSql.indexOf(statement.toLowerCase());
+}
 
 describe("202608030001_authenticated_product_events.sql - table shape", () => {
   it("creates the table under the correct name", () => {
@@ -59,8 +64,8 @@ describe("202608030001_authenticated_product_events.sql - table shape", () => {
   });
 
   it("never defines an update or delete grant, matching append-only rows", () => {
-    expect(sql.toLowerCase()).not.toMatch(/grant\s+update\b/);
-    expect(sql.toLowerCase()).not.toMatch(/grant\s+delete\b/);
+    expect(normalizedSql).not.toMatch(/grant\s+update\b/);
+    expect(normalizedSql).not.toMatch(/grant\s+delete\b/);
   });
 });
 
@@ -135,7 +140,7 @@ describe("202608030001_authenticated_product_events.sql - RLS and grants", () =>
   });
 
   it("defines no user-facing RLS policies", () => {
-    expect(sql.toLowerCase()).not.toMatch(/create policy/);
+    expect(normalizedSql).not.toMatch(/create policy/);
   });
 
   it("revokes all access from public, anon, and authenticated", () => {
@@ -150,11 +155,31 @@ describe("202608030001_authenticated_product_events.sql - RLS and grants", () =>
     );
   });
 
+  it("explicitly revokes all privileges from service_role before granting least privilege", () => {
+    const serviceRoleRevoke =
+      "revoke all privileges\non table public.authenticated_product_events\nfrom service_role";
+    const serviceRoleGrant =
+      "grant select, insert on table public.authenticated_product_events\n  to service_role";
+
+    expect(sql).toContain(serviceRoleRevoke);
+    expect(sql).toContain(serviceRoleGrant);
+    expect(statementIndex(serviceRoleRevoke)).toBeGreaterThan(-1);
+    expect(statementIndex(serviceRoleGrant)).toBeGreaterThan(
+      statementIndex(serviceRoleRevoke)
+    );
+  });
+
   it("grants only select and insert to service_role", () => {
     expect(sql).toContain(
       "grant select, insert on table public.authenticated_product_events"
     );
     expect(sql).toContain("to service_role");
+    expect(normalizedSql).not.toMatch(
+      /grant\s+(update|delete|truncate|references|trigger)\b[\s\S]*?\bto\s+service_role\b/
+    );
+    expect(normalizedSql).not.toMatch(
+      /grant\s+all(?:\s+privileges)?\b[\s\S]*?\bto\s+service_role\b/
+    );
   });
 });
 
@@ -163,11 +188,13 @@ describe("202608030001_authenticated_product_events.sql - isolation from analyti
     expect(sql).not.toMatch(/alter table public\.analytics_events\b/);
     expect(sql).not.toMatch(/drop table public\.analytics_events\b/);
     expect(sql).not.toMatch(/update public\.analytics_events\b/);
+    expect(sql).not.toMatch(/delete from public\.analytics_events\b/);
+    expect(sql).not.toMatch(/truncate table public\.analytics_events\b/);
   });
 
   it("does not define a down/rollback migration (forward-only, matching repo convention)", () => {
-    expect(sql.toLowerCase()).not.toMatch(/^-- down/m);
-    expect(sql.toLowerCase()).not.toMatch(/\brollback\b/);
+    expect(normalizedSql).not.toMatch(/^-- down/m);
+    expect(normalizedSql).not.toMatch(/\brollback\b/);
   });
 
   it("leaves the existing analytics_events migration file completely untouched", () => {
