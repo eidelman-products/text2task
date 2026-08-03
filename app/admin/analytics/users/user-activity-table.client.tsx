@@ -1,26 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
-export type OwnerUserActivityRow = {
-  id: string;
-  email: string | null;
-  signupAt: string | null;
-  emailConfirmedAt: string | null;
-  provider: string | null;
-  lastSignInAt: string | null;
-  hasProfile: boolean;
-  plan: string | null;
-  subscriptionStatus: string | null;
-  extractCount: number | null;
-  successfulExtractCount: number;
-  lastExtractAt: string | null;
-  lastDashboardSeenAt: string | null;
-  projectCount: number;
-  lastProjectAt: string | null;
-  lastActivityAt: string | null;
-  isOwnerOrTest: boolean;
-};
+import { getProductEventLabel } from "@/lib/activity/product-event-labels";
+import type { OwnerUserActivityRow } from "./owner-user-activity-types";
 
 type FilterKey =
   | "all"
@@ -29,6 +13,8 @@ type FilterKey =
   | "never_extracted"
   | "missing_profile"
   | "unverified"
+  | "viewed_app"
+  | "returning"
   | "free"
   | "pro";
 
@@ -39,6 +25,8 @@ const FILTERS: Array<{ key: FilterKey; label: string }> = [
   { key: "never_extracted", label: "Never extracted" },
   { key: "missing_profile", label: "Missing profile" },
   { key: "unverified", label: "Unverified" },
+  { key: "viewed_app", label: "Viewed app" },
+  { key: "returning", label: "Returning" },
   { key: "free", label: "Free" },
   { key: "pro", label: "Pro" },
 ];
@@ -56,16 +44,20 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 
 function formatDate(value: string | null) {
   if (!value) {
-    return "—";
+    return "-";
   }
 
   const timestamp = new Date(value).getTime();
 
   if (!Number.isFinite(timestamp)) {
-    return "—";
+    return "-";
   }
 
   return dateFormatter.format(new Date(timestamp));
+}
+
+function formatCount(value: number, singular: string, plural: string) {
+  return `${value} ${value === 1 ? singular : plural}`;
 }
 
 function matchesFilter(row: OwnerUserActivityRow, filter: FilterKey, now: number) {
@@ -87,6 +79,10 @@ function matchesFilter(row: OwnerUserActivityRow, filter: FilterKey, now: number
       return !row.hasProfile;
     case "unverified":
       return !row.emailConfirmedAt;
+    case "viewed_app":
+      return row.totalAuthenticatedViews > 0;
+    case "returning":
+      return row.isAuthenticatedReturningUser;
     case "free":
       return row.plan === "free";
     case "pro":
@@ -109,13 +105,22 @@ function computeSummary(rows: OwnerUserActivityRow[], now: number) {
     neverExtracted: rows.filter((row) => row.successfulExtractCount === 0)
       .length,
     missingProfiles: rows.filter((row) => !row.hasProfile).length,
+    authenticatedActiveLast7Days: rows.filter((row) => {
+      if (!row.authenticatedLastSeenAt) return false;
+      const timestamp = new Date(row.authenticatedLastSeenAt).getTime();
+      return Number.isFinite(timestamp) && now - timestamp <= SEVEN_DAYS_MS;
+    }).length,
+    returningUsers: rows.filter((row) => row.isAuthenticatedReturningUser)
+      .length,
   };
 }
 
 export default function UserActivityTable({
   rows,
+  authenticatedActivityUnavailable = false,
 }: {
   rows: OwnerUserActivityRow[];
+  authenticatedActivityUnavailable?: boolean;
 }) {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [showOwnerTest, setShowOwnerTest] = useState(false);
@@ -172,6 +177,14 @@ export default function UserActivityTable({
           <p>Missing profiles</p>
           <strong>{summary.missingProfiles}</strong>
         </article>
+        <article className="admin-stat-card">
+          <p>Authenticated active last 7 days</p>
+          <strong>{summary.authenticatedActiveLast7Days}</strong>
+        </article>
+        <article className="admin-stat-card">
+          <p>Returning users</p>
+          <strong>{summary.returningUsers}</strong>
+        </article>
       </div>
 
       <section className="admin-panel">
@@ -212,6 +225,12 @@ export default function UserActivityTable({
             </label>
           </div>
 
+          {authenticatedActivityUnavailable ? (
+            <p className="admin-muted owner-users-count">
+              Authenticated activity is temporarily unavailable.
+            </p>
+          ) : null}
+
           <div className="admin-table-wrap">
             <table>
               <thead>
@@ -222,6 +241,8 @@ export default function UserActivityTable({
                   <th>Provider</th>
                   <th>Last sign-in</th>
                   <th>Last dashboard visit</th>
+                  <th>Authenticated activity</th>
+                  <th>Usage</th>
                   <th>Successful extracts</th>
                   <th>Last extract</th>
                   <th>Projects</th>
@@ -229,6 +250,7 @@ export default function UserActivityTable({
                   <th>Plan</th>
                   <th>Subscription</th>
                   <th>Profile</th>
+                  <th>Timeline</th>
                 </tr>
               </thead>
               <tbody>
@@ -253,15 +275,49 @@ export default function UserActivityTable({
                           {row.emailConfirmedAt ? "Verified" : "Unverified"}
                         </span>
                       </td>
-                      <td>{row.provider ?? "—"}</td>
+                      <td>{row.provider ?? "-"}</td>
                       <td>{formatDate(row.lastSignInAt)}</td>
                       <td>{formatDate(row.lastDashboardSeenAt)}</td>
+                      <td>
+                        <div className="owner-users-stack">
+                          <strong>
+                            {getProductEventLabel(row.authenticatedLastEventName)}
+                          </strong>
+                          <span>{formatDate(row.authenticatedLastSeenAt)}</span>
+                          {row.authenticatedLastViewedRoute ? (
+                            <code>{row.authenticatedLastViewedRoute}</code>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="owner-users-stack">
+                          <span>
+                            {formatCount(
+                              row.totalAuthenticatedViews,
+                              "view",
+                              "views"
+                            )}
+                          </span>
+                          <span>
+                            {formatCount(
+                              row.authenticatedActiveDays,
+                              "active day",
+                              "active days"
+                            )}
+                          </span>
+                          {row.isAuthenticatedReturningUser ? (
+                            <span className="admin-status-pill admin-status-pill--yes">
+                              Returning
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
                       <td>{row.successfulExtractCount}</td>
                       <td>{formatDate(row.lastExtractAt)}</td>
                       <td>{row.projectCount}</td>
                       <td>{formatDate(row.lastProjectAt)}</td>
-                      <td>{row.plan ?? "—"}</td>
-                      <td>{row.subscriptionStatus ?? "—"}</td>
+                      <td>{row.plan ?? "-"}</td>
+                      <td>{row.subscriptionStatus ?? "-"}</td>
                       <td>
                         <span
                           className={
@@ -273,11 +329,19 @@ export default function UserActivityTable({
                           {row.hasProfile ? "OK" : "Missing"}
                         </span>
                       </td>
+                      <td>
+                        <Link
+                          href={`/admin/analytics/users/${row.id}`}
+                          className="owner-users-action-link"
+                        >
+                          View timeline
+                        </Link>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={13}>No users match this filter.</td>
+                    <td colSpan={16}>No users match this filter.</td>
                   </tr>
                 )}
               </tbody>

@@ -1,42 +1,25 @@
 import Link from "next/link";
 
-import { isOwnerEmail, requireOwner } from "@/lib/auth/owner.server";
+import {
+  loadOwnerAuthenticatedActivitySummary,
+  type OwnerAuthenticatedActivitySummaryRow,
+} from "@/lib/activity/owner-authenticated-activity.server";
+import { requireOwner } from "@/lib/auth/owner.server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import UserActivityTable, {
-  type OwnerUserActivityRow,
-} from "./user-activity-table.client";
+import {
+  getOwnerActivityUserIds,
+  mergeUserActivity,
+} from "./owner-user-activity-merge";
+import type {
+  AuthUserSummary,
+  OwnerActivityProfileRow,
+  OwnerActivityReport,
+} from "./owner-user-activity-types";
+import UserActivityTable from "./user-activity-table.client";
 
 const REPORT_ROW_LIMIT = 2000;
 const AUTH_USERS_PAGE_SIZE = 1000;
 const AUTH_USERS_MAX_PAGES = 5; // safety cap: up to 5,000 auth accounts
-
-type OwnerActivityProfileRow = {
-  id: string;
-  plan: string | null;
-  subscriptionStatus: string | null;
-  extractCount: number | null;
-  successfulExtractCount: number;
-  lastExtractAt: string | null;
-  lastDashboardSeenAt: string | null;
-  profileCreatedAt: string | null;
-  projectCount: number;
-  firstProjectAt: string | null;
-  lastProjectAt: string | null;
-};
-
-type OwnerActivityReport = {
-  totalProfiles: number;
-  rows: OwnerActivityProfileRow[];
-};
-
-type AuthUserSummary = {
-  id: string;
-  email: string | null;
-  createdAt: string | null;
-  emailConfirmedAt: string | null;
-  lastSignInAt: string | null;
-  provider: string | null;
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -204,83 +187,6 @@ async function loadAllAuthUsers(): Promise<AuthUserSummary[] | null> {
   }
 }
 
-function latestOf(...values: Array<string | null>): string | null {
-  let latest: string | null = null;
-  let latestTimestamp = -Infinity;
-
-  for (const value of values) {
-    if (!value) {
-      continue;
-    }
-
-    const timestamp = new Date(value).getTime();
-
-    if (Number.isFinite(timestamp) && timestamp > latestTimestamp) {
-      latestTimestamp = timestamp;
-      latest = value;
-    }
-  }
-
-  return latest;
-}
-
-function mergeUserActivity(
-  authUsers: AuthUserSummary[] | null,
-  activityReport: OwnerActivityReport | null
-): OwnerUserActivityRow[] {
-  const profileById = new Map(
-    (activityReport?.rows ?? []).map((row) => [row.id, row])
-  );
-  const authById = new Map((authUsers ?? []).map((user) => [user.id, user]));
-  const allIds = new Set<string>([...profileById.keys(), ...authById.keys()]);
-
-  const merged: OwnerUserActivityRow[] = [];
-
-  for (const id of allIds) {
-    const authUser = authById.get(id) ?? null;
-    const profile = profileById.get(id) ?? null;
-
-    const lastExtractAt = profile?.lastExtractAt ?? null;
-    const lastDashboardSeenAt = profile?.lastDashboardSeenAt ?? null;
-    const lastProjectAt = profile?.lastProjectAt ?? null;
-    const lastSignInAt = authUser?.lastSignInAt ?? null;
-
-    merged.push({
-      id,
-      email: authUser?.email ?? null,
-      signupAt: authUser?.createdAt ?? profile?.profileCreatedAt ?? null,
-      emailConfirmedAt: authUser?.emailConfirmedAt ?? null,
-      provider: authUser?.provider ?? null,
-      lastSignInAt,
-      hasProfile: profile !== null,
-      plan: profile?.plan ?? null,
-      subscriptionStatus: profile?.subscriptionStatus ?? null,
-      extractCount: profile?.extractCount ?? null,
-      successfulExtractCount: profile?.successfulExtractCount ?? 0,
-      lastExtractAt,
-      lastDashboardSeenAt,
-      projectCount: profile?.projectCount ?? 0,
-      lastProjectAt,
-      lastActivityAt: latestOf(
-        lastSignInAt,
-        lastDashboardSeenAt,
-        lastExtractAt,
-        lastProjectAt
-      ),
-      isOwnerOrTest: isOwnerEmail(authUser?.email ?? null),
-    });
-  }
-
-  merged.sort((a, b) => {
-    const aTime = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : -Infinity;
-    const bTime = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : -Infinity;
-
-    return bTime - aTime;
-  });
-
-  return merged;
-}
-
 export default async function AdminUserActivityPage() {
   await requireOwner();
 
@@ -317,7 +223,24 @@ export default async function AdminUserActivityPage() {
     );
   }
 
-  const mergedRows = mergeUserActivity(authUsers, activityReport);
+  const userIds = getOwnerActivityUserIds(authUsers, activityReport);
+  let authenticatedActivityRows: OwnerAuthenticatedActivitySummaryRow[] = [];
+  let authenticatedActivityUnavailable = false;
+
+  const authenticatedActivityResult =
+    await loadOwnerAuthenticatedActivitySummary(userIds);
+
+  if (authenticatedActivityResult.status === "ready") {
+    authenticatedActivityRows = authenticatedActivityResult.rows;
+  } else {
+    authenticatedActivityUnavailable = true;
+  }
+
+  const mergedRows = mergeUserActivity(
+    authUsers,
+    activityReport,
+    authenticatedActivityRows
+  );
 
   return (
     <main className="admin-analytics-page">
@@ -344,7 +267,7 @@ export default async function AdminUserActivityPage() {
         {!authUsers ? (
           <p className="owner-users-warning">
             Auth Admin data is temporarily unavailable. Showing profile and
-            activity data only — signup date, verification, provider, and
+            activity data only; signup date, verification, provider, and
             last sign-in may be incomplete below.
           </p>
         ) : null}
@@ -352,12 +275,22 @@ export default async function AdminUserActivityPage() {
         {!activityReport ? (
           <p className="owner-users-warning">
             The profile/activity report is temporarily unavailable. Showing
-            Auth account data only — plan, subscription, extraction, and
+            Auth account data only; plan, subscription, extraction, and
             project activity are unavailable below.
           </p>
         ) : null}
 
-        <UserActivityTable rows={mergedRows} />
+        {authenticatedActivityUnavailable ? (
+          <p className="owner-users-warning">
+            Authenticated activity is temporarily unavailable. Showing all other
+            user activity data; product-view columns may be incomplete below.
+          </p>
+        ) : null}
+
+        <UserActivityTable
+          rows={mergedRows}
+          authenticatedActivityUnavailable={authenticatedActivityUnavailable}
+        />
       </section>
     </main>
   );
@@ -462,7 +395,7 @@ const ownerUsersCss = `
 
   .admin-product-stat-grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
   }
 
@@ -593,6 +526,38 @@ const ownerUsersCss = `
 
   .owner-users-count {
     padding: 12px 18px;
+  }
+
+  .owner-users-stack {
+    display: grid;
+    gap: 4px;
+    min-width: 170px;
+    white-space: normal;
+  }
+
+  .owner-users-stack strong {
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  .owner-users-stack span,
+  .owner-users-stack code {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .owner-users-stack code {
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .owner-users-action-link {
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
   }
 
   .admin-table-wrap {
