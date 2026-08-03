@@ -16,6 +16,11 @@ function readNormalized(filePath: string): string {
 }
 
 const sql = readNormalized(MIGRATION_PATH);
+const normalizedSql = sql.toLowerCase();
+
+function statementIndex(statement: string) {
+  return normalizedSql.indexOf(statement.toLowerCase());
+}
 
 function extractFunctionBody(source: string, functionSignaturePrefix: string): string {
   const startMarker = `create or replace function public.${functionSignaturePrefix}`;
@@ -88,6 +93,11 @@ describe("202608030002 - get_owner_authenticated_activity_summary", () => {
   });
 
   it("revokes execution from public/anon/authenticated and grants only to service_role", () => {
+    const serviceRoleRevoke =
+      "revoke all privileges on function public.get_owner_authenticated_activity_summary(uuid[]) from service_role";
+    const serviceRoleGrant =
+      "grant execute on function public.get_owner_authenticated_activity_summary(uuid[])\n  to service_role";
+
     expect(sql).toContain(
       "revoke all on function public.get_owner_authenticated_activity_summary(uuid[]) from public"
     );
@@ -97,8 +107,13 @@ describe("202608030002 - get_owner_authenticated_activity_summary", () => {
     expect(sql).toContain(
       "revoke all on function public.get_owner_authenticated_activity_summary(uuid[]) from authenticated"
     );
-    expect(sql).toContain(
-      "grant execute on function public.get_owner_authenticated_activity_summary(uuid[])"
+    expect(sql).toContain(serviceRoleRevoke);
+    expect(sql).toContain(serviceRoleGrant);
+    expect(statementIndex(serviceRoleGrant)).toBeGreaterThan(
+      statementIndex(serviceRoleRevoke)
+    );
+    expect(normalizedSql).not.toMatch(
+      /grant\s+all(?:\s+privileges)?\b[\s\S]*?get_owner_authenticated_activity_summary[\s\S]*?\bto\s+service_role\b/
     );
   });
 });
@@ -145,6 +160,11 @@ describe("202608030002 - get_owner_user_activity_timeline", () => {
   });
 
   it("revokes execution from public/anon/authenticated and grants only to service_role", () => {
+    const serviceRoleRevoke =
+      "revoke all privileges on function public.get_owner_user_activity_timeline(uuid, int) from service_role";
+    const serviceRoleGrant =
+      "grant execute on function public.get_owner_user_activity_timeline(uuid, int)\n  to service_role";
+
     expect(sql).toContain(
       "revoke all on function public.get_owner_user_activity_timeline(uuid, int) from public"
     );
@@ -154,16 +174,21 @@ describe("202608030002 - get_owner_user_activity_timeline", () => {
     expect(sql).toContain(
       "revoke all on function public.get_owner_user_activity_timeline(uuid, int) from authenticated"
     );
-    expect(sql).toContain(
-      "grant execute on function public.get_owner_user_activity_timeline(uuid, int)"
+    expect(sql).toContain(serviceRoleRevoke);
+    expect(sql).toContain(serviceRoleGrant);
+    expect(statementIndex(serviceRoleGrant)).toBeGreaterThan(
+      statementIndex(serviceRoleRevoke)
+    );
+    expect(normalizedSql).not.toMatch(
+      /grant\s+all(?:\s+privileges)?\b[\s\S]*?get_owner_user_activity_timeline[\s\S]*?\bto\s+service_role\b/
     );
   });
 });
 
 describe("202608030002 - forward-only migration convention", () => {
   it("does not define a down/rollback migration", () => {
-    expect(sql.toLowerCase()).not.toMatch(/^-- down/m);
-    expect(sql.toLowerCase()).not.toMatch(/\brollback\b/);
+    expect(normalizedSql).not.toMatch(/^-- down/m);
+    expect(normalizedSql).not.toMatch(/\brollback\b/);
   });
 
   it("never touches public.analytics_events", () => {

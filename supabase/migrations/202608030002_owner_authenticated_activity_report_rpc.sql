@@ -3,15 +3,17 @@
 --
 -- Two read-only owner analytics RPCs over public.authenticated_product_events
 -- (202608030001_authenticated_product_events.sql), for the owner-only
--- Users & Activity admin sub-route (/admin/analytics/users) and its planned
+-- Users & Activity admin sub-route (/admin/analytics/users) and its
 -- per-user timeline detail route. Mirrors the structure and safety
 -- conventions of the existing get_owner_user_activity_report() and
 -- get_owner_product_activation_analytics() functions exactly (language sql,
 -- stable, security invoker, set search_path = public, revoke-then-grant to
 -- service_role only).
 --
--- Neither function is wired into any UI or application code by this
--- migration -- that is a later phase.
+-- This migration creates the read-only RPCs only. The repository now
+-- contains the owner read layer and UI that call them, but production
+-- application code will not call these functions until those commits are
+-- pushed and deployed.
 --
 -- Argument choice for get_owner_authenticated_activity_summary:
 -- p_user_ids uuid[] was chosen over a no-argument bounded report. The
@@ -99,12 +101,13 @@ $$;
 revoke all on function public.get_owner_authenticated_activity_summary(uuid[]) from public;
 revoke all on function public.get_owner_authenticated_activity_summary(uuid[]) from anon;
 revoke all on function public.get_owner_authenticated_activity_summary(uuid[]) from authenticated;
+revoke all privileges on function public.get_owner_authenticated_activity_summary(uuid[]) from service_role;
 
 grant execute on function public.get_owner_authenticated_activity_summary(uuid[])
   to service_role;
 
 comment on function public.get_owner_authenticated_activity_summary(uuid[]) is
-  'Owner-analytics only. Per-user authenticated-view summary (last_seen_at, last_viewed_route, last_event_name, total_authenticated_views, distinct_active_days, is_returning) for the given, server-capped (max 2000) set of user ids, read from public.authenticated_product_events. distinct_active_days is bucketed by Asia/Jerusalem calendar date, matching this repository''s existing owner-analytics timezone convention (lib/analytics/owner-analytics-window.ts, and the "Times shown in Israel time" convention already used by /admin/analytics/users). is_returning := distinct_active_days > 1. Returns no client message, task text, project title, client/contact name, email content, or other private/free-form content, because none is stored in the source table. Not yet called from any application code.';
+  'Owner-analytics only. Per-user authenticated-view summary (last_seen_at, last_viewed_route, last_event_name, total_authenticated_views, distinct_active_days, is_returning) for the given, server-capped (max 2000) set of user ids, read from public.authenticated_product_events. distinct_active_days is bucketed by Asia/Jerusalem calendar date, matching this repository''s existing owner-analytics timezone convention (lib/analytics/owner-analytics-window.ts, and the "Times shown in Israel time" convention already used by /admin/analytics/users). is_returning := distinct_active_days > 1. Returns no client message, task text, project title, client/contact name, email content, or other private/free-form content, because none is stored in the source table. Repository code calls this only from owner-only server UI after deployment.';
 
 create or replace function public.get_owner_user_activity_timeline(
   p_user_id uuid,
@@ -148,9 +151,10 @@ $$;
 revoke all on function public.get_owner_user_activity_timeline(uuid, int) from public;
 revoke all on function public.get_owner_user_activity_timeline(uuid, int) from anon;
 revoke all on function public.get_owner_user_activity_timeline(uuid, int) from authenticated;
+revoke all privileges on function public.get_owner_user_activity_timeline(uuid, int) from service_role;
 
 grant execute on function public.get_owner_user_activity_timeline(uuid, int)
   to service_role;
 
 comment on function public.get_owner_user_activity_timeline(uuid, int) is
-  'Owner-analytics only. Ordered (newest first, deterministic id desc tiebreak) authenticated-view timeline for one user from public.authenticated_product_events -- created_at, event_name, route, entity_type, entity_id only. p_limit defaults to 200 and is clamped server-side to a hard ceiling of 500 regardless of the requested value. Returns no client message, task text, project title, client/contact name, email content, or other private/free-form content, because none is stored in the source table. Not yet called from any application code.';
+  'Owner-analytics only. Ordered (newest first, deterministic id desc tiebreak) authenticated-view timeline for one user from public.authenticated_product_events -- created_at, event_name, route, entity_type, entity_id only. p_limit defaults to 200 and is clamped server-side to a hard ceiling of 500 regardless of the requested value. Returns no client message, task text, project title, client/contact name, email content, or other private/free-form content, because none is stored in the source table. Repository code calls this only from owner-only server UI after deployment.';
