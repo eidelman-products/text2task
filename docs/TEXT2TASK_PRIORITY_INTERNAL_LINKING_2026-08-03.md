@@ -2,7 +2,7 @@
 
 ## 1. Exact verdict
 
-Completed. Six contextual internal links were added across four existing
+Completed. Six contextual internal links were added across five existing
 source pages, pointing to two of the three GSC-flagged target pages
 (`/features/screenshot-to-tasks` and `/use-cases/wordpress-freelancers`).
 No new links were added to `/use-cases/web-designers` — the audit found it
@@ -108,7 +108,7 @@ for two isolated cards was judged more natural than inventing new titles.
 The audit found `/use-cases/web-designers` already has substantial,
 genuine inbound linking and no new link was added to it:
 
-- Automatic `relatedSlugs` cross-links from 8 other use-case pages
+- Automatic `relatedSlugs` cross-links from 9 other use-case pages
   (`wordpress-freelancers`, `webflow-freelancers`, `virtual-assistants`,
   `small-agencies`, `shopify-freelancers`, `seo-freelancers`,
   `project-managers`, `graphic-designers`, `freelance-developers`) via the
