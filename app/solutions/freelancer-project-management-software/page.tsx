@@ -204,6 +204,11 @@ const useCaseLinks = [
     text: "Keep multi-client requests clear before work moves into execution.",
   },
   {
+    href: "/use-cases/wordpress-freelancers",
+    title: "WordPress freelancers",
+    text: "Separate WordPress maintenance requests from new paid work before it's scheduled.",
+  },
+  {
     href: "/use-cases",
     title: "All use cases",
     text: "Explore more ways freelancers and service teams use Text2Task.",

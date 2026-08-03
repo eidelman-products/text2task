@@ -234,8 +234,11 @@ export default function ArticlePage() {
           <section className={styles.section}>
             <h2>Where Text2Task fits</h2>
             <p>
-              Text2Task helps web designers turn messy revision messages and
-              screenshots into structured tasks. You can review the
+              Text2Task helps web designers turn messy revision messages and{" "}
+              <Link href="/features/screenshot-to-tasks">
+                screenshots into structured tasks
+              </Link>
+              . You can review the
               extracted tasks, edit the preview, and save everything into a
               clean Tasks CRM. It does not decide whether something is a
               revision or new scope for you — that judgment call stays
@@ -244,8 +247,11 @@ export default function ArticlePage() {
             </p>
 
             <p>
-              This is especially useful for web designers, WordPress
-              freelancers, Webflow freelancers, and small agencies that
+              This is especially useful for web designers,{" "}
+              <Link href="/use-cases/wordpress-freelancers">
+                WordPress freelancers
+              </Link>
+              , Webflow freelancers, and small agencies that
               handle repeated client edits. See the full{" "}
               <Link href="/use-cases/web-designers">
                 web designers use case

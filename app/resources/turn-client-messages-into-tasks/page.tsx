@@ -266,8 +266,11 @@ export default function ArticlePage() {
           <section className={styles.section}>
             <h2>How Text2Task speeds this up</h2>
             <p>
-              Text2Task helps turn messy client messages and screenshots
-              into organized tasks. The AI creates a structured preview,
+              Text2Task helps turn messy client messages and{" "}
+              <Link href="/features/screenshot-to-tasks">
+                screenshots into organized tasks
+              </Link>
+              . The AI creates a structured preview,
               and you stay in control by reviewing and editing before
               saving anything. It does not guarantee that every implied
               detail is caught correctly, which is why the review step

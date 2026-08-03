@@ -138,6 +138,11 @@ const audienceLinks = [
     text: "Review follow-up requests across ongoing client projects.",
   },
   {
+    href: "/use-cases/wordpress-freelancers",
+    title: "WordPress freelancers",
+    text: "Check the next bug report or content request against maintenance work already tracked.",
+  },
+  {
     href: "/solutions/freelancer-project-management-software",
     title: "Freelancers",
     text: "Keep client feedback connected to the project it changes.",

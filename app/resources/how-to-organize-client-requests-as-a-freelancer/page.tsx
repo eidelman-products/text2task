@@ -268,8 +268,11 @@ export default function ArticlePage() {
             <h2>How Text2Task helps</h2>
             <p>
               Text2Task helps freelancers turn messy client messages and
-              screenshots into organized tasks. Paste a message or upload a
-              screenshot, review the structured preview, edit supported
+              screenshots into organized tasks. Paste a message or{" "}
+              <Link href="/features/screenshot-to-tasks">
+                upload a screenshot
+              </Link>
+              , review the structured preview, edit supported
               fields, remove anything that does not belong, and save the
               approved result to your Tasks CRM. It can identify the task,
               deadline, priority, budget, and client details when they are
