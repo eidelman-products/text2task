@@ -813,3 +813,299 @@ export const revealShareLinkSecretRpcDataSchema = z
 export type RevealShareLinkSecretRpcData = z.infer<
   typeof revealShareLinkSecretRpcDataSchema
 >;
+
+// ---------------------------------------------------------------------
+// Phase 1B.4 configuration-save contracts (settings / tasks / resources /
+// publishUpdate, combined into one atomic save_share_configuration call).
+// Preserves every Phase 1B.1-1B.3 contract above unchanged.
+// ---------------------------------------------------------------------
+
+const MAX_CONFIGURATION_ITEMS = 500;
+
+/**
+ * Partial, strict settings group. Every field is independently optional
+ * (omitted means unchanged), but at least one recognized key must be
+ * present when the group itself is supplied -- an empty `{}` is
+ * indistinguishable from omission and is rejected rather than silently
+ * accepted as a no-op. `clientFacingSubtitle` reuses the existing
+ * validated-but-never-transformed schema; an explicit `null` clears the
+ * subtitle, matching the RPC's own has-key/value distinction.
+ */
+export const saveShareConfigurationSettingsSchema = z
+  .object({
+    commentsEnabled: z.boolean().optional(),
+    clientFacingSubtitle: clientFacingSubtitleSchema.nullable().optional(),
+    contentDirection: z.enum(["auto", "ltr", "rtl"]).optional(),
+  })
+  .strict()
+  .refine(
+    (value) => Object.keys(value).length > 0,
+    "settings must contain at least one recognized key."
+  );
+export type SaveShareConfigurationSettings = z.infer<
+  typeof saveShareConfigurationSettingsSchema
+>;
+
+const publicLabelSchema = z
+  .string()
+  .max(120, "Must be at most 120 characters.")
+  .refine(isNotBlank, "Must not be empty or whitespace-only.");
+
+/**
+ * The delivered share_link_tasks.display_order and
+ * share_link_resources.display_order columns are both PostgreSQL
+ * `integer` (int4), whose accepted non-negative range ends at
+ * 2147483647 -- narrower than JavaScript's own safe-integer range. A
+ * value Zod alone would accept but the database's own type could never
+ * store must never reach the RPC in the first place, so this bound is
+ * enforced here, not left for the SQL cast to discover.
+ */
+const POSTGRES_INTEGER_MAX = 2147483647;
+
+const displayOrderSchema = z
+  .number()
+  .int()
+  .min(0, "Must be at least 0.")
+  .max(POSTGRES_INTEGER_MAX, `Must be at most ${POSTGRES_INTEGER_MAX}.`);
+
+export const saveShareConfigurationTaskItemSchema = z
+  .object({
+    subtaskId: canonicalSubtaskIdSchema,
+    publicGroup: z.enum([
+      "in_progress",
+      "waiting_for_feedback",
+      "completed",
+      "coming_up",
+    ]),
+    waitingForClientFeedback: z.boolean(),
+    displayOrder: displayOrderSchema,
+  })
+  .strict();
+export type SaveShareConfigurationTaskItem = z.infer<
+  typeof saveShareConfigurationTaskItemSchema
+>;
+
+/**
+ * An empty array is a meaningful, distinct request (clear every mapping)
+ * -- never conflated with omission, which is expressed by leaving the
+ * whole `tasks` key out of the request body entirely. Duplicate
+ * subtaskIds are rejected outright, never silently deduplicated.
+ */
+export const saveShareConfigurationTasksSchema = z
+  .array(saveShareConfigurationTaskItemSchema)
+  .max(
+    MAX_CONFIGURATION_ITEMS,
+    `Must contain at most ${MAX_CONFIGURATION_ITEMS} task items.`
+  )
+  .superRefine((tasks, ctx) => {
+    const seen = new Set<string>();
+    for (const [index, task] of tasks.entries()) {
+      if (seen.has(task.subtaskId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate subtaskId ${task.subtaskId}.`,
+          path: [index, "subtaskId"],
+        });
+        continue;
+      }
+      seen.add(task.subtaskId);
+    }
+  });
+export type SaveShareConfigurationTasks = z.infer<
+  typeof saveShareConfigurationTasksSchema
+>;
+
+export const saveShareConfigurationResourceItemSchema = z
+  .object({
+    resourceId: canonicalUuidSchema,
+    publicLabel: publicLabelSchema,
+    canDownload: z.boolean(),
+    displayOrder: displayOrderSchema,
+  })
+  .strict();
+export type SaveShareConfigurationResourceItem = z.infer<
+  typeof saveShareConfigurationResourceItemSchema
+>;
+
+/**
+ * Same empty-means-clear, duplicate-rejecting shape as tasks above.
+ * `resourceId` is canonicalized to lowercase on input (matching every
+ * other owner-supplied UUID in this file) specifically so two spellings
+ * of the same UUID that differ only by letter case cannot bypass
+ * duplicate detection.
+ */
+export const saveShareConfigurationResourcesSchema = z
+  .array(saveShareConfigurationResourceItemSchema)
+  .max(
+    MAX_CONFIGURATION_ITEMS,
+    `Must contain at most ${MAX_CONFIGURATION_ITEMS} resource items.`
+  )
+  .superRefine((resources, ctx) => {
+    const seen = new Set<string>();
+    for (const [index, resource] of resources.entries()) {
+      if (seen.has(resource.resourceId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate resourceId ${resource.resourceId}.`,
+          path: [index, "resourceId"],
+        });
+        continue;
+      }
+      seen.add(resource.resourceId);
+    }
+  });
+export type SaveShareConfigurationResources = z.infer<
+  typeof saveShareConfigurationResourcesSchema
+>;
+
+/** Reuses the existing shareLinkUpdateBodySchema (max 5000, non-blank
+ * after btrim, never transformed) -- the exact same bound the delivered
+ * share_link_updates_body_check enforces. */
+export const saveShareConfigurationPublishUpdateSchema = z
+  .object({
+    body: shareLinkUpdateBodySchema,
+  })
+  .strict();
+export type SaveShareConfigurationPublishUpdate = z.infer<
+  typeof saveShareConfigurationPublishUpdateSchema
+>;
+
+/**
+ * PATCH /api/share-links/[id]/config request body. `linkId` is supplied
+ * only by the path segment (shareLinkIdParamSchema), never duplicated
+ * here. Every top-level group is optional, but at least one must be
+ * present -- an entirely empty body is rejected rather than treated as a
+ * silent no-op.
+ */
+export const saveShareConfigurationRequestSchema = z
+  .object({
+    settings: saveShareConfigurationSettingsSchema.optional(),
+    tasks: saveShareConfigurationTasksSchema.optional(),
+    resources: saveShareConfigurationResourcesSchema.optional(),
+    publishUpdate: saveShareConfigurationPublishUpdateSchema.optional(),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      value.settings !== undefined ||
+      value.tasks !== undefined ||
+      value.resources !== undefined ||
+      value.publishUpdate !== undefined,
+    "At least one of settings, tasks, resources or publishUpdate must be supplied."
+  );
+export type SaveShareConfigurationRequest = z.infer<
+  typeof saveShareConfigurationRequestSchema
+>;
+
+/**
+ * A PostgreSQL `integer` (int4) value that the delivered schema also
+ * requires to be strictly positive: project_share_links.
+ * configuration_version (`project_share_links_configuration_version_check:
+ * configuration_version > 0`) and share_link_updates.version
+ * (`share_link_updates_version_check: version > 0`) both share this
+ * exact shape. Bounded at both ends so a malformed or out-of-range RPC
+ * result -- something the delivered `integer` column could never
+ * actually store -- fails closed here rather than being passed through.
+ */
+const postgresPositiveIntegerSchema = z
+  .number()
+  .int()
+  .min(1, "Must be at least 1.")
+  .max(POSTGRES_INTEGER_MAX, `Must be at most ${POSTGRES_INTEGER_MAX}.`);
+
+function hasDuplicateStrings(values: readonly string[]): boolean {
+  return new Set(values).size !== values.length;
+}
+
+/**
+ * The final taskIds set the RPC returns: bounded by the same 500-item
+ * cap the request itself enforces (this V1 operation can never produce
+ * a larger mapping than a single call's own submitted set), and free of
+ * duplicates -- share_link_tasks_share_link_id_subtask_id_unique
+ * guarantees the underlying rows are already distinct, so a duplicate
+ * in the RPC's own output would indicate a corrupt or tampered result,
+ * not a legitimate database state.
+ */
+const saveShareConfigurationTaskIdsSchema = z
+  .array(canonicalSubtaskIdSchema)
+  .max(
+    MAX_CONFIGURATION_ITEMS,
+    `Must contain at most ${MAX_CONFIGURATION_ITEMS} task ids.`
+  )
+  .refine(
+    (ids) => !hasDuplicateStrings(ids),
+    "taskIds must not contain duplicates."
+  );
+
+/**
+ * Canonical lowercase uuid text -- PostgreSQL's own `uuid::text` cast is
+ * always canonical lowercase (matching every other output-side uuidSchema
+ * in this file), so an uppercase character here indicates a corrupt or
+ * tampered result. This schema deliberately performs no `.transform()`:
+ * an uppercase value is rejected outright, never silently lowercased,
+ * so a caller can never be handed a "canonicalized" id that did not
+ * actually come from the database in that form.
+ */
+const canonicalLowercaseUuidSchema = z
+  .string()
+  .uuid()
+  .refine(
+    (value) => value === value.toLowerCase(),
+    "Must be a canonical lowercase uuid."
+  );
+
+/** Same 500-item cap and duplicate-freedom as taskIds above, matching
+ * share_link_resources_share_link_id_resource_id_unique. */
+const saveShareConfigurationResourceIdsSchema = z
+  .array(canonicalLowercaseUuidSchema)
+  .max(
+    MAX_CONFIGURATION_ITEMS,
+    `Must contain at most ${MAX_CONFIGURATION_ITEMS} resource ids.`
+  )
+  .refine(
+    (ids) => !hasDuplicateStrings(ids),
+    "resourceIds must not contain duplicates."
+  );
+
+const saveShareConfigurationCurrentUpdateSchema = z
+  .object({
+    version: postgresPositiveIntegerSchema,
+    publishedAt: strictTimestampSchema,
+  })
+  .strict();
+
+/**
+ * The exact shape public.save_share_configuration's own jsonb return
+ * value parses through. Unlike activate/rotate, nothing is attached to
+ * this after parsing (there is no secret to generate client-side for
+ * this operation), so this one schema serves as both the RPC-result
+ * parse target and the final safe repository/API result -- a separate
+ * "Rpc" variant would be a pointless duplicate. `taskIds`/`resourceIds`
+ * reflect the final committed mapping, ordered deterministically by the
+ * RPC itself (display_order, then id) -- never merely the submitted
+ * group, and this schema deliberately imposes no array-order requirement
+ * of its own (the RPC's own ordering is trusted, not re-validated here).
+ * `currentUpdate` never carries the update body.
+ */
+export const saveShareConfigurationDataSchema = z
+  .object({
+    linkId: uuidSchema,
+    configurationVersion: postgresPositiveIntegerSchema,
+    taskIds: saveShareConfigurationTaskIdsSchema,
+    resourceIds: saveShareConfigurationResourceIdsSchema,
+    currentUpdate: saveShareConfigurationCurrentUpdateSchema.nullable(),
+  })
+  .strict();
+export type SaveShareConfigurationData = z.infer<
+  typeof saveShareConfigurationDataSchema
+>;
+
+export const saveShareConfigurationResponseSchema = z.union([
+  z
+    .object({ ok: z.literal(true), data: saveShareConfigurationDataSchema })
+    .strict(),
+  shareLinkApiErrorSchema,
+]);
+export type SaveShareConfigurationResponse = z.infer<
+  typeof saveShareConfigurationResponseSchema
+>;

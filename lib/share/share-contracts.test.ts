@@ -15,6 +15,13 @@ import {
   revealShareLinkSecretRpcDataSchema,
   revokeShareLinkDataSchema,
   rotateShareLinkSecretDataSchema,
+  saveShareConfigurationDataSchema,
+  saveShareConfigurationRequestSchema,
+  saveShareConfigurationResourceItemSchema,
+  saveShareConfigurationResourcesSchema,
+  saveShareConfigurationSettingsSchema,
+  saveShareConfigurationTaskItemSchema,
+  saveShareConfigurationTasksSchema,
   setSharePinDataSchema,
   setSharePinRequestSchema,
   setShareLinkExpiryDataSchema,
@@ -1601,5 +1608,704 @@ describe("Phase 1B.1/1B.2 broad public-id contracts remain unchanged", () => {
       link: validManagedLink({ publicId: VALID_PUBLIC_ID }),
     });
     expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------
+// Phase 1B.4 configuration-save contracts
+// ---------------------------------------------------------------------
+
+const VALID_SUBTASK_ID = "42";
+const VALID_SUBTASK_ID_2 = "43";
+const VALID_RESOURCE_ID = VALID_UUID;
+const VALID_RESOURCE_ID_2 = VALID_UUID_2;
+
+function validTaskItem(overrides: Record<string, unknown> = {}) {
+  return {
+    subtaskId: VALID_SUBTASK_ID,
+    publicGroup: "in_progress",
+    waitingForClientFeedback: false,
+    displayOrder: 0,
+    ...overrides,
+  };
+}
+
+function validResourceItem(overrides: Record<string, unknown> = {}) {
+  return {
+    resourceId: VALID_RESOURCE_ID,
+    publicLabel: "Contract PDF",
+    canDownload: true,
+    displayOrder: 0,
+    ...overrides,
+  };
+}
+
+describe("saveShareConfigurationSettingsSchema", () => {
+  it("accepts a single supplied field", () => {
+    expect(
+      saveShareConfigurationSettingsSchema.safeParse({ commentsEnabled: true }).success
+    ).toBe(true);
+  });
+
+  it("accepts all three fields together", () => {
+    expect(
+      saveShareConfigurationSettingsSchema.safeParse({
+        commentsEnabled: true,
+        clientFacingSubtitle: "Hello",
+        contentDirection: "ltr",
+      }).success
+    ).toBe(true);
+  });
+
+  it("accepts an explicit clientFacingSubtitle: null to clear it", () => {
+    const result = saveShareConfigurationSettingsSchema.safeParse({
+      clientFacingSubtitle: null,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.clientFacingSubtitle).toBeNull();
+    }
+  });
+
+  it("rejects an empty object -- at least one recognized key is required when settings is supplied", () => {
+    expect(saveShareConfigurationSettingsSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("rejects an unknown key", () => {
+    expect(
+      saveShareConfigurationSettingsSchema.safeParse({
+        commentsEnabled: true,
+        extra: "nope",
+      }).success
+    ).toBe(false);
+  });
+
+  it("rejects a whitespace-only clientFacingSubtitle", () => {
+    expect(
+      saveShareConfigurationSettingsSchema.safeParse({
+        clientFacingSubtitle: "   ",
+      }).success
+    ).toBe(false);
+  });
+
+  it("rejects a clientFacingSubtitle whose original length exceeds 200", () => {
+    expect(
+      saveShareConfigurationSettingsSchema.safeParse({
+        clientFacingSubtitle: "a".repeat(199) + "  ",
+      }).success
+    ).toBe(false);
+  });
+
+  it("preserves clientFacingSubtitle exactly, without trimming", () => {
+    const original = "  Hello\nworld  ";
+    const result = saveShareConfigurationSettingsSchema.safeParse({
+      clientFacingSubtitle: original,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.clientFacingSubtitle).toBe(original);
+    }
+  });
+
+  it("rejects an invalid contentDirection", () => {
+    expect(
+      saveShareConfigurationSettingsSchema.safeParse({ contentDirection: "rtl-ish" })
+        .success
+    ).toBe(false);
+  });
+
+  it("rejects a non-boolean commentsEnabled", () => {
+    expect(
+      saveShareConfigurationSettingsSchema.safeParse({ commentsEnabled: "true" })
+        .success
+    ).toBe(false);
+  });
+});
+
+describe("saveShareConfigurationTaskItemSchema", () => {
+  it("accepts a valid item", () => {
+    expect(saveShareConfigurationTaskItemSchema.safeParse(validTaskItem()).success).toBe(
+      true
+    );
+  });
+
+  it("rejects an unknown key", () => {
+    expect(
+      saveShareConfigurationTaskItemSchema.safeParse(validTaskItem({ extra: "nope" }))
+        .success
+    ).toBe(false);
+  });
+
+  it.each(["subtaskId", "publicGroup", "waitingForClientFeedback", "displayOrder"])(
+    "rejects a missing required key %s",
+    (key) => {
+      const item = validTaskItem();
+      delete (item as Record<string, unknown>)[key];
+      expect(saveShareConfigurationTaskItemSchema.safeParse(item).success).toBe(false);
+    }
+  );
+
+  it.each(["0", "01", "-1", "1.5", "abc", "", " 1", "1 "])(
+    "rejects an invalid decimal subtaskId %s",
+    (subtaskId) => {
+      expect(
+        saveShareConfigurationTaskItemSchema.safeParse(validTaskItem({ subtaskId }))
+          .success
+      ).toBe(false);
+    }
+  );
+
+  it("never converts subtaskId to a JavaScript number", () => {
+    const result = saveShareConfigurationTaskItemSchema.safeParse(validTaskItem());
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(typeof result.data.subtaskId).toBe("string");
+    }
+  });
+
+  it("rejects an unknown publicGroup", () => {
+    expect(
+      saveShareConfigurationTaskItemSchema.safeParse(
+        validTaskItem({ publicGroup: "urgent" })
+      ).success
+    ).toBe(false);
+  });
+
+  it.each(["in_progress", "waiting_for_feedback", "completed", "coming_up"])(
+    "accepts the closed publicGroup value %s",
+    (publicGroup) => {
+      expect(
+        saveShareConfigurationTaskItemSchema.safeParse(validTaskItem({ publicGroup }))
+          .success
+      ).toBe(true);
+    }
+  );
+
+  it.each([-1, 1.5, Number.MAX_SAFE_INTEGER + 1, "0", null])(
+    "rejects an invalid displayOrder %s",
+    (displayOrder) => {
+      expect(
+        saveShareConfigurationTaskItemSchema.safeParse(validTaskItem({ displayOrder }))
+          .success
+      ).toBe(false);
+    }
+  );
+
+  it("accepts displayOrder 0", () => {
+    expect(
+      saveShareConfigurationTaskItemSchema.safeParse(validTaskItem({ displayOrder: 0 }))
+        .success
+    ).toBe(true);
+  });
+
+  it("accepts displayOrder 2147483647 -- the delivered integer column's own maximum", () => {
+    expect(
+      saveShareConfigurationTaskItemSchema.safeParse(
+        validTaskItem({ displayOrder: 2147483647 })
+      ).success
+    ).toBe(true);
+  });
+
+  it("rejects displayOrder 2147483648 -- one past the delivered integer column's maximum", () => {
+    expect(
+      saveShareConfigurationTaskItemSchema.safeParse(
+        validTaskItem({ displayOrder: 2147483648 })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects displayOrder Number.MAX_SAFE_INTEGER -- far beyond the integer column's range", () => {
+    expect(
+      saveShareConfigurationTaskItemSchema.safeParse(
+        validTaskItem({ displayOrder: Number.MAX_SAFE_INTEGER })
+      ).success
+    ).toBe(false);
+  });
+});
+
+describe("saveShareConfigurationTasksSchema", () => {
+  it("accepts an empty array (clears the mapping)", () => {
+    const result = saveShareConfigurationTasksSchema.safeParse([]);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual([]);
+    }
+  });
+
+  it("accepts a list of distinct items", () => {
+    expect(
+      saveShareConfigurationTasksSchema.safeParse([
+        validTaskItem({ subtaskId: VALID_SUBTASK_ID }),
+        validTaskItem({ subtaskId: VALID_SUBTASK_ID_2 }),
+      ]).success
+    ).toBe(true);
+  });
+
+  it("rejects a duplicate subtaskId -- never silently deduplicated", () => {
+    const result = saveShareConfigurationTasksSchema.safeParse([
+      validTaskItem({ subtaskId: VALID_SUBTASK_ID }),
+      validTaskItem({ subtaskId: VALID_SUBTASK_ID }),
+    ]);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects more than 500 items", () => {
+    const items = Array.from({ length: 501 }, (_, i) =>
+      validTaskItem({ subtaskId: String(i + 1) })
+    );
+    expect(saveShareConfigurationTasksSchema.safeParse(items).success).toBe(false);
+  });
+
+  it("accepts exactly 500 items", () => {
+    const items = Array.from({ length: 500 }, (_, i) =>
+      validTaskItem({ subtaskId: String(i + 1) })
+    );
+    expect(saveShareConfigurationTasksSchema.safeParse(items).success).toBe(true);
+  });
+});
+
+describe("saveShareConfigurationResourceItemSchema", () => {
+  it("accepts a valid item", () => {
+    expect(
+      saveShareConfigurationResourceItemSchema.safeParse(validResourceItem()).success
+    ).toBe(true);
+  });
+
+  it("canonicalizes resourceId to lowercase", () => {
+    const result = saveShareConfigurationResourceItemSchema.safeParse(
+      validResourceItem({ resourceId: VALID_RESOURCE_ID.toUpperCase() })
+    );
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.resourceId).toBe(VALID_RESOURCE_ID);
+    }
+  });
+
+  it("rejects a non-uuid resourceId", () => {
+    expect(
+      saveShareConfigurationResourceItemSchema.safeParse(
+        validResourceItem({ resourceId: "not-a-uuid" })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects an unknown key", () => {
+    expect(
+      saveShareConfigurationResourceItemSchema.safeParse(
+        validResourceItem({ extra: "nope" })
+      ).success
+    ).toBe(false);
+  });
+
+  it.each(["resourceId", "publicLabel", "canDownload", "displayOrder"])(
+    "rejects a missing required key %s",
+    (key) => {
+      const item = validResourceItem();
+      delete (item as Record<string, unknown>)[key];
+      expect(saveShareConfigurationResourceItemSchema.safeParse(item).success).toBe(
+        false
+      );
+    }
+  );
+
+  it("rejects a whitespace-only publicLabel", () => {
+    expect(
+      saveShareConfigurationResourceItemSchema.safeParse(
+        validResourceItem({ publicLabel: "   " })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects a publicLabel whose original length exceeds 120", () => {
+    expect(
+      saveShareConfigurationResourceItemSchema.safeParse(
+        validResourceItem({ publicLabel: "a".repeat(119) + "  " })
+      ).success
+    ).toBe(false);
+  });
+
+  it("preserves publicLabel exactly, without trimming", () => {
+    const original = "  Contract PDF  ";
+    const result = saveShareConfigurationResourceItemSchema.safeParse(
+      validResourceItem({ publicLabel: original })
+    );
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.publicLabel).toBe(original);
+    }
+  });
+
+  it.each([-1, 1.5, "0"])("rejects an invalid displayOrder %s", (displayOrder) => {
+    expect(
+      saveShareConfigurationResourceItemSchema.safeParse(
+        validResourceItem({ displayOrder })
+      ).success
+    ).toBe(false);
+  });
+
+  it("accepts displayOrder 2147483647 -- the delivered integer column's own maximum", () => {
+    expect(
+      saveShareConfigurationResourceItemSchema.safeParse(
+        validResourceItem({ displayOrder: 2147483647 })
+      ).success
+    ).toBe(true);
+  });
+
+  it("rejects displayOrder 2147483648 -- one past the delivered integer column's maximum", () => {
+    expect(
+      saveShareConfigurationResourceItemSchema.safeParse(
+        validResourceItem({ displayOrder: 2147483648 })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects displayOrder Number.MAX_SAFE_INTEGER -- far beyond the integer column's range", () => {
+    expect(
+      saveShareConfigurationResourceItemSchema.safeParse(
+        validResourceItem({ displayOrder: Number.MAX_SAFE_INTEGER })
+      ).success
+    ).toBe(false);
+  });
+});
+
+describe("saveShareConfigurationResourcesSchema", () => {
+  it("accepts an empty array (clears the mapping)", () => {
+    const result = saveShareConfigurationResourcesSchema.safeParse([]);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual([]);
+    }
+  });
+
+  it("rejects a duplicate resourceId -- never silently deduplicated", () => {
+    const result = saveShareConfigurationResourcesSchema.safeParse([
+      validResourceItem({ resourceId: VALID_RESOURCE_ID }),
+      validResourceItem({ resourceId: VALID_RESOURCE_ID }),
+    ]);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a duplicate resourceId that differs only by letter case", () => {
+    const result = saveShareConfigurationResourcesSchema.safeParse([
+      validResourceItem({ resourceId: VALID_RESOURCE_ID }),
+      validResourceItem({ resourceId: VALID_RESOURCE_ID.toUpperCase() }),
+    ]);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects more than 500 items", () => {
+    const items = Array.from({ length: 501 }, (_, i) =>
+      validResourceItem({
+        resourceId: `11111111-1111-4111-8111-${String(i).padStart(12, "0")}`,
+      })
+    );
+    expect(saveShareConfigurationResourcesSchema.safeParse(items).success).toBe(false);
+  });
+
+  it("accepts exactly 500 items", () => {
+    const items = Array.from({ length: 500 }, (_, i) =>
+      validResourceItem({
+        resourceId: `11111111-1111-4111-8111-${String(i).padStart(12, "0")}`,
+      })
+    );
+    expect(saveShareConfigurationResourcesSchema.safeParse(items).success).toBe(true);
+  });
+});
+
+describe("saveShareConfigurationRequestSchema", () => {
+  it("accepts a full request with all four groups", () => {
+    const result = saveShareConfigurationRequestSchema.safeParse({
+      settings: { commentsEnabled: true },
+      tasks: [validTaskItem()],
+      resources: [validResourceItem()],
+      publishUpdate: { body: "Hello client" },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it.each([
+    ["settings", { settings: { commentsEnabled: true } }],
+    ["tasks", { tasks: [validTaskItem()] }],
+    ["resources", { resources: [validResourceItem()] }],
+    ["publishUpdate", { publishUpdate: { body: "Hello client" } }],
+  ])("accepts a request with only %s present", (_label, body) => {
+    expect(saveShareConfigurationRequestSchema.safeParse(body).success).toBe(true);
+  });
+
+  it("accepts empty tasks/resources arrays to clear both mappings", () => {
+    expect(
+      saveShareConfigurationRequestSchema.safeParse({ tasks: [], resources: [] })
+        .success
+    ).toBe(true);
+  });
+
+  it("rejects an entirely empty body -- at least one group is required", () => {
+    expect(saveShareConfigurationRequestSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("rejects an unknown top-level key", () => {
+    expect(
+      saveShareConfigurationRequestSchema.safeParse({
+        settings: { commentsEnabled: true },
+        linkId: VALID_UUID,
+      }).success
+    ).toBe(false);
+  });
+
+  it("rejects a linkId in the body -- the path alone supplies it", () => {
+    const result = saveShareConfigurationRequestSchema.safeParse({
+      linkId: VALID_UUID,
+      settings: { commentsEnabled: true },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it.each(["secretDigest", "pinHash", "pinSalt", "userId", "projectId"])(
+    "never accepts the private/secret field %s at the top level",
+    (forbiddenField) => {
+      const result = saveShareConfigurationRequestSchema.safeParse({
+        settings: { commentsEnabled: true },
+        [forbiddenField]: "leak",
+      });
+      expect(result.success).toBe(false);
+    }
+  );
+
+  it("rejects a null tasks/resources/publishUpdate group -- these are not nullable at the HTTP boundary", () => {
+    expect(
+      saveShareConfigurationRequestSchema.safeParse({ tasks: null }).success
+    ).toBe(false);
+    expect(
+      saveShareConfigurationRequestSchema.safeParse({ resources: null }).success
+    ).toBe(false);
+    expect(
+      saveShareConfigurationRequestSchema.safeParse({ publishUpdate: null }).success
+    ).toBe(false);
+  });
+
+  it("rejects a whitespace-only publishUpdate.body", () => {
+    expect(
+      saveShareConfigurationRequestSchema.safeParse({
+        publishUpdate: { body: "   " },
+      }).success
+    ).toBe(false);
+  });
+
+  it("rejects a publishUpdate.body whose original length exceeds 5000", () => {
+    expect(
+      saveShareConfigurationRequestSchema.safeParse({
+        publishUpdate: { body: "a".repeat(4999) + "  " },
+      }).success
+    ).toBe(false);
+  });
+
+  it("preserves publishUpdate.body exactly, without trimming", () => {
+    const original = "  Update body  \n";
+    const result = saveShareConfigurationRequestSchema.safeParse({
+      publishUpdate: { body: original },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.publishUpdate?.body).toBe(original);
+    }
+  });
+});
+
+describe("saveShareConfigurationDataSchema", () => {
+  function validData(overrides: Record<string, unknown> = {}) {
+    return {
+      linkId: VALID_UUID,
+      configurationVersion: 3,
+      taskIds: [VALID_SUBTASK_ID, VALID_SUBTASK_ID_2],
+      resourceIds: [VALID_RESOURCE_ID, VALID_RESOURCE_ID_2],
+      currentUpdate: { version: 2, publishedAt: VALID_TIMESTAMP },
+      ...overrides,
+    };
+  }
+
+  it("accepts a valid payload with a current update", () => {
+    expect(saveShareConfigurationDataSchema.safeParse(validData()).success).toBe(true);
+  });
+
+  it("accepts a null currentUpdate", () => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(validData({ currentUpdate: null }))
+        .success
+    ).toBe(true);
+  });
+
+  it("accepts empty taskIds/resourceIds arrays", () => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(
+        validData({ taskIds: [], resourceIds: [] })
+      ).success
+    ).toBe(true);
+  });
+
+  it("rejects a non-positive configurationVersion", () => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(
+        validData({ configurationVersion: 0 })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects a taskId that is not a canonical decimal string", () => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(validData({ taskIds: ["01"] }))
+        .success
+    ).toBe(false);
+  });
+
+  it("rejects a currentUpdate with a body field -- the body is never returned", () => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(
+        validData({ currentUpdate: { version: 1, publishedAt: VALID_TIMESTAMP, body: "leak" } })
+      ).success
+    ).toBe(false);
+  });
+
+  it.each([
+    "secretDigest",
+    "pinHash",
+    "pinSalt",
+    "userId",
+    "projectId",
+    "settings",
+    "commentsEnabled",
+    "clientFacingSubtitle",
+    "contentDirection",
+  ])("rejects a forbidden field %s", (forbiddenField) => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(
+        validData({ [forbiddenField]: "leak" })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects a duplicate taskId in the result -- the underlying table's own unique constraint means a duplicate indicates a corrupt result", () => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(
+        validData({ taskIds: [VALID_SUBTASK_ID, VALID_SUBTASK_ID] })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects a duplicate resourceId in the result", () => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(
+        validData({ resourceIds: [VALID_RESOURCE_ID, VALID_RESOURCE_ID] })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects an uppercase resourceId in the result rather than silently lowercasing it", () => {
+    // VALID_RESOURCE_ID (VALID_UUID) is digits-only and has no letter
+    // case to alter, so this uses a uuid containing real hex letters to
+    // actually exercise the canonical-lowercase check.
+    const mixedCaseUuid = "aabbccdd-1111-4111-8111-111111111111";
+    const result = saveShareConfigurationDataSchema.safeParse(
+      validData({ resourceIds: [mixedCaseUuid.toUpperCase()] })
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a lowercase resourceId containing real hex letters", () => {
+    const mixedCaseUuid = "aabbccdd-1111-4111-8111-111111111111";
+    const result = saveShareConfigurationDataSchema.safeParse(
+      validData({ resourceIds: [mixedCaseUuid] })
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects 501 taskIds", () => {
+    const taskIds = Array.from({ length: 501 }, (_, i) => String(i + 1));
+    expect(
+      saveShareConfigurationDataSchema.safeParse(validData({ taskIds })).success
+    ).toBe(false);
+  });
+
+  it("accepts exactly 500 taskIds", () => {
+    const taskIds = Array.from({ length: 500 }, (_, i) => String(i + 1));
+    expect(
+      saveShareConfigurationDataSchema.safeParse(validData({ taskIds })).success
+    ).toBe(true);
+  });
+
+  it("rejects 501 resourceIds", () => {
+    const resourceIds = Array.from(
+      { length: 501 },
+      (_, i) => `11111111-1111-4111-8111-${String(i).padStart(12, "0")}`
+    );
+    expect(
+      saveShareConfigurationDataSchema.safeParse(validData({ resourceIds })).success
+    ).toBe(false);
+  });
+
+  it("accepts exactly 500 resourceIds", () => {
+    const resourceIds = Array.from(
+      { length: 500 },
+      (_, i) => `11111111-1111-4111-8111-${String(i).padStart(12, "0")}`
+    );
+    expect(
+      saveShareConfigurationDataSchema.safeParse(validData({ resourceIds })).success
+    ).toBe(true);
+  });
+
+  it("accepts configurationVersion at exactly the PostgreSQL integer maximum", () => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(
+        validData({ configurationVersion: 2147483647 })
+      ).success
+    ).toBe(true);
+  });
+
+  it("rejects configurationVersion above the PostgreSQL integer range", () => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(
+        validData({ configurationVersion: 2147483648 })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects currentUpdate.version above the PostgreSQL integer range", () => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(
+        validData({
+          currentUpdate: { version: 2147483648, publishedAt: VALID_TIMESTAMP },
+        })
+      ).success
+    ).toBe(false);
+  });
+
+  it("accepts currentUpdate.version at exactly the PostgreSQL integer maximum", () => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(
+        validData({
+          currentUpdate: { version: 2147483647, publishedAt: VALID_TIMESTAMP },
+        })
+      ).success
+    ).toBe(true);
+  });
+
+  it("rejects a non-positive currentUpdate.version", () => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(
+        validData({ currentUpdate: { version: 0, publishedAt: VALID_TIMESTAMP } })
+      ).success
+    ).toBe(false);
+  });
+
+  it("does not require taskIds/resourceIds to be in any particular order", () => {
+    expect(
+      saveShareConfigurationDataSchema.safeParse(
+        validData({ taskIds: [VALID_SUBTASK_ID_2, VALID_SUBTASK_ID] })
+      ).success
+    ).toBe(true);
+    expect(
+      saveShareConfigurationDataSchema.safeParse(
+        validData({ resourceIds: [VALID_RESOURCE_ID_2, VALID_RESOURCE_ID] })
+      ).success
+    ).toBe(true);
   });
 });

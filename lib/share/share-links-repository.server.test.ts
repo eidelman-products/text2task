@@ -40,6 +40,7 @@ const {
   revealShareLinkSecret,
   revokeShareLink,
   rotateShareLinkSecret,
+  saveShareConfiguration,
   setShareLinkExpiry,
   setShareLinkPin,
 } = await import("./share-links-repository.server");
@@ -1788,6 +1789,342 @@ describe("revealShareLinkSecret", () => {
   });
 });
 
+function validSaveConfigurationRpcData(overrides: Record<string, unknown> = {}) {
+  return {
+    linkId: VALID_UUID,
+    configurationVersion: 3,
+    taskIds: ["1", "2"],
+    resourceIds: [VALID_UUID_2],
+    currentUpdate: { version: 1, publishedAt: VALID_TIMESTAMP },
+    ...overrides,
+  };
+}
+
+describe("saveShareConfiguration", () => {
+  it("calls save_share_configuration with the canonical link id and exactly five arguments", async () => {
+    const rpc = vi
+      .fn()
+      .mockResolvedValue({ data: validSaveConfigurationRpcData(), error: null });
+    const client = buildFakeClient(rpc);
+
+    await saveShareConfiguration(client, VALID_UUID.toUpperCase(), {
+      settings: { commentsEnabled: true },
+    });
+
+    expect(rpc).toHaveBeenCalledTimes(1);
+    const [rpcName, params] = rpc.mock.calls[0];
+    expect(rpcName).toBe("save_share_configuration");
+    expect(Object.keys(params as object).sort()).toEqual(
+      ["p_link_id", "p_publish_update", "p_resources", "p_settings", "p_tasks"].sort()
+    );
+  });
+
+  it("sends SQL null for every omitted group", async () => {
+    const rpc = vi
+      .fn()
+      .mockResolvedValue({ data: validSaveConfigurationRpcData(), error: null });
+    const client = buildFakeClient(rpc);
+
+    await saveShareConfiguration(client, VALID_UUID, {
+      settings: { commentsEnabled: true },
+    });
+
+    expect(rpc).toHaveBeenCalledWith("save_share_configuration", {
+      p_link_id: VALID_UUID,
+      p_settings: { commentsEnabled: true },
+      p_tasks: null,
+      p_resources: null,
+      p_publish_update: null,
+    });
+  });
+
+  it("forwards a full payload with every group present, unchanged", async () => {
+    const rpc = vi
+      .fn()
+      .mockResolvedValue({ data: validSaveConfigurationRpcData(), error: null });
+    const client = buildFakeClient(rpc);
+
+    const request = {
+      settings: {
+        commentsEnabled: true,
+        clientFacingSubtitle: null,
+        contentDirection: "ltr" as const,
+      },
+      tasks: [
+        {
+          subtaskId: "1",
+          publicGroup: "in_progress" as const,
+          waitingForClientFeedback: false,
+          displayOrder: 0,
+        },
+      ],
+      resources: [
+        {
+          resourceId: VALID_UUID_2,
+          publicLabel: "Contract",
+          canDownload: true,
+          displayOrder: 0,
+        },
+      ],
+      publishUpdate: { body: "Hello client" },
+    };
+
+    await saveShareConfiguration(client, VALID_UUID, request);
+
+    expect(rpc).toHaveBeenCalledWith("save_share_configuration", {
+      p_link_id: VALID_UUID,
+      p_settings: request.settings,
+      p_tasks: request.tasks,
+      p_resources: request.resources,
+      p_publish_update: request.publishUpdate,
+    });
+  });
+
+  it("preserves an empty tasks/resources array distinctly from omission", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: validSaveConfigurationRpcData({ taskIds: [], resourceIds: [] }),
+      error: null,
+    });
+    const client = buildFakeClient(rpc);
+
+    await saveShareConfiguration(client, VALID_UUID, { tasks: [], resources: [] });
+
+    expect(rpc).toHaveBeenCalledWith("save_share_configuration", {
+      p_link_id: VALID_UUID,
+      p_settings: null,
+      p_tasks: [],
+      p_resources: [],
+      p_publish_update: null,
+    });
+  });
+
+  it("preserves subtaskId as a string, never converting it to a number, across the RPC boundary", async () => {
+    const rpc = vi
+      .fn()
+      .mockResolvedValue({ data: validSaveConfigurationRpcData(), error: null });
+    const client = buildFakeClient(rpc);
+
+    await saveShareConfiguration(client, VALID_UUID, {
+      tasks: [
+        {
+          subtaskId: "9007199254740993",
+          publicGroup: "in_progress",
+          waitingForClientFeedback: false,
+          displayOrder: 0,
+        },
+      ],
+    });
+
+    const [, params] = rpc.mock.calls[0];
+    const tasks = (params as { p_tasks: Array<{ subtaskId: unknown }> }).p_tasks;
+    expect(typeof tasks[0]?.subtaskId).toBe("string");
+    expect(tasks[0]?.subtaskId).toBe("9007199254740993");
+  });
+
+  it("returns parsed success data on a valid RPC response", async () => {
+    const payload = validSaveConfigurationRpcData();
+    const rpc = vi.fn().mockResolvedValue({ data: payload, error: null });
+    const client = buildFakeClient(rpc);
+
+    const result = await saveShareConfiguration(client, VALID_UUID, {
+      settings: { commentsEnabled: true },
+    });
+
+    expect(result).toEqual({ ok: true, data: payload });
+  });
+
+  it("succeeds when the caller supplied an uppercase id and the RPC's canonical lowercase linkId matches it", async () => {
+    const payload = validSaveConfigurationRpcData();
+    const rpc = vi.fn().mockResolvedValue({ data: payload, error: null });
+    const client = buildFakeClient(rpc);
+
+    const result = await saveShareConfiguration(client, VALID_UUID.toUpperCase(), {
+      settings: { commentsEnabled: true },
+    });
+
+    expect(result).toEqual({ ok: true, data: payload });
+    expect(rpc).toHaveBeenCalledWith(
+      "save_share_configuration",
+      expect.objectContaining({ p_link_id: VALID_UUID })
+    );
+  });
+
+  it("fails closed with UNEXPECTED when the RPC result's linkId does not match the canonical requested linkId", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: validSaveConfigurationRpcData({ linkId: VALID_UUID_2 }),
+      error: null,
+    });
+    const client = buildFakeClient(rpc);
+
+    const result = await saveShareConfiguration(client, VALID_UUID, {
+      settings: { commentsEnabled: true },
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+
+  it("fails closed with UNEXPECTED when the RPC returns malformed data", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: { linkId: VALID_UUID }, error: null });
+    const client = buildFakeClient(rpc);
+
+    const result = await saveShareConfiguration(client, VALID_UUID, {
+      settings: { commentsEnabled: true },
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+
+  it("maps UNAUTHORIZED to a typed error", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "P0001", message: "UNAUTHORIZED" },
+    });
+    const client = buildFakeClient(rpc);
+    const result = await saveShareConfiguration(client, VALID_UUID, {
+      settings: { commentsEnabled: true },
+    });
+    expect(result).toEqual({ ok: false, error: { code: "UNAUTHORIZED" } });
+  });
+
+  it("maps SHARE_LINK_NOT_FOUND to a typed error", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "P0001", message: "SHARE_LINK_NOT_FOUND" },
+    });
+    const client = buildFakeClient(rpc);
+    const result = await saveShareConfiguration(client, VALID_UUID, {
+      settings: { commentsEnabled: true },
+    });
+    expect(result).toEqual({ ok: false, error: { code: "SHARE_LINK_NOT_FOUND" } });
+  });
+
+  it("maps PROJECT_ARCHIVED to a typed error", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "P0001", message: "PROJECT_ARCHIVED" },
+    });
+    const client = buildFakeClient(rpc);
+    const result = await saveShareConfiguration(client, VALID_UUID, {
+      settings: { commentsEnabled: true },
+    });
+    expect(result).toEqual({ ok: false, error: { code: "PROJECT_ARCHIVED" } });
+  });
+
+  it("maps SHARE_LINK_REVOKED to the shared SHARE_LINK_STATE_CONFLICT category", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "P0001", message: "SHARE_LINK_REVOKED" },
+    });
+    const client = buildFakeClient(rpc);
+    const result = await saveShareConfiguration(client, VALID_UUID, {
+      settings: { commentsEnabled: true },
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "SHARE_LINK_STATE_CONFLICT" },
+    });
+  });
+
+  it.each([
+    "INVALID_CONFIGURATION",
+    "INVALID_SETTINGS",
+    "INVALID_TASKS",
+    "INVALID_RESOURCES",
+    "INVALID_PUBLISH_UPDATE",
+  ])("maps %s to INVALID_REQUEST", async (message) => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { code: "P0001", message } });
+    const client = buildFakeClient(rpc);
+    const result = await saveShareConfiguration(client, VALID_UUID, {
+      settings: { commentsEnabled: true },
+    });
+    expect(result).toEqual({ ok: false, error: { code: "INVALID_REQUEST" } });
+  });
+
+  it.each([
+    "SHARE_TASK_LINK_NOT_FOUND",
+    "SHARE_TASK_OWNER_MISMATCH",
+    "SHARE_TASK_NOT_FOUND",
+    "SHARE_TASK_NOT_OWNED",
+    "SHARE_TASK_DELETED",
+    "SHARE_TASK_WITHOUT_PROJECT",
+    "SHARE_TASK_PROJECT_MISMATCH",
+    "SHARE_RESOURCE_LINK_NOT_FOUND",
+    "SHARE_RESOURCE_OWNER_MISMATCH",
+    "SHARE_RESOURCE_NOT_FOUND",
+    "SHARE_RESOURCE_NOT_OWNED",
+    "SHARE_RESOURCE_RELATIONSHIP_INVALID",
+    "SHARE_RESOURCE_PROJECT_MISMATCH",
+    "SHARE_RESOURCE_TASK_PROJECT_MISMATCH",
+  ])(
+    "maps the cross-tenant trigger error %s to INVALID_REQUEST, never leaking it directly",
+    async (message) => {
+      const rpc = vi.fn().mockResolvedValue({ data: null, error: { code: "P0001", message } });
+      const client = buildFakeClient(rpc);
+      const result = await saveShareConfiguration(client, VALID_UUID, {
+        settings: { commentsEnabled: true },
+      });
+      expect(result).toEqual({ ok: false, error: { code: "INVALID_REQUEST" } });
+      expect(JSON.stringify(result)).not.toContain(message);
+    }
+  );
+
+  it.each([
+    "TASK_SET_VERIFICATION_FAILED",
+    "RESOURCE_SET_VERIFICATION_FAILED",
+    "PUBLISH_UPDATE_INSERT_FAILED",
+  ])("maps the internal consistency assertion %s to UNEXPECTED", async (message) => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { code: "P0001", message } });
+    const client = buildFakeClient(rpc);
+    const result = await saveShareConfiguration(client, VALID_UUID, {
+      settings: { commentsEnabled: true },
+    });
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+
+  it("does not use substring matching -- a message that merely contains INVALID_TASKS is not matched", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "P0001", message: "context: INVALID_TASKS happened" },
+    });
+    const client = buildFakeClient(rpc);
+    const result = await saveShareConfiguration(client, VALID_UUID, {
+      settings: { commentsEnabled: true },
+    });
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+
+  it("requires the exact code P0001 -- the same message with a different code is UNEXPECTED", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "42501", message: "UNAUTHORIZED" },
+    });
+    const client = buildFakeClient(rpc);
+    const result = await saveShareConfiguration(client, VALID_UUID, {
+      settings: { commentsEnabled: true },
+    });
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+
+  it("never returns a raw PostgrestError -- details/hint never survive the mapping", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: {
+        code: "P0001",
+        message: "SHARE_LINK_NOT_FOUND",
+        details: "raw",
+        hint: "raw",
+      },
+    });
+    const client = buildFakeClient(rpc);
+    const result = await saveShareConfiguration(client, VALID_UUID, {
+      settings: { commentsEnabled: true },
+    });
+    expect(result).toEqual({ ok: false, error: { code: "SHARE_LINK_NOT_FOUND" } });
+    expect(result).not.toHaveProperty("error.details");
+    expect(result).not.toHaveProperty("error.hint");
+  });
+});
+
 describe("share-links-repository.server.ts source constraints", () => {
   const source = readFileSync(
     path.join(__dirname, "share-links-repository.server.ts"),
@@ -1813,11 +2150,11 @@ describe("share-links-repository.server.ts source constraints", () => {
     expect(source).toContain("p_secret_digest: secretDigest,");
   });
 
-  it("calls only the thirteen sanctioned RPCs", () => {
+  it("calls only the fourteen sanctioned RPCs", () => {
     const rpcCalls = [...source.matchAll(/\.rpc\(\s*([A-Z0-9_]+|"[a-z_]+")/g)].map(
       (m) => m[1]
     );
-    expect(rpcCalls).toHaveLength(13);
+    expect(rpcCalls).toHaveLength(14);
   });
 
   it("centralizes every RPC name as a named constant rather than an inline string literal at the call site", () => {
@@ -1859,6 +2196,9 @@ describe("share-links-repository.server.ts source constraints", () => {
     );
     expect(source).toContain(
       'const REVEAL_SHARE_LINK_SECRET_RPC = "reveal_share_link_secret";'
+    );
+    expect(source).toContain(
+      'const SAVE_SHARE_CONFIGURATION_RPC = "save_share_configuration";'
     );
   });
 

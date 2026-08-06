@@ -14,6 +14,7 @@ import {
   revokeShareLinkDataSchema,
   rotateShareLinkSecretDataSchema,
   rotateShareLinkSecretRpcDataSchema,
+  saveShareConfigurationDataSchema,
   setSharePinDataSchema,
   setShareLinkExpiryDataSchema,
   shareLinkManagementStateDataSchema,
@@ -27,6 +28,8 @@ import {
   type RevealShareLinkSecretData,
   type RevokeShareLinkData,
   type RotateShareLinkSecretData,
+  type SaveShareConfigurationData,
+  type SaveShareConfigurationRequest,
   type SetSharePinData,
   type SetShareLinkExpiryData,
   type ShareLinkManagementStateData,
@@ -91,6 +94,7 @@ const CLEAR_SHARE_LINK_EXPIRY_RPC = "clear_share_link_expiry";
 const ROTATE_SHARE_LINK_SECRET_RPC = "rotate_share_link_secret";
 const REVOKE_SHARE_LINK_RPC = "revoke_share_link";
 const REVEAL_SHARE_LINK_SECRET_RPC = "reveal_share_link_secret";
+const SAVE_SHARE_CONFIGURATION_RPC = "save_share_configuration";
 
 const RPC_ERROR_CODE = "P0001";
 
@@ -221,6 +225,74 @@ function mapAccessOperationRpcError(
       // well-formed RPC arguments), never a condition an owner caused, so
       // all fail closed as UNEXPECTED rather than exposing an internal
       // validation code.
+      return { code: "UNEXPECTED" };
+  }
+}
+
+/**
+ * Maps public.save_share_configuration's error by exact code and exact
+ * message, never substring matching. Deliberately its own mapper, not a
+ * branch bolted onto mapAccessOperationRpcError above: this RPC's error
+ * vocabulary (INVALID_SETTINGS/TASKS/RESOURCES/PUBLISH_UPDATE/
+ * CONFIGURATION, plus the cross-tenant trigger codes) belongs to no
+ * other RPC, and every existing mapper's established behavior must stay
+ * untouched. PROJECT_ARCHIVED and INVALID_REQUEST already exist as
+ * repository/public categories from earlier phases, so this operation
+ * introduces no new category at all.
+ */
+function mapSaveConfigurationRpcError(
+  error: ShareLinksRpcError
+): ShareLinksRepositoryError {
+  if (error.code !== RPC_ERROR_CODE) {
+    return { code: "UNEXPECTED" };
+  }
+
+  switch (error.message) {
+    case "UNAUTHORIZED":
+      return { code: "UNAUTHORIZED" };
+    case "SHARE_LINK_NOT_FOUND":
+      return { code: "SHARE_LINK_NOT_FOUND" };
+    case "PROJECT_ARCHIVED":
+      return { code: "PROJECT_ARCHIVED" };
+    case "SHARE_LINK_REVOKED":
+      return { code: "SHARE_LINK_STATE_CONFLICT" };
+    case "INVALID_CONFIGURATION":
+    case "INVALID_SETTINGS":
+    case "INVALID_TASKS":
+    case "INVALID_RESOURCES":
+    case "INVALID_PUBLISH_UPDATE":
+      return { code: "INVALID_REQUEST" };
+    // The exact cross-owner/cross-project codes
+    // enforce_share_link_task_integrity / enforce_share_link_resource_
+    // integrity (202608030005) raise. This RPC's own prevalidation is
+    // designed to make these unreachable in practice, but if the
+    // unconditional trigger ever fires anyway (its own independent
+    // second line of defense), the failure is still owner-caused invalid
+    // input, not a repository bug -- mapped to INVALID_REQUEST without
+    // ever exposing the trigger's own message, which could otherwise
+    // hint at another tenant's row existing.
+    case "SHARE_TASK_LINK_NOT_FOUND":
+    case "SHARE_TASK_OWNER_MISMATCH":
+    case "SHARE_TASK_NOT_FOUND":
+    case "SHARE_TASK_NOT_OWNED":
+    case "SHARE_TASK_DELETED":
+    case "SHARE_TASK_WITHOUT_PROJECT":
+    case "SHARE_TASK_PROJECT_MISMATCH":
+    case "SHARE_RESOURCE_LINK_NOT_FOUND":
+    case "SHARE_RESOURCE_OWNER_MISMATCH":
+    case "SHARE_RESOURCE_NOT_FOUND":
+    case "SHARE_RESOURCE_NOT_OWNED":
+    case "SHARE_RESOURCE_RELATIONSHIP_INVALID":
+    case "SHARE_RESOURCE_PROJECT_MISMATCH":
+    case "SHARE_RESOURCE_TASK_PROJECT_MISMATCH":
+      return { code: "INVALID_REQUEST" };
+    default:
+      // Includes TASK_SET_VERIFICATION_FAILED,
+      // RESOURCE_SET_VERIFICATION_FAILED and
+      // PUBLISH_UPDATE_INSERT_FAILED -- internal consistency assertions
+      // that should never fire in practice -- and any other unrecognized
+      // message. All fail closed as UNEXPECTED rather than exposing an
+      // internal code.
       return { code: "UNEXPECTED" };
   }
 }
@@ -863,6 +935,61 @@ export async function revealShareLinkSecret<Client>(
   });
   if (!parsed.success) {
     return { ok: false, error: { code: "SHARE_LINK_SECRET_UNAVAILABLE" } };
+  }
+
+  return { ok: true, data: parsed.data };
+}
+
+// ---------------------------------------------------------------------
+// Phase 1B.4 configuration save (settings / tasks / resources /
+// publishUpdate, combined into one atomic RPC call)
+// ---------------------------------------------------------------------
+
+/**
+ * Saves an owned share link's configuration -- settings, task mapping,
+ * Resource mapping and an optional new published update -- via the
+ * single atomic public.save_share_configuration RPC. Never queries or
+ * mutates a Client Share table directly and never uses the admin/
+ * service-role client; the RPC itself is the sole authoritative
+ * ownership check and the sole place any of these tables are touched.
+ *
+ * Each omitted request group is sent as SQL null (`?? null` only ever
+ * falls back on `undefined`, never on a legitimate empty array, so an
+ * empty `tasks`/`resources` array -- "clear every mapping" -- is
+ * preserved exactly as the caller supplied it, distinct from omitting
+ * the group entirely). Every group's fields are forwarded verbatim: Zod
+ * already parsed `subtaskId` as a canonical decimal string (never a
+ * JavaScript number), and JSON serialization keeps it a string across
+ * this RPC boundary the same way every other Phase 1B subtask id is
+ * carried.
+ */
+export async function saveShareConfiguration<Client>(
+  supabase: Client,
+  linkId: string,
+  request: SaveShareConfigurationRequest
+): Promise<ShareLinksRepositoryResult<SaveShareConfigurationData>> {
+  const canonicalLinkId = canonicalizeUuid(linkId);
+
+  const client = supabase as ShareLinksSupabaseLikeClient;
+  const { data, error } = await client.rpc(SAVE_SHARE_CONFIGURATION_RPC, {
+    p_link_id: canonicalLinkId,
+    p_settings: request.settings ?? null,
+    p_tasks: request.tasks ?? null,
+    p_resources: request.resources ?? null,
+    p_publish_update: request.publishUpdate ?? null,
+  });
+
+  if (error) {
+    return { ok: false, error: mapSaveConfigurationRpcError(error) };
+  }
+
+  const parsed = saveShareConfigurationDataSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  if (parsed.data.linkId !== canonicalLinkId) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
   }
 
   return { ok: true, data: parsed.data };
