@@ -42,6 +42,15 @@ function validSummaryEntry(projectId: string) {
   };
 }
 
+function expectNoStoreHeaders(response: Response) {
+  const cacheControl = response.headers.get("Cache-Control") ?? "";
+  expect(cacheControl).toContain("private");
+  expect(cacheControl).toContain("no-store");
+  expect(cacheControl).toContain("max-age=0");
+  expect(response.headers.get("Pragma")).toBe("no-cache");
+  expect(response.headers.get("Expires")).toBe("0");
+}
+
 beforeEach(() => {
   getUserMock.mockReset();
   listShareLinkSummariesMock.mockReset();
@@ -363,5 +372,54 @@ describe("GET /api/share-links/summary - repository outcomes", () => {
     ]) {
       expect(text).not.toContain(forbidden);
     }
+  });
+});
+
+describe("GET /api/share-links/summary - explicit no-store headers on every response branch", () => {
+  it("401 UNAUTHENTICATED response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: null }, error: null });
+    const response = await GET(buildRequest(`?projectIds=${VALID_UUID}`));
+    expect(response.status).toBe(401);
+    expectNoStoreHeaders(response);
+  });
+
+  it("400 INVALID_REQUEST response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    const response = await GET(buildRequest(""));
+    expect(response.status).toBe(400);
+    expectNoStoreHeaders(response);
+  });
+
+  it("404 PROJECT_NOT_FOUND response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    listShareLinkSummariesMock.mockResolvedValue({
+      ok: false,
+      error: { code: "PROJECT_NOT_FOUND" },
+    });
+    const response = await GET(buildRequest(`?projectIds=${VALID_UUID}`));
+    expect(response.status).toBe(404);
+    expectNoStoreHeaders(response);
+  });
+
+  it("500 INTERNAL_ERROR response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    listShareLinkSummariesMock.mockResolvedValue({
+      ok: false,
+      error: { code: "UNEXPECTED" },
+    });
+    const response = await GET(buildRequest(`?projectIds=${VALID_UUID}`));
+    expect(response.status).toBe(500);
+    expectNoStoreHeaders(response);
+  });
+
+  it("200 success response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    listShareLinkSummariesMock.mockResolvedValue({
+      ok: true,
+      data: { [VALID_UUID]: validSummaryEntry(VALID_UUID) },
+    });
+    const response = await GET(buildRequest(`?projectIds=${VALID_UUID}`));
+    expect(response.status).toBe(200);
+    expectNoStoreHeaders(response);
   });
 });

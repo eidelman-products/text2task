@@ -1,12 +1,28 @@
 import "server-only";
 
 import {
+  activateShareLinkDataSchema,
+  activateShareLinkRpcDataSchema,
   canonicalizeUuid,
+  createShareLinkDraftDataSchema,
+  disableShareLinkDataSchema,
+  reenableShareLinkDataSchema,
   shareLinkManagementStateDataSchema,
   shareLinkSummaryDataSchema,
+  type ActivateShareLinkData,
+  type CreateShareLinkDraftData,
+  type DisableShareLinkData,
+  type ReenableShareLinkData,
   type ShareLinkManagementStateData,
   type ShareLinkSummaryData,
 } from "@/lib/share/share-contracts";
+import { generateSharePublicId } from "@/lib/share/share-public-id.server";
+import {
+  createShareSecretDigest,
+  generateRawShareSecret,
+  SHARE_SECRET_DIGEST_VERSION,
+} from "@/lib/share/share-secret.server";
+import { encryptShareSecret } from "@/lib/share/share-secret-encryption.server";
 
 /**
  * Minimal structural shape of the Supabase RPC call this repository
@@ -39,17 +55,25 @@ export type ShareLinksSupabaseLikeClient = {
   ) => PromiseLike<ShareLinksRpcResult>;
 };
 
-// Centralized, exact RPC names and parameter names -- the only two
-// database entry points this repository (and therefore any Phase 1B.1
-// route) is permitted to call.
+// Centralized, exact RPC names and parameter names -- the only database
+// entry points this repository (and therefore any Phase 1B route) is
+// permitted to call.
 const GET_SHARE_LINK_MANAGEMENT_STATE_RPC = "get_share_link_management_state";
 const LIST_SHARE_LINK_SUMMARIES_RPC = "list_share_link_summaries";
+const CREATE_SHARE_LINK_DRAFT_RPC = "create_share_link_draft";
+const ACTIVATE_SHARE_LINK_RPC = "activate_share_link";
+const DISABLE_SHARE_LINK_RPC = "disable_share_link";
+const REENABLE_SHARE_LINK_RPC = "reenable_share_link";
 
 const RPC_ERROR_CODE = "P0001";
 
 export type ShareLinksRepositoryErrorCode =
   | "UNAUTHORIZED"
   | "PROJECT_NOT_FOUND"
+  | "PROJECT_ARCHIVED"
+  | "SHARE_LINK_NOT_FOUND"
+  | "SHARE_LINK_STATE_CONFLICT"
+  | "SHARE_LINK_ANOTHER_LINK_ACTIVE"
   | "UNEXPECTED";
 
 export interface ShareLinksRepositoryError {
@@ -74,6 +98,54 @@ function mapRpcError(error: ShareLinksRpcError): ShareLinksRepositoryError {
     return { code: "PROJECT_NOT_FOUND" };
   }
   return { code: "UNEXPECTED" };
+}
+
+/**
+ * Maps a lifecycle RPC (create/activate/disable/reenable) error by exact
+ * code and exact message, never substring matching. Every wrong-state
+ * message (SHARE_LINK_NOT_DRAFT / SHARE_LINK_NOT_ACTIVE /
+ * SHARE_LINK_NOT_DISABLED) collapses into the single
+ * SHARE_LINK_STATE_CONFLICT repository/public category, per the exact
+ * SQL message still being checked individually below --
+ * SHARE_LINK_ANOTHER_LINK_ACTIVE and every other stable code keep their
+ * own distinct category. PUBLIC_ID_COLLISION is deliberately absent here:
+ * createShareLinkDraft handles it itself, before ever reaching this
+ * function, as a retry signal rather than a caller-visible error.
+ */
+function mapLifecycleRpcError(error: ShareLinksRpcError): ShareLinksRepositoryError {
+  if (error.code !== RPC_ERROR_CODE) {
+    return { code: "UNEXPECTED" };
+  }
+
+  switch (error.message) {
+    case "UNAUTHORIZED":
+      return { code: "UNAUTHORIZED" };
+    case "PROJECT_NOT_FOUND":
+      return { code: "PROJECT_NOT_FOUND" };
+    case "PROJECT_ARCHIVED":
+      return { code: "PROJECT_ARCHIVED" };
+    case "SHARE_LINK_NOT_FOUND":
+      return { code: "SHARE_LINK_NOT_FOUND" };
+    case "SHARE_LINK_NOT_DRAFT":
+    case "SHARE_LINK_NOT_ACTIVE":
+    case "SHARE_LINK_NOT_DISABLED":
+      return { code: "SHARE_LINK_STATE_CONFLICT" };
+    case "SHARE_LINK_ANOTHER_LINK_ACTIVE":
+      return { code: "SHARE_LINK_ANOTHER_LINK_ACTIVE" };
+    default:
+      // Includes INVALID_PUBLIC_ID, INVALID_SECRET_DIGEST(_VERSION),
+      // INVALID_CIPHERTEXT, INVALID_NONCE, INVALID_AUTH_TAG,
+      // INVALID_ENCRYPTION_VERSION and SHARE_LINK_SECRET_MATERIAL_MISSING
+      // -- every one of these indicates a repository-side bug (the
+      // repository itself is responsible for well-formed RPC arguments),
+      // never a condition an owner caused, so all fail closed as
+      // UNEXPECTED rather than exposing an internal validation code.
+      return { code: "UNEXPECTED" };
+  }
+}
+
+function hexFromBuffer(value: Buffer): string {
+  return value.toString("hex");
 }
 
 /**
@@ -188,6 +260,181 @@ export async function listShareLinkSummaries<Client>(
   }
 
   if (!isExactRequestedProjectSet(canonicalProjectIds, parsed.data)) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  return { ok: true, data: parsed.data };
+}
+
+const MAX_PUBLIC_ID_ATTEMPTS = 3;
+
+/**
+ * Creates an owned draft share link, via public.create_share_link_draft.
+ * Generates a fresh candidate public id for each of up to
+ * MAX_PUBLIC_ID_ATTEMPTS attempts, retrying only on the RPC's exact
+ * {code: P0001, message: PUBLIC_ID_COLLISION} result -- a bounded `for`
+ * loop, never an unbounded one. Any other RPC error, or exhausting every
+ * attempt, returns a typed failure (collision exhaustion surfaces as
+ * UNEXPECTED, matching every other internal failure).
+ */
+export async function createShareLinkDraft<Client>(
+  supabase: Client,
+  projectId: string
+): Promise<ShareLinksRepositoryResult<CreateShareLinkDraftData>> {
+  const client = supabase as ShareLinksSupabaseLikeClient;
+  const canonicalProjectId = canonicalizeUuid(projectId);
+
+  for (let attempt = 0; attempt < MAX_PUBLIC_ID_ATTEMPTS; attempt += 1) {
+    const candidatePublicId = generateSharePublicId();
+
+    const { data, error } = await client.rpc(CREATE_SHARE_LINK_DRAFT_RPC, {
+      p_project_id: canonicalProjectId,
+      p_public_id: candidatePublicId,
+    });
+
+    if (error) {
+      if (error.code === RPC_ERROR_CODE && error.message === "PUBLIC_ID_COLLISION") {
+        continue;
+      }
+      return { ok: false, error: mapLifecycleRpcError(error) };
+    }
+
+    const parsed = createShareLinkDraftDataSchema.safeParse(data);
+    if (!parsed.success) {
+      return { ok: false, error: { code: "UNEXPECTED" } };
+    }
+
+    return { ok: true, data: parsed.data };
+  }
+
+  return { ok: false, error: { code: "UNEXPECTED" } };
+}
+
+/**
+ * Activates an owned draft share link, via public.activate_share_link.
+ * Generates the raw share secret, its keyed digest, and its AES-256-GCM
+ * encryption (AAD-bound to the canonical link id) entirely in this
+ * function -- never in the route. `createShareSecretDigest` already
+ * returns the exact persisted representation
+ * (project_share_links.secret_digest's own lowercase-hex-64 format), so
+ * it is sent to the RPC as-is, with no intermediate encoding conversion
+ * -- there is exactly one digest representation anywhere in this path.
+ * The encrypted ciphertext/nonce/authTag are hex-encoded here at the
+ * repository/RPC boundary (they are stored as `bytea`, which the RPC
+ * parameter list represents as hex text). The raw secret itself is never
+ * sent to the RPC. Any crypto/key failure (missing/malformed HMAC or
+ * encryption key, or either helper's own input validation rejecting a
+ * malformed value) is caught here and fails closed as UNEXPECTED before
+ * the RPC is ever called; its internal message is never forwarded to the
+ * caller.
+ *
+ * The RPC itself never returns the raw secret (Postgres never sees
+ * plaintext) -- this function attaches the secret it already generated
+ * to the RPC's own safe, parsed result to produce the final
+ * ActivateShareLinkData the route returns.
+ */
+export async function activateShareLink<Client>(
+  supabase: Client,
+  linkId: string
+): Promise<ShareLinksRepositoryResult<ActivateShareLinkData>> {
+  const canonicalLinkId = canonicalizeUuid(linkId);
+
+  let rawSecret: string;
+  let secretDigest: string;
+  let ciphertextHex: string;
+  let nonceHex: string;
+  let authTagHex: string;
+  let encryptionVersion: number;
+
+  try {
+    rawSecret = generateRawShareSecret();
+    secretDigest = createShareSecretDigest(rawSecret);
+
+    const encrypted = encryptShareSecret(rawSecret, canonicalLinkId);
+    ciphertextHex = hexFromBuffer(encrypted.ciphertext);
+    nonceHex = hexFromBuffer(encrypted.nonce);
+    authTagHex = hexFromBuffer(encrypted.authTag);
+    encryptionVersion = encrypted.encryptionVersion;
+  } catch {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  const client = supabase as ShareLinksSupabaseLikeClient;
+  const { data, error } = await client.rpc(ACTIVATE_SHARE_LINK_RPC, {
+    p_link_id: canonicalLinkId,
+    p_secret_digest: secretDigest,
+    p_secret_digest_version: SHARE_SECRET_DIGEST_VERSION,
+    p_ciphertext_hex: ciphertextHex,
+    p_nonce_hex: nonceHex,
+    p_auth_tag_hex: authTagHex,
+    p_encryption_version: encryptionVersion,
+  });
+
+  if (error) {
+    return { ok: false, error: mapLifecycleRpcError(error) };
+  }
+
+  const parsed = activateShareLinkRpcDataSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  const fullData = activateShareLinkDataSchema.safeParse({
+    ...parsed.data,
+    secret: rawSecret,
+  });
+  if (!fullData.success) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  return { ok: true, data: fullData.data };
+}
+
+/**
+ * Disables an owned active share link, via public.disable_share_link.
+ */
+export async function disableShareLink<Client>(
+  supabase: Client,
+  linkId: string
+): Promise<ShareLinksRepositoryResult<DisableShareLinkData>> {
+  const client = supabase as ShareLinksSupabaseLikeClient;
+  const { data, error } = await client.rpc(DISABLE_SHARE_LINK_RPC, {
+    p_link_id: canonicalizeUuid(linkId),
+  });
+
+  if (error) {
+    return { ok: false, error: mapLifecycleRpcError(error) };
+  }
+
+  const parsed = disableShareLinkDataSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  return { ok: true, data: parsed.data };
+}
+
+/**
+ * Re-enables an owned disabled share link back to active, via
+ * public.reenable_share_link. Never generates or sends any secret
+ * material -- the RPC itself requires the existing secret_digest and
+ * project_share_secret_material row to already be present.
+ */
+export async function reenableShareLink<Client>(
+  supabase: Client,
+  linkId: string
+): Promise<ShareLinksRepositoryResult<ReenableShareLinkData>> {
+  const client = supabase as ShareLinksSupabaseLikeClient;
+  const { data, error } = await client.rpc(REENABLE_SHARE_LINK_RPC, {
+    p_link_id: canonicalizeUuid(linkId),
+  });
+
+  if (error) {
+    return { ok: false, error: mapLifecycleRpcError(error) };
+  }
+
+  const parsed = reenableShareLinkDataSchema.safeParse(data);
+  if (!parsed.success) {
     return { ok: false, error: { code: "UNEXPECTED" } };
   }
 

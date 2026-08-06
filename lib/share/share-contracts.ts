@@ -401,6 +401,10 @@ export const shareLinkApiErrorCodeSchema = z.enum([
   "UNAUTHENTICATED",
   "INVALID_REQUEST",
   "PROJECT_NOT_FOUND",
+  "PROJECT_ARCHIVED",
+  "SHARE_LINK_NOT_FOUND",
+  "SHARE_LINK_STATE_CONFLICT",
+  "SHARE_LINK_ANOTHER_LINK_ACTIVE",
   "INTERNAL_ERROR",
 ]);
 export type ShareLinkApiErrorCode = z.infer<typeof shareLinkApiErrorCodeSchema>;
@@ -438,4 +442,130 @@ export const shareLinkSummaryResponseSchema = z.union([
 ]);
 export type ShareLinkSummaryResponse = z.infer<
   typeof shareLinkSummaryResponseSchema
+>;
+
+// ---------------------------------------------------------------------
+// Phase 1B.2 lifecycle contracts (create / activate / disable / re-enable)
+// ---------------------------------------------------------------------
+
+/** Path parameter for every app/api/share-links/[id]/** route. */
+export const shareLinkIdParamSchema = z
+  .object({
+    id: canonicalUuidSchema,
+  })
+  .strict();
+export type ShareLinkIdParam = z.infer<typeof shareLinkIdParamSchema>;
+
+const sharePublicIdSchema = z.string().regex(/^[A-Za-z0-9_-]{16,64}$/);
+
+/**
+ * The raw share secret. Appears only in activateShareLinkDataSchema --
+ * never in the create-draft, disable or re-enable data contracts, which
+ * have nothing to reveal. Exactly 43 base64url characters, matching
+ * lib/share/share-secret.server.ts's generateRawShareSecret output shape.
+ */
+const rawShareSecretSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]{43}$/, "Must be exactly 43 base64url characters.");
+
+export const createShareLinkDraftRequestSchema = z
+  .object({
+    projectId: canonicalUuidSchema,
+  })
+  .strict();
+export type CreateShareLinkDraftRequest = z.infer<
+  typeof createShareLinkDraftRequestSchema
+>;
+
+export const createShareLinkDraftDataSchema = z
+  .object({
+    linkId: uuidSchema,
+    publicId: sharePublicIdSchema,
+    state: z.literal("draft"),
+    createdAt: strictTimestampSchema,
+  })
+  .strict();
+export type CreateShareLinkDraftData = z.infer<
+  typeof createShareLinkDraftDataSchema
+>;
+
+export const createShareLinkDraftResponseSchema = z.union([
+  z
+    .object({ ok: z.literal(true), data: createShareLinkDraftDataSchema })
+    .strict(),
+  shareLinkApiErrorSchema,
+]);
+export type CreateShareLinkDraftResponse = z.infer<
+  typeof createShareLinkDraftResponseSchema
+>;
+
+/**
+ * The exact shape public.activate_share_link's own jsonb return value
+ * parses through -- Postgres never sees or returns the raw secret, so
+ * this RPC-row schema deliberately has no `secret` field. The repository
+ * parses the RPC's raw output through this schema, then attaches the
+ * `secret` it already generated in TypeScript to produce
+ * ActivateShareLinkData below.
+ */
+export const activateShareLinkRpcDataSchema = z
+  .object({
+    linkId: uuidSchema,
+    publicId: sharePublicIdSchema,
+    state: z.literal("active"),
+    configurationVersion: z.number().int().positive(),
+    activatedAt: strictTimestampSchema,
+  })
+  .strict();
+export type ActivateShareLinkRpcData = z.infer<
+  typeof activateShareLinkRpcDataSchema
+>;
+
+export const activateShareLinkDataSchema = activateShareLinkRpcDataSchema
+  .extend({ secret: rawShareSecretSchema })
+  .strict();
+export type ActivateShareLinkData = z.infer<typeof activateShareLinkDataSchema>;
+
+export const activateShareLinkResponseSchema = z.union([
+  z.object({ ok: z.literal(true), data: activateShareLinkDataSchema }).strict(),
+  shareLinkApiErrorSchema,
+]);
+export type ActivateShareLinkResponse = z.infer<
+  typeof activateShareLinkResponseSchema
+>;
+
+export const disableShareLinkDataSchema = z
+  .object({
+    linkId: uuidSchema,
+    state: z.literal("disabled"),
+    configurationVersion: z.number().int().positive(),
+    disabledAt: strictTimestampSchema,
+  })
+  .strict();
+export type DisableShareLinkData = z.infer<typeof disableShareLinkDataSchema>;
+
+export const disableShareLinkResponseSchema = z.union([
+  z.object({ ok: z.literal(true), data: disableShareLinkDataSchema }).strict(),
+  shareLinkApiErrorSchema,
+]);
+export type DisableShareLinkResponse = z.infer<
+  typeof disableShareLinkResponseSchema
+>;
+
+export const reenableShareLinkDataSchema = z
+  .object({
+    linkId: uuidSchema,
+    state: z.literal("active"),
+    configurationVersion: z.number().int().positive(),
+    activatedAt: strictTimestampSchema,
+    disabledAt: strictTimestampSchema,
+  })
+  .strict();
+export type ReenableShareLinkData = z.infer<typeof reenableShareLinkDataSchema>;
+
+export const reenableShareLinkResponseSchema = z.union([
+  z.object({ ok: z.literal(true), data: reenableShareLinkDataSchema }).strict(),
+  shareLinkApiErrorSchema,
+]);
+export type ReenableShareLinkResponse = z.infer<
+  typeof reenableShareLinkResponseSchema
 >;

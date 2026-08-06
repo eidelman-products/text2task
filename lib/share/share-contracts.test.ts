@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  activateShareLinkDataSchema,
+  activateShareLinkRpcDataSchema,
   canonicalizeUuid,
   canonicalSubtaskIdSchema,
+  createShareLinkDraftDataSchema,
+  createShareLinkDraftRequestSchema,
+  disableShareLinkDataSchema,
   managedShareLinkStateSchema,
+  reenableShareLinkDataSchema,
+  shareLinkApiErrorCodeSchema,
   shareLinkApiErrorSchema,
+  shareLinkIdParamSchema,
   shareLinkManagementStateDataSchema,
   shareLinkManagementStateQuerySchema,
   shareLinkManagementStateResponseSchema,
@@ -757,5 +765,292 @@ describe("API response envelope", () => {
       data: { [VALID_UUID]: noSummaryEntry(VALID_UUID) },
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("shareLinkApiErrorCodeSchema - Phase 1B.2 additions", () => {
+  it.each([
+    "PROJECT_ARCHIVED",
+    "SHARE_LINK_NOT_FOUND",
+    "SHARE_LINK_STATE_CONFLICT",
+    "SHARE_LINK_ANOTHER_LINK_ACTIVE",
+    "INTERNAL_ERROR",
+  ])("accepts %s", (code) => {
+    expect(shareLinkApiErrorCodeSchema.safeParse(code).success).toBe(true);
+  });
+
+  it("still accepts every Phase 1B.1 code", () => {
+    for (const code of ["UNAUTHENTICATED", "INVALID_REQUEST", "PROJECT_NOT_FOUND"]) {
+      expect(shareLinkApiErrorCodeSchema.safeParse(code).success).toBe(true);
+    }
+  });
+
+  it("rejects an unknown code", () => {
+    expect(shareLinkApiErrorCodeSchema.safeParse("SOMETHING_ELSE").success).toBe(
+      false
+    );
+  });
+});
+
+describe("shareLinkIdParamSchema", () => {
+  it("accepts a valid lowercase uuid", () => {
+    const result = shareLinkIdParamSchema.safeParse({ id: VALID_UUID });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts and canonicalizes an uppercase uuid to lowercase", () => {
+    const result = shareLinkIdParamSchema.safeParse({ id: VALID_UUID.toUpperCase() });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.id).toBe(VALID_UUID);
+    }
+  });
+
+  it("rejects a non-uuid id", () => {
+    expect(shareLinkIdParamSchema.safeParse({ id: "not-a-uuid" }).success).toBe(
+      false
+    );
+  });
+
+  it("rejects an unknown top-level key (closed schema)", () => {
+    expect(
+      shareLinkIdParamSchema.safeParse({ id: VALID_UUID, extra: "nope" }).success
+    ).toBe(false);
+  });
+});
+
+describe("createShareLinkDraftRequestSchema", () => {
+  it("accepts a valid projectId and canonicalizes it", () => {
+    const result = createShareLinkDraftRequestSchema.safeParse({
+      projectId: VALID_UUID.toUpperCase(),
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.projectId).toBe(VALID_UUID);
+    }
+  });
+
+  it("rejects a missing or invalid projectId", () => {
+    expect(createShareLinkDraftRequestSchema.safeParse({}).success).toBe(false);
+    expect(
+      createShareLinkDraftRequestSchema.safeParse({ projectId: "nope" }).success
+    ).toBe(false);
+  });
+
+  it("rejects an unknown top-level key", () => {
+    expect(
+      createShareLinkDraftRequestSchema.safeParse({
+        projectId: VALID_UUID,
+        secret: "leak",
+      }).success
+    ).toBe(false);
+  });
+});
+
+function validCreateShareLinkDraftData(overrides: Record<string, unknown> = {}) {
+  return {
+    linkId: VALID_UUID,
+    publicId: VALID_PUBLIC_ID,
+    state: "draft",
+    createdAt: VALID_TIMESTAMP,
+    ...overrides,
+  };
+}
+
+describe("createShareLinkDraftDataSchema", () => {
+  it("accepts a valid payload", () => {
+    expect(
+      createShareLinkDraftDataSchema.safeParse(validCreateShareLinkDraftData())
+        .success
+    ).toBe(true);
+  });
+
+  it("rejects a state other than draft", () => {
+    for (const state of ["active", "disabled", "expired", "revoked"]) {
+      expect(
+        createShareLinkDraftDataSchema.safeParse(
+          validCreateShareLinkDraftData({ state })
+        ).success
+      ).toBe(false);
+    }
+  });
+
+  it("rejects a secret field -- create data never reveals a secret", () => {
+    expect(
+      createShareLinkDraftDataSchema.safeParse(
+        validCreateShareLinkDraftData({ secret: "x".repeat(43) })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects any digest/ciphertext/pin field", () => {
+    for (const forbiddenField of ["secretDigest", "ciphertext", "pinHash", "userId"]) {
+      expect(
+        createShareLinkDraftDataSchema.safeParse(
+          validCreateShareLinkDraftData({ [forbiddenField]: "leak" })
+        ).success
+      ).toBe(false);
+    }
+  });
+});
+
+const VALID_RAW_SECRET = "P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc"; // 43 chars
+
+function validActivateShareLinkRpcData(overrides: Record<string, unknown> = {}) {
+  return {
+    linkId: VALID_UUID,
+    publicId: VALID_PUBLIC_ID,
+    state: "active",
+    configurationVersion: 1,
+    activatedAt: VALID_TIMESTAMP,
+    ...overrides,
+  };
+}
+
+describe("activateShareLinkRpcDataSchema", () => {
+  it("accepts the RPC's own row shape, without a secret field", () => {
+    const result = activateShareLinkRpcDataSchema.safeParse(
+      validActivateShareLinkRpcData()
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a secret field on the raw RPC row -- Postgres never returns one", () => {
+    expect(
+      activateShareLinkRpcDataSchema.safeParse(
+        validActivateShareLinkRpcData({ secret: VALID_RAW_SECRET })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects a state other than active", () => {
+    expect(
+      activateShareLinkRpcDataSchema.safeParse(
+        validActivateShareLinkRpcData({ state: "draft" })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects a non-positive configurationVersion", () => {
+    expect(
+      activateShareLinkRpcDataSchema.safeParse(
+        validActivateShareLinkRpcData({ configurationVersion: 0 })
+      ).success
+    ).toBe(false);
+  });
+});
+
+describe("activateShareLinkDataSchema", () => {
+  it("accepts the RPC row plus a valid 43-character base64url secret", () => {
+    const result = activateShareLinkDataSchema.safeParse({
+      ...validActivateShareLinkRpcData(),
+      secret: VALID_RAW_SECRET,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("requires the secret field", () => {
+    expect(
+      activateShareLinkDataSchema.safeParse(validActivateShareLinkRpcData())
+        .success
+    ).toBe(false);
+  });
+
+  it.each(["", "a".repeat(42), "a".repeat(44), "not valid chars!!!!!!!!!!!!!!!!!!!!!!!!!!!"])(
+    "rejects an invalid secret shape %s",
+    (secret) => {
+      expect(
+        activateShareLinkDataSchema.safeParse({
+          ...validActivateShareLinkRpcData(),
+          secret,
+        }).success
+      ).toBe(false);
+    }
+  );
+
+  it.each(["digest", "secretDigest", "ciphertext", "nonce", "authTag", "encryptionVersion", "userId", "projectId"])(
+    "rejects a forbidden field %s",
+    (forbiddenField) => {
+      expect(
+        activateShareLinkDataSchema.safeParse({
+          ...validActivateShareLinkRpcData(),
+          secret: VALID_RAW_SECRET,
+          [forbiddenField]: "leak",
+        }).success
+      ).toBe(false);
+    }
+  );
+});
+
+describe("disableShareLinkDataSchema", () => {
+  function validData(overrides: Record<string, unknown> = {}) {
+    return {
+      linkId: VALID_UUID,
+      state: "disabled",
+      configurationVersion: 2,
+      disabledAt: VALID_TIMESTAMP,
+      ...overrides,
+    };
+  }
+
+  it("accepts a valid payload", () => {
+    expect(disableShareLinkDataSchema.safeParse(validData()).success).toBe(true);
+  });
+
+  it("rejects a state other than disabled", () => {
+    expect(
+      disableShareLinkDataSchema.safeParse(validData({ state: "active" })).success
+    ).toBe(false);
+  });
+
+  it("rejects a secret field -- disable data never reveals a secret", () => {
+    expect(
+      disableShareLinkDataSchema.safeParse(
+        validData({ secret: VALID_RAW_SECRET })
+      ).success
+    ).toBe(false);
+  });
+});
+
+describe("reenableShareLinkDataSchema", () => {
+  function validData(overrides: Record<string, unknown> = {}) {
+    return {
+      linkId: VALID_UUID,
+      state: "active",
+      configurationVersion: 3,
+      activatedAt: VALID_TIMESTAMP,
+      disabledAt: VALID_TIMESTAMP,
+      ...overrides,
+    };
+  }
+
+  it("accepts a valid payload", () => {
+    expect(reenableShareLinkDataSchema.safeParse(validData()).success).toBe(true);
+  });
+
+  it("rejects a state other than active", () => {
+    expect(
+      reenableShareLinkDataSchema.safeParse(validData({ state: "disabled" }))
+        .success
+    ).toBe(false);
+  });
+
+  it("rejects a secret field -- re-enable data never reveals a secret", () => {
+    expect(
+      reenableShareLinkDataSchema.safeParse(
+        validData({ secret: VALID_RAW_SECRET })
+      ).success
+    ).toBe(false);
+  });
+
+  it("requires both activatedAt and disabledAt", () => {
+    const { activatedAt: _activatedAt, ...withoutActivatedAt } = validData();
+    expect(reenableShareLinkDataSchema.safeParse(withoutActivatedAt).success).toBe(
+      false
+    );
+    const { disabledAt: _disabledAt, ...withoutDisabledAt } = validData();
+    expect(reenableShareLinkDataSchema.safeParse(withoutDisabledAt).success).toBe(
+      false
+    );
   });
 });

@@ -7,14 +7,16 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 const getShareLinkManagementStateMock = vi.fn();
+const createShareLinkDraftMock = vi.fn();
 vi.mock("@/lib/share/share-links-repository.server", () => ({
   getShareLinkManagementState: (...args: unknown[]) =>
     getShareLinkManagementStateMock(...args),
+  createShareLinkDraft: (...args: unknown[]) => createShareLinkDraftMock(...args),
 }));
 
 const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-const { GET } = await import("./route");
+const { GET, POST } = await import("./route");
 
 const VALID_UUID = "11111111-1111-4111-8111-111111111111";
 
@@ -22,9 +24,35 @@ function buildRequest(query: string) {
   return new NextRequest(`http://localhost/api/share-links${query}`);
 }
 
+function buildPostRequest(body: unknown) {
+  return new NextRequest("http://localhost/api/share-links", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+function buildInvalidJsonPostRequest() {
+  return new NextRequest("http://localhost/api/share-links", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: "{not valid json",
+  });
+}
+
+function expectNoStoreHeaders(response: Response) {
+  const cacheControl = response.headers.get("Cache-Control") ?? "";
+  expect(cacheControl).toContain("private");
+  expect(cacheControl).toContain("no-store");
+  expect(cacheControl).toContain("max-age=0");
+  expect(response.headers.get("Pragma")).toBe("no-cache");
+  expect(response.headers.get("Expires")).toBe("0");
+}
+
 beforeEach(() => {
   getUserMock.mockReset();
   getShareLinkManagementStateMock.mockReset();
+  createShareLinkDraftMock.mockReset();
   consoleErrorSpy.mockClear();
 });
 
@@ -260,5 +288,299 @@ describe("GET /api/share-links - repository outcomes", () => {
     ]) {
       expect(text).not.toContain(forbidden);
     }
+  });
+});
+
+describe("POST /api/share-links - authentication", () => {
+  it("returns 401 UNAUTHENTICATED when there is no authenticated user", async () => {
+    getUserMock.mockResolvedValue({ data: { user: null }, error: null });
+
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body).toEqual({
+      ok: false,
+      code: "UNAUTHENTICATED",
+      error: expect.any(String),
+    });
+    expect(createShareLinkDraftMock).not.toHaveBeenCalled();
+  });
+
+  it("maps a repository UNAUTHORIZED result to 401 UNAUTHENTICATED, not 500", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    createShareLinkDraftMock.mockResolvedValue({
+      ok: false,
+      error: { code: "UNAUTHORIZED" },
+    });
+
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.code).toBe("UNAUTHENTICATED");
+  });
+});
+
+describe("POST /api/share-links - validation", () => {
+  beforeEach(() => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+  });
+
+  it("rejects a missing projectId with 400 INVALID_REQUEST", async () => {
+    const response = await POST(buildPostRequest({}));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.code).toBe("INVALID_REQUEST");
+    expect(createShareLinkDraftMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a malformed projectId with 400 INVALID_REQUEST", async () => {
+    const response = await POST(buildPostRequest({ projectId: "not-a-uuid" }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.code).toBe("INVALID_REQUEST");
+    expect(createShareLinkDraftMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid JSON with 400 INVALID_REQUEST", async () => {
+    const response = await POST(buildInvalidJsonPostRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.code).toBe("INVALID_REQUEST");
+    expect(createShareLinkDraftMock).not.toHaveBeenCalled();
+  });
+
+  it("canonicalizes an uppercase projectId to lowercase before calling the repository", async () => {
+    createShareLinkDraftMock.mockResolvedValue({
+      ok: true,
+      data: {
+        linkId: VALID_UUID,
+        publicId: "abcdefgh12345678",
+        state: "draft",
+        createdAt: "2026-08-06T00:00:00Z",
+      },
+    });
+
+    await POST(buildPostRequest({ projectId: VALID_UUID.toUpperCase() }));
+
+    expect(createShareLinkDraftMock).toHaveBeenCalledWith(
+      expect.anything(),
+      VALID_UUID
+    );
+  });
+});
+
+describe("POST /api/share-links - repository outcomes", () => {
+  beforeEach(() => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+  });
+
+  it("returns 404 PROJECT_NOT_FOUND when the repository reports PROJECT_NOT_FOUND", async () => {
+    createShareLinkDraftMock.mockResolvedValue({
+      ok: false,
+      error: { code: "PROJECT_NOT_FOUND" },
+    });
+
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body.code).toBe("PROJECT_NOT_FOUND");
+  });
+
+  it("returns 409 PROJECT_ARCHIVED when the repository reports PROJECT_ARCHIVED", async () => {
+    createShareLinkDraftMock.mockResolvedValue({
+      ok: false,
+      error: { code: "PROJECT_ARCHIVED" },
+    });
+
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.code).toBe("PROJECT_ARCHIVED");
+  });
+
+  it("returns a generic 500 INTERNAL_ERROR for an unexpected repository failure (including collision exhaustion or crypto failure)", async () => {
+    createShareLinkDraftMock.mockResolvedValue({
+      ok: false,
+      error: { code: "UNEXPECTED" },
+    });
+
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body.code).toBe("INTERNAL_ERROR");
+  });
+
+  it("returns 500 INTERNAL_ERROR when the repository call throws, without serializing the raw error", async () => {
+    createShareLinkDraftMock.mockRejectedValue(
+      Object.assign(new Error("raw postgres failure"), { code: "P0001" })
+    );
+
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body.code).toBe("INTERNAL_ERROR");
+    const text = JSON.stringify(body);
+    expect(text).not.toContain("P0001");
+    expect(text).not.toContain("raw postgres failure");
+  });
+
+  it("returns 201 with {ok:true,data} on success, calling exactly one repository function", async () => {
+    const data = {
+      linkId: VALID_UUID,
+      publicId: "abcdefgh12345678",
+      state: "draft",
+      createdAt: "2026-08-06T00:00:00Z",
+    };
+    createShareLinkDraftMock.mockResolvedValue({ ok: true, data });
+
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+
+    expect(response.status).toBe(201);
+    const body = await response.json();
+    expect(body).toEqual({ ok: true, data });
+    expect(body).not.toHaveProperty("success");
+    expect(createShareLinkDraftMock).toHaveBeenCalledTimes(1);
+    expect(createShareLinkDraftMock).toHaveBeenCalledWith(
+      expect.anything(),
+      VALID_UUID
+    );
+  });
+
+  it("never leaks a secret or raw database error code in the serialized response", async () => {
+    const data = {
+      linkId: VALID_UUID,
+      publicId: "abcdefgh12345678",
+      state: "draft",
+      createdAt: "2026-08-06T00:00:00Z",
+    };
+    createShareLinkDraftMock.mockResolvedValue({ ok: true, data });
+
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+    const text = await response.text();
+
+    for (const forbidden of ["secret", "digest", "ciphertext", "pinHash", "P0001"]) {
+      expect(text.toLowerCase()).not.toContain(forbidden.toLowerCase());
+    }
+  });
+});
+
+describe("GET/POST /api/share-links - explicit no-store headers on every response branch", () => {
+  it("GET: 401 UNAUTHENTICATED response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: null }, error: null });
+    const response = await GET(buildRequest(`?projectId=${VALID_UUID}`));
+    expect(response.status).toBe(401);
+    expectNoStoreHeaders(response);
+  });
+
+  it("GET: 400 INVALID_REQUEST response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    const response = await GET(buildRequest(""));
+    expect(response.status).toBe(400);
+    expectNoStoreHeaders(response);
+  });
+
+  it("GET: 404 PROJECT_NOT_FOUND response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    getShareLinkManagementStateMock.mockResolvedValue({
+      ok: false,
+      error: { code: "PROJECT_NOT_FOUND" },
+    });
+    const response = await GET(buildRequest(`?projectId=${VALID_UUID}`));
+    expect(response.status).toBe(404);
+    expectNoStoreHeaders(response);
+  });
+
+  it("GET: 500 INTERNAL_ERROR response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    getShareLinkManagementStateMock.mockResolvedValue({
+      ok: false,
+      error: { code: "UNEXPECTED" },
+    });
+    const response = await GET(buildRequest(`?projectId=${VALID_UUID}`));
+    expect(response.status).toBe(500);
+    expectNoStoreHeaders(response);
+  });
+
+  it("GET: 200 success response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    getShareLinkManagementStateMock.mockResolvedValue({
+      ok: true,
+      data: { link: null, mappedTaskIds: [], mappedResourceIds: [], currentUpdate: null },
+    });
+    const response = await GET(buildRequest(`?projectId=${VALID_UUID}`));
+    expect(response.status).toBe(200);
+    expectNoStoreHeaders(response);
+  });
+
+  it("POST: 401 UNAUTHENTICATED response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: null }, error: null });
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+    expect(response.status).toBe(401);
+    expectNoStoreHeaders(response);
+  });
+
+  it("POST: 400 INVALID_REQUEST response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    const response = await POST(buildPostRequest({}));
+    expect(response.status).toBe(400);
+    expectNoStoreHeaders(response);
+  });
+
+  it("POST: 404 PROJECT_NOT_FOUND response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    createShareLinkDraftMock.mockResolvedValue({
+      ok: false,
+      error: { code: "PROJECT_NOT_FOUND" },
+    });
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+    expect(response.status).toBe(404);
+    expectNoStoreHeaders(response);
+  });
+
+  it("POST: 409 PROJECT_ARCHIVED response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    createShareLinkDraftMock.mockResolvedValue({
+      ok: false,
+      error: { code: "PROJECT_ARCHIVED" },
+    });
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+    expect(response.status).toBe(409);
+    expectNoStoreHeaders(response);
+  });
+
+  it("POST: 500 INTERNAL_ERROR response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    createShareLinkDraftMock.mockResolvedValue({
+      ok: false,
+      error: { code: "UNEXPECTED" },
+    });
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+    expect(response.status).toBe(500);
+    expectNoStoreHeaders(response);
+  });
+
+  it("POST: 201 success response is no-store", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    createShareLinkDraftMock.mockResolvedValue({
+      ok: true,
+      data: {
+        linkId: VALID_UUID,
+        publicId: "abcdefgh12345678",
+        state: "draft",
+        createdAt: "2026-08-06T00:00:00Z",
+      },
+    });
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+    expect(response.status).toBe(201);
+    expectNoStoreHeaders(response);
   });
 });
