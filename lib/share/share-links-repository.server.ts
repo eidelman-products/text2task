@@ -4,25 +4,45 @@ import {
   activateShareLinkDataSchema,
   activateShareLinkRpcDataSchema,
   canonicalizeUuid,
+  clearSharePinDataSchema,
+  clearShareLinkExpiryDataSchema,
   createShareLinkDraftDataSchema,
   disableShareLinkDataSchema,
   reenableShareLinkDataSchema,
+  revealShareLinkSecretDataSchema,
+  revealShareLinkSecretRpcDataSchema,
+  revokeShareLinkDataSchema,
+  rotateShareLinkSecretDataSchema,
+  rotateShareLinkSecretRpcDataSchema,
+  setSharePinDataSchema,
+  setShareLinkExpiryDataSchema,
   shareLinkManagementStateDataSchema,
   shareLinkSummaryDataSchema,
   type ActivateShareLinkData,
+  type ClearSharePinData,
+  type ClearShareLinkExpiryData,
   type CreateShareLinkDraftData,
   type DisableShareLinkData,
   type ReenableShareLinkData,
+  type RevealShareLinkSecretData,
+  type RevokeShareLinkData,
+  type RotateShareLinkSecretData,
+  type SetSharePinData,
+  type SetShareLinkExpiryData,
   type ShareLinkManagementStateData,
   type ShareLinkSummaryData,
 } from "@/lib/share/share-contracts";
 import { generateSharePublicId } from "@/lib/share/share-public-id.server";
+import { hashSharePin } from "@/lib/share/share-pin.server";
 import {
   createShareSecretDigest,
   generateRawShareSecret,
   SHARE_SECRET_DIGEST_VERSION,
 } from "@/lib/share/share-secret.server";
-import { encryptShareSecret } from "@/lib/share/share-secret-encryption.server";
+import {
+  decryptShareSecret,
+  encryptShareSecret,
+} from "@/lib/share/share-secret-encryption.server";
 
 /**
  * Minimal structural shape of the Supabase RPC call this repository
@@ -64,6 +84,13 @@ const CREATE_SHARE_LINK_DRAFT_RPC = "create_share_link_draft";
 const ACTIVATE_SHARE_LINK_RPC = "activate_share_link";
 const DISABLE_SHARE_LINK_RPC = "disable_share_link";
 const REENABLE_SHARE_LINK_RPC = "reenable_share_link";
+const SET_SHARE_LINK_PIN_RPC = "set_share_link_pin";
+const CLEAR_SHARE_LINK_PIN_RPC = "clear_share_link_pin";
+const SET_SHARE_LINK_EXPIRY_RPC = "set_share_link_expiry";
+const CLEAR_SHARE_LINK_EXPIRY_RPC = "clear_share_link_expiry";
+const ROTATE_SHARE_LINK_SECRET_RPC = "rotate_share_link_secret";
+const REVOKE_SHARE_LINK_RPC = "revoke_share_link";
+const REVEAL_SHARE_LINK_SECRET_RPC = "reveal_share_link_secret";
 
 const RPC_ERROR_CODE = "P0001";
 
@@ -74,6 +101,8 @@ export type ShareLinksRepositoryErrorCode =
   | "SHARE_LINK_NOT_FOUND"
   | "SHARE_LINK_STATE_CONFLICT"
   | "SHARE_LINK_ANOTHER_LINK_ACTIVE"
+  | "SHARE_LINK_SECRET_UNAVAILABLE"
+  | "INVALID_REQUEST"
   | "UNEXPECTED";
 
 export interface ShareLinksRepositoryError {
@@ -140,6 +169,58 @@ function mapLifecycleRpcError(error: ShareLinksRpcError): ShareLinksRepositoryEr
       // repository itself is responsible for well-formed RPC arguments),
       // never a condition an owner caused, so all fail closed as
       // UNEXPECTED rather than exposing an internal validation code.
+      return { code: "UNEXPECTED" };
+  }
+}
+
+/**
+ * Maps a Phase 1B.3 access-operation RPC (PIN/expiry/rotate/revoke/
+ * reveal) error by exact code and exact message, never substring
+ * matching. Deliberately separate from mapLifecycleRpcError above: that
+ * mapper's SHARE_LINK_SECRET_MATERIAL_MISSING handling (falling through
+ * to UNEXPECTED, exercised by app/api/share-links/[id]/enable/route.test.ts)
+ * must not change, so this phase's own distinct
+ * SHARE_LINK_SECRET_UNAVAILABLE category is introduced only here, not by
+ * touching the existing function. SHARE_LINK_REVOKED (an access-operation
+ * -specific message no Phase 1B.2 RPC raises) collapses into the same
+ * SHARE_LINK_STATE_CONFLICT public category as every other wrong-state
+ * condition.
+ */
+function mapAccessOperationRpcError(
+  error: ShareLinksRpcError
+): ShareLinksRepositoryError {
+  if (error.code !== RPC_ERROR_CODE) {
+    return { code: "UNEXPECTED" };
+  }
+
+  switch (error.message) {
+    case "UNAUTHORIZED":
+      return { code: "UNAUTHORIZED" };
+    case "SHARE_LINK_NOT_FOUND":
+      return { code: "SHARE_LINK_NOT_FOUND" };
+    case "SHARE_LINK_REVOKED":
+    case "SHARE_LINK_STATE_CONFLICT":
+      return { code: "SHARE_LINK_STATE_CONFLICT" };
+    case "SHARE_LINK_SECRET_MATERIAL_MISSING":
+      return { code: "SHARE_LINK_SECRET_UNAVAILABLE" };
+    case "INVALID_EXPIRY":
+      // The database performs the authoritative future-time check (the
+      // owner-supplied timestamp can become non-future between request
+      // parsing and transaction execution, so this can never be fully
+      // replaced by a route-side clock comparison). This is owner-caused
+      // invalid input, not an internal failure, so it maps to the public
+      // INVALID_REQUEST category rather than UNEXPECTED -- unlike every
+      // other internal-validation message below, whose exact SQL message
+      // is never exposed to a caller.
+      return { code: "INVALID_REQUEST" };
+    default:
+      // Includes INVALID_PIN_MATERIAL, INVALID_SECRET_DIGEST(_VERSION),
+      // INVALID_CIPHERTEXT, INVALID_NONCE, INVALID_AUTH_TAG and
+      // INVALID_ENCRYPTION_VERSION -- every one of these indicates a
+      // repository-side bug (the repository itself is responsible for
+      // well-formed RPC arguments), never a condition an owner caused, so
+      // all fail closed as UNEXPECTED rather than exposing an internal
+      // validation code.
       return { code: "UNEXPECTED" };
   }
 }
@@ -436,6 +517,352 @@ export async function reenableShareLink<Client>(
   const parsed = reenableShareLinkDataSchema.safeParse(data);
   if (!parsed.success) {
     return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  return { ok: true, data: parsed.data };
+}
+
+// ---------------------------------------------------------------------
+// Phase 1B.3 access operations (PIN / expiry / rotate / revoke / reveal)
+// ---------------------------------------------------------------------
+
+/**
+ * Sets/replaces the PIN on an owned share link, via
+ * public.set_share_link_pin. Hashes the PIN with hashSharePin (fresh
+ * salt, fixed V1 scrypt profile) entirely in this function -- the
+ * plaintext PIN is never sent to the RPC, only the resulting hash/salt/
+ * profile. A hashing failure (including an invalid PIN shape) is caught
+ * here and fails closed as UNEXPECTED before the RPC is ever called.
+ */
+export async function setShareLinkPin<Client>(
+  supabase: Client,
+  linkId: string,
+  pin: string
+): Promise<ShareLinksRepositoryResult<SetSharePinData>> {
+  const canonicalLinkId = canonicalizeUuid(linkId);
+
+  let pinHash: string;
+  let pinSalt: string;
+  let pinHashVersion: number;
+  let pinScryptN: number;
+  let pinScryptR: number;
+  let pinScryptP: number;
+  let pinKeyLength: number;
+
+  try {
+    const hashed = await hashSharePin(pin);
+    pinHash = hashed.pinHash;
+    pinSalt = hashed.pinSalt;
+    pinHashVersion = hashed.pinHashVersion;
+    pinScryptN = hashed.pinScryptN;
+    pinScryptR = hashed.pinScryptR;
+    pinScryptP = hashed.pinScryptP;
+    pinKeyLength = hashed.pinKeyLength;
+  } catch {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  const client = supabase as ShareLinksSupabaseLikeClient;
+  const { data, error } = await client.rpc(SET_SHARE_LINK_PIN_RPC, {
+    p_link_id: canonicalLinkId,
+    p_pin_hash: pinHash,
+    p_pin_salt: pinSalt,
+    p_pin_hash_version: pinHashVersion,
+    p_pin_scrypt_n: pinScryptN,
+    p_pin_scrypt_r: pinScryptR,
+    p_pin_scrypt_p: pinScryptP,
+    p_pin_key_length: pinKeyLength,
+  });
+
+  if (error) {
+    return { ok: false, error: mapAccessOperationRpcError(error) };
+  }
+
+  const parsed = setSharePinDataSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  if (parsed.data.linkId !== canonicalLinkId) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  return { ok: true, data: parsed.data };
+}
+
+/**
+ * Clears the PIN on an owned share link, via public.clear_share_link_pin.
+ * Idempotent: the RPC itself leaves configuration_version untouched when
+ * no PIN was present.
+ */
+export async function clearShareLinkPin<Client>(
+  supabase: Client,
+  linkId: string
+): Promise<ShareLinksRepositoryResult<ClearSharePinData>> {
+  const canonicalLinkId = canonicalizeUuid(linkId);
+
+  const client = supabase as ShareLinksSupabaseLikeClient;
+  const { data, error } = await client.rpc(CLEAR_SHARE_LINK_PIN_RPC, {
+    p_link_id: canonicalLinkId,
+  });
+
+  if (error) {
+    return { ok: false, error: mapAccessOperationRpcError(error) };
+  }
+
+  const parsed = clearSharePinDataSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  if (parsed.data.linkId !== canonicalLinkId) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  return { ok: true, data: parsed.data };
+}
+
+/**
+ * Sets/replaces expires_at on an owned share link, via
+ * public.set_share_link_expiry. `expiresAt` is forwarded verbatim (the
+ * route already validated it as a strict ISO timestamp) -- this function
+ * performs no reformatting of its own.
+ */
+export async function setShareLinkExpiry<Client>(
+  supabase: Client,
+  linkId: string,
+  expiresAt: string
+): Promise<ShareLinksRepositoryResult<SetShareLinkExpiryData>> {
+  const canonicalLinkId = canonicalizeUuid(linkId);
+
+  const client = supabase as ShareLinksSupabaseLikeClient;
+  const { data, error } = await client.rpc(SET_SHARE_LINK_EXPIRY_RPC, {
+    p_link_id: canonicalLinkId,
+    p_expires_at: expiresAt,
+  });
+
+  if (error) {
+    return { ok: false, error: mapAccessOperationRpcError(error) };
+  }
+
+  const parsed = setShareLinkExpiryDataSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  if (parsed.data.linkId !== canonicalLinkId) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  return { ok: true, data: parsed.data };
+}
+
+/**
+ * Clears expires_at on an owned share link, via
+ * public.clear_share_link_expiry. Idempotent when expiry was already
+ * null; returns SHARE_LINK_STATE_CONFLICT (mapped from the RPC's own
+ * SHARE_LINK_STATE_CONFLICT message) when the link is expired, since
+ * clearing expiry on an expired link is not a supported transition.
+ */
+export async function clearShareLinkExpiry<Client>(
+  supabase: Client,
+  linkId: string
+): Promise<ShareLinksRepositoryResult<ClearShareLinkExpiryData>> {
+  const canonicalLinkId = canonicalizeUuid(linkId);
+
+  const client = supabase as ShareLinksSupabaseLikeClient;
+  const { data, error } = await client.rpc(CLEAR_SHARE_LINK_EXPIRY_RPC, {
+    p_link_id: canonicalLinkId,
+  });
+
+  if (error) {
+    return { ok: false, error: mapAccessOperationRpcError(error) };
+  }
+
+  const parsed = clearShareLinkExpiryDataSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  if (parsed.data.linkId !== canonicalLinkId) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  return { ok: true, data: parsed.data };
+}
+
+/**
+ * Rotates the secret on an owned active/disabled share link, via
+ * public.rotate_share_link_secret. Generates a fresh raw secret, its
+ * keyed digest, and its AES-256-GCM encryption entirely in this function
+ * -- exactly mirroring activateShareLink above -- and never sends the
+ * plaintext secret to the RPC. Any crypto/key failure is caught here and
+ * fails closed as UNEXPECTED before the RPC is ever called. The RPC never
+ * returns the raw secret; this function attaches the secret it already
+ * generated to the RPC's own safe, parsed result.
+ */
+export async function rotateShareLinkSecret<Client>(
+  supabase: Client,
+  linkId: string
+): Promise<ShareLinksRepositoryResult<RotateShareLinkSecretData>> {
+  const canonicalLinkId = canonicalizeUuid(linkId);
+
+  let rawSecret: string;
+  let secretDigest: string;
+  let ciphertextHex: string;
+  let nonceHex: string;
+  let authTagHex: string;
+  let encryptionVersion: number;
+
+  try {
+    rawSecret = generateRawShareSecret();
+    secretDigest = createShareSecretDigest(rawSecret);
+
+    const encrypted = encryptShareSecret(rawSecret, canonicalLinkId);
+    ciphertextHex = hexFromBuffer(encrypted.ciphertext);
+    nonceHex = hexFromBuffer(encrypted.nonce);
+    authTagHex = hexFromBuffer(encrypted.authTag);
+    encryptionVersion = encrypted.encryptionVersion;
+  } catch {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  const client = supabase as ShareLinksSupabaseLikeClient;
+  const { data, error } = await client.rpc(ROTATE_SHARE_LINK_SECRET_RPC, {
+    p_link_id: canonicalLinkId,
+    p_secret_digest: secretDigest,
+    p_secret_digest_version: SHARE_SECRET_DIGEST_VERSION,
+    p_ciphertext_hex: ciphertextHex,
+    p_nonce_hex: nonceHex,
+    p_auth_tag_hex: authTagHex,
+    p_encryption_version: encryptionVersion,
+  });
+
+  if (error) {
+    return { ok: false, error: mapAccessOperationRpcError(error) };
+  }
+
+  const parsed = rotateShareLinkSecretRpcDataSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  if (parsed.data.linkId !== canonicalLinkId) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  const fullData = rotateShareLinkSecretDataSchema.safeParse({
+    ...parsed.data,
+    secret: rawSecret,
+  });
+  if (!fullData.success) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  return { ok: true, data: fullData.data };
+}
+
+/**
+ * Permanently revokes an owned share link, via public.revoke_share_link.
+ * Terminal: an already-revoked link returns SHARE_LINK_STATE_CONFLICT
+ * (mapped from the RPC's own message) rather than replaying the
+ * mutation.
+ */
+export async function revokeShareLink<Client>(
+  supabase: Client,
+  linkId: string
+): Promise<ShareLinksRepositoryResult<RevokeShareLinkData>> {
+  const canonicalLinkId = canonicalizeUuid(linkId);
+
+  const client = supabase as ShareLinksSupabaseLikeClient;
+  const { data, error } = await client.rpc(REVOKE_SHARE_LINK_RPC, {
+    p_link_id: canonicalLinkId,
+  });
+
+  if (error) {
+    return { ok: false, error: mapAccessOperationRpcError(error) };
+  }
+
+  const parsed = revokeShareLinkDataSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  if (parsed.data.linkId !== canonicalLinkId) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  return { ok: true, data: parsed.data };
+}
+
+/**
+ * Reveals the currently stored raw secret for an owned active share
+ * link. public.reveal_share_link_secret never decrypts and never returns
+ * plaintext -- it returns only encrypted material (lowercase hex,
+ * exact-length), which this function converts to Buffer only after the
+ * RPC result has passed strict schema validation, then decrypts
+ * server-side via decryptShareSecret (AAD-bound to the canonical link
+ * id, exactly as encryptShareSecret bound it during activation/
+ * rotation). Any failure from this point on -- malformed hex, wrong key,
+ * wrong AAD, a tampered auth tag, or a recovered plaintext that does not
+ * pass the raw-secret shape check -- fails closed as
+ * SHARE_LINK_SECRET_UNAVAILABLE. The ciphertext, nonce, auth tag and any
+ * underlying crypto error detail are never included in the returned
+ * result.
+ */
+export async function revealShareLinkSecret<Client>(
+  supabase: Client,
+  linkId: string
+): Promise<ShareLinksRepositoryResult<RevealShareLinkSecretData>> {
+  const canonicalLinkId = canonicalizeUuid(linkId);
+
+  const client = supabase as ShareLinksSupabaseLikeClient;
+  const { data, error } = await client.rpc(REVEAL_SHARE_LINK_SECRET_RPC, {
+    p_link_id: canonicalLinkId,
+  });
+
+  if (error) {
+    return { ok: false, error: mapAccessOperationRpcError(error) };
+  }
+
+  const parsedRpc = revealShareLinkSecretRpcDataSchema.safeParse(data);
+  if (!parsedRpc.success) {
+    // Malformed encrypted material (bad ciphertext/nonce/authTag hex, an
+    // unsupported encryptionVersion, an invalid publicId, or a missing
+    // field) is a stored-material integrity failure, not a generic
+    // repository bug -- fails closed the same way a decryption failure
+    // does, and decryption is never attempted.
+    return { ok: false, error: { code: "SHARE_LINK_SECRET_UNAVAILABLE" } };
+  }
+
+  if (parsedRpc.data.linkId !== canonicalLinkId) {
+    // The RPC is owner/state/project scoped by p_link_id already, so this
+    // can only happen if the RPC's own result is corrupt or has been
+    // tampered with -- treated exactly like any other secret-material
+    // integrity failure. Decryption is never attempted.
+    return { ok: false, error: { code: "SHARE_LINK_SECRET_UNAVAILABLE" } };
+  }
+
+  let secret: string;
+  try {
+    secret = decryptShareSecret({
+      ciphertext: Buffer.from(parsedRpc.data.ciphertextHex, "hex"),
+      nonce: Buffer.from(parsedRpc.data.nonceHex, "hex"),
+      authTag: Buffer.from(parsedRpc.data.authTagHex, "hex"),
+      encryptionVersion: parsedRpc.data.encryptionVersion,
+      shareLinkId: canonicalLinkId,
+    });
+  } catch {
+    return { ok: false, error: { code: "SHARE_LINK_SECRET_UNAVAILABLE" } };
+  }
+
+  const parsed = revealShareLinkSecretDataSchema.safeParse({
+    linkId: parsedRpc.data.linkId,
+    publicId: parsedRpc.data.publicId,
+    secret,
+  });
+  if (!parsed.success) {
+    return { ok: false, error: { code: "SHARE_LINK_SECRET_UNAVAILABLE" } };
   }
 
   return { ok: true, data: parsed.data };

@@ -405,6 +405,7 @@ export const shareLinkApiErrorCodeSchema = z.enum([
   "SHARE_LINK_NOT_FOUND",
   "SHARE_LINK_STATE_CONFLICT",
   "SHARE_LINK_ANOTHER_LINK_ACTIVE",
+  "SHARE_LINK_SECRET_UNAVAILABLE",
   "INTERNAL_ERROR",
 ]);
 export type ShareLinkApiErrorCode = z.infer<typeof shareLinkApiErrorCodeSchema>;
@@ -568,4 +569,247 @@ export const reenableShareLinkResponseSchema = z.union([
 ]);
 export type ReenableShareLinkResponse = z.infer<
   typeof reenableShareLinkResponseSchema
+>;
+
+// ---------------------------------------------------------------------
+// Phase 1B.3 access-operation contracts (PIN / expiry / rotate / revoke /
+// reveal). Preserves every Phase 1B.1/1B.2 contract above unchanged.
+// ---------------------------------------------------------------------
+
+/** Exactly 4-6 ASCII decimal digits -- matches
+ * lib/share/share-pin.server.ts's PIN_PATTERN exactly. No whitespace
+ * trimming, no coercion. */
+const sharePinInputSchema = z
+  .string()
+  .regex(/^[0-9]{4,6}$/, "Must be exactly 4-6 ASCII decimal digits.");
+
+/**
+ * The exact V1 public-id shape (see
+ * lib/share/share-public-id.server.ts's generateSharePublicId:
+ * randomBytes(18).toString("base64url"), always exactly 24 characters).
+ * Deliberately narrower than sharePublicIdSchema's 16-64 range -- that
+ * broader schema stays exactly as-is for the Phase 1B.1/1B.2 contracts
+ * that intentionally allow the table's future-compatible range, but the
+ * Phase 1B.3 rotate/reveal results only ever carry a publicId this
+ * repository itself generated, so they are held to the exact shape a V1
+ * server actually produces.
+ */
+const sharePublicIdV1Schema = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]{24}$/, "Must be exactly 24 base64url characters.");
+
+export const setSharePinRequestSchema = z
+  .object({ pin: sharePinInputSchema })
+  .strict();
+export type SetSharePinRequest = z.infer<typeof setSharePinRequestSchema>;
+
+const sharePinLifecycleDataSchema = z
+  .object({
+    linkId: uuidSchema,
+    state: managedShareLinkStateSchema,
+    configurationVersion: z.number().int().positive(),
+    updatedAt: strictTimestampSchema,
+  })
+  .strict();
+
+export const setSharePinDataSchema = sharePinLifecycleDataSchema
+  .extend({ hasPin: z.literal(true) })
+  .strict();
+export type SetSharePinData = z.infer<typeof setSharePinDataSchema>;
+
+export const clearSharePinDataSchema = sharePinLifecycleDataSchema
+  .extend({ hasPin: z.literal(false) })
+  .strict();
+export type ClearSharePinData = z.infer<typeof clearSharePinDataSchema>;
+
+export const setSharePinResponseSchema = z.union([
+  z.object({ ok: z.literal(true), data: setSharePinDataSchema }).strict(),
+  shareLinkApiErrorSchema,
+]);
+export type SetSharePinResponse = z.infer<typeof setSharePinResponseSchema>;
+
+export const clearSharePinResponseSchema = z.union([
+  z.object({ ok: z.literal(true), data: clearSharePinDataSchema }).strict(),
+  shareLinkApiErrorSchema,
+]);
+export type ClearSharePinResponse = z.infer<typeof clearSharePinResponseSchema>;
+
+/**
+ * PUT body for the expiry route. `expiresAt` is validated but never
+ * transformed -- strictTimestampSchema has no `.transform()` step, so the
+ * owner-supplied timestamp string is preserved byte-for-byte through to
+ * the repository/RPC boundary rather than being silently reformatted.
+ */
+export const setShareLinkExpiryRequestSchema = z
+  .object({ expiresAt: strictTimestampSchema })
+  .strict();
+export type SetShareLinkExpiryRequest = z.infer<
+  typeof setShareLinkExpiryRequestSchema
+>;
+
+const shareLinkExpiryLifecycleBaseSchema = z.object({
+  linkId: uuidSchema,
+  state: managedShareLinkStateSchema,
+  configurationVersion: z.number().int().positive(),
+  updatedAt: strictTimestampSchema,
+});
+
+export const setShareLinkExpiryDataSchema = shareLinkExpiryLifecycleBaseSchema
+  .extend({ expiresAt: strictTimestampSchema })
+  .strict();
+export type SetShareLinkExpiryData = z.infer<typeof setShareLinkExpiryDataSchema>;
+
+/**
+ * public.clear_share_link_expiry rejects state = expired (the delivered
+ * lifecycle CHECK constraint requires an expired link to keep a non-null
+ * expires_at) and state = revoked (rejected before any state check even
+ * runs), so a successful clear can only ever return draft, active or
+ * disabled -- narrower than setShareLinkExpiryDataSchema's state, which
+ * intentionally keeps the full managedShareLinkStateSchema range since
+ * SET may return an expired link without changing its state.
+ */
+const clearShareLinkExpiryStateSchema = z.enum(["draft", "active", "disabled"]);
+
+export const clearShareLinkExpiryDataSchema = shareLinkExpiryLifecycleBaseSchema
+  .extend({
+    expiresAt: z.null(),
+    state: clearShareLinkExpiryStateSchema,
+  })
+  .strict();
+export type ClearShareLinkExpiryData = z.infer<
+  typeof clearShareLinkExpiryDataSchema
+>;
+
+export const setShareLinkExpiryResponseSchema = z.union([
+  z.object({ ok: z.literal(true), data: setShareLinkExpiryDataSchema }).strict(),
+  shareLinkApiErrorSchema,
+]);
+export type SetShareLinkExpiryResponse = z.infer<
+  typeof setShareLinkExpiryResponseSchema
+>;
+
+export const clearShareLinkExpiryResponseSchema = z.union([
+  z.object({ ok: z.literal(true), data: clearShareLinkExpiryDataSchema }).strict(),
+  shareLinkApiErrorSchema,
+]);
+export type ClearShareLinkExpiryResponse = z.infer<
+  typeof clearShareLinkExpiryResponseSchema
+>;
+
+/**
+ * The exact shape public.rotate_share_link_secret's own jsonb return
+ * value parses through -- Postgres never sees or returns the raw secret,
+ * so this RPC-row schema deliberately has no `secret` field, mirroring
+ * activateShareLinkRpcDataSchema exactly. The repository parses the RPC's
+ * raw output through this schema, then attaches the fresh raw secret it
+ * already generated in TypeScript to produce RotateShareLinkSecretData
+ * below.
+ */
+/**
+ * public.rotate_share_link_secret is restricted to active/disabled links
+ * (draft has no secret to rotate; revoked is terminal; expired is not a
+ * supported rotation state) -- narrower than managedShareLinkStateSchema.
+ */
+const rotateShareLinkSecretStateSchema = z.enum(["active", "disabled"]);
+
+export const rotateShareLinkSecretRpcDataSchema = z
+  .object({
+    linkId: uuidSchema,
+    publicId: sharePublicIdV1Schema,
+    state: rotateShareLinkSecretStateSchema,
+    configurationVersion: z.number().int().positive(),
+    rotatedAt: strictTimestampSchema,
+  })
+  .strict();
+export type RotateShareLinkSecretRpcData = z.infer<
+  typeof rotateShareLinkSecretRpcDataSchema
+>;
+
+/**
+ * Safe rotate result: a freshly generated raw secret (same 43-character
+ * base64url shape as activation's), the link's stable publicId, and its
+ * new configurationVersion/rotatedAt -- never the digest or any encrypted
+ * field.
+ */
+export const rotateShareLinkSecretDataSchema = rotateShareLinkSecretRpcDataSchema
+  .extend({ secret: rawShareSecretSchema })
+  .strict();
+export type RotateShareLinkSecretData = z.infer<
+  typeof rotateShareLinkSecretDataSchema
+>;
+
+export const rotateShareLinkSecretResponseSchema = z.union([
+  z
+    .object({ ok: z.literal(true), data: rotateShareLinkSecretDataSchema })
+    .strict(),
+  shareLinkApiErrorSchema,
+]);
+export type RotateShareLinkSecretResponse = z.infer<
+  typeof rotateShareLinkSecretResponseSchema
+>;
+
+/** State is pinned to "revoked" -- revoke never returns a secret. */
+export const revokeShareLinkDataSchema = z
+  .object({
+    linkId: uuidSchema,
+    state: z.literal("revoked"),
+    configurationVersion: z.number().int().positive(),
+    revokedAt: strictTimestampSchema,
+  })
+  .strict();
+export type RevokeShareLinkData = z.infer<typeof revokeShareLinkDataSchema>;
+
+export const revokeShareLinkResponseSchema = z.union([
+  z.object({ ok: z.literal(true), data: revokeShareLinkDataSchema }).strict(),
+  shareLinkApiErrorSchema,
+]);
+export type RevokeShareLinkResponse = z.infer<
+  typeof revokeShareLinkResponseSchema
+>;
+
+/**
+ * Safe browser-facing reveal result: the currently stored raw secret plus
+ * enough identity to display it, and nothing else -- no ciphertext,
+ * digest, nonce, auth tag or encryption version.
+ */
+export const revealShareLinkSecretDataSchema = z
+  .object({
+    linkId: uuidSchema,
+    publicId: sharePublicIdV1Schema,
+    secret: rawShareSecretSchema,
+  })
+  .strict();
+export type RevealShareLinkSecretData = z.infer<
+  typeof revealShareLinkSecretDataSchema
+>;
+
+export const revealShareLinkSecretResponseSchema = z.union([
+  z
+    .object({ ok: z.literal(true), data: revealShareLinkSecretDataSchema })
+    .strict(),
+  shareLinkApiErrorSchema,
+]);
+export type RevealShareLinkSecretResponse = z.infer<
+  typeof revealShareLinkSecretResponseSchema
+>;
+
+/**
+ * Repository-only schema for public.reveal_share_link_secret's raw jsonb
+ * result -- encrypted material only, exact hex length and case, never
+ * parsed or exposed outside lib/share/share-links-repository.server.ts.
+ * The repository decrypts through this shape and returns only
+ * revealShareLinkSecretDataSchema's safe shape to its caller.
+ */
+export const revealShareLinkSecretRpcDataSchema = z
+  .object({
+    linkId: uuidSchema,
+    publicId: sharePublicIdV1Schema,
+    ciphertextHex: z.string().regex(/^[0-9a-f]{86}$/),
+    nonceHex: z.string().regex(/^[0-9a-f]{24}$/),
+    authTagHex: z.string().regex(/^[0-9a-f]{32}$/),
+    encryptionVersion: z.literal(1),
+  })
+  .strict();
+export type RevealShareLinkSecretRpcData = z.infer<
+  typeof revealShareLinkSecretRpcDataSchema
 >;

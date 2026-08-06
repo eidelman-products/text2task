@@ -4,11 +4,21 @@ import {
   activateShareLinkRpcDataSchema,
   canonicalizeUuid,
   canonicalSubtaskIdSchema,
+  clearSharePinDataSchema,
+  clearShareLinkExpiryDataSchema,
   createShareLinkDraftDataSchema,
   createShareLinkDraftRequestSchema,
   disableShareLinkDataSchema,
   managedShareLinkStateSchema,
   reenableShareLinkDataSchema,
+  revealShareLinkSecretDataSchema,
+  revealShareLinkSecretRpcDataSchema,
+  revokeShareLinkDataSchema,
+  rotateShareLinkSecretDataSchema,
+  setSharePinDataSchema,
+  setSharePinRequestSchema,
+  setShareLinkExpiryDataSchema,
+  setShareLinkExpiryRequestSchema,
   shareLinkApiErrorCodeSchema,
   shareLinkApiErrorSchema,
   shareLinkIdParamSchema,
@@ -24,6 +34,13 @@ import {
 const VALID_UUID = "11111111-1111-4111-8111-111111111111";
 const VALID_UUID_2 = "22222222-2222-4222-8222-222222222222";
 const VALID_PUBLIC_ID = "abcdefgh12345678";
+// The exact V1 shape (see lib/share/share-public-id.server.ts's
+// generateSharePublicId: randomBytes(18).toString("base64url"), always
+// exactly 24 characters) -- used only for the Phase 1B.3 rotate/reveal
+// contracts, which are held to this narrower shape than the broader
+// 16-64-character sharePublicIdSchema every Phase 1B.1/1B.2 contract
+// still uses.
+const VALID_PUBLIC_ID_V1 = "abcdefgh12345678ABCDEFGH";
 const VALID_TIMESTAMP = "2026-08-05T00:00:00Z";
 const VALID_TIMESTAMP_OFFSET = "2026-08-05T00:00:00.123456+02:00";
 
@@ -1052,5 +1069,537 @@ describe("reenableShareLinkDataSchema", () => {
     expect(reenableShareLinkDataSchema.safeParse(withoutDisabledAt).success).toBe(
       false
     );
+  });
+});
+
+// ---------------------------------------------------------------------
+// Phase 1B.3 access-operation contracts
+// ---------------------------------------------------------------------
+
+describe("shareLinkApiErrorCodeSchema - Phase 1B.3 additions", () => {
+  it("accepts SHARE_LINK_SECRET_UNAVAILABLE", () => {
+    expect(
+      shareLinkApiErrorCodeSchema.safeParse("SHARE_LINK_SECRET_UNAVAILABLE").success
+    ).toBe(true);
+  });
+
+  it.each([
+    "INVALID_PIN_MATERIAL",
+    "INVALID_CIPHERTEXT",
+    "INVALID_NONCE",
+    "INVALID_AUTH_TAG",
+    "INVALID_SECRET_DIGEST",
+    "P0001",
+  ])("never exposes the internal code %s", (code) => {
+    expect(shareLinkApiErrorCodeSchema.safeParse(code).success).toBe(false);
+  });
+});
+
+describe("setSharePinRequestSchema", () => {
+  it.each(["1234", "12345", "123456"])("accepts a valid %s-digit pin", (pin) => {
+    expect(setSharePinRequestSchema.safeParse({ pin }).success).toBe(true);
+  });
+
+  it.each(["123", "1234567", "12a4", "", " 1234", "1234 "])(
+    "rejects an invalid pin shape %s",
+    (pin) => {
+      expect(setSharePinRequestSchema.safeParse({ pin }).success).toBe(false);
+    }
+  );
+
+  it("rejects a numeric pin (no coercion)", () => {
+    expect(setSharePinRequestSchema.safeParse({ pin: 1234 }).success).toBe(false);
+  });
+
+  it("rejects an unknown top-level key (closed schema)", () => {
+    expect(
+      setSharePinRequestSchema.safeParse({ pin: "1234", extra: "nope" }).success
+    ).toBe(false);
+  });
+
+  it("rejects a missing pin", () => {
+    expect(setSharePinRequestSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("setSharePinDataSchema / clearSharePinDataSchema", () => {
+  function validSetData(overrides: Record<string, unknown> = {}) {
+    return {
+      linkId: VALID_UUID,
+      hasPin: true,
+      state: "active",
+      configurationVersion: 2,
+      updatedAt: VALID_TIMESTAMP,
+      ...overrides,
+    };
+  }
+
+  function validClearData(overrides: Record<string, unknown> = {}) {
+    return {
+      linkId: VALID_UUID,
+      hasPin: false,
+      state: "active",
+      configurationVersion: 2,
+      updatedAt: VALID_TIMESTAMP,
+      ...overrides,
+    };
+  }
+
+  it("setSharePinDataSchema accepts a valid payload", () => {
+    expect(setSharePinDataSchema.safeParse(validSetData()).success).toBe(true);
+  });
+
+  it("setSharePinDataSchema rejects hasPin=false", () => {
+    expect(
+      setSharePinDataSchema.safeParse(validSetData({ hasPin: false })).success
+    ).toBe(false);
+  });
+
+  it("setSharePinDataSchema rejects a revoked state -- PIN operations reject revoked links", () => {
+    expect(
+      setSharePinDataSchema.safeParse(validSetData({ state: "revoked" })).success
+    ).toBe(false);
+  });
+
+  it("clearSharePinDataSchema accepts a valid payload", () => {
+    expect(clearSharePinDataSchema.safeParse(validClearData()).success).toBe(true);
+  });
+
+  it("clearSharePinDataSchema rejects hasPin=true", () => {
+    expect(
+      clearSharePinDataSchema.safeParse(validClearData({ hasPin: true })).success
+    ).toBe(false);
+  });
+
+  it.each([
+    "pinHash",
+    "pinSalt",
+    "pinHashVersion",
+    "pinScryptN",
+    "pinScryptR",
+    "pinScryptP",
+    "pinKeyLength",
+  ])("never exposes the PIN material field %s", (forbiddenField) => {
+    expect(
+      setSharePinDataSchema.safeParse(validSetData({ [forbiddenField]: "leak" }))
+        .success
+    ).toBe(false);
+    expect(
+      clearSharePinDataSchema.safeParse(validClearData({ [forbiddenField]: "leak" }))
+        .success
+    ).toBe(false);
+  });
+});
+
+describe("setShareLinkExpiryRequestSchema", () => {
+  it("accepts a valid strict ISO timestamp and preserves it exactly, unchanged", () => {
+    const result = setShareLinkExpiryRequestSchema.safeParse({
+      expiresAt: VALID_TIMESTAMP_OFFSET,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.expiresAt).toBe(VALID_TIMESTAMP_OFFSET);
+    }
+  });
+
+  it.each(["2026-08-05", "not-a-timestamp", "", 1754352000000, null])(
+    "rejects a malformed or non-strict expiresAt %s",
+    (expiresAt) => {
+      expect(
+        setShareLinkExpiryRequestSchema.safeParse({ expiresAt }).success
+      ).toBe(false);
+    }
+  );
+
+  it("rejects an unknown top-level key (closed schema)", () => {
+    expect(
+      setShareLinkExpiryRequestSchema.safeParse({
+        expiresAt: VALID_TIMESTAMP,
+        extra: "nope",
+      }).success
+    ).toBe(false);
+  });
+
+  it("rejects a missing expiresAt", () => {
+    expect(setShareLinkExpiryRequestSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("setShareLinkExpiryDataSchema / clearShareLinkExpiryDataSchema", () => {
+  function validSetData(overrides: Record<string, unknown> = {}) {
+    return {
+      linkId: VALID_UUID,
+      state: "active",
+      expiresAt: VALID_TIMESTAMP,
+      configurationVersion: 2,
+      updatedAt: VALID_TIMESTAMP,
+      ...overrides,
+    };
+  }
+
+  function validClearData(overrides: Record<string, unknown> = {}) {
+    return {
+      linkId: VALID_UUID,
+      state: "active",
+      expiresAt: null,
+      configurationVersion: 2,
+      updatedAt: VALID_TIMESTAMP,
+      ...overrides,
+    };
+  }
+
+  it("setShareLinkExpiryDataSchema accepts a valid payload", () => {
+    expect(setShareLinkExpiryDataSchema.safeParse(validSetData()).success).toBe(
+      true
+    );
+  });
+
+  it("setShareLinkExpiryDataSchema rejects a null expiresAt -- set always returns a real timestamp", () => {
+    expect(
+      setShareLinkExpiryDataSchema.safeParse(validSetData({ expiresAt: null }))
+        .success
+    ).toBe(false);
+  });
+
+  it("setShareLinkExpiryDataSchema rejects a revoked state", () => {
+    expect(
+      setShareLinkExpiryDataSchema.safeParse(validSetData({ state: "revoked" }))
+        .success
+    ).toBe(false);
+  });
+
+  it("clearShareLinkExpiryDataSchema accepts a valid payload", () => {
+    expect(
+      clearShareLinkExpiryDataSchema.safeParse(validClearData()).success
+    ).toBe(true);
+  });
+
+  it("clearShareLinkExpiryDataSchema rejects a non-null expiresAt -- clear always returns null", () => {
+    expect(
+      clearShareLinkExpiryDataSchema.safeParse(
+        validClearData({ expiresAt: VALID_TIMESTAMP })
+      ).success
+    ).toBe(false);
+  });
+
+  it.each(["draft", "active", "disabled"])(
+    "clearShareLinkExpiryDataSchema accepts state %s",
+    (state) => {
+      expect(
+        clearShareLinkExpiryDataSchema.safeParse(validClearData({ state })).success
+      ).toBe(true);
+    }
+  );
+
+  it.each(["expired", "revoked"])(
+    "clearShareLinkExpiryDataSchema rejects state %s -- clear_share_link_expiry never returns it",
+    (state) => {
+      expect(
+        clearShareLinkExpiryDataSchema.safeParse(validClearData({ state })).success
+      ).toBe(false);
+    }
+  );
+
+  it("setShareLinkExpiryDataSchema still accepts state expired -- SET may return an expired link without changing its state", () => {
+    expect(
+      setShareLinkExpiryDataSchema.safeParse(validSetData({ state: "expired" }))
+        .success
+    ).toBe(true);
+  });
+});
+
+describe("rotateShareLinkSecretDataSchema", () => {
+  function validData(overrides: Record<string, unknown> = {}) {
+    return {
+      linkId: VALID_UUID,
+      publicId: VALID_PUBLIC_ID_V1,
+      state: "active",
+      configurationVersion: 4,
+      rotatedAt: VALID_TIMESTAMP,
+      secret: VALID_RAW_SECRET,
+      ...overrides,
+    };
+  }
+
+  it("accepts a valid payload with a fresh raw secret", () => {
+    expect(rotateShareLinkSecretDataSchema.safeParse(validData()).success).toBe(
+      true
+    );
+  });
+
+  it("requires the secret field", () => {
+    const { secret: _secret, ...withoutSecret } = validData();
+    expect(
+      rotateShareLinkSecretDataSchema.safeParse(withoutSecret).success
+    ).toBe(false);
+  });
+
+  it.each(["", "a".repeat(42), "a".repeat(44)])(
+    "rejects an invalid secret shape %s",
+    (secret) => {
+      expect(
+        rotateShareLinkSecretDataSchema.safeParse(validData({ secret })).success
+      ).toBe(false);
+    }
+  );
+
+  it.each(["active", "disabled"])("accepts state %s", (state) => {
+    expect(
+      rotateShareLinkSecretDataSchema.safeParse(validData({ state })).success
+    ).toBe(true);
+  });
+
+  it.each(["draft", "expired", "revoked"])(
+    "rejects state %s -- rotate_share_link_secret only ever returns active or disabled",
+    (state) => {
+      expect(
+        rotateShareLinkSecretDataSchema.safeParse(validData({ state })).success
+      ).toBe(false);
+    }
+  );
+
+  it.each(["secretDigest", "ciphertext", "nonce", "authTag", "encryptionVersion"])(
+    "rejects a forbidden encrypted-material field %s",
+    (forbiddenField) => {
+      expect(
+        rotateShareLinkSecretDataSchema.safeParse(
+          validData({ [forbiddenField]: "leak" })
+        ).success
+      ).toBe(false);
+    }
+  );
+
+  it("accepts an exactly-24-character V1 publicId", () => {
+    expect(
+      rotateShareLinkSecretDataSchema.safeParse(
+        validData({ publicId: VALID_PUBLIC_ID_V1 })
+      ).success
+    ).toBe(true);
+  });
+
+  it.each([23, 25])("rejects a publicId of the wrong length (%d)", (length) => {
+    expect(
+      rotateShareLinkSecretDataSchema.safeParse(
+        validData({ publicId: "a".repeat(length) })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects a schema-valid-elsewhere 16-character publicId -- Phase 1B.3 holds rotate to the exact V1 shape", () => {
+    expect(
+      rotateShareLinkSecretDataSchema.safeParse(
+        validData({ publicId: VALID_PUBLIC_ID })
+      ).success
+    ).toBe(false);
+  });
+});
+
+describe("revokeShareLinkDataSchema", () => {
+  function validData(overrides: Record<string, unknown> = {}) {
+    return {
+      linkId: VALID_UUID,
+      state: "revoked",
+      configurationVersion: 5,
+      revokedAt: VALID_TIMESTAMP,
+      ...overrides,
+    };
+  }
+
+  it("accepts a valid payload", () => {
+    expect(revokeShareLinkDataSchema.safeParse(validData()).success).toBe(true);
+  });
+
+  it("rejects a state other than revoked", () => {
+    for (const state of ["draft", "active", "disabled", "expired"]) {
+      expect(
+        revokeShareLinkDataSchema.safeParse(validData({ state })).success
+      ).toBe(false);
+    }
+  });
+
+  it("rejects a secret field -- revoke data never reveals a secret", () => {
+    expect(
+      revokeShareLinkDataSchema.safeParse(validData({ secret: VALID_RAW_SECRET }))
+        .success
+    ).toBe(false);
+  });
+});
+
+describe("revealShareLinkSecretDataSchema (safe browser result)", () => {
+  function validData(overrides: Record<string, unknown> = {}) {
+    return {
+      linkId: VALID_UUID,
+      publicId: VALID_PUBLIC_ID_V1,
+      secret: VALID_RAW_SECRET,
+      ...overrides,
+    };
+  }
+
+  it("accepts a valid payload", () => {
+    expect(revealShareLinkSecretDataSchema.safeParse(validData()).success).toBe(
+      true
+    );
+  });
+
+  it("requires the secret field", () => {
+    const { secret: _secret, ...withoutSecret } = validData();
+    expect(
+      revealShareLinkSecretDataSchema.safeParse(withoutSecret).success
+    ).toBe(false);
+  });
+
+  it.each([
+    "ciphertextHex",
+    "nonceHex",
+    "authTagHex",
+    "encryptionVersion",
+    "secretDigest",
+  ])("rejects a forbidden encrypted-material field %s", (forbiddenField) => {
+    expect(
+      revealShareLinkSecretDataSchema.safeParse(
+        validData({ [forbiddenField]: "leak" })
+      ).success
+    ).toBe(false);
+  });
+
+  it("accepts an exactly-24-character V1 publicId", () => {
+    expect(
+      revealShareLinkSecretDataSchema.safeParse(
+        validData({ publicId: VALID_PUBLIC_ID_V1 })
+      ).success
+    ).toBe(true);
+  });
+
+  it.each([23, 25])("rejects a publicId of the wrong length (%d)", (length) => {
+    expect(
+      revealShareLinkSecretDataSchema.safeParse(
+        validData({ publicId: "a".repeat(length) })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects a schema-valid-elsewhere 16-character publicId -- Phase 1B.3 holds reveal to the exact V1 shape", () => {
+    expect(
+      revealShareLinkSecretDataSchema.safeParse(
+        validData({ publicId: VALID_PUBLIC_ID })
+      ).success
+    ).toBe(false);
+  });
+});
+
+describe("revealShareLinkSecretRpcDataSchema (repository-only encrypted shape)", () => {
+  function validData(overrides: Record<string, unknown> = {}) {
+    return {
+      linkId: VALID_UUID,
+      publicId: VALID_PUBLIC_ID_V1,
+      ciphertextHex: "a".repeat(86),
+      nonceHex: "b".repeat(24),
+      authTagHex: "c".repeat(32),
+      encryptionVersion: 1,
+      ...overrides,
+    };
+  }
+
+  it("accepts a valid payload", () => {
+    expect(
+      revealShareLinkSecretRpcDataSchema.safeParse(validData()).success
+    ).toBe(true);
+  });
+
+  it("rejects an uppercase-hex ciphertextHex -- must be lowercase", () => {
+    expect(
+      revealShareLinkSecretRpcDataSchema.safeParse(
+        validData({ ciphertextHex: "A".repeat(86) })
+      ).success
+    ).toBe(false);
+  });
+
+  it.each([85, 87])("rejects a ciphertextHex of the wrong length (%d)", (length) => {
+    expect(
+      revealShareLinkSecretRpcDataSchema.safeParse(
+        validData({ ciphertextHex: "a".repeat(length) })
+      ).success
+    ).toBe(false);
+  });
+
+  it.each([23, 25])("rejects a nonceHex of the wrong length (%d)", (length) => {
+    expect(
+      revealShareLinkSecretRpcDataSchema.safeParse(
+        validData({ nonceHex: "b".repeat(length) })
+      ).success
+    ).toBe(false);
+  });
+
+  it.each([31, 33])("rejects an authTagHex of the wrong length (%d)", (length) => {
+    expect(
+      revealShareLinkSecretRpcDataSchema.safeParse(
+        validData({ authTagHex: "c".repeat(length) })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects an encryptionVersion other than exactly 1", () => {
+    expect(
+      revealShareLinkSecretRpcDataSchema.safeParse(
+        validData({ encryptionVersion: 2 })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects a plaintext secret field -- this schema only ever carries encrypted material", () => {
+    expect(
+      revealShareLinkSecretRpcDataSchema.safeParse(
+        validData({ secret: VALID_RAW_SECRET })
+      ).success
+    ).toBe(false);
+  });
+
+  it("accepts an exactly-24-character V1 publicId", () => {
+    expect(
+      revealShareLinkSecretRpcDataSchema.safeParse(
+        validData({ publicId: VALID_PUBLIC_ID_V1 })
+      ).success
+    ).toBe(true);
+  });
+
+  it.each([23, 25])("rejects a publicId of the wrong length (%d)", (length) => {
+    expect(
+      revealShareLinkSecretRpcDataSchema.safeParse(
+        validData({ publicId: "a".repeat(length) })
+      ).success
+    ).toBe(false);
+  });
+
+  it("rejects a schema-valid-elsewhere 16-character publicId -- Phase 1B.3 holds reveal to the exact V1 shape", () => {
+    expect(
+      revealShareLinkSecretRpcDataSchema.safeParse(
+        validData({ publicId: VALID_PUBLIC_ID })
+      ).success
+    ).toBe(false);
+  });
+});
+
+describe("Phase 1B.1/1B.2 broad public-id contracts remain unchanged", () => {
+  it("createShareLinkDraftDataSchema still accepts the broad 16-64-character sharePublicIdSchema shape", () => {
+    expect(
+      createShareLinkDraftDataSchema.safeParse(
+        validCreateShareLinkDraftData({ publicId: VALID_PUBLIC_ID })
+      ).success
+    ).toBe(true);
+  });
+
+  it("activateShareLinkRpcDataSchema still accepts the broad 16-64-character sharePublicIdSchema shape", () => {
+    expect(
+      activateShareLinkRpcDataSchema.safeParse(
+        validActivateShareLinkRpcData({ publicId: VALID_PUBLIC_ID })
+      ).success
+    ).toBe(true);
+  });
+
+  it("shareLinkManagementStateDataSchema's managed link still accepts the broad 16-64-character sharePublicIdSchema shape", () => {
+    const data = withManagedLinkData({
+      link: validManagedLink({ publicId: VALID_PUBLIC_ID }),
+    });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(true);
   });
 });
