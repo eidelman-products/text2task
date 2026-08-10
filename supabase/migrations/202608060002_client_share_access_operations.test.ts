@@ -567,7 +567,7 @@ describe("202608060002 - rotate_share_link_secret behavior", () => {
     const linkUpdateText = body.slice(linkUpdateStart, linkUpdateEnd).toLowerCase();
     expect(linkUpdateText).toContain("secret_digest = p_secret_digest");
     expect(linkUpdateText).toContain("secret_digest_version = p_secret_digest_version");
-    expect(linkUpdateText).toContain("rotated_at = v_now");
+    expect(linkUpdateText).toContain("rotated_at = v_rotation_timestamp");
     expect(linkUpdateText).toContain("configuration_version = v_new_configuration_version");
     expect(linkUpdateText).not.toContain("state =");
     expect(linkUpdateText).not.toContain("public_id =");
@@ -615,8 +615,61 @@ describe("202608060002 - rotate_share_link_secret behavior", () => {
       expect(returnBlock).not.toContain(forbidden);
     }
     expect(body).toContain(
-      "return jsonb_build_object(\n    'linkId', p_link_id,\n    'publicId', v_link_public_id,\n    'state', v_link_state,\n    'configurationVersion', v_new_configuration_version,\n    'rotatedAt', v_now\n  );"
+      "return jsonb_build_object(\n    'linkId', p_link_id,\n    'publicId', v_link_public_id,\n    'state', v_link_state,\n    'configurationVersion', v_new_configuration_version,\n    'rotatedAt', v_rotation_timestamp\n  );"
     );
+  });
+
+  it("derives rotated_at from real wall-clock time (clock_timestamp()), never from the transaction-fixed now()", () => {
+    expect(body).not.toContain("v_now timestamptz := now();");
+    expect(body).not.toMatch(/\bv_now\b/);
+    expect(body).toContain("v_rotation_timestamp timestamptz;");
+    expect(body).toContain("v_rotation_timestamp := clock_timestamp();");
+  });
+
+  it("reads the row's own previous rotated_at under the same FOR UPDATE lock used for the rest of the rotation", () => {
+    expect(body).toContain("v_link_rotated_at timestamptz;");
+    const lockSelectStart = body.indexOf("select\n      link.state");
+    const lockSelectEnd = body.indexOf("for update;", lockSelectStart);
+    expect(lockSelectStart).toBeGreaterThan(-1);
+    expect(lockSelectEnd).toBeGreaterThan(lockSelectStart);
+    const lockSelect = body.slice(lockSelectStart, lockSelectEnd);
+    expect(lockSelect).toContain("link.rotated_at");
+    expect(lockSelect).toContain("v_link_rotated_at");
+  });
+
+  it("compares the clock_timestamp() candidate against the previous rotated_at and floors it to strictly exceed that value, guaranteeing a strictly monotonic rotated_at even for two rotations in one transaction or one clock tick", () => {
+    const candidateIdx = body.indexOf("v_rotation_timestamp := clock_timestamp();");
+    expect(candidateIdx).toBeGreaterThan(-1);
+    const monotonicGuard = body.slice(candidateIdx, candidateIdx + 220);
+    expect(monotonicGuard).toContain(
+      "if v_link_rotated_at is not null and v_rotation_timestamp <= v_link_rotated_at then"
+    );
+    expect(monotonicGuard).toContain("v_rotation_timestamp := v_link_rotated_at + interval '1 microsecond';");
+    // Strictly greater, not merely different: the guard's own comparison
+    // uses <=, which rejects an equal candidate as well as a smaller one.
+    expect(monotonicGuard).not.toContain("v_rotation_timestamp < v_link_rotated_at");
+  });
+
+  it("the monotonic timestamp is computed AFTER every validation/state/material check and BEFORE the first mutating UPDATE, so a rejected rotation never touches it", () => {
+    const candidateIdx = body.indexOf("v_rotation_timestamp := clock_timestamp();");
+    const firstMutationIndex = body.indexOf("update public.project_share_links");
+    const lastValidationIndex = body.lastIndexOf("message = 'SHARE_LINK_SECRET_MATERIAL_MISSING'", candidateIdx);
+    expect(lastValidationIndex).toBeGreaterThan(-1);
+    expect(candidateIdx).toBeGreaterThan(lastValidationIndex);
+    expect(firstMutationIndex).toBeGreaterThan(candidateIdx);
+  });
+
+  it("never uses pg_sleep or any artificial delay to force timestamp separation", () => {
+    expect(body.toLowerCase()).not.toContain("pg_sleep");
+  });
+
+  it("does not change the semantics of any lifecycle timestamp other than rotated_at -- activated_at, disabled_at and expires_at remain absent from every SET clause in this function", () => {
+    const setClauses = body.match(/set\s*\n(?:\s*\w+\s*=\s*[^,;]+,?\s*\n?)+/gi) ?? [];
+    const combined = setClauses.join("\n").toLowerCase();
+    expect(combined).not.toContain("activated_at =");
+    expect(combined).not.toContain("disabled_at =");
+    expect(combined).not.toContain("expires_at =");
+    expect(combined).not.toContain("created_at =");
   });
 });
 

@@ -260,17 +260,84 @@ describe("202608030003 - forbidden secret, token and PIN storage", () => {
     );
   });
 
-  it("allows a missing secret only in the pre-generation draft state", () => {
+  it("names the digest-consistency constraint on project_share_links", () => {
     expect(blocks.project_share_links).toContain(
       "constraint project_share_links_secret_digest_consistency_check"
     );
-    expect(blocks.project_share_links).toContain("and state = 'draft'");
   });
 
   it("has no plaintext or reversible PIN column", () => {
     for (const forbidden of ["pin", "pin_plaintext", "pin_value", "pin_code"]) {
       expect(linkColumns).not.toContain(forbidden);
     }
+  });
+
+  describe("project_share_links_secret_digest_consistency_check -- nullable only for draft, or a revoked link that never activated", () => {
+    const constraintIdx = blocks.project_share_links.indexOf(
+      "constraint project_share_links_secret_digest_consistency_check"
+    );
+    const constraintBlock = blocks.project_share_links.slice(constraintIdx, constraintIdx + 500);
+
+    it("locates the constraint's full CHECK expression", () => {
+      expect(constraintIdx).toBeGreaterThan(-1);
+      expect(constraintBlock).toContain("check (");
+    });
+
+    it("[permits] a true draft (state = 'draft') to have a null digest, independent of activated_at", () => {
+      expect(constraintBlock).toContain("state = 'draft'");
+    });
+
+    it("[permits] a revoked link to have a null digest ONLY when it never activated (activated_at is null) -- not every revoked link", () => {
+      expect(constraintBlock).toContain("or (state = 'revoked' and activated_at is null)");
+    });
+
+    it("the null-digest branch is exactly (draft) OR (revoked AND never-activated) -- structurally, no other state/activated_at combination can satisfy it", () => {
+      expect(constraintBlock).toContain(
+        "and (\n          state = 'draft'\n          or (state = 'revoked' and activated_at is null)\n        )"
+      );
+    });
+
+    it("[rejects null for active/disabled/expired] the digest-required branch is completely unconditional on state -- it never mentions the state column at all, so it is the only branch active/disabled/expired rows (which can never satisfy the draft/never-activated-revoked null branch) can ever satisfy", () => {
+      const orIdx = constraintBlock.indexOf(")\n      or (");
+      expect(orIdx).toBeGreaterThan(-1);
+      const nonNullBranch = constraintBlock.slice(orIdx, orIdx + 160);
+      expect(nonNullBranch).toContain("secret_digest is not null");
+      expect(nonNullBranch).toContain("secret_digest_version is not null");
+      expect(nonNullBranch).toContain("secret_digest_version > 0");
+      expect(nonNullBranch).not.toMatch(/\bstate\b/);
+    });
+
+    it("[rejects null for a previously-activated revoked link] the revoked null-branch clause requires activated_at is null specifically -- a revoked row with activated_at is not null fails that clause and therefore falls through to the digest-required branch, so an activated link's digest history can never be silently dropped by revocation", () => {
+      expect(constraintBlock).toContain("state = 'revoked' and activated_at is null");
+      // A bare "state = 'revoked'" with no activated_at qualifier anywhere
+      // in the null-branch would be the unconditionally-broad regression
+      // this test guards against.
+      expect(constraintBlock).not.toContain("or state = 'revoked'\n");
+      expect(constraintBlock).not.toContain("'draft', 'revoked'");
+    });
+
+    it("does not weaken the existing digest format or version-positivity validation", () => {
+      expect(blocks.project_share_links).toContain(
+        "check (secret_digest is null or secret_digest ~ '^[0-9a-f]{64}$')"
+      );
+      expect(constraintBlock).toContain("secret_digest_version > 0");
+    });
+
+    it("cross-contract: the widened constraint can represent the already-delivered draft -> revoked transition that enforce_project_share_link_integrity's own state-transition matrix and revoke_share_link both already support with no state restriction", () => {
+      // enforce_project_share_link_integrity (202608030005) explicitly
+      // allows (old.state = 'draft' and new.state in ('active', 'revoked')),
+      // and revoke_share_link (202608060002) has no state restriction at
+      // all -- this constraint must not be the one thing that makes that
+      // already-delivered transition impossible for a link with no digest.
+      expect(constraintBlock).toContain("state = 'revoked' and activated_at is null");
+    });
+  });
+
+  it("updates the secret_digest column comment to no longer claim nullability is draft-only", () => {
+    expect(normalizedSql).not.toContain(
+      "nullable only in the pre-generation ''draft'' state, which project_share_links_secret_digest_consistency_check enforces."
+    );
+    expect(sql).toContain("revoked directly from ''draft'' without ever activating");
   });
 
   it("stores the PIN as a salted, versioned, explicitly parameterised scrypt derivation", () => {

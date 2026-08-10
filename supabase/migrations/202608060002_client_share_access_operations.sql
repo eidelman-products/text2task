@@ -554,8 +554,9 @@ declare
   v_link_public_id text;
   v_link_configuration_version integer;
   v_link_secret_digest text;
+  v_link_rotated_at timestamptz;
   v_new_configuration_version integer;
-  v_now timestamptz := now();
+  v_rotation_timestamp timestamptz;
   v_updated_link_count integer;
   v_updated_material_count integer;
   v_secret_material_exists boolean;
@@ -596,10 +597,10 @@ begin
 
   select
       link.state, link.public_id, link.configuration_version,
-      link.secret_digest, link.project_id
+      link.secret_digest, link.project_id, link.rotated_at
     into
       v_link_state, v_link_public_id, v_link_configuration_version,
-      v_link_secret_digest, v_project_id
+      v_link_secret_digest, v_project_id, v_link_rotated_at
     from public.project_share_links as link
     where link.id = p_link_id and link.user_id = v_user_id
     for update;
@@ -642,6 +643,25 @@ begin
 
   v_new_configuration_version := v_link_configuration_version + 1;
 
+  -- rotated_at must represent the actual moment of THIS rotation and must
+  -- be strictly greater than the row's own previous rotated_at --
+  -- enforce_project_share_link_integrity (202608030005) requires exactly
+  -- that whenever a secret genuinely changes on a link that already had
+  -- one. now()/transaction_timestamp() is fixed for the entire enclosing
+  -- transaction and is therefore NOT safe here: two rotations of the same
+  -- link inside one transaction (a legitimate sequence -- nothing in this
+  -- RPC or its callers forbids it) would otherwise compute the identical
+  -- timestamp and the second rotation would fail its own integrity check.
+  -- clock_timestamp() is real wall-clock time that advances on every call
+  -- regardless of transaction boundaries, but even that is not by itself
+  -- guaranteed to differ from the previous rotation at very high call
+  -- rates or on platforms with coarse clock resolution, so the result is
+  -- additionally floored to strictly exceed the previous rotated_at.
+  v_rotation_timestamp := clock_timestamp();
+  if v_link_rotated_at is not null and v_rotation_timestamp <= v_link_rotated_at then
+    v_rotation_timestamp := v_link_rotated_at + interval '1 microsecond';
+  end if;
+
   -- state, public_id, activated_at, disabled_at and expires_at are
   -- deliberately absent from this SET clause -- rotation replaces only
   -- the secret material, never the link's own lifecycle state or
@@ -650,7 +670,7 @@ begin
     set
       secret_digest = p_secret_digest,
       secret_digest_version = p_secret_digest_version,
-      rotated_at = v_now,
+      rotated_at = v_rotation_timestamp,
       configuration_version = v_new_configuration_version
     where id = p_link_id
       and user_id = v_user_id;
@@ -683,13 +703,13 @@ begin
     'publicId', v_link_public_id,
     'state', v_link_state,
     'configurationVersion', v_new_configuration_version,
-    'rotatedAt', v_now
+    'rotatedAt', v_rotation_timestamp
   );
 end;
 $$;
 
 comment on function public.rotate_share_link_secret(uuid, text, smallint, text, text, text, smallint) is
-  'Phase 1B.3: atomically replaces an owned active/disabled share link''s secret_digest and its project_share_secret_material row, bumping configuration_version exactly once -- all in one transaction (the Phase 3 grant-invalidation mechanism this migration''s header describes: rotation is the primary way a leaked link becomes unusable). SECURITY DEFINER; obtains auth.uid() internally; accepts no plaintext secret, only an already-computed digest and already-encrypted material, matching activate_share_link''s validation exactly. Verifies both UPDATE statements affect exactly one row. Preserves state, public_id, activated_at, disabled_at and expires_at. Writes one link_rotated event containing no identity digest, content or secret material. Never returns the digest, ciphertext, nonce, auth tag, encryption version or any owner/project identifier.';
+  'Phase 1B.3: atomically replaces an owned active/disabled share link''s secret_digest and its project_share_secret_material row, bumping configuration_version exactly once -- all in one transaction (the Phase 3 grant-invalidation mechanism this migration''s header describes: rotation is the primary way a leaked link becomes unusable). SECURITY DEFINER; obtains auth.uid() internally; accepts no plaintext secret, only an already-computed digest and already-encrypted material, matching activate_share_link''s validation exactly. Verifies both UPDATE statements affect exactly one row. Preserves state, public_id, activated_at, disabled_at and expires_at. rotated_at is computed from clock_timestamp() (real wall-clock time, not the transaction-fixed now()) and is floored to strictly exceed the row''s own previous rotated_at, so consecutive rotations of the same link -- even within one transaction or one clock tick -- always produce a strictly increasing value, satisfying enforce_project_share_link_integrity''s own requirement. Writes one link_rotated event containing no identity digest, content or secret material. Never returns the digest, ciphertext, nonce, auth tag, encryption version or any owner/project identifier.';
 
 revoke all on function public.rotate_share_link_secret(uuid, text, smallint, text, text, text, smallint)
   from public;

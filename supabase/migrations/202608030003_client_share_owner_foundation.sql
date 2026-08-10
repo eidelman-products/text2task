@@ -142,16 +142,28 @@ create table public.project_share_links (
   constraint project_share_links_secret_digest_format_check
     check (secret_digest is null or secret_digest ~ '^[0-9a-f]{64}$'),
 
-  -- A secret may be absent ONLY in the pre-generation 'draft' state; every
-  -- other state requires a complete, versioned digest. This is what makes
-  -- "nullable only if a true draft state exists" true at the database
-  -- layer rather than by convention.
+  -- A secret may be absent only in two cases: the pre-generation 'draft'
+  -- state, or a 'revoked' link that reached 'revoked' directly from 'draft'
+  -- without ever activating (activated_at is null) -- revoke_share_link
+  -- supports revoking a draft outright (an owner discarding an unused link),
+  -- and a link that never activated never generated secret material to
+  -- begin with, so there is nothing to require here. Every OTHER state --
+  -- active, disabled, expired, and a revoked link that WAS previously
+  -- activated (activated_at is not null) -- requires a complete, versioned
+  -- digest: activation is the only path that ever assigns one, and revoking
+  -- an already-activated link must never silently drop its digest history
+  -- (revoke_share_link deliberately never clears secret_digest, and the
+  -- retained public.project_share_secret_material row would otherwise
+  -- reference a link with no corresponding digest evidence at all).
   constraint project_share_links_secret_digest_consistency_check
     check (
       (
         secret_digest is null
         and secret_digest_version is null
-        and state = 'draft'
+        and (
+          state = 'draft'
+          or (state = 'revoked' and activated_at is null)
+        )
       )
       or (
         secret_digest is not null
@@ -296,7 +308,7 @@ comment on column public.project_share_links.public_id is
   'Opaque, URL-safe public identifier used as the /share/<public_id> path segment. Never derived from project, client or user data, and never a database id. Knowing it alone grants nothing -- it only selects which row a supplied share secret is verified against.';
 
 comment on column public.project_share_links.secret_digest is
-  'Lowercase hex keyed HMAC-SHA256 digest of the share secret, computed with a dedicated versioned server secret of at least 32 random bytes. The raw secret is NEVER stored, and no reversible or encrypted copy is stored in V1: a lost share URL is recovered only by rotating the secret and issuing a new URL. Nullable only in the pre-generation ''draft'' state, which project_share_links_secret_digest_consistency_check enforces.';
+  'Lowercase hex keyed HMAC-SHA256 digest of the share secret, computed with a dedicated versioned server secret of at least 32 random bytes. The raw secret is NEVER stored, and no reversible or encrypted copy is stored in V1: a lost share URL is recovered only by rotating the secret and issuing a new URL. Nullable only in the pre-generation ''draft'' state, or a ''revoked'' link that was revoked directly from ''draft'' without ever activating (activated_at is null) -- a link that never activated never generated one. Every other state, including a revoked link that WAS previously activated, requires a complete digest; project_share_links_secret_digest_consistency_check enforces this exactly.';
 
 comment on column public.project_share_links.secret_digest_version is
   'Version of the HMAC key/derivation used for secret_digest, so the server secret can be rotated without invalidating every existing link at once. Required whenever secret_digest is present.';
