@@ -47,6 +47,15 @@ type DashboardClientProps = {
    * in-page tab clicks never touch the URL (see handleNavChange below).
    */
   initialView?: DashboardWorkspaceView;
+  /**
+   * Server-computed Client Share availability (lib/share/share-availability
+   * .server.ts, evaluated in app/dashboard/page.tsx), threaded down as a
+   * plain boolean the same way `initialPlan` already is. This is a UX-only
+   * visibility gate -- the real security boundary is each
+   * app/api/share-links/** route's own server-side assertClientShareEnabled()
+   * call, which this prop never replaces.
+   */
+  clientShareEnabled: boolean;
 };
 
 type DashboardNav = DashboardWorkspaceView;
@@ -359,6 +368,7 @@ export default function DashboardClient({
   userId,
   initialPlan,
   initialView,
+  clientShareEnabled,
 }: DashboardClientProps) {
   const [activeNav, setActiveNav] = useState<DashboardNav>(
     initialView ?? DEFAULT_DASHBOARD_WORKSPACE_VIEW
@@ -1785,6 +1795,7 @@ export default function DashboardClient({
       case "tasks":
         return (
           <TasksView
+            clientShareEnabled={clientShareEnabled}
             isLoadingTasks={isLoadingTasks}
             tasksError={tasksError}
             tasks={tasks}

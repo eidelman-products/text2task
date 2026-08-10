@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 const getUserMock = vi.fn();
@@ -70,6 +70,39 @@ beforeEach(() => {
   setShareLinkPinMock.mockReset();
   clearShareLinkPinMock.mockReset();
   consoleErrorSpy.mockClear();
+  vi.stubEnv("TEXT2TASK_CLIENT_SHARE_ENABLED", "true");
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("PUT/DELETE /api/share-links/[id]/pin - feature gate", () => {
+  it("PUT returns 404 NOT_FOUND before authenticating when the feature is disabled", async () => {
+    vi.stubEnv("TEXT2TASK_CLIENT_SHARE_ENABLED", "false");
+
+    const response = await PUT(buildPutRequest({ pin: "1234" }), buildContext(VALID_UUID));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toEqual({ ok: false, code: "NOT_FOUND", error: expect.any(String) });
+    expect(getUserMock).not.toHaveBeenCalled();
+    expect(setShareLinkPinMock).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+  });
+
+  it("DELETE returns 404 NOT_FOUND before authenticating when the feature is disabled", async () => {
+    vi.stubEnv("TEXT2TASK_CLIENT_SHARE_ENABLED", "false");
+
+    const response = await DELETE(buildDeleteRequest(), buildContext(VALID_UUID));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toEqual({ ok: false, code: "NOT_FOUND", error: expect.any(String) });
+    expect(getUserMock).not.toHaveBeenCalled();
+    expect(clearShareLinkPinMock).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe("PUT /api/share-links/[id]/pin - validation", () => {

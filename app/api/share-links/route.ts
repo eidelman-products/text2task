@@ -9,6 +9,10 @@ import {
   createShareLinkDraft,
   getShareLinkManagementState,
 } from "@/lib/share/share-links-repository.server";
+import {
+  assertClientShareEnabled,
+  isShareAvailabilityError,
+} from "@/lib/share/share-availability.server";
 
 /**
  * Structured, safe error log: a fixed operation/stage plus a fixed
@@ -53,6 +57,8 @@ function errorResponse(code: ShareLinkApiErrorCode, error: string, status: numbe
 
 export async function GET(req: NextRequest) {
   try {
+    assertClientShareEnabled();
+
     const supabase = await createClient();
 
     const {
@@ -99,6 +105,10 @@ export async function GET(req: NextRequest) {
       { headers: SHARE_LINKS_NO_STORE_HEADERS }
     );
   } catch (error) {
+    if (isShareAvailabilityError(error)) {
+      return errorResponse("NOT_FOUND", "Not found.", 404);
+    }
+
     logShareLinksRouteError("share_links.get_management_state", error);
 
     return errorResponse("INTERNAL_ERROR", "Failed to load the share link.", 500);
@@ -107,6 +117,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    assertClientShareEnabled();
+
     const supabase = await createClient();
 
     const {
@@ -159,6 +171,10 @@ export async function POST(req: NextRequest) {
       { status: 201, headers: SHARE_LINKS_NO_STORE_HEADERS }
     );
   } catch (error) {
+    if (isShareAvailabilityError(error)) {
+      return errorResponse("NOT_FOUND", "Not found.", 404);
+    }
+
     logShareLinksRouteError("share_links.create_draft", error);
 
     return errorResponse("INTERNAL_ERROR", "Failed to create the share link.", 500);

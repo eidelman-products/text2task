@@ -5,6 +5,10 @@ import {
   type ShareLinkApiErrorCode,
 } from "@/lib/share/share-contracts";
 import { listShareLinkSummaries } from "@/lib/share/share-links-repository.server";
+import {
+  assertClientShareEnabled,
+  isShareAvailabilityError,
+} from "@/lib/share/share-availability.server";
 
 /**
  * Structured, safe error log: a fixed operation/stage plus a fixed
@@ -46,6 +50,8 @@ function errorResponse(code: ShareLinkApiErrorCode, error: string, status: numbe
 
 export async function GET(req: NextRequest) {
   try {
+    assertClientShareEnabled();
+
     const supabase = await createClient();
 
     const {
@@ -102,6 +108,10 @@ export async function GET(req: NextRequest) {
       { headers: SHARE_LINKS_NO_STORE_HEADERS }
     );
   } catch (error) {
+    if (isShareAvailabilityError(error)) {
+      return errorResponse("NOT_FOUND", "Not found.", 404);
+    }
+
     logShareLinksRouteError("share_links.list_summaries", error);
 
     return errorResponse(

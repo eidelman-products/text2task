@@ -1102,6 +1102,18 @@ describe("shareLinkApiErrorCodeSchema - Phase 1B.3 additions", () => {
   });
 });
 
+// ---------------------------------------------------------------------
+// Phase 2A addition: the Client Share availability gate's generic,
+// fail-closed response code (never distinguishes "feature disabled" from
+// "route does not exist" to a caller).
+// ---------------------------------------------------------------------
+
+describe("shareLinkApiErrorCodeSchema - Phase 2A additions", () => {
+  it("accepts NOT_FOUND", () => {
+    expect(shareLinkApiErrorCodeSchema.safeParse("NOT_FOUND").success).toBe(true);
+  });
+});
+
 describe("setSharePinRequestSchema", () => {
   it.each(["1234", "12345", "123456"])("accepts a valid %s-digit pin", (pin) => {
     expect(setSharePinRequestSchema.safeParse({ pin }).success).toBe(true);

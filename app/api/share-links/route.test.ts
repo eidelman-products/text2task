@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 const getUserMock = vi.fn();
@@ -54,6 +54,53 @@ beforeEach(() => {
   getShareLinkManagementStateMock.mockReset();
   createShareLinkDraftMock.mockReset();
   consoleErrorSpy.mockClear();
+  // Every test below exercises behavior past the availability gate; the
+  // gate's own disabled-state behavior is covered separately below.
+  vi.stubEnv("TEXT2TASK_CLIENT_SHARE_ENABLED", "true");
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("GET/POST /api/share-links - feature gate", () => {
+  it("GET returns 404 NOT_FOUND before authenticating when the feature is disabled", async () => {
+    vi.stubEnv("TEXT2TASK_CLIENT_SHARE_ENABLED", "false");
+
+    const response = await GET(buildRequest(`?projectId=${VALID_UUID}`));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toEqual({ ok: false, code: "NOT_FOUND", error: expect.any(String) });
+    expect(getUserMock).not.toHaveBeenCalled();
+    expect(getShareLinkManagementStateMock).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+  });
+
+  it("POST returns 404 NOT_FOUND before authenticating when the feature is disabled", async () => {
+    vi.stubEnv("TEXT2TASK_CLIENT_SHARE_ENABLED", "false");
+
+    const response = await POST(buildPostRequest({ projectId: VALID_UUID }));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toEqual({ ok: false, code: "NOT_FOUND", error: expect.any(String) });
+    expect(getUserMock).not.toHaveBeenCalled();
+    expect(createShareLinkDraftMock).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+  });
+
+  it("GET succeeds when the feature is explicitly enabled", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    getShareLinkManagementStateMock.mockResolvedValue({
+      ok: true,
+      data: { link: null, mappedTaskIds: [], mappedResourceIds: [], currentUpdate: null },
+    });
+
+    const response = await GET(buildRequest(`?projectId=${VALID_UUID}`));
+
+    expect(response.status).toBe(200);
+  });
 });
 
 describe("GET /api/share-links - authentication", () => {

@@ -21,6 +21,8 @@ import ProjectUpdateModal from "./tasks/project-updates/project-update-modal";
 import ProjectUpdateHistoryModal from "./tasks/project-updates/project-update-history-modal";
 import { useProjectUpdate } from "./tasks/project-updates/use-project-update";
 import { useProjectUpdateHistory } from "./tasks/project-updates/use-project-update-history";
+import { ShareLinkPanel } from "./tasks/share-link/share-link-panel";
+import { useShareLink } from "./tasks/share-link/use-share-link";
 import type { CSSProperties, KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -56,6 +58,7 @@ export type {
 } from "./tasks/task-types";
 
 type TasksViewProps = {
+  clientShareEnabled: boolean;
   isLoadingTasks: boolean;
   tasksError: string;
   tasks: TaskRow[];
@@ -125,6 +128,7 @@ type ProjectDeleteTarget = {
 };
 
 export default function TasksView({
+  clientShareEnabled,
   isLoadingTasks,
   tasksError,
   tasks,
@@ -233,6 +237,7 @@ export default function TasksView({
 
   const projectUpdateState = useProjectUpdate();
   const projectUpdateHistoryState = useProjectUpdateHistory();
+  const shareLink = useShareLink();
 
   useEffect(() => {
     if (isLoadingTasks) return;
@@ -443,6 +448,10 @@ export default function TasksView({
     setResourcesProject(null);
   }
 
+  function openShareLinkPanel(project: TaskProjectGroup) {
+    shareLink.openPanel(project);
+  }
+
   function syncOpenProjectResourceCount(resources: TaskResource[]) {
     if (!resourcesProject) return;
 
@@ -640,6 +649,11 @@ export default function TasksView({
                         onOpenProjectHistory={
                           resolvedProjectId ? openProjectHistory : undefined
                         }
+                        onOpenShareLink={
+                          clientShareEnabled && resolvedProjectId
+                            ? openShareLinkPanel
+                            : undefined
+                        }
                         onToggleProjectSelection={toggleProjectSelection}
                         updateTaskField={updateTaskField}
                         updateTaskStatus={updateTaskStatus}
@@ -680,6 +694,7 @@ export default function TasksView({
                 onOpenProjectResources={openProjectResources}
                 onOpenProjectUpdate={projectUpdateState.openModal}
                 onOpenProjectHistory={openProjectHistory}
+                onOpenShareLink={clientShareEnabled ? openShareLinkPanel : undefined}
               />
             </>
           )}
@@ -726,6 +741,19 @@ export default function TasksView({
         state={projectUpdateHistoryState.state}
         onClose={projectUpdateHistoryState.closeHistory}
         onRefresh={projectUpdateHistoryState.refreshHistory}
+      />
+
+      <ShareLinkPanel
+        state={shareLink.state}
+        triggerRef={shareLink.triggerRef}
+        onClose={shareLink.closePanel}
+        onRetry={shareLink.refresh}
+        onCreateDraft={() => void shareLink.createDraft()}
+        onActivate={() => void shareLink.activate()}
+        onDisable={() => void shareLink.disable()}
+        onReenable={() => void shareLink.reenable()}
+        onRevoke={() => void shareLink.revoke()}
+        onCopyLink={() => void shareLink.copyLink()}
       />
 
       <TaskDeleteModals

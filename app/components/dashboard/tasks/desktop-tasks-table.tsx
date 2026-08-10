@@ -52,6 +52,7 @@ type DesktopTasksTableProps = {
   onOpenProjectResources: (project: TaskProjectGroup) => void;
   onOpenProjectUpdate: (project: TaskProjectGroup) => void;
   onOpenProjectHistory: (project: TaskProjectGroup) => void;
+  onOpenShareLink?: (project: TaskProjectGroup) => void;
 };
 
 export default function DesktopTasksTable({
@@ -83,6 +84,7 @@ export default function DesktopTasksTable({
   onOpenProjectResources,
   onOpenProjectUpdate,
   onOpenProjectHistory,
+  onOpenShareLink,
 }: DesktopTasksTableProps) {
   const projectGroups = useMemo(() => buildTaskProjectGroups(tasks), [tasks]);
 
@@ -475,6 +477,31 @@ export default function DesktopTasksTable({
                         >
                           History
                         </button>
+
+                        {onOpenShareLink ? (
+                          <button
+                            type="button"
+                            onClick={() => onOpenShareLink(project)}
+                            disabled={!canManageResources || isProjectBusy}
+                            className="crm-soft-button-v6"
+                            title={
+                              canManageResources
+                                ? "Share this project's progress with your client"
+                                : "Sharing is available for saved projects"
+                            }
+                            style={{
+                              ...resourcesButtonStyle,
+                              opacity:
+                                !canManageResources || isProjectBusy ? 0.55 : 1,
+                              cursor:
+                                !canManageResources || isProjectBusy
+                                  ? "not-allowed"
+                                  : "pointer",
+                            }}
+                          >
+                            Share with client
+                          </button>
+                        ) : null}
 
                         <TaskRowActions
                           taskId={project.primaryTask.id}

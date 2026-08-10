@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 const getUserMock = vi.fn();
@@ -55,6 +55,26 @@ beforeEach(() => {
   getUserMock.mockReset();
   listShareLinkSummariesMock.mockReset();
   consoleErrorSpy.mockClear();
+  vi.stubEnv("TEXT2TASK_CLIENT_SHARE_ENABLED", "true");
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("GET /api/share-links/summary - feature gate", () => {
+  it("returns 404 NOT_FOUND before authenticating when the feature is disabled", async () => {
+    vi.stubEnv("TEXT2TASK_CLIENT_SHARE_ENABLED", "false");
+
+    const response = await GET(buildRequest(`?projectIds=${VALID_UUID}`));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toEqual({ ok: false, code: "NOT_FOUND", error: expect.any(String) });
+    expect(getUserMock).not.toHaveBeenCalled();
+    expect(listShareLinkSummariesMock).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe("GET /api/share-links/summary - authentication", () => {

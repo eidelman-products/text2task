@@ -398,6 +398,7 @@ export type ShareLinkSummaryData = z.infer<typeof shareLinkSummaryDataSchema>;
 // ---------------------------------------------------------------------
 
 export const shareLinkApiErrorCodeSchema = z.enum([
+  "NOT_FOUND",
   "UNAUTHENTICATED",
   "INVALID_REQUEST",
   "PROJECT_NOT_FOUND",

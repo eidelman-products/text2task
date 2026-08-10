@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 const requireDashboardUserMock = vi.fn();
@@ -15,8 +15,12 @@ vi.mock("@/lib/supabase/requireDashboardUser", () => ({
 vi.mock(
   "../components/dashboard-client",
   () => ({
-    default: (props: { initialView?: string }) => (
-      <div data-testid="dashboard-client" data-initial-view={props.initialView} />
+    default: (props: { initialView?: string; clientShareEnabled?: boolean }) => (
+      <div
+        data-testid="dashboard-client"
+        data-initial-view={props.initialView}
+        data-client-share-enabled={String(props.clientShareEnabled)}
+      />
     ),
   })
 );
@@ -30,6 +34,11 @@ beforeEach(() => {
     email: "person@example.com",
     plan: "free",
   });
+  vi.stubEnv("TEXT2TASK_CLIENT_SHARE_ENABLED", "");
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 function buildSearchParams(params: Record<string, string | string[]>) {
@@ -109,5 +118,29 @@ describe("/dashboard - passes through the authenticated user", () => {
 
     expect(requireDashboardUserMock).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("dashboard-client")).toBeInTheDocument();
+  });
+});
+
+describe("/dashboard - Client Share availability gate passthrough", () => {
+  it("passes clientShareEnabled=false when the env var is unset", async () => {
+    const page = await DashboardPage({ searchParams: buildSearchParams({}) });
+    render(page);
+
+    expect(screen.getByTestId("dashboard-client")).toHaveAttribute(
+      "data-client-share-enabled",
+      "false"
+    );
+  });
+
+  it("passes clientShareEnabled=true only when the env var is exactly 'true'", async () => {
+    vi.stubEnv("TEXT2TASK_CLIENT_SHARE_ENABLED", "true");
+
+    const page = await DashboardPage({ searchParams: buildSearchParams({}) });
+    render(page);
+
+    expect(screen.getByTestId("dashboard-client")).toHaveAttribute(
+      "data-client-share-enabled",
+      "true"
+    );
   });
 });

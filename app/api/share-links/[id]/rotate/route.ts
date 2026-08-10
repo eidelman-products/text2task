@@ -5,6 +5,10 @@ import {
   type ShareLinkApiErrorCode,
 } from "@/lib/share/share-contracts";
 import { rotateShareLinkSecret } from "@/lib/share/share-links-repository.server";
+import {
+  assertClientShareEnabled,
+  isShareAvailabilityError,
+} from "@/lib/share/share-availability.server";
 
 /**
  * Structured, safe error log: a fixed operation/stage plus a fixed
@@ -43,6 +47,8 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(_req: NextRequest, context: RouteContext) {
   try {
+    assertClientShareEnabled();
+
     const { id } = await context.params;
     const parsedId = shareLinkIdParamSchema.safeParse({ id });
 
@@ -95,6 +101,10 @@ export async function POST(_req: NextRequest, context: RouteContext) {
       { headers: SHARE_LINKS_NO_STORE_HEADERS }
     );
   } catch (error) {
+    if (isShareAvailabilityError(error)) {
+      return errorResponse("NOT_FOUND", "Not found.", 404);
+    }
+
     logShareLinksRouteError("share_links.rotate", error);
 
     return errorResponse(

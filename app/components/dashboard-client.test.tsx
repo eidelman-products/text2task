@@ -209,6 +209,7 @@ function renderDashboard(initialView: DashboardWorkspaceView = "dashboard") {
       userId="user-1"
       initialPlan="free"
       initialView={initialView}
+      clientShareEnabled={false}
     />
   );
 }
@@ -323,6 +324,7 @@ describe("DashboardClient authenticated view instrumentation", () => {
         userId="user-1"
         initialPlan="free"
         initialView="dashboard"
+        clientShareEnabled={false}
       />
     );
     await waitFor(() => expect(productEventCalls(fetchMock)).toHaveLength(1));
@@ -333,6 +335,7 @@ describe("DashboardClient authenticated view instrumentation", () => {
         userId="user-1"
         initialPlan="free"
         initialView="dashboard"
+        clientShareEnabled={false}
       />
     );
 
@@ -370,6 +373,7 @@ describe("DashboardClient authenticated view instrumentation", () => {
           userId="user-1"
           initialPlan="free"
           initialView="dashboard"
+          clientShareEnabled={false}
         />
       </StrictMode>
     );

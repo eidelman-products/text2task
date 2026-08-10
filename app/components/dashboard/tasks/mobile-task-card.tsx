@@ -26,6 +26,7 @@ type MobileTaskCardProps = {
   onOpenProjectResources?: (project: TaskProjectGroup) => void;
   onOpenProjectUpdate?: (project: TaskProjectGroup) => void;
   onOpenProjectHistory?: (project: TaskProjectGroup) => void;
+  onOpenShareLink?: (project: TaskProjectGroup) => void;
   onToggleProjectSelection: (project: TaskProjectGroup) => void;
   updateTaskField: (taskId: number, field: string, value: string) => void;
   updateTaskStatus: (taskId: number, status: string) => Promise<void> | void;
@@ -50,6 +51,7 @@ export default function MobileTaskCard({
   onOpenProjectResources,
   onOpenProjectUpdate,
   onOpenProjectHistory,
+  onOpenShareLink,
   onToggleProjectSelection,
   updateTaskField,
   updateTaskStatus,
@@ -305,6 +307,7 @@ export default function MobileTaskCard({
 
           {onOpenProjectResources ||
           onOpenProjectHistory ||
+          onOpenShareLink ||
           (actionMode !== "archived" && onOpenProjectUpdate && !isDeleting) ? (
             <div style={mobileProjectActionsStyle}>
               {onOpenProjectResources ? (
@@ -346,6 +349,17 @@ export default function MobileTaskCard({
                   style={mobileSharedActionButtonStyle}
                 >
                   History
+                </button>
+              ) : null}
+
+              {onOpenShareLink ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenShareLink(project)}
+                  disabled={isDeleting}
+                  style={mobileSharedActionButtonStyle}
+                >
+                  Share with client
                 </button>
               ) : null}
             </div>
