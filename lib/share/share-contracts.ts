@@ -273,6 +273,17 @@ const managedShareLinkSchema = z
     commentsEnabled: z.boolean(),
     clientFacingSubtitle: clientFacingSubtitleSchema.nullable(),
     contentDirection: z.enum(["auto", "ltr", "rtl"]),
+    // Phase 1C: durable owner publication intent for three project-level
+    // fields. These are never a copy of the project's title/status/target
+    // date -- public.projects remains authoritative for the values
+    // themselves; project_share_links stores only whether the owner has
+    // explicitly authorized each safe projection to be included in a
+    // future public page. Required (not optional) here: the read RPC
+    // always returns all three as real booleans, defaulting to false,
+    // never omitting them.
+    titleVisible: z.boolean(),
+    statusVisible: z.boolean(),
+    targetDateVisible: z.boolean(),
     configurationVersion: z.number().int().positive(),
     createdAt: strictTimestampSchema,
     activatedAt: strictTimestampSchema.nullable(),
@@ -837,6 +848,13 @@ export const saveShareConfigurationSettingsSchema = z
     commentsEnabled: z.boolean().optional(),
     clientFacingSubtitle: clientFacingSubtitleSchema.nullable().optional(),
     contentDirection: z.enum(["auto", "ltr", "rtl"]).optional(),
+    // Phase 1C: durable publication-intent flags, following the exact
+    // same optional/omitted-means-unchanged convention as the three
+    // fields above -- see managedShareLinkSchema's titleVisible/
+    // statusVisible/targetDateVisible for the read-side contract.
+    titleVisible: z.boolean().optional(),
+    statusVisible: z.boolean().optional(),
+    targetDateVisible: z.boolean().optional(),
   })
   .strict()
   .refine(

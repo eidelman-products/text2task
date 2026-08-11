@@ -65,6 +65,9 @@ function validManagedLink(overrides: Record<string, unknown> = {}) {
     commentsEnabled: true,
     clientFacingSubtitle: null,
     contentDirection: "auto",
+    titleVisible: false,
+    statusVisible: false,
+    targetDateVisible: false,
     configurationVersion: 1,
     createdAt: VALID_TIMESTAMP,
     activatedAt: null,
@@ -602,6 +605,57 @@ describe("owner-authored text is validated but never transformed (management sta
       currentUpdate: { body: original, version: 1, publishedAt: VALID_TIMESTAMP },
     });
     expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(true);
+  });
+});
+
+describe("shareLinkManagementStateDataSchema - Phase 1C publication-intent flags", () => {
+  it("accepts all three flags as false (the private-by-default value)", () => {
+    const data = withManagedLinkData({
+      link: validManagedLink({
+        titleVisible: false,
+        statusVisible: false,
+        targetDateVisible: false,
+      }),
+    });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(true);
+  });
+
+  it("accepts all three flags as true", () => {
+    const data = withManagedLinkData({
+      link: validManagedLink({
+        titleVisible: true,
+        statusVisible: true,
+        targetDateVisible: true,
+      }),
+    });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(true);
+  });
+
+  it.each(["titleVisible", "statusVisible", "targetDateVisible"] as const)(
+    "requires %s to be present (not optional) on a managed link",
+    (field) => {
+      const link = validManagedLink() as Record<string, unknown>;
+      delete link[field];
+      const data = withManagedLinkData({ link });
+      expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+    }
+  );
+
+  it.each(["titleVisible", "statusVisible", "targetDateVisible"] as const)(
+    "rejects a non-boolean %s",
+    (field) => {
+      const data = withManagedLinkData({
+        link: validManagedLink({ [field]: "true" }),
+      });
+      expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+    }
+  );
+
+  it("never appears as a raw project title/status/date value -- only booleans are ever accepted", () => {
+    const data = withManagedLinkData({
+      link: validManagedLink({ titleVisible: "My Project Title" }),
+    });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
   });
 });
 
@@ -1731,6 +1785,47 @@ describe("saveShareConfigurationSettingsSchema", () => {
       saveShareConfigurationSettingsSchema.safeParse({ commentsEnabled: "true" })
         .success
     ).toBe(false);
+  });
+
+  it.each(["titleVisible", "statusVisible", "targetDateVisible"] as const)(
+    "accepts %s supplied alone",
+    (field) => {
+      expect(
+        saveShareConfigurationSettingsSchema.safeParse({ [field]: true }).success
+      ).toBe(true);
+    }
+  );
+
+  it("accepts all three publication-intent flags together, alongside the existing fields", () => {
+    expect(
+      saveShareConfigurationSettingsSchema.safeParse({
+        commentsEnabled: true,
+        titleVisible: true,
+        statusVisible: true,
+        targetDateVisible: false,
+      }).success
+    ).toBe(true);
+  });
+
+  it.each(["titleVisible", "statusVisible", "targetDateVisible"] as const)(
+    "rejects a non-boolean %s",
+    (field) => {
+      expect(
+        saveShareConfigurationSettingsSchema.safeParse({ [field]: "true" }).success
+      ).toBe(false);
+    }
+  );
+
+  it("omitting all three publication-intent flags leaves them unspecified (not defaulted to any value here -- the RPC treats omission as unchanged)", () => {
+    const result = saveShareConfigurationSettingsSchema.safeParse({
+      commentsEnabled: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.titleVisible).toBeUndefined();
+      expect(result.data.statusVisible).toBeUndefined();
+      expect(result.data.targetDateVisible).toBeUndefined();
+    }
   });
 });
 
