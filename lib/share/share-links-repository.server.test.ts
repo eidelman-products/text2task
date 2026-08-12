@@ -123,8 +123,28 @@ function validManagedLink() {
 function validManagementStateData() {
   return {
     link: validManagedLink(),
-    mappedTaskIds: ["1", "42"],
-    mappedResourceIds: [VALID_UUID],
+    mappedTasks: [
+      {
+        subtaskId: "1",
+        publicGroup: "waiting_for_feedback" as const,
+        waitingForClientFeedback: true,
+        displayOrder: 8,
+      },
+      {
+        subtaskId: "42",
+        publicGroup: "completed" as const,
+        waitingForClientFeedback: false,
+        displayOrder: 4,
+      },
+    ],
+    mappedResources: [
+      {
+        resourceId: VALID_UUID,
+        publicLabel: "Final logo",
+        canDownload: false,
+        displayOrder: 9,
+      },
+    ],
     currentUpdate: null,
   };
 }

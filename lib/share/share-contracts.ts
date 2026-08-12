@@ -170,6 +170,79 @@ const shareLinkUpdateBodySchema = z
   .refine(isNotBlank, "Must not be empty or whitespace-only.");
 
 // ---------------------------------------------------------------------
+// Shared task/Resource mapping vocabulary. A single source of truth for
+// the public_group vocabulary, the display_order bound and the
+// public_label shape, matching the exact database check constraints
+// delivered in 202608030003 (share_link_tasks_public_group_check,
+// share_link_tasks_display_order_check,
+// share_link_resources_public_label_check,
+// share_link_resources_display_order_check). Used by BOTH the read-side
+// mapped task/Resource contract (management-state, Phase 2B corrective
+// migration 202608110002) and the write-side save_share_configuration
+// task/Resource item contract below -- moved up here specifically so
+// neither direction has to re-declare this vocabulary.
+// ---------------------------------------------------------------------
+
+const MAX_CONFIGURATION_ITEMS = 500;
+
+/**
+ * share_link_tasks.display_order / share_link_resources.display_order
+ * are both PostgreSQL `integer` (int4), whose accepted non-negative
+ * range ends at 2147483647 -- narrower than JavaScript's own
+ * safe-integer range. A value Zod alone would accept but the database's
+ * own type could never store must never reach the RPC in the first
+ * place, so this bound is enforced here, not left for a SQL cast to
+ * discover.
+ */
+const POSTGRES_INTEGER_MAX = 2147483647;
+
+const displayOrderSchema = z
+  .number()
+  .int()
+  .min(0, "Must be at least 0.")
+  .max(POSTGRES_INTEGER_MAX, `Must be at most ${POSTGRES_INTEGER_MAX}.`);
+
+const publicLabelSchema = z
+  .string()
+  .max(120, "Must be at most 120 characters.")
+  .refine(isNotBlank, "Must not be empty or whitespace-only.");
+
+/** Closed client-facing task-visibility vocabulary, matching
+ * share_link_tasks_public_group_check exactly: in_progress,
+ * waiting_for_feedback, completed, coming_up. Deliberately NOT the
+ * internal status vocabulary (New/In Progress/Review/Urgent/Done) --
+ * 'Urgent' must never be surfaced publicly, and the internal vocabulary
+ * must be free to change without changing what a client sees. */
+export const sharePublicGroupSchema = z.enum([
+  "in_progress",
+  "waiting_for_feedback",
+  "completed",
+  "coming_up",
+]);
+
+function hasDuplicateStrings(values: readonly string[]): boolean {
+  return new Set(values).size !== values.length;
+}
+
+/**
+ * One shared shape for a task's share-mapping metadata. subtaskId has no
+ * read/write case-transform asymmetry (it is a canonicalSubtaskIdSchema
+ * decimal-string regex, not a uuid), so this exact schema safely serves
+ * both the read-side mapped-task contract and the write-side
+ * save_share_configuration task item -- see
+ * saveShareConfigurationTaskItemSchema below, which is this same schema,
+ * not a re-declared duplicate.
+ */
+const shareLinkTaskMappingItemSchema = z
+  .object({
+    subtaskId: canonicalSubtaskIdSchema,
+    publicGroup: sharePublicGroupSchema,
+    waitingForClientFeedback: z.boolean(),
+    displayOrder: displayOrderSchema,
+  })
+  .strict();
+
+// ---------------------------------------------------------------------
 // Query input contracts
 // ---------------------------------------------------------------------
 
@@ -303,17 +376,53 @@ const currentShareLinkUpdateSchema = z
   .strict();
 
 /**
+ * Phase 2B corrective foundation: the complete persisted per-item task
+ * mapping metadata (never a bare id) -- reuses
+ * shareLinkTaskMappingItemSchema, the exact same shape
+ * saveShareConfigurationTaskItemSchema (below) validates, since a
+ * mapped task's read shape and its save-request item shape are
+ * identical. See 202608110002_client_share_management_mapping_metadata.sql.
+ */
+export const mappedShareLinkTaskSchema = shareLinkTaskMappingItemSchema;
+export type MappedShareLinkTask = z.infer<typeof mappedShareLinkTaskSchema>;
+
+/**
+ * Complete persisted per-item Resource mapping metadata. resourceId is
+ * plain output-side uuidSchema here (RPC output, always canonical
+ * lowercase already) rather than canonicalUuidSchema's input-transform
+ * variant -- the same read/write uuid-schema split this file already
+ * uses everywhere else (e.g. managedShareLinkSchema.id vs
+ * createShareLinkDraftRequestSchema.projectId).
+ */
+export const mappedShareLinkResourceSchema = z
+  .object({
+    resourceId: uuidSchema,
+    publicLabel: publicLabelSchema,
+    canDownload: z.boolean(),
+    displayOrder: displayOrderSchema,
+  })
+  .strict();
+export type MappedShareLinkResource = z.infer<typeof mappedShareLinkResourceSchema>;
+
+/**
  * Closed union: either there is no managed link (every dependent field
  * pinned to its empty/null value) or a managed link exists (its
  * dependent fields carry real data). This makes impossible combinations
- * -- e.g. a mapped task id with no link -- unrepresentable rather than
+ * -- e.g. a mapped task with no link -- unrepresentable rather than
  * merely undocumented.
+ *
+ * Phase 2B corrective foundation: mappedTaskIds/mappedResourceIds (bare
+ * id arrays) are replaced entirely by mappedTasks/mappedResources
+ * (structured per-item mapping metadata) -- not supplemented, per the
+ * corrective-foundation instruction not to keep a bare-id array as a
+ * second durable source of truth. Ids needed for counts/selection are
+ * derived from these structured arrays in application code.
  */
 const noManagedShareLinkDataSchema = z
   .object({
     link: z.null(),
-    mappedTaskIds: z.array(canonicalSubtaskIdSchema).max(0),
-    mappedResourceIds: z.array(uuidSchema).max(0),
+    mappedTasks: z.array(mappedShareLinkTaskSchema).max(0),
+    mappedResources: z.array(mappedShareLinkResourceSchema).max(0),
     currentUpdate: z.null(),
   })
   .strict();
@@ -321,8 +430,34 @@ const noManagedShareLinkDataSchema = z
 const withManagedShareLinkDataSchema = z
   .object({
     link: managedShareLinkSchema,
-    mappedTaskIds: z.array(canonicalSubtaskIdSchema),
-    mappedResourceIds: z.array(uuidSchema),
+    // Bounded and duplicate-checked defensively: a single link can never
+    // have more mapped items than a single save_share_configuration call
+    // could have written (MAX_CONFIGURATION_ITEMS), and
+    // share_link_tasks_share_link_id_subtask_id_unique /
+    // share_link_resources_share_link_id_resource_id_unique guarantee the
+    // underlying rows are already distinct -- a duplicate or oversized
+    // array here indicates a corrupt or tampered RPC result, which must
+    // fail closed rather than reach the owner editor.
+    mappedTasks: z
+      .array(mappedShareLinkTaskSchema)
+      .max(
+        MAX_CONFIGURATION_ITEMS,
+        `Must contain at most ${MAX_CONFIGURATION_ITEMS} task items.`
+      )
+      .refine(
+        (items) => !hasDuplicateStrings(items.map((item) => item.subtaskId)),
+        "mappedTasks must not contain a duplicate subtaskId."
+      ),
+    mappedResources: z
+      .array(mappedShareLinkResourceSchema)
+      .max(
+        MAX_CONFIGURATION_ITEMS,
+        `Must contain at most ${MAX_CONFIGURATION_ITEMS} resource items.`
+      )
+      .refine(
+        (items) => !hasDuplicateStrings(items.map((item) => item.resourceId)),
+        "mappedResources must not contain a duplicate resourceId."
+      ),
     currentUpdate: currentShareLinkUpdateSchema.nullable(),
   })
   .strict();
@@ -830,9 +965,10 @@ export type RevealShareLinkSecretRpcData = z.infer<
 // Phase 1B.4 configuration-save contracts (settings / tasks / resources /
 // publishUpdate, combined into one atomic save_share_configuration call).
 // Preserves every Phase 1B.1-1B.3 contract above unchanged.
+// MAX_CONFIGURATION_ITEMS, displayOrderSchema and publicLabelSchema are
+// declared earlier in this file (shared task/Resource mapping
+// vocabulary section) and reused here, not redeclared.
 // ---------------------------------------------------------------------
-
-const MAX_CONFIGURATION_ITEMS = 500;
 
 /**
  * Partial, strict settings group. Every field is independently optional
@@ -865,41 +1001,13 @@ export type SaveShareConfigurationSettings = z.infer<
   typeof saveShareConfigurationSettingsSchema
 >;
 
-const publicLabelSchema = z
-  .string()
-  .max(120, "Must be at most 120 characters.")
-  .refine(isNotBlank, "Must not be empty or whitespace-only.");
-
 /**
- * The delivered share_link_tasks.display_order and
- * share_link_resources.display_order columns are both PostgreSQL
- * `integer` (int4), whose accepted non-negative range ends at
- * 2147483647 -- narrower than JavaScript's own safe-integer range. A
- * value Zod alone would accept but the database's own type could never
- * store must never reach the RPC in the first place, so this bound is
- * enforced here, not left for the SQL cast to discover.
+ * Identical shape to mappedShareLinkTaskSchema above (both are
+ * shareLinkTaskMappingItemSchema) -- a mapped task's read shape and its
+ * save-request item shape are the same thing, so this is an alias, not a
+ * redeclared duplicate.
  */
-const POSTGRES_INTEGER_MAX = 2147483647;
-
-const displayOrderSchema = z
-  .number()
-  .int()
-  .min(0, "Must be at least 0.")
-  .max(POSTGRES_INTEGER_MAX, `Must be at most ${POSTGRES_INTEGER_MAX}.`);
-
-export const saveShareConfigurationTaskItemSchema = z
-  .object({
-    subtaskId: canonicalSubtaskIdSchema,
-    publicGroup: z.enum([
-      "in_progress",
-      "waiting_for_feedback",
-      "completed",
-      "coming_up",
-    ]),
-    waitingForClientFeedback: z.boolean(),
-    displayOrder: displayOrderSchema,
-  })
-  .strict();
+export const saveShareConfigurationTaskItemSchema = shareLinkTaskMappingItemSchema;
 export type SaveShareConfigurationTaskItem = z.infer<
   typeof saveShareConfigurationTaskItemSchema
 >;
@@ -1031,10 +1139,6 @@ const postgresPositiveIntegerSchema = z
   .int()
   .min(1, "Must be at least 1.")
   .max(POSTGRES_INTEGER_MAX, `Must be at most ${POSTGRES_INTEGER_MAX}.`);
-
-function hasDuplicateStrings(values: readonly string[]): boolean {
-  return new Set(values).size !== values.length;
-}
 
 /**
  * The final taskIds set the RPC returns: bounded by the same 500-item

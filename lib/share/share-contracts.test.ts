@@ -79,11 +79,31 @@ function validManagedLink(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function validMappedTask(overrides: Record<string, unknown> = {}) {
+  return {
+    subtaskId: "1",
+    publicGroup: "waiting_for_feedback",
+    waitingForClientFeedback: true,
+    displayOrder: 8,
+    ...overrides,
+  };
+}
+
+function validMappedResource(overrides: Record<string, unknown> = {}) {
+  return {
+    resourceId: VALID_UUID,
+    publicLabel: "Final logo",
+    canDownload: false,
+    displayOrder: 9,
+    ...overrides,
+  };
+}
+
 function noManagedLinkData(overrides: Record<string, unknown> = {}) {
   return {
     link: null,
-    mappedTaskIds: [],
-    mappedResourceIds: [],
+    mappedTasks: [],
+    mappedResources: [],
     currentUpdate: null,
     ...overrides,
   };
@@ -92,8 +112,11 @@ function noManagedLinkData(overrides: Record<string, unknown> = {}) {
 function withManagedLinkData(overrides: Record<string, unknown> = {}) {
   return {
     link: validManagedLink(),
-    mappedTaskIds: ["1", "42"],
-    mappedResourceIds: [VALID_UUID],
+    mappedTasks: [
+      validMappedTask({ subtaskId: "1", displayOrder: 8, publicGroup: "waiting_for_feedback", waitingForClientFeedback: true }),
+      validMappedTask({ subtaskId: "42", displayOrder: 4, publicGroup: "completed", waitingForClientFeedback: false }),
+    ],
+    mappedResources: [validMappedResource()],
     currentUpdate: null,
     ...overrides,
   };
@@ -416,13 +439,13 @@ describe("shareLinkManagementStateDataSchema - basic acceptance", () => {
 });
 
 describe("shareLinkManagementStateDataSchema - closed union rejects impossible combinations", () => {
-  it("rejects link=null with a non-empty mappedTaskIds", () => {
-    const data = noManagedLinkData({ mappedTaskIds: ["1"] });
+  it("rejects link=null with a non-empty mappedTasks", () => {
+    const data = noManagedLinkData({ mappedTasks: [validMappedTask()] });
     expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
   });
 
-  it("rejects link=null with a non-empty mappedResourceIds", () => {
-    const data = noManagedLinkData({ mappedResourceIds: [VALID_UUID] });
+  it("rejects link=null with a non-empty mappedResources", () => {
+    const data = noManagedLinkData({ mappedResources: [validMappedResource()] });
     expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
   });
 
@@ -440,6 +463,149 @@ describe("shareLinkManagementStateDataSchema - closed union rejects impossible c
 
   it("rejects link=undefined-shaped payload (must be exactly null or the strict object)", () => {
     const data = withManagedLinkData({ link: undefined });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+  });
+});
+
+describe("shareLinkManagementStateDataSchema - mapped task/Resource metadata (Phase 2B corrective foundation)", () => {
+  it("accepts a complete persisted task mapping item", () => {
+    const data = withManagedLinkData({ mappedTasks: [validMappedTask()] });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(true);
+  });
+
+  it("accepts a complete persisted resource mapping item", () => {
+    const data = withManagedLinkData({ mappedResources: [validMappedResource()] });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(true);
+  });
+
+  it("preserves out-of-sequence displayOrder values exactly, without renumbering (8 stays 8, 4 stays 4)", () => {
+    const data = withManagedLinkData({
+      mappedTasks: [
+        validMappedTask({ subtaskId: "1", displayOrder: 8 }),
+        validMappedTask({ subtaskId: "2", displayOrder: 4 }),
+      ],
+    });
+    const parsed = shareLinkManagementStateDataSchema.safeParse(data);
+    expect(parsed.success).toBe(true);
+    if (parsed.success && "mappedTasks" in parsed.data) {
+      expect(parsed.data.mappedTasks.map((t) => t.displayOrder)).toEqual([8, 4]);
+    }
+  });
+
+  it.each(["in_progress", "waiting_for_feedback", "completed", "coming_up"])(
+    "accepts publicGroup %s",
+    (publicGroup) => {
+      const data = withManagedLinkData({ mappedTasks: [validMappedTask({ publicGroup })] });
+      expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(true);
+    }
+  );
+
+  it.each(["urgent", "new", "in-progress", "", "IN_PROGRESS", 1, null])(
+    "rejects an invalid publicGroup %s -- never the internal status vocabulary",
+    (publicGroup) => {
+      const data = withManagedLinkData({ mappedTasks: [validMappedTask({ publicGroup })] });
+      expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+    }
+  );
+
+  it.each(["true", 1, 0, null, "false"])(
+    "rejects a non-boolean waitingForClientFeedback %s -- never cast",
+    (waitingForClientFeedback) => {
+      const data = withManagedLinkData({
+        mappedTasks: [validMappedTask({ waitingForClientFeedback })],
+      });
+      expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+    }
+  );
+
+  it.each(["true", 1, 0, null])(
+    "rejects a non-boolean canDownload %s -- never cast",
+    (canDownload) => {
+      const data = withManagedLinkData({
+        mappedResources: [validMappedResource({ canDownload })],
+      });
+      expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+    }
+  );
+
+  it.each(["8", 8.5, -1, null, 2147483648])(
+    "rejects an invalid task displayOrder %s (must be a non-negative integer within the Postgres int4 bound)",
+    (displayOrder) => {
+      const data = withManagedLinkData({ mappedTasks: [validMappedTask({ displayOrder })] });
+      expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+    }
+  );
+
+  it.each(["9", 9.5, -1, null, 2147483648])(
+    "rejects an invalid resource displayOrder %s",
+    (displayOrder) => {
+      const data = withManagedLinkData({
+        mappedResources: [validMappedResource({ displayOrder })],
+      });
+      expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+    }
+  );
+
+  it("rejects a task mapping item missing a required field", () => {
+    const item = validMappedTask();
+    delete (item as Record<string, unknown>).displayOrder;
+    const data = withManagedLinkData({ mappedTasks: [item] });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("rejects a resource mapping item missing a required field", () => {
+    const item = validMappedResource();
+    delete (item as Record<string, unknown>).publicLabel;
+    const data = withManagedLinkData({ mappedResources: [item] });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("rejects an unknown key on a task mapping item (strict object)", () => {
+    const data = withManagedLinkData({
+      mappedTasks: [validMappedTask({ subtaskTitle: "Design hero" })],
+    });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("rejects an unknown key on a resource mapping item (strict object)", () => {
+    const data = withManagedLinkData({
+      mappedResources: [validMappedResource({ storagePath: "/x" })],
+    });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("rejects a duplicate subtaskId across mappedTasks -- indicates a corrupt or tampered result", () => {
+    const data = withManagedLinkData({
+      mappedTasks: [
+        validMappedTask({ subtaskId: "1", displayOrder: 1 }),
+        validMappedTask({ subtaskId: "1", displayOrder: 2 }),
+      ],
+    });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("rejects a duplicate resourceId across mappedResources -- indicates a corrupt or tampered result", () => {
+    const data = withManagedLinkData({
+      mappedResources: [
+        validMappedResource({ resourceId: VALID_UUID, displayOrder: 1 }),
+        validMappedResource({ resourceId: VALID_UUID, displayOrder: 2 }),
+      ],
+    });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("rejects a non-array mappedTasks", () => {
+    const data = withManagedLinkData({ mappedTasks: { "0": validMappedTask() } });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("rejects a bare-id string array (the retired mappedTaskIds shape) as mappedTasks", () => {
+    const data = withManagedLinkData({ mappedTasks: ["1", "42"] });
+    expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("rejects a bare-id string array (the retired mappedResourceIds shape) as mappedResources", () => {
+    const data = withManagedLinkData({ mappedResources: [VALID_UUID] });
     expect(shareLinkManagementStateDataSchema.safeParse(data).success).toBe(false);
   });
 });

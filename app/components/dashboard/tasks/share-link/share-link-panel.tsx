@@ -12,16 +12,19 @@ import {
   dashboardSpacing,
   dashboardTypography,
 } from "../../ui/tokens";
+import type { SaveShareConfigurationRequest } from "@/lib/share/share-contracts";
+import { ShareLinkConfigurationEditor } from "./share-link-configuration-editor";
 import type { ShareLinkActionKind, ShareLinkPanelState } from "./use-share-link";
 
 /*
-  Phase 2A management shell only: no-link/draft/active/disabled/expired
-  states, create draft, activate, copy link, disable, re-enable, revoke.
-  Deliberately excludes task/Resource selection, settings, PIN, expiry,
-  rotation, and Preview -- those are later Phase 2 slices per the accepted
-  Pre-Phase-2 mapping summary. Built on ResponsiveDialog (shared
-  desktop/mobile primitive) rather than a new bespoke modal, matching the
-  summary's explicit UI-integration guidance.
+  Phase 2A management shell (no-link/draft/active/disabled/expired states,
+  create draft, activate, copy link, disable, re-enable, revoke), now
+  joined by the Phase 2B content-configuration editor (rendered below the
+  lifecycle controls whenever a managed link exists, in any state --
+  saving is only ever rejected server-side for a revoked link, and this
+  panel already can't reach that combination since a revoked link reads
+  back as `link: null`). Still excludes PIN, expiry, rotation, and Preview
+  -- those remain later Phase 2 slices.
 */
 
 export type ShareLinkPanelProps = {
@@ -29,12 +32,14 @@ export type ShareLinkPanelProps = {
   triggerRef: RefObject<HTMLElement | null>;
   onClose: () => void;
   onRetry: () => void;
+  onRetryResources: () => void;
   onCreateDraft: () => void;
   onActivate: () => void;
   onDisable: () => void;
   onReenable: () => void;
   onRevoke: () => void;
   onCopyLink: () => void;
+  onSaveConfiguration: (request: SaveShareConfigurationRequest) => void;
 };
 
 const STATE_LABELS: Record<string, { label: string; variant: "neutral" | "blue" | "green" | "amber" }> = {
@@ -49,12 +54,14 @@ export function ShareLinkPanel({
   triggerRef,
   onClose,
   onRetry,
+  onRetryResources,
   onCreateDraft,
   onActivate,
   onDisable,
   onReenable,
   onRevoke,
   onCopyLink,
+  onSaveConfiguration,
 }: ShareLinkPanelProps) {
   const headingId = useId();
   const [confirmingAction, setConfirmingAction] = useState<
@@ -140,18 +147,36 @@ export function ShareLinkPanel({
             onCreateDraft={onCreateDraft}
           />
         ) : (
-          <LinkStateView
-            state={link.state}
-            actionPending={state.actionPending}
-            copyStatus={state.copyStatus}
-            confirmingAction={confirmingAction}
-            onActivate={onActivate}
-            onDisable={() => runWithConfirm("disable", onDisable)}
-            onReenable={onReenable}
-            onRevoke={() => runWithConfirm("revoke", onRevoke)}
-            onCopyLink={onCopyLink}
-            onCancelConfirm={() => setConfirmingAction(null)}
-          />
+          <>
+            <LinkStateView
+              state={link.state}
+              actionPending={state.actionPending}
+              copyStatus={state.copyStatus}
+              confirmingAction={confirmingAction}
+              onActivate={onActivate}
+              onDisable={() => runWithConfirm("disable", onDisable)}
+              onReenable={onReenable}
+              onRevoke={() => runWithConfirm("revoke", onRevoke)}
+              onCopyLink={onCopyLink}
+              onCancelConfirm={() => setConfirmingAction(null)}
+            />
+            {state.project && state.data ? (
+              <ShareLinkConfigurationEditor
+                link={link}
+                mappedTasks={state.data.mappedTasks}
+                mappedResources={state.data.mappedResources}
+                currentUpdate={state.data.currentUpdate}
+                project={state.project}
+                resources={state.resources}
+                resourcesLoading={state.resourcesLoading}
+                resourcesError={state.resourcesError}
+                onRetryResources={onRetryResources}
+                pending={state.actionPending === "saveConfiguration"}
+                disabled={busy}
+                onSave={onSaveConfiguration}
+              />
+            ) : null}
+          </>
         )}
 
         {state.actionError ? (

@@ -49,6 +49,9 @@ function baseState(overrides: Partial<ShareLinkPanelState> = {}): ShareLinkPanel
     actionPending: null,
     actionError: null,
     copyStatus: "idle",
+    resources: [],
+    resourcesLoading: false,
+    resourcesError: null,
     ...overrides,
   };
 }
@@ -75,8 +78,8 @@ function linkData(state: "draft" | "active" | "disabled" | "expired") {
       lastViewedAt: null,
       viewCount: 0,
     },
-    mappedTaskIds: [],
-    mappedResourceIds: [],
+    mappedTasks: [],
+    mappedResources: [],
     currentUpdate: null,
   };
 }
@@ -90,12 +93,14 @@ function renderPanel(state: ShareLinkPanelState, overrides: Partial<Parameters<t
         triggerRef={triggerRef}
         onClose={vi.fn()}
         onRetry={vi.fn()}
+        onRetryResources={vi.fn()}
         onCreateDraft={vi.fn()}
         onActivate={vi.fn()}
         onDisable={vi.fn()}
         onReenable={vi.fn()}
         onRevoke={vi.fn()}
         onCopyLink={vi.fn()}
+        onSaveConfiguration={vi.fn()}
         {...overrides}
       />
     );
@@ -125,7 +130,7 @@ describe("ShareLinkPanel - rendering per state", () => {
 
   it("shows the no-link setup state with a create-draft action", async () => {
     const onCreateDraft = vi.fn();
-    renderPanel(baseState({ data: { link: null, mappedTaskIds: [], mappedResourceIds: [], currentUpdate: null } }), {
+    renderPanel(baseState({ data: { link: null, mappedTasks: [], mappedResources: [], currentUpdate: null } }), {
       onCreateDraft,
     });
 
@@ -227,5 +232,46 @@ describe("ShareLinkPanel - rendering per state", () => {
   it("never renders the plaintext secret anywhere in the DOM", () => {
     renderPanel(baseState({ data: linkData("active") }));
     expect(document.body.textContent).not.toMatch(/[A-Za-z0-9_-]{43}/);
+  });
+});
+
+describe("ShareLinkPanel - configuration editor wiring", () => {
+  it("renders the configuration editor once a managed link exists", () => {
+    renderPanel(baseState({ data: linkData("active") }));
+    expect(screen.getByRole("button", { name: /^save configuration$/i })).toBeInTheDocument();
+  });
+
+  it("does not render the configuration editor while there is no managed link", () => {
+    renderPanel(
+      baseState({ data: { link: null, mappedTasks: [], mappedResources: [], currentUpdate: null } })
+    );
+    expect(screen.queryByRole("button", { name: /^save configuration$/i })).not.toBeInTheDocument();
+  });
+
+  it("Save configuration calls onSaveConfiguration with the built request", async () => {
+    const onSaveConfiguration = vi.fn();
+    renderPanel(baseState({ data: linkData("active") }), { onSaveConfiguration });
+
+    await userEvent.click(screen.getByRole("button", { name: /^save configuration$/i }));
+
+    expect(onSaveConfiguration).toHaveBeenCalledTimes(1);
+    expect(onSaveConfiguration.mock.calls[0][0]).toHaveProperty("settings");
+  });
+
+  it("opening the panel never calls onSaveConfiguration on its own", () => {
+    const onSaveConfiguration = vi.fn();
+    renderPanel(baseState({ data: linkData("active") }), { onSaveConfiguration });
+    expect(onSaveConfiguration).not.toHaveBeenCalled();
+  });
+
+  it("a Resources load error inside the editor shows a retry that calls onRetryResources", async () => {
+    const onRetryResources = vi.fn();
+    renderPanel(
+      baseState({ data: linkData("active"), resourcesError: "Could not load Resources. Please try again." }),
+      { onRetryResources }
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /try again/i, hidden: false }));
+    expect(onRetryResources).toHaveBeenCalledTimes(1);
   });
 });

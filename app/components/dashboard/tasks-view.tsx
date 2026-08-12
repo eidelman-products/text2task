@@ -748,12 +748,14 @@ export default function TasksView({
         triggerRef={shareLink.triggerRef}
         onClose={shareLink.closePanel}
         onRetry={shareLink.refresh}
+        onRetryResources={shareLink.retryResources}
         onCreateDraft={() => void shareLink.createDraft()}
         onActivate={() => void shareLink.activate()}
         onDisable={() => void shareLink.disable()}
         onReenable={() => void shareLink.reenable()}
         onRevoke={() => void shareLink.revoke()}
         onCopyLink={() => void shareLink.copyLink()}
+        onSaveConfiguration={(request) => void shareLink.saveConfiguration(request)}
       />
 
       <TaskDeleteModals

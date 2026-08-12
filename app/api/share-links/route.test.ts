@@ -94,7 +94,7 @@ describe("GET/POST /api/share-links - feature gate", () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
     getShareLinkManagementStateMock.mockResolvedValue({
       ok: true,
-      data: { link: null, mappedTaskIds: [], mappedResourceIds: [], currentUpdate: null },
+      data: { link: null, mappedTasks: [], mappedResources: [], currentUpdate: null },
     });
 
     const response = await GET(buildRequest(`?projectId=${VALID_UUID}`));
@@ -172,7 +172,7 @@ describe("GET /api/share-links - validation", () => {
   it("canonicalizes an uppercase projectId to lowercase before calling the repository", async () => {
     getShareLinkManagementStateMock.mockResolvedValue({
       ok: true,
-      data: { link: null, mappedTaskIds: [], mappedResourceIds: [], currentUpdate: null },
+      data: { link: null, mappedTasks: [], mappedResources: [], currentUpdate: null },
     });
 
     await GET(buildRequest(`?projectId=${VALID_UUID.toUpperCase()}`));
@@ -279,8 +279,8 @@ describe("GET /api/share-links - repository outcomes", () => {
   it("returns the repository's parsed data as {ok:true,data} on success, calling exactly one repository function", async () => {
     const data = {
       link: null,
-      mappedTaskIds: [],
-      mappedResourceIds: [],
+      mappedTasks: [],
+      mappedResources: [],
       currentUpdate: null,
     };
     getShareLinkManagementStateMock.mockResolvedValue({ ok: true, data });
@@ -314,8 +314,8 @@ describe("GET /api/share-links - repository outcomes", () => {
   it("never leaks secret/PIN/encrypted fields or raw database error codes in the serialized response", async () => {
     const data = {
       link: null,
-      mappedTaskIds: [],
-      mappedResourceIds: [],
+      mappedTasks: [],
+      mappedResources: [],
       currentUpdate: null,
     };
     getShareLinkManagementStateMock.mockResolvedValue({ ok: true, data });
@@ -561,7 +561,7 @@ describe("GET/POST /api/share-links - explicit no-store headers on every respons
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
     getShareLinkManagementStateMock.mockResolvedValue({
       ok: true,
-      data: { link: null, mappedTaskIds: [], mappedResourceIds: [], currentUpdate: null },
+      data: { link: null, mappedTasks: [], mappedResources: [], currentUpdate: null },
     });
     const response = await GET(buildRequest(`?projectId=${VALID_UUID}`));
     expect(response.status).toBe(200);

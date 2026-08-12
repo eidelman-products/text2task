@@ -1,7 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 
-import type { ShareLinkManagementStateData } from "@/lib/share/share-contracts";
+import type {
+  SaveShareConfigurationRequest,
+  ShareLinkManagementStateData,
+} from "@/lib/share/share-contracts";
 import type { TaskProjectGroup } from "../task-types";
+import { fetchTaskResources, type TaskResource } from "../../resources/resource-api";
 import {
   ShareLinkClientError,
   activateShareLink as activateShareLinkRequest,
@@ -11,6 +15,7 @@ import {
   reenableShareLink as reenableShareLinkRequest,
   revealShareLinkSecret as revealShareLinkSecretRequest,
   revokeShareLink as revokeShareLinkRequest,
+  saveShareConfiguration as saveShareConfigurationRequest,
 } from "./share-link-client";
 
 /*
@@ -31,7 +36,8 @@ export type ShareLinkActionKind =
   | "disable"
   | "reenable"
   | "revoke"
-  | "copyLink";
+  | "copyLink"
+  | "saveConfiguration";
 
 export type ShareLinkPanelState = {
   isOpen: boolean;
@@ -43,6 +49,16 @@ export type ShareLinkPanelState = {
   actionPending: ShareLinkActionKind | null;
   actionError: string | null;
   copyStatus: "idle" | "copied" | "failed";
+  // Project-level Resources available to select for sharing (Phase 2B).
+  // Loaded once when the panel opens, alongside the management-state
+  // read -- never re-fetched after a configuration save, since saving a
+  // share configuration never creates/deletes a Resource, only its
+  // share-mapping. Mirrors ResourceManagerModal's own existing
+  // project-level (task_id: null) read scope exactly -- no new Resource
+  // read path was introduced.
+  resources: TaskResource[];
+  resourcesLoading: boolean;
+  resourcesError: string | null;
 };
 
 const INITIAL_STATE: ShareLinkPanelState = {
@@ -55,6 +71,9 @@ const INITIAL_STATE: ShareLinkPanelState = {
   actionPending: null,
   actionError: null,
   copyStatus: "idle",
+  resources: [],
+  resourcesLoading: false,
+  resourcesError: null,
 };
 
 export function getShareLinkProjectId(
@@ -136,6 +155,35 @@ export function useShareLink() {
   // disabled button), so a plain ref is checked synchronously instead.
   const actionInFlightRef = useRef(false);
 
+  const loadResources = useCallback(async (projectId: string) => {
+    setState((current) => ({
+      ...current,
+      resourcesLoading: true,
+      resourcesError: null,
+    }));
+
+    try {
+      const resources = await fetchTaskResources({ project_id: projectId });
+
+      setState((current) =>
+        current.projectId === projectId
+          ? { ...current, resourcesLoading: false, resourcesError: null, resources }
+          : current
+      );
+    } catch {
+      setState((current) =>
+        current.projectId === projectId
+          ? {
+              ...current,
+              resourcesLoading: false,
+              resourcesError: "Could not load Resources. Please try again.",
+              resources: [],
+            }
+          : current
+      );
+    }
+  }, []);
+
   const loadManagementState = useCallback(async (projectId: string) => {
     setState((current) => ({ ...current, isLoading: true, loadError: null }));
 
@@ -198,11 +246,13 @@ export function useShareLink() {
         project,
         projectId,
         isLoading: true,
+        resourcesLoading: true,
       });
 
       void loadManagementState(projectId);
+      void loadResources(projectId);
     },
-    [loadManagementState]
+    [loadManagementState, loadResources]
   );
 
   const closePanel = useCallback(() => {
@@ -216,6 +266,13 @@ export function useShareLink() {
       void loadManagementState(projectId);
     }
   }, [loadManagementState]);
+
+  const retryResources = useCallback(() => {
+    const projectId = latestProjectIdRef.current;
+    if (projectId) {
+      void loadResources(projectId);
+    }
+  }, [loadResources]);
 
   const runAction = useCallback(
     async (kind: ShareLinkActionKind, run: () => Promise<void>) => {
@@ -316,17 +373,40 @@ export function useShareLink() {
     });
   }, [runAction]);
 
+  /*
+    Configuration save. `request` is built entirely by the caller (the
+    configuration editor component) -- this hook never inspects or
+    derives its contents, it only forwards it to the existing atomic
+    save_share_configuration RPC via the repository/route layer and, on
+    success, reconciles from the authoritative re-read rather than
+    trusting the editor's own local draft as final. `runAction`'s
+    existing reentrancy guard covers rapid repeated Save clicks the same
+    way it already covers every other action.
+  */
+  const saveConfiguration = useCallback(
+    (request: SaveShareConfigurationRequest) => {
+      return runAction("saveConfiguration", async () => {
+        const linkId = latestLinkIdRef.current;
+        if (!linkId) throw new Error("Missing share link id.");
+        await saveShareConfigurationRequest(linkId, request);
+      });
+    },
+    [runAction]
+  );
+
   return {
     state,
     triggerRef,
     openPanel,
     closePanel,
     refresh,
+    retryResources,
     createDraft,
     activate,
     disable,
     reenable,
     revoke,
     copyLink,
+    saveConfiguration,
   };
 }

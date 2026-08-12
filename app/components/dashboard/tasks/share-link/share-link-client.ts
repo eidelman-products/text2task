@@ -6,6 +6,7 @@ import {
   reenableShareLinkResponseSchema,
   revokeShareLinkResponseSchema,
   revealShareLinkSecretResponseSchema,
+  saveShareConfigurationResponseSchema,
   type ShareLinkApiErrorCode,
   type ShareLinkManagementStateData,
   type CreateShareLinkDraftData,
@@ -14,6 +15,8 @@ import {
   type ReenableShareLinkData,
   type RevokeShareLinkData,
   type RevealShareLinkSecretData,
+  type SaveShareConfigurationRequest,
+  type SaveShareConfigurationData,
 } from "@/lib/share/share-contracts";
 
 /**
@@ -143,5 +146,20 @@ export function revealShareLinkSecret(
     `/api/share-links/${encodeURIComponent(linkId)}/reveal`,
     { method: "POST" },
     revealShareLinkSecretResponseSchema
+  );
+}
+
+export function saveShareConfiguration(
+  linkId: string,
+  request: SaveShareConfigurationRequest
+): Promise<SaveShareConfigurationData> {
+  return requestShareLink(
+    `/api/share-links/${encodeURIComponent(linkId)}/config`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    },
+    saveShareConfigurationResponseSchema
   );
 }

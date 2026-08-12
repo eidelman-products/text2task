@@ -31,7 +31,7 @@ describe("getShareLinkManagementState", () => {
     const fetchMock = vi.fn().mockReturnValue(
       jsonResponse({
         ok: true,
-        data: { link: null, mappedTaskIds: [], mappedResourceIds: [], currentUpdate: null },
+        data: { link: null, mappedTasks: [], mappedResources: [], currentUpdate: null },
       })
     );
     vi.stubGlobal("fetch", fetchMock);

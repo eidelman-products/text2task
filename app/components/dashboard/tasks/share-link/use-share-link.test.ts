@@ -13,6 +13,7 @@ const disableShareLinkMock = vi.fn();
 const reenableShareLinkMock = vi.fn();
 const revokeShareLinkMock = vi.fn();
 const revealShareLinkSecretMock = vi.fn();
+const saveShareConfigurationMock = vi.fn();
 
 vi.mock("./share-link-client", async () => {
   const actual = await vi.importActual<typeof import("./share-link-client")>(
@@ -28,6 +29,19 @@ vi.mock("./share-link-client", async () => {
     reenableShareLink: (...args: unknown[]) => reenableShareLinkMock(...args),
     revokeShareLink: (...args: unknown[]) => revokeShareLinkMock(...args),
     revealShareLinkSecret: (...args: unknown[]) => revealShareLinkSecretMock(...args),
+    saveShareConfiguration: (...args: unknown[]) => saveShareConfigurationMock(...args),
+  };
+});
+
+const fetchTaskResourcesMock = vi.fn();
+
+vi.mock("../../resources/resource-api", async () => {
+  const actual = await vi.importActual<typeof import("../../resources/resource-api")>(
+    "../../resources/resource-api"
+  );
+  return {
+    ...actual,
+    fetchTaskResources: (...args: unknown[]) => fetchTaskResourcesMock(...args),
   };
 });
 
@@ -77,7 +91,7 @@ function projectGroup(): TaskProjectGroup {
 }
 
 function noLinkState() {
-  return { link: null, mappedTaskIds: [], mappedResourceIds: [], currentUpdate: null };
+  return { link: null, mappedTasks: [], mappedResources: [], currentUpdate: null };
 }
 
 function draftLinkState() {
@@ -102,8 +116,8 @@ function draftLinkState() {
       lastViewedAt: null,
       viewCount: 0,
     },
-    mappedTaskIds: [],
-    mappedResourceIds: [],
+    mappedTasks: [],
+    mappedResources: [],
     currentUpdate: null,
   };
 }
@@ -116,6 +130,9 @@ beforeEach(() => {
   reenableShareLinkMock.mockReset();
   revokeShareLinkMock.mockReset();
   revealShareLinkSecretMock.mockReset();
+  saveShareConfigurationMock.mockReset();
+  fetchTaskResourcesMock.mockReset();
+  fetchTaskResourcesMock.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -390,5 +407,126 @@ describe("useShareLink - actions", () => {
 
     expect(result.current.state.copyStatus).toBe("failed");
     expect(result.current.state.actionError).toBeTruthy();
+  });
+
+  it("saveConfiguration calls the client with the current linkId and request, then refreshes from the authoritative state", async () => {
+    const result = await openAndLoad(draftLinkState());
+    saveShareConfigurationMock.mockResolvedValue({
+      linkId: LINK_ID,
+      configurationVersion: 2,
+      currentUpdate: null,
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce(draftLinkState());
+
+    const request = { settings: { commentsEnabled: false } };
+    await act(async () => {
+      await result.current.saveConfiguration(request as never);
+    });
+
+    expect(saveShareConfigurationMock).toHaveBeenCalledWith(LINK_ID, request);
+    expect(getShareLinkManagementStateMock).toHaveBeenCalledTimes(2);
+    expect(result.current.state.actionPending).toBeNull();
+    expect(result.current.state.actionError).toBeNull();
+  });
+
+  it("a failed saveConfiguration keeps the prior data and sets a safe actionError, without refreshing", async () => {
+    const result = await openAndLoad(draftLinkState());
+    saveShareConfigurationMock.mockRejectedValue(
+      new ShareLinkClientError("SHARE_LINK_STATE_CONFLICT", "conflict")
+    );
+
+    await act(async () => {
+      await result.current.saveConfiguration({ settings: { commentsEnabled: false } } as never);
+    });
+
+    expect(result.current.state.actionPending).toBeNull();
+    expect(result.current.state.actionError).toBeTruthy();
+    expect(result.current.state.data?.link?.id).toBe(LINK_ID);
+    expect(getShareLinkManagementStateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rapid repeated saveConfiguration calls cannot double-submit", async () => {
+    const result = await openAndLoad(draftLinkState());
+    let resolveSave!: (value: { linkId: string; configurationVersion: number; currentUpdate: null }) => void;
+    saveShareConfigurationMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSave = resolve;
+      })
+    );
+
+    let firstCall: Promise<void>;
+    let secondCall: Promise<void>;
+    act(() => {
+      firstCall = result.current.saveConfiguration({ settings: { commentsEnabled: false } } as never);
+      secondCall = result.current.saveConfiguration({ settings: { commentsEnabled: false } } as never);
+    });
+
+    expect(saveShareConfigurationMock).toHaveBeenCalledTimes(1);
+
+    getShareLinkManagementStateMock.mockResolvedValueOnce(draftLinkState());
+    await act(async () => {
+      resolveSave({ linkId: LINK_ID, configurationVersion: 2, currentUpdate: null });
+      await firstCall;
+      await secondCall;
+    });
+
+    expect(saveShareConfigurationMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("useShareLink - project-level Resources", () => {
+  it("openPanel loads project-level Resources alongside the management state", async () => {
+    const resource = {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      user_id: "user-1",
+      project_id: PROJECT_ID,
+      task_id: null,
+      resource_type: "link" as const,
+      title: "Brief",
+      url: "https://example.com",
+      storage_path: null,
+      file_name: null,
+      mime_type: null,
+      size_bytes: null,
+      notes: null,
+      created_at: "2026-08-03T10:00:00.000Z",
+      updated_at: "2026-08-03T10:00:00.000Z",
+    };
+    getShareLinkManagementStateMock.mockResolvedValue(noLinkState());
+    fetchTaskResourcesMock.mockResolvedValue([resource]);
+
+    const { result } = renderHook(() => useShareLink());
+    act(() => {
+      result.current.openPanel(projectGroup());
+    });
+
+    expect(result.current.state.resourcesLoading).toBe(true);
+    await waitFor(() => expect(result.current.state.resourcesLoading).toBe(false));
+
+    expect(fetchTaskResourcesMock).toHaveBeenCalledWith({ project_id: PROJECT_ID });
+    expect(result.current.state.resources).toEqual([resource]);
+    expect(result.current.state.resourcesError).toBeNull();
+  });
+
+  it("a Resources load failure sets resourcesError, and retryResources retries", async () => {
+    getShareLinkManagementStateMock.mockResolvedValue(noLinkState());
+    fetchTaskResourcesMock.mockRejectedValueOnce(new Error("network"));
+
+    const { result } = renderHook(() => useShareLink());
+    act(() => {
+      result.current.openPanel(projectGroup());
+    });
+
+    await waitFor(() => expect(result.current.state.resourcesLoading).toBe(false));
+    expect(result.current.state.resourcesError).toBeTruthy();
+    expect(result.current.state.resources).toEqual([]);
+
+    fetchTaskResourcesMock.mockResolvedValueOnce([]);
+    act(() => {
+      result.current.retryResources();
+    });
+
+    await waitFor(() => expect(result.current.state.resourcesLoading).toBe(false));
+    expect(result.current.state.resourcesError).toBeNull();
   });
 });
