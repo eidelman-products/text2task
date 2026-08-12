@@ -1,0 +1,225 @@
+"use client";
+
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+
+import { DashboardButton } from "../../ui/button";
+import { stack } from "../../ui/styles";
+import { dashboardColors, dashboardTypography } from "../../ui/tokens";
+import { ConfirmableActionButton } from "./share-link-confirmable-button";
+import type { ShareLinkActionKind } from "./use-share-link";
+
+/*
+  Phase 2C -- Copy / Native Share / WhatsApp / Rotate.
+
+  Copy/Native Share/WhatsApp all resolve through the same authenticated
+  reveal path (public.reveal_share_link_secret), which only ever succeeds
+  for state = 'active' -- so, matching that real backend capability
+  matrix rather than merely hiding a button that would still 409, none of
+  these three render at all outside the active state. Rotation is
+  restricted to active/disabled by rotate_share_link_secret itself, so it
+  only renders for those two states.
+
+  NATIVE SHARE HYDRATION SAFETY: `navigator.share` support is NOT read
+  during render. Reading it synchronously in the render body would make
+  the very first render (server-rendered HTML, and this component's own
+  first client render if it were ever hydrated rather than mounted fresh)
+  depend on an environment-specific browser capability -- deterministic
+  only by accident. Instead, `nativeShareSupported` starts `false` on
+  every render (server and first client render alike) and is updated by
+  an effect that only ever runs after mount, on the client -- the
+  standard "detect client-only capability after mount" pattern, with no
+  new dependency. See share-link-channels.test.tsx's dedicated
+  react-dom/server test for the proof.
+
+  WHATSAPP POPUP SAFETY: `window.open` is called SYNCHRONOUSLY inside the
+  click handler, still within the click's own user-gesture context,
+  BEFORE the async reveal begins -- `whatsapp`'s hook action later
+  navigates that already-open window once reveal resolves (or closes it
+  on failure), rather than ever calling `window.open` itself after an
+  await, which many browsers would block as no longer a trusted gesture.
+  Critically, the pre-open call does NOT pass the `noopener` (or
+  `noreferrer`) window-feature string: per actual browser behavior
+  (Chromium, Firefox, WebKit), `window.open` with `noopener` specified
+  ALWAYS returns `null` -- there would be no WindowProxy left to navigate
+  later, silently defeating the entire pre-open strategy. Instead, the
+  opener relationship is severed by setting `popup.opener = null`
+  directly on the returned reference, which does not affect this page's
+  own ability to keep and later navigate that reference.
+
+  WHATSAPP REENTRANCY: a rapid second click must not open a second blank
+  tab even before React has re-rendered `disabled` -- `useShareLink`'s
+  own `actionInFlightRef` guard lives inside the hook's `whatsapp`
+  action, which only runs AFTER this component's click handler has
+  already synchronously called `window.open`, so it cannot protect
+  against a second `window.open` call by itself. `whatsappInFlightRef`
+  below is a second, component-local synchronous ref guard -- checked
+  and set at the very top of the click handler, exactly mirroring the
+  hook's own ref-guard pattern -- specifically to prevent a second popup
+  context from ever being created, independent of and in addition to the
+  hook's own guard against a second reveal/navigation.
+*/
+
+export type ShareLinkChannelsProps = {
+  linkState: "draft" | "active" | "disabled" | "expired";
+  actionPending: ShareLinkActionKind | null;
+  disabled: boolean;
+  copyStatus: "idle" | "copied" | "failed";
+  confirmingRotate: boolean;
+  onCopyLink: () => void;
+  onNativeShare: () => void;
+  onWhatsApp: (popup: Window | null) => void;
+  onRequestRotate: () => void;
+  onCancelRotateConfirm: () => void;
+};
+
+const ROTATE_WARNING =
+  "Rotating the link will immediately invalidate the previously shared client link. Anyone using the old link will lose access.";
+
+export function ShareLinkChannels({
+  linkState,
+  actionPending,
+  disabled,
+  copyStatus,
+  confirmingRotate,
+  onCopyLink,
+  onNativeShare,
+  onWhatsApp,
+  onRequestRotate,
+  onCancelRotateConfirm,
+}: ShareLinkChannelsProps) {
+  const canRevealForSharing = linkState === "active";
+  const canRotate = linkState === "active" || linkState === "disabled";
+
+  // Deterministic on every server render and every first client render:
+  // always false until the post-mount effect below runs. See this file's
+  // header comment.
+  const [nativeShareSupported, setNativeShareSupported] = useState(false);
+
+  useEffect(() => {
+    setNativeShareSupported(
+      typeof navigator !== "undefined" && typeof navigator.share === "function"
+    );
+  }, []);
+
+  const whatsappInFlightRef = useRef(false);
+
+  // Once the surrounding action genuinely completes (disabled flips back
+  // to false), this component's own local guard is released so a later,
+  // legitimate click can open a fresh popup.
+  useEffect(() => {
+    if (!disabled) {
+      whatsappInFlightRef.current = false;
+    }
+  }, [disabled]);
+
+  function handleWhatsAppClick() {
+    if (whatsappInFlightRef.current || disabled) {
+      return;
+    }
+    whatsappInFlightRef.current = true;
+
+    // No `noopener`/`noreferrer` feature here -- see this file's header
+    // comment for why that would make `popup` always null.
+    const popup = window.open("about:blank", "_blank");
+    if (popup) {
+      try {
+        popup.opener = null;
+      } catch {
+        // Some environments may disallow this assignment -- non-fatal,
+        // the popup reference itself remains fully usable for
+        // navigation either way.
+      }
+    }
+
+    onWhatsApp(popup);
+  }
+
+  if (!canRevealForSharing && !canRotate) {
+    return null;
+  }
+
+  return (
+    <div style={stack(4)}>
+      <SectionHeading title="Link" />
+
+      {canRevealForSharing ? (
+        <div style={stack(2)}>
+          <DashboardButton
+            variant="primary"
+            onClick={onCopyLink}
+            loading={actionPending === "copyLink"}
+            disabled={disabled}
+          >
+            {copyStatus === "copied" ? "Link copied" : "Copy client link"}
+          </DashboardButton>
+          {copyStatus === "failed" ? (
+            <p style={errorTextStyle}>
+              Could not copy the link automatically. Please try again.
+            </p>
+          ) : null}
+
+          {nativeShareSupported ? (
+            <DashboardButton
+              variant="secondary"
+              onClick={onNativeShare}
+              loading={actionPending === "nativeShare"}
+              disabled={disabled}
+            >
+              Share...
+            </DashboardButton>
+          ) : (
+            <p style={mutedTextStyle}>
+              Native sharing is not available in this browser. Use Copy link instead.
+            </p>
+          )}
+
+          <DashboardButton
+            variant="secondary"
+            onClick={handleWhatsAppClick}
+            loading={actionPending === "whatsapp"}
+            disabled={disabled}
+          >
+            Share via WhatsApp
+          </DashboardButton>
+        </div>
+      ) : null}
+
+      {canRotate ? (
+        <ConfirmableActionButton
+          label="Rotate link"
+          confirmLabel="Confirm rotate"
+          isConfirming={confirmingRotate}
+          loading={actionPending === "rotate"}
+          disabled={disabled}
+          variant="danger"
+          onClick={onRequestRotate}
+          onCancel={onCancelRotateConfirm}
+          warning={ROTATE_WARNING}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function SectionHeading({ title }: { title: string }) {
+  return <h3 style={sectionTitleStyle}>{title}</h3>;
+}
+
+const sectionTitleStyle: CSSProperties = {
+  margin: 0,
+  fontSize: dashboardTypography.size.md,
+  fontWeight: dashboardTypography.weight.semibold,
+  color: dashboardColors.text.primary,
+};
+
+const errorTextStyle: CSSProperties = {
+  margin: 0,
+  fontSize: dashboardTypography.size.sm,
+  color: dashboardColors.status.red,
+};
+
+const mutedTextStyle: CSSProperties = {
+  margin: 0,
+  fontSize: dashboardTypography.size.sm,
+  color: dashboardColors.text.muted,
+};

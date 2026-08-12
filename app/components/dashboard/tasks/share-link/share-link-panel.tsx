@@ -13,18 +13,22 @@ import {
   dashboardTypography,
 } from "../../ui/tokens";
 import type { SaveShareConfigurationRequest } from "@/lib/share/share-contracts";
+import { ShareLinkAccessControls } from "./share-link-access-controls";
+import { ShareLinkChannels } from "./share-link-channels";
+import { ConfirmableActionButton } from "./share-link-confirmable-button";
 import { ShareLinkConfigurationEditor } from "./share-link-configuration-editor";
 import type { ShareLinkActionKind, ShareLinkPanelState } from "./use-share-link";
 
 /*
   Phase 2A management shell (no-link/draft/active/disabled/expired states,
-  create draft, activate, copy link, disable, re-enable, revoke), now
-  joined by the Phase 2B content-configuration editor (rendered below the
-  lifecycle controls whenever a managed link exists, in any state --
-  saving is only ever rejected server-side for a revoked link, and this
-  panel already can't reach that combination since a revoked link reads
-  back as `link: null`). Still excludes PIN, expiry, rotation, and Preview
-  -- those remain later Phase 2 slices.
+  create draft, activate, disable, re-enable, revoke), joined by the
+  Phase 2B content-configuration editor (rendered below the lifecycle
+  controls whenever a managed link exists, in any state -- saving is only
+  ever rejected server-side for a revoked link, and this panel already
+  can't reach that combination since a revoked link reads back as `link:
+  null`), and now Phase 2C's owner access controls (PIN, expiry) and
+  share channels (Copy, Native Share, WhatsApp, Rotate). Still excludes
+  Preview and anything public -- those remain later Phase 2 slices.
 */
 
 export type ShareLinkPanelProps = {
@@ -40,6 +44,13 @@ export type ShareLinkPanelProps = {
   onRevoke: () => void;
   onCopyLink: () => void;
   onSaveConfiguration: (request: SaveShareConfigurationRequest) => void;
+  onSetPin: (pin: string) => void;
+  onClearPin: () => void;
+  onSetExpiry: (expiresAtIso: string) => void;
+  onClearExpiry: () => void;
+  onRotate: () => void;
+  onNativeShare: () => void;
+  onWhatsApp: (popup: Window | null) => void;
 };
 
 const STATE_LABELS: Record<string, { label: string; variant: "neutral" | "blue" | "green" | "amber" }> = {
@@ -62,10 +73,17 @@ export function ShareLinkPanel({
   onRevoke,
   onCopyLink,
   onSaveConfiguration,
+  onSetPin,
+  onClearPin,
+  onSetExpiry,
+  onClearExpiry,
+  onRotate,
+  onNativeShare,
+  onWhatsApp,
 }: ShareLinkPanelProps) {
   const headingId = useId();
   const [confirmingAction, setConfirmingAction] = useState<
-    "disable" | "revoke" | null
+    "disable" | "revoke" | "clearPin" | "rotate" | null
   >(null);
 
   // Reset any pending destructive confirmation whenever the panel opens
@@ -96,7 +114,10 @@ export function ShareLinkPanel({
     onClose();
   }
 
-  function runWithConfirm(action: "disable" | "revoke", run: () => void) {
+  function runWithConfirm(
+    action: "disable" | "revoke" | "clearPin" | "rotate",
+    run: () => void
+  ) {
     if (confirmingAction === action) {
       setConfirmingAction(null);
       run();
@@ -151,14 +172,35 @@ export function ShareLinkPanel({
             <LinkStateView
               state={link.state}
               actionPending={state.actionPending}
-              copyStatus={state.copyStatus}
               confirmingAction={confirmingAction}
               onActivate={onActivate}
               onDisable={() => runWithConfirm("disable", onDisable)}
               onReenable={onReenable}
               onRevoke={() => runWithConfirm("revoke", onRevoke)}
-              onCopyLink={onCopyLink}
               onCancelConfirm={() => setConfirmingAction(null)}
+            />
+            <ShareLinkAccessControls
+              link={link}
+              disabled={busy}
+              actionPending={state.actionPending}
+              confirmingClearPin={confirmingAction === "clearPin"}
+              onSetPin={onSetPin}
+              onRequestClearPin={() => runWithConfirm("clearPin", onClearPin)}
+              onCancelClearPinConfirm={() => setConfirmingAction(null)}
+              onSetExpiry={onSetExpiry}
+              onClearExpiry={onClearExpiry}
+            />
+            <ShareLinkChannels
+              linkState={link.state}
+              actionPending={state.actionPending}
+              disabled={busy}
+              copyStatus={state.copyStatus}
+              confirmingRotate={confirmingAction === "rotate"}
+              onCopyLink={onCopyLink}
+              onNativeShare={onNativeShare}
+              onWhatsApp={onWhatsApp}
+              onRequestRotate={() => runWithConfirm("rotate", onRotate)}
+              onCancelRotateConfirm={() => setConfirmingAction(null)}
             />
             {state.project && state.data ? (
               <ShareLinkConfigurationEditor
@@ -220,24 +262,20 @@ function NoLinkView({
 function LinkStateView({
   state: linkState,
   actionPending,
-  copyStatus,
   confirmingAction,
   onActivate,
   onDisable,
   onReenable,
   onRevoke,
-  onCopyLink,
   onCancelConfirm,
 }: {
   state: "draft" | "active" | "disabled" | "expired";
   actionPending: ShareLinkActionKind | null;
-  copyStatus: "idle" | "copied" | "failed";
-  confirmingAction: "disable" | "revoke" | null;
+  confirmingAction: "disable" | "revoke" | "clearPin" | "rotate" | null;
   onActivate: () => void;
   onDisable: () => void;
   onReenable: () => void;
   onRevoke: () => void;
-  onCopyLink: () => void;
   onCancelConfirm: () => void;
 }) {
   const busy = actionPending !== null;
@@ -259,24 +297,6 @@ function LinkStateView({
         >
           Activate link
         </DashboardButton>
-      ) : null}
-
-      {linkState === "active" ? (
-        <div style={stack(2)}>
-          <DashboardButton
-            variant="primary"
-            onClick={onCopyLink}
-            loading={actionPending === "copyLink"}
-            disabled={busy}
-          >
-            {copyStatus === "copied" ? "Link copied" : "Copy client link"}
-          </DashboardButton>
-          {copyStatus === "failed" ? (
-            <p style={errorTextStyle}>
-              Could not copy the link automatically. Please try again.
-            </p>
-          ) : null}
-        </div>
       ) : null}
 
       {linkState === "disabled" ? (
@@ -313,50 +333,6 @@ function LinkStateView({
         onClick={onRevoke}
         onCancel={onCancelConfirm}
       />
-    </div>
-  );
-}
-
-function ConfirmableActionButton({
-  label,
-  confirmLabel,
-  isConfirming,
-  loading,
-  disabled,
-  variant,
-  onClick,
-  onCancel,
-}: {
-  label: string;
-  confirmLabel: string;
-  isConfirming: boolean;
-  loading: boolean;
-  disabled: boolean;
-  variant: "secondary" | "danger";
-  onClick: () => void;
-  onCancel: () => void;
-}) {
-  if (!isConfirming) {
-    return (
-      <DashboardButton variant={variant} onClick={onClick} disabled={disabled}>
-        {label}
-      </DashboardButton>
-    );
-  }
-
-  return (
-    <div style={row(2)}>
-      <DashboardButton
-        variant={variant}
-        onClick={onClick}
-        loading={loading}
-        disabled={disabled}
-      >
-        {confirmLabel}
-      </DashboardButton>
-      <DashboardButton variant="ghost" onClick={onCancel} disabled={loading}>
-        Cancel
-      </DashboardButton>
     </div>
   );
 }

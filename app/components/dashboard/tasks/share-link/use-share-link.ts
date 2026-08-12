@@ -9,14 +9,35 @@ import { fetchTaskResources, type TaskResource } from "../../resources/resource-
 import {
   ShareLinkClientError,
   activateShareLink as activateShareLinkRequest,
+  clearShareLinkExpiry as clearShareLinkExpiryRequest,
+  clearSharePin as clearSharePinRequest,
   createShareLinkDraft as createShareLinkDraftRequest,
   disableShareLink as disableShareLinkRequest,
   getShareLinkManagementState,
   reenableShareLink as reenableShareLinkRequest,
   revealShareLinkSecret as revealShareLinkSecretRequest,
   revokeShareLink as revokeShareLinkRequest,
+  rotateShareLinkSecret as rotateShareLinkSecretRequest,
   saveShareConfiguration as saveShareConfigurationRequest,
+  setShareLinkExpiry as setShareLinkExpiryRequest,
+  setSharePin as setSharePinRequest,
 } from "./share-link-client";
+
+/**
+ * Reveals the current share secret and builds the ephemeral client URL
+ * entirely within this function's own local scope. The URL is returned
+ * to the caller and must be used and discarded immediately -- never
+ * assigned to any component or hook state. Shared by copyLink,
+ * nativeShare and whatsapp below so the reveal + URL-construction logic
+ * exists in exactly one place, per the "one small internal action
+ * helper" guidance -- it never returns/stores the URL in hook state
+ * itself, only hands it back to its own immediate caller.
+ */
+async function revealEphemeralShareUrl(linkId: string): Promise<string> {
+  const revealed = await revealShareLinkSecretRequest(linkId);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return `${origin}/share/${revealed.publicId}#${revealed.secret}`;
+}
 
 /*
   Owner-facing Client Share management state, mirroring
@@ -37,7 +58,14 @@ export type ShareLinkActionKind =
   | "reenable"
   | "revoke"
   | "copyLink"
-  | "saveConfiguration";
+  | "saveConfiguration"
+  | "setPin"
+  | "clearPin"
+  | "setExpiry"
+  | "clearExpiry"
+  | "rotate"
+  | "nativeShare"
+  | "whatsapp";
 
 export type ShareLinkPanelState = {
   isOpen: boolean;
@@ -122,6 +150,8 @@ function describeError(error: unknown, fallback: string): string {
         return "Another share link for this project is already active.";
       case "SHARE_LINK_SECRET_UNAVAILABLE":
         return "The share link secret could not be retrieved. Try rotating the link.";
+      case "INVALID_REQUEST":
+        return "That value was not valid. Please check and try again.";
       case "NOT_FOUND":
         return "Client sharing is not available right now.";
       default:
@@ -351,17 +381,16 @@ export function useShareLink() {
   /*
     Copy Link never stores the plaintext secret or the full URL in React
     state -- it is built and handed to the Clipboard API entirely inside
-    this function-scoped closure, then discarded. copyStatus (idle/copied/
-    failed) is the only thing persisted, and it carries no secret material.
+    revealEphemeralShareUrl's own function-scoped closure, then
+    discarded. copyStatus (idle/copied/failed) is the only thing
+    persisted, and it carries no secret material.
   */
   const copyLink = useCallback(() => {
     return runAction("copyLink", async () => {
       const linkId = latestLinkIdRef.current;
       if (!linkId) throw new Error("Missing share link id.");
 
-      const revealed = await revealShareLinkSecretRequest(linkId);
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
-      const url = `${origin}/share/${revealed.publicId}#${revealed.secret}`;
+      const url = await revealEphemeralShareUrl(linkId);
 
       try {
         await navigator.clipboard.writeText(url);
@@ -372,6 +401,161 @@ export function useShareLink() {
       }
     });
   }, [runAction]);
+
+  /*
+    Phase 2C access controls. Each mirrors the exact pattern every other
+    action here already uses: resolve the current linkId from the ref,
+    forward to the client wrapper, let runAction's own reentrancy guard
+    and post-success refresh handle the rest. None of these inspect or
+    transform the PIN/timestamp -- the owner-facing component validates
+    against the same canonical contracts the route itself uses before
+    ever calling these, and the server remains the sole authority.
+  */
+  const setPin = useCallback(
+    (pin: string) => {
+      return runAction("setPin", async () => {
+        const linkId = latestLinkIdRef.current;
+        if (!linkId) throw new Error("Missing share link id.");
+        await setSharePinRequest(linkId, pin);
+      });
+    },
+    [runAction]
+  );
+
+  const clearPin = useCallback(() => {
+    return runAction("clearPin", async () => {
+      const linkId = latestLinkIdRef.current;
+      if (!linkId) throw new Error("Missing share link id.");
+      await clearSharePinRequest(linkId);
+    });
+  }, [runAction]);
+
+  const setExpiry = useCallback(
+    (expiresAt: string) => {
+      return runAction("setExpiry", async () => {
+        const linkId = latestLinkIdRef.current;
+        if (!linkId) throw new Error("Missing share link id.");
+        await setShareLinkExpiryRequest(linkId, expiresAt);
+      });
+    },
+    [runAction]
+  );
+
+  const clearExpiry = useCallback(() => {
+    return runAction("clearExpiry", async () => {
+      const linkId = latestLinkIdRef.current;
+      if (!linkId) throw new Error("Missing share link id.");
+      await clearShareLinkExpiryRequest(linkId);
+    });
+  }, [runAction]);
+
+  /*
+    Rotation replaces the link's secret. The RPC's own response includes
+    a freshly generated plaintext secret (mirroring activateShareLink's
+    response shape) -- it is intentionally never read out of the
+    resolved promise below, so it is discarded the instant this async
+    function returns, never assigned to any state. If the owner needs to
+    copy the rotated link, copyLink performs its own fresh reveal
+    afterward rather than this action ever surfacing the secret it just
+    generated.
+  */
+  const rotate = useCallback(() => {
+    return runAction("rotate", async () => {
+      const linkId = latestLinkIdRef.current;
+      if (!linkId) throw new Error("Missing share link id.");
+      await rotateShareLinkSecretRequest(linkId);
+    });
+  }, [runAction]);
+
+  /*
+    Native Share (Web Share API). A user dismissing the native share
+    sheet rejects with a DOMException named "AbortError" -- that is
+    swallowed here as a benign no-op, never surfaced as actionError, so
+    cancelling never reads as an application failure. Unsupported-browser
+    detection is primarily the component's own render-time concern (it
+    should not offer this control at all when navigator.share does not
+    exist), but this action still fails closed defensively if called
+    anyway.
+  */
+  const nativeShare = useCallback(() => {
+    return runAction("nativeShare", async () => {
+      const linkId = latestLinkIdRef.current;
+      if (!linkId) throw new Error("Missing share link id.");
+
+      if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
+        throw new Error(
+          "Native sharing is not available in this browser. Use Copy link instead."
+        );
+      }
+
+      const url = await revealEphemeralShareUrl(linkId);
+
+      try {
+        await navigator.share({
+          title: "Text2Task project update",
+          text: "Here's the latest project update.",
+          url,
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        throw error;
+      }
+    });
+  }, [runAction]);
+
+  /*
+    WhatsApp via a plain wa.me prefilled link -- no API, no OAuth, no
+    phone number. Popup-blocking safety: `popup` is a window handle the
+    CALLER (the component's click handler) must open synchronously,
+    inside the original user gesture -- without the `noopener` window
+    feature, which browsers always resolve to a null return value,
+    defeating the whole pre-open strategy -- *before* invoking this
+    action. By the time this async function reaches its own `await`,
+    that gesture has already been spent, so this function only ever
+    navigates the pre-opened window rather than calling `window.open`
+    itself post-await. If reveal OR the navigation attempt itself fails,
+    the pre-opened blank window is closed rather than left as an orphan
+    tab. If no popup handle was supplied (e.g. the caller's own
+    window.open call was itself blocked), this falls back to a direct
+    post-reveal window.open, which is the best remaining option in that
+    situation.
+  */
+  const whatsapp = useCallback(
+    (popup: Window | null) => {
+      return runAction("whatsapp", async () => {
+        const linkId = latestLinkIdRef.current;
+        if (!linkId) {
+          popup?.close();
+          throw new Error("Missing share link id.");
+        }
+
+        let url: string;
+        try {
+          url = await revealEphemeralShareUrl(linkId);
+        } catch (error) {
+          popup?.close();
+          throw error;
+        }
+
+        const message = `Here's the latest project update: ${url}`;
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+        try {
+          if (popup && !popup.closed) {
+            popup.location.href = waUrl;
+          } else {
+            window.open(waUrl, "_blank", "noopener,noreferrer");
+          }
+        } catch (error) {
+          popup?.close();
+          throw error;
+        }
+      });
+    },
+    [runAction]
+  );
 
   /*
     Configuration save. `request` is built entirely by the caller (the
@@ -408,5 +592,12 @@ export function useShareLink() {
     revoke,
     copyLink,
     saveConfiguration,
+    setPin,
+    clearPin,
+    setExpiry,
+    clearExpiry,
+    rotate,
+    nativeShare,
+    whatsapp,
   };
 }

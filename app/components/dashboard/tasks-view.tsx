@@ -756,6 +756,13 @@ export default function TasksView({
         onRevoke={() => void shareLink.revoke()}
         onCopyLink={() => void shareLink.copyLink()}
         onSaveConfiguration={(request) => void shareLink.saveConfiguration(request)}
+        onSetPin={(pin) => void shareLink.setPin(pin)}
+        onClearPin={() => void shareLink.clearPin()}
+        onSetExpiry={(expiresAt) => void shareLink.setExpiry(expiresAt)}
+        onClearExpiry={() => void shareLink.clearExpiry()}
+        onRotate={() => void shareLink.rotate()}
+        onNativeShare={() => void shareLink.nativeShare()}
+        onWhatsApp={(popup) => void shareLink.whatsapp(popup)}
       />
 
       <TaskDeleteModals

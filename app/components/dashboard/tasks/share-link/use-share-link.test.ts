@@ -14,6 +14,11 @@ const reenableShareLinkMock = vi.fn();
 const revokeShareLinkMock = vi.fn();
 const revealShareLinkSecretMock = vi.fn();
 const saveShareConfigurationMock = vi.fn();
+const setSharePinMock = vi.fn();
+const clearSharePinMock = vi.fn();
+const setShareLinkExpiryMock = vi.fn();
+const clearShareLinkExpiryMock = vi.fn();
+const rotateShareLinkSecretMock = vi.fn();
 
 vi.mock("./share-link-client", async () => {
   const actual = await vi.importActual<typeof import("./share-link-client")>(
@@ -30,6 +35,11 @@ vi.mock("./share-link-client", async () => {
     revokeShareLink: (...args: unknown[]) => revokeShareLinkMock(...args),
     revealShareLinkSecret: (...args: unknown[]) => revealShareLinkSecretMock(...args),
     saveShareConfiguration: (...args: unknown[]) => saveShareConfigurationMock(...args),
+    setSharePin: (...args: unknown[]) => setSharePinMock(...args),
+    clearSharePin: (...args: unknown[]) => clearSharePinMock(...args),
+    setShareLinkExpiry: (...args: unknown[]) => setShareLinkExpiryMock(...args),
+    clearShareLinkExpiry: (...args: unknown[]) => clearShareLinkExpiryMock(...args),
+    rotateShareLinkSecret: (...args: unknown[]) => rotateShareLinkSecretMock(...args),
   };
 });
 
@@ -122,6 +132,19 @@ function draftLinkState() {
   };
 }
 
+function activeLinkState(overrides: Record<string, unknown> = {}) {
+  const base = draftLinkState();
+  return {
+    ...base,
+    link: {
+      ...base.link,
+      state: "active" as const,
+      activatedAt: "2026-08-10T00:00:00Z",
+      ...overrides,
+    },
+  };
+}
+
 beforeEach(() => {
   getShareLinkManagementStateMock.mockReset();
   createShareLinkDraftMock.mockReset();
@@ -131,6 +154,11 @@ beforeEach(() => {
   revokeShareLinkMock.mockReset();
   revealShareLinkSecretMock.mockReset();
   saveShareConfigurationMock.mockReset();
+  setSharePinMock.mockReset();
+  clearSharePinMock.mockReset();
+  setShareLinkExpiryMock.mockReset();
+  clearShareLinkExpiryMock.mockReset();
+  rotateShareLinkSecretMock.mockReset();
   fetchTaskResourcesMock.mockReset();
   fetchTaskResourcesMock.mockResolvedValue([]);
 });
@@ -528,5 +556,380 @@ describe("useShareLink - project-level Resources", () => {
 
     await waitFor(() => expect(result.current.state.resourcesLoading).toBe(false));
     expect(result.current.state.resourcesError).toBeNull();
+  });
+});
+
+describe("useShareLink - Phase 2C access controls (PIN / expiry / rotate)", () => {
+  async function openAndLoad(initialData: ShareLinkManagementStateData) {
+    getShareLinkManagementStateMock.mockResolvedValue(initialData);
+    const { result } = renderHook(() => useShareLink());
+
+    act(() => {
+      result.current.openPanel(projectGroup());
+    });
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+
+    return result;
+  }
+
+  it("setPin calls setSharePin with the current linkId and the entered pin, then refreshes", async () => {
+    const result = await openAndLoad(draftLinkState());
+    setSharePinMock.mockResolvedValue({
+      linkId: LINK_ID,
+      hasPin: true,
+      state: "draft",
+      configurationVersion: 2,
+      updatedAt: "2026-08-12T00:00:00Z",
+    });
+    const refreshed = draftLinkState();
+    getShareLinkManagementStateMock.mockResolvedValueOnce({
+      ...refreshed,
+      link: { ...refreshed.link, hasPin: true },
+    });
+
+    await act(async () => {
+      await result.current.setPin("1234");
+    });
+
+    expect(setSharePinMock).toHaveBeenCalledWith(LINK_ID, "1234");
+    expect(getShareLinkManagementStateMock).toHaveBeenCalledTimes(2);
+    expect(result.current.state.actionError).toBeNull();
+  });
+
+  it("clearPin calls clearSharePin with the current linkId", async () => {
+    const result = await openAndLoad(draftLinkState());
+    clearSharePinMock.mockResolvedValue({
+      linkId: LINK_ID,
+      hasPin: false,
+      state: "draft",
+      configurationVersion: 2,
+      updatedAt: "2026-08-12T00:00:00Z",
+    });
+
+    await act(async () => {
+      await result.current.clearPin();
+    });
+
+    expect(clearSharePinMock).toHaveBeenCalledWith(LINK_ID);
+  });
+
+  it("setExpiry calls setShareLinkExpiry with the current linkId and the ISO timestamp", async () => {
+    const result = await openAndLoad(draftLinkState());
+    setShareLinkExpiryMock.mockResolvedValue({
+      linkId: LINK_ID,
+      state: "draft",
+      expiresAt: "2026-09-01T00:00:00Z",
+      configurationVersion: 2,
+      updatedAt: "2026-08-12T00:00:00Z",
+    });
+
+    await act(async () => {
+      await result.current.setExpiry("2026-09-01T00:00:00Z");
+    });
+
+    expect(setShareLinkExpiryMock).toHaveBeenCalledWith(LINK_ID, "2026-09-01T00:00:00Z");
+  });
+
+  it("clearExpiry calls clearShareLinkExpiry with the current linkId", async () => {
+    const result = await openAndLoad(draftLinkState());
+    clearShareLinkExpiryMock.mockResolvedValue({
+      linkId: LINK_ID,
+      state: "draft",
+      expiresAt: null,
+      configurationVersion: 2,
+      updatedAt: "2026-08-12T00:00:00Z",
+    });
+
+    await act(async () => {
+      await result.current.clearExpiry();
+    });
+
+    expect(clearShareLinkExpiryMock).toHaveBeenCalledWith(LINK_ID);
+  });
+
+  it("a failed setPin/setExpiry preserves the prior authoritative state and sets a safe actionError", async () => {
+    const result = await openAndLoad(draftLinkState());
+    setSharePinMock.mockRejectedValue(new ShareLinkClientError("SHARE_LINK_STATE_CONFLICT", "conflict"));
+
+    await act(async () => {
+      await result.current.setPin("1234");
+    });
+
+    expect(result.current.state.actionPending).toBeNull();
+    expect(result.current.state.actionError).toBeTruthy();
+    expect(result.current.state.data?.link?.hasPin).toBe(false);
+  });
+
+  it("rotate calls rotateShareLinkSecret with the current linkId and never stores the returned plaintext secret", async () => {
+    const result = await openAndLoad(activeLinkState());
+    rotateShareLinkSecretMock.mockResolvedValue({
+      linkId: LINK_ID,
+      publicId: "abcdefgh12345678",
+      state: "active",
+      configurationVersion: 2,
+      rotatedAt: "2026-08-12T00:00:00Z",
+      secret: "Q8j1PwDrSyTiNpZsCfGhJkLzXcVbNm1234567890abd",
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce(activeLinkState());
+
+    await act(async () => {
+      await result.current.rotate();
+    });
+
+    expect(rotateShareLinkSecretMock).toHaveBeenCalledWith(LINK_ID);
+    const serializedState = JSON.stringify(result.current.state);
+    expect(serializedState).not.toContain("Q8j1PwDrSyTiNpZsCfGhJkLzXcVbNm1234567890abd");
+  });
+
+  it("rapid repeated rotate confirmations cannot rotate twice", async () => {
+    const result = await openAndLoad(activeLinkState());
+    let resolveRotate!: (value: {
+      linkId: string;
+      publicId: string;
+      state: "active";
+      configurationVersion: number;
+      rotatedAt: string;
+      secret: string;
+    }) => void;
+    rotateShareLinkSecretMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRotate = resolve;
+      })
+    );
+
+    let firstCall: Promise<void>;
+    let secondCall: Promise<void>;
+    act(() => {
+      firstCall = result.current.rotate();
+      secondCall = result.current.rotate();
+    });
+
+    expect(rotateShareLinkSecretMock).toHaveBeenCalledTimes(1);
+
+    getShareLinkManagementStateMock.mockResolvedValueOnce(activeLinkState());
+    await act(async () => {
+      resolveRotate({
+        linkId: LINK_ID,
+        publicId: "abcdefgh12345678",
+        state: "active",
+        configurationVersion: 2,
+        rotatedAt: "2026-08-12T00:00:00Z",
+        secret: "Q8j1PwDrSyTiNpZsCfGhJkLzXcVbNm1234567890abd",
+      });
+      await firstCall;
+      await secondCall;
+    });
+
+    expect(rotateShareLinkSecretMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("useShareLink - Phase 2C Copy/Native Share/WhatsApp", () => {
+  async function openAndLoad(initialData: ShareLinkManagementStateData) {
+    getShareLinkManagementStateMock.mockResolvedValue(initialData);
+    const { result } = renderHook(() => useShareLink());
+
+    act(() => {
+      result.current.openPanel(projectGroup());
+    });
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+
+    return result;
+  }
+
+  it("nativeShare reveals, calls navigator.share with the ephemeral URL, and never stores the secret", async () => {
+    const result = await openAndLoad(activeLinkState());
+    revealShareLinkSecretMock.mockResolvedValue({
+      linkId: LINK_ID,
+      publicId: "abcdefgh12345678",
+      secret: "P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc",
+    });
+    const shareMock = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { share: shareMock, clipboard: { writeText: vi.fn() } });
+
+    await act(async () => {
+      await result.current.nativeShare();
+    });
+
+    expect(shareMock).toHaveBeenCalledTimes(1);
+    const shareArg = shareMock.mock.calls[0][0];
+    expect(shareArg.url).toContain("/share/abcdefgh12345678#P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc");
+    expect(result.current.state.actionError).toBeNull();
+
+    const serializedState = JSON.stringify(result.current.state);
+    expect(serializedState).not.toContain("P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc");
+  });
+
+  it("nativeShare treats a user-cancelled share (AbortError) as a benign no-op, not an application error", async () => {
+    const result = await openAndLoad(activeLinkState());
+    revealShareLinkSecretMock.mockResolvedValue({
+      linkId: LINK_ID,
+      publicId: "abcdefgh12345678",
+      secret: "P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc",
+    });
+    const abortError = new DOMException("User cancelled", "AbortError");
+    vi.stubGlobal("navigator", {
+      share: vi.fn().mockRejectedValue(abortError),
+      clipboard: { writeText: vi.fn() },
+    });
+
+    await act(async () => {
+      await result.current.nativeShare();
+    });
+
+    expect(result.current.state.actionError).toBeNull();
+  });
+
+  it("nativeShare surfaces a real (non-Abort) failure as actionError", async () => {
+    const result = await openAndLoad(activeLinkState());
+    revealShareLinkSecretMock.mockResolvedValue({
+      linkId: LINK_ID,
+      publicId: "abcdefgh12345678",
+      secret: "P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc",
+    });
+    vi.stubGlobal("navigator", {
+      share: vi.fn().mockRejectedValue(new Error("share failed")),
+      clipboard: { writeText: vi.fn() },
+    });
+
+    await act(async () => {
+      await result.current.nativeShare();
+    });
+
+    expect(result.current.state.actionError).toBeTruthy();
+  });
+
+  it("nativeShare fails closed without ever revealing when navigator.share is unsupported", async () => {
+    const result = await openAndLoad(activeLinkState());
+    vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn() } });
+
+    await act(async () => {
+      await result.current.nativeShare();
+    });
+
+    expect(result.current.state.actionError).toBeTruthy();
+    expect(revealShareLinkSecretMock).not.toHaveBeenCalled();
+  });
+
+  it("whatsapp reveals, navigates the pre-opened popup to a wa.me URL containing the ephemeral URL, and never stores the secret", async () => {
+    const result = await openAndLoad(activeLinkState());
+    revealShareLinkSecretMock.mockResolvedValue({
+      linkId: LINK_ID,
+      publicId: "abcdefgh12345678",
+      secret: "P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc",
+    });
+    const popup = { closed: false, location: { href: "" }, close: vi.fn() } as unknown as Window;
+
+    await act(async () => {
+      await result.current.whatsapp(popup);
+    });
+
+    expect((popup as unknown as { location: { href: string } }).location.href).toContain(
+      "https://wa.me/?text="
+    );
+    expect((popup as unknown as { location: { href: string } }).location.href).toContain(
+      encodeURIComponent("/share/abcdefgh12345678#P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc")
+    );
+
+    const serializedState = JSON.stringify(result.current.state);
+    expect(serializedState).not.toContain("P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc");
+  });
+
+  it("whatsapp closes the pre-opened popup if reveal fails, leaving no orphan tab", async () => {
+    const result = await openAndLoad(activeLinkState());
+    revealShareLinkSecretMock.mockRejectedValue(
+      new ShareLinkClientError("SHARE_LINK_STATE_CONFLICT", "conflict")
+    );
+    const closeMock = vi.fn();
+    const popup = { closed: false, location: { href: "" }, close: closeMock } as unknown as Window;
+
+    await act(async () => {
+      await result.current.whatsapp(popup);
+    });
+
+    expect(closeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("whatsapp closes the pre-opened popup if the navigation attempt itself throws, leaving no orphan tab", async () => {
+    const result = await openAndLoad(activeLinkState());
+    revealShareLinkSecretMock.mockResolvedValue({
+      linkId: LINK_ID,
+      publicId: "abcdefgh12345678",
+      secret: "P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc",
+    });
+    const closeMock = vi.fn();
+    const popup = {
+      closed: false,
+      // Simulates a browser throwing when the parent attempts to
+      // navigate a popup it no longer has permission to touch (e.g. the
+      // user navigated it away manually in the meantime).
+      set location(_value: unknown) {
+        throw new DOMException("Blocked a frame with origin from accessing a cross-origin frame.");
+      },
+      close: closeMock,
+    } as unknown as Window;
+
+    await act(async () => {
+      await result.current.whatsapp(popup);
+    });
+
+    expect(closeMock).toHaveBeenCalledTimes(1);
+    expect(result.current.state.actionError).toBeTruthy();
+  });
+
+  it("whatsapp falls back to window.open when no popup handle is supplied", async () => {
+    const result = await openAndLoad(activeLinkState());
+    revealShareLinkSecretMock.mockResolvedValue({
+      linkId: LINK_ID,
+      publicId: "abcdefgh12345678",
+      secret: "P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc",
+    });
+    const windowOpenMock = vi.spyOn(window, "open").mockReturnValue(null);
+
+    await act(async () => {
+      await result.current.whatsapp(null);
+    });
+
+    expect(windowOpenMock).toHaveBeenCalledTimes(1);
+    expect(windowOpenMock.mock.calls[0][0]).toContain("https://wa.me/?text=");
+  });
+
+  it("duplicate rapid clicks across different share channels cannot trigger duplicate reveals", async () => {
+    const result = await openAndLoad(activeLinkState());
+    let resolveReveal!: (value: {
+      linkId: string;
+      publicId: string;
+      secret: string;
+    }) => void;
+    revealShareLinkSecretMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveReveal = resolve;
+      })
+    );
+    vi.stubGlobal("navigator", {
+      share: vi.fn().mockResolvedValue(undefined),
+      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+
+    let firstCall: Promise<void>;
+    let secondCall: Promise<void>;
+    act(() => {
+      firstCall = result.current.copyLink();
+      secondCall = result.current.nativeShare();
+    });
+
+    expect(revealShareLinkSecretMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveReveal({
+        linkId: LINK_ID,
+        publicId: "abcdefgh12345678",
+        secret: "P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc",
+      });
+      await firstCall;
+      await secondCall;
+    });
+
+    expect(revealShareLinkSecretMock).toHaveBeenCalledTimes(1);
   });
 });

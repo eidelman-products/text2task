@@ -7,6 +7,11 @@ import {
   revokeShareLinkResponseSchema,
   revealShareLinkSecretResponseSchema,
   saveShareConfigurationResponseSchema,
+  setSharePinResponseSchema,
+  clearSharePinResponseSchema,
+  setShareLinkExpiryResponseSchema,
+  clearShareLinkExpiryResponseSchema,
+  rotateShareLinkSecretResponseSchema,
   type ShareLinkApiErrorCode,
   type ShareLinkManagementStateData,
   type CreateShareLinkDraftData,
@@ -17,6 +22,11 @@ import {
   type RevealShareLinkSecretData,
   type SaveShareConfigurationRequest,
   type SaveShareConfigurationData,
+  type SetSharePinData,
+  type ClearSharePinData,
+  type SetShareLinkExpiryData,
+  type ClearShareLinkExpiryData,
+  type RotateShareLinkSecretData,
 } from "@/lib/share/share-contracts";
 
 /**
@@ -161,5 +171,71 @@ export function saveShareConfiguration(
       body: JSON.stringify(request),
     },
     saveShareConfigurationResponseSchema
+  );
+}
+
+/**
+ * Phase 2C owner access-control operations. `pin`/`expiresAt` are sent
+ * exactly as the owner supplied them (already validated client-side
+ * against the same canonical schemas the route itself uses) -- this
+ * module performs no PIN hashing or timestamp reformatting of its own;
+ * the server remains the sole authority for both.
+ */
+export function setSharePin(linkId: string, pin: string): Promise<SetSharePinData> {
+  return requestShareLink(
+    `/api/share-links/${encodeURIComponent(linkId)}/pin`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin }),
+    },
+    setSharePinResponseSchema
+  );
+}
+
+export function clearSharePin(linkId: string): Promise<ClearSharePinData> {
+  return requestShareLink(
+    `/api/share-links/${encodeURIComponent(linkId)}/pin`,
+    { method: "DELETE" },
+    clearSharePinResponseSchema
+  );
+}
+
+export function setShareLinkExpiry(
+  linkId: string,
+  expiresAt: string
+): Promise<SetShareLinkExpiryData> {
+  return requestShareLink(
+    `/api/share-links/${encodeURIComponent(linkId)}/expiry`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ expiresAt }),
+    },
+    setShareLinkExpiryResponseSchema
+  );
+}
+
+export function clearShareLinkExpiry(linkId: string): Promise<ClearShareLinkExpiryData> {
+  return requestShareLink(
+    `/api/share-links/${encodeURIComponent(linkId)}/expiry`,
+    { method: "DELETE" },
+    clearShareLinkExpiryResponseSchema
+  );
+}
+
+/**
+ * Rotation's own success response includes a freshly generated plaintext
+ * secret (mirroring activateShareLink's response shape) -- this wrapper
+ * returns it exactly once to its caller and stores nothing itself. The
+ * caller (useShareLink's `rotate` action) discards it without ever
+ * assigning it to any persisted state, matching this feature's
+ * secret-handling discipline throughout.
+ */
+export function rotateShareLinkSecret(linkId: string): Promise<RotateShareLinkSecretData> {
+  return requestShareLink(
+    `/api/share-links/${encodeURIComponent(linkId)}/rotate`,
+    { method: "POST" },
+    rotateShareLinkSecretResponseSchema
   );
 }

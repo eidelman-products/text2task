@@ -56,7 +56,10 @@ function baseState(overrides: Partial<ShareLinkPanelState> = {}): ShareLinkPanel
   };
 }
 
-function linkData(state: "draft" | "active" | "disabled" | "expired") {
+function linkData(
+  state: "draft" | "active" | "disabled" | "expired",
+  linkOverrides: Record<string, unknown> = {}
+) {
   return {
     link: {
       id: "22222222-2222-4222-8222-222222222222",
@@ -77,6 +80,7 @@ function linkData(state: "draft" | "active" | "disabled" | "expired") {
       rotatedAt: null,
       lastViewedAt: null,
       viewCount: 0,
+      ...linkOverrides,
     },
     mappedTasks: [],
     mappedResources: [],
@@ -101,6 +105,13 @@ function renderPanel(state: ShareLinkPanelState, overrides: Partial<Parameters<t
         onRevoke={vi.fn()}
         onCopyLink={vi.fn()}
         onSaveConfiguration={vi.fn()}
+        onSetPin={vi.fn()}
+        onClearPin={vi.fn()}
+        onSetExpiry={vi.fn()}
+        onClearExpiry={vi.fn()}
+        onRotate={vi.fn()}
+        onNativeShare={vi.fn()}
+        onWhatsApp={vi.fn()}
         {...overrides}
       />
     );
@@ -273,5 +284,113 @@ describe("ShareLinkPanel - configuration editor wiring", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /try again/i, hidden: false }));
     expect(onRetryResources).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ShareLinkPanel - Phase 2C access controls wiring", () => {
+  it("renders PIN and expiry controls once a managed link exists", () => {
+    renderPanel(baseState({ data: linkData("active") }));
+    expect(screen.getByRole("button", { name: /add pin/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /set expiry/i })).toBeInTheDocument();
+  });
+
+  it("Add PIN -> Save PIN calls onSetPin with the entered value", async () => {
+    const onSetPin = vi.fn();
+    renderPanel(baseState({ data: linkData("active") }), { onSetPin });
+
+    await userEvent.click(screen.getByRole("button", { name: /add pin/i }));
+    await userEvent.type(screen.getByLabelText(/new pin/i), "4242");
+    await userEvent.click(screen.getByRole("button", { name: /save pin/i }));
+
+    expect(onSetPin).toHaveBeenCalledWith("4242");
+  });
+
+  it("Remove PIN requires a second confirming click before calling onClearPin", async () => {
+    const onClearPin = vi.fn();
+    renderPanel(baseState({ data: linkData("active", { hasPin: true }) }), { onClearPin });
+
+    await userEvent.click(screen.getByRole("button", { name: /remove pin/i }));
+    expect(onClearPin).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /confirm remove/i })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /confirm remove/i }));
+    expect(onClearPin).toHaveBeenCalledTimes(1);
+  });
+
+  it("Set expiry calls onSetExpiry with a converted UTC ISO timestamp", async () => {
+    const onSetExpiry = vi.fn();
+    renderPanel(baseState({ data: linkData("active") }), { onSetExpiry });
+
+    await userEvent.click(screen.getByRole("button", { name: /set expiry/i }));
+    const futureYear = new Date().getFullYear() + 2;
+    await userEvent.type(screen.getByLabelText(/expiry date and time/i), `${futureYear}-05-01T09:00`);
+    await userEvent.click(screen.getByRole("button", { name: /save expiry/i }));
+
+    expect(onSetExpiry).toHaveBeenCalledWith(new Date(futureYear, 4, 1, 9, 0, 0, 0).toISOString());
+  });
+});
+
+describe("ShareLinkPanel - Phase 2C share channels wiring", () => {
+  it("Native Share calls onNativeShare when supported", async () => {
+    vi.stubGlobal("navigator", { share: vi.fn() });
+    const onNativeShare = vi.fn();
+    renderPanel(baseState({ data: linkData("active") }), { onNativeShare });
+
+    await userEvent.click(screen.getByRole("button", { name: /share\.\.\./i }));
+
+    expect(onNativeShare).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
+  });
+
+  it("WhatsApp calls onWhatsApp with a synchronously opened window handle", async () => {
+    const popupStub = { closed: false } as unknown as Window;
+    const windowOpenMock = vi.spyOn(window, "open").mockReturnValue(popupStub);
+    const onWhatsApp = vi.fn();
+    renderPanel(baseState({ data: linkData("active") }), { onWhatsApp });
+
+    await userEvent.click(screen.getByRole("button", { name: /whatsapp/i }));
+
+    expect(onWhatsApp).toHaveBeenCalledWith(popupStub);
+    windowOpenMock.mockRestore();
+  });
+
+  it("Rotate shows the explicit invalidation warning and requires a second confirming click", async () => {
+    const onRotate = vi.fn();
+    renderPanel(baseState({ data: linkData("active") }), { onRotate });
+
+    await userEvent.click(screen.getByRole("button", { name: /^rotate link$/i }));
+    expect(onRotate).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(/immediately invalidate the previously shared client link/i)
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /confirm rotate/i }));
+    expect(onRotate).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render Copy/Share/WhatsApp/Rotate secret-sharing controls for a draft (non-revealable, non-rotatable) link", () => {
+    renderPanel(baseState({ data: linkData("draft") }));
+    expect(screen.queryByRole("button", { name: /copy client link/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /share\.\.\./i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /whatsapp/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /rotate link/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("ShareLinkPanel - Phase 2C regression safety", () => {
+  it("never renders the plaintext secret anywhere in the DOM with the new sections present", () => {
+    renderPanel(baseState({ data: linkData("active", { hasPin: true, expiresAt: "2026-09-01T00:00:00Z" }) }));
+    expect(document.body.textContent).not.toMatch(/[A-Za-z0-9_-]{43}/);
+  });
+
+  it("existing Phase 2A lifecycle controls (activate/disable/re-enable/revoke) are unchanged", () => {
+    renderPanel(baseState({ data: linkData("draft") }));
+    expect(screen.getByRole("button", { name: /activate link/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /revoke link/i })).toBeInTheDocument();
+  });
+
+  it("the Phase 2B configuration editor still renders alongside the new Phase 2C sections", () => {
+    renderPanel(baseState({ data: linkData("active") }));
+    expect(screen.getByRole("button", { name: /^save configuration$/i })).toBeInTheDocument();
   });
 });
