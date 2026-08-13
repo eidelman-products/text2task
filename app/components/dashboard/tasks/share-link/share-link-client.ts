@@ -28,6 +28,10 @@ import {
   type ClearShareLinkExpiryData,
   type RotateShareLinkSecretData,
 } from "@/lib/share/share-contracts";
+import {
+  previewShareLinkResponseSchema,
+  type ClientProjectProjection,
+} from "@/lib/share/client-share-projection-contracts";
 
 /**
  * Client-side fetch wrappers for the Phase 2A owner operations only
@@ -237,5 +241,19 @@ export function rotateShareLinkSecret(linkId: string): Promise<RotateShareLinkSe
     `/api/share-links/${encodeURIComponent(linkId)}/rotate`,
     { method: "POST" },
     rotateShareLinkSecretResponseSchema
+  );
+}
+
+/**
+ * Phase 2D owner Preview. Returns only the strict client-facing
+ * projection -- no secret, no full URL, no owner management fields.
+ * This call never reveals the share secret and never mutates
+ * view_count/last_viewed_at (see the route's own doc comment).
+ */
+export function previewShareLink(linkId: string): Promise<ClientProjectProjection> {
+  return requestShareLink(
+    `/api/share-links/${encodeURIComponent(linkId)}/preview`,
+    undefined,
+    previewShareLinkResponseSchema
   );
 }

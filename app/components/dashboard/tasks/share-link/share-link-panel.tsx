@@ -13,6 +13,8 @@ import {
   dashboardTypography,
 } from "../../ui/tokens";
 import type { SaveShareConfigurationRequest } from "@/lib/share/share-contracts";
+import type { ClientProjectProjection } from "@/lib/share/client-share-projection-contracts";
+import { ClientProjectView } from "./client-project-view";
 import { ShareLinkAccessControls } from "./share-link-access-controls";
 import { ShareLinkChannels } from "./share-link-channels";
 import { ConfirmableActionButton } from "./share-link-confirmable-button";
@@ -26,9 +28,13 @@ import type { ShareLinkActionKind, ShareLinkPanelState } from "./use-share-link"
   controls whenever a managed link exists, in any state -- saving is only
   ever rejected server-side for a revoked link, and this panel already
   can't reach that combination since a revoked link reads back as `link:
-  null`), and now Phase 2C's owner access controls (PIN, expiry) and
-  share channels (Copy, Native Share, WhatsApp, Rotate). Still excludes
-  Preview and anything public -- those remain later Phase 2 slices.
+  null`), Phase 2C's owner access controls (PIN, expiry) and share
+  channels (Copy, Native Share, WhatsApp, Rotate), and now Phase 2D's
+  owner Preview -- toggling `state.previewOpen` structurally REPLACES the
+  management sections below with the reusable `ClientProjectView`
+  rendering the strict server-built projection, so the client-facing view
+  is never visually mixed with dashboard/private project controls. Still
+  excludes anything public -- that remains Phase 3.
 */
 
 export type ShareLinkPanelProps = {
@@ -51,6 +57,8 @@ export type ShareLinkPanelProps = {
   onRotate: () => void;
   onNativeShare: () => void;
   onWhatsApp: (popup: Window | null) => void;
+  onOpenPreview: () => void;
+  onClosePreview: () => void;
 };
 
 const STATE_LABELS: Record<string, { label: string; variant: "neutral" | "blue" | "green" | "amber" }> = {
@@ -80,6 +88,8 @@ export function ShareLinkPanel({
   onRotate,
   onNativeShare,
   onWhatsApp,
+  onOpenPreview,
+  onClosePreview,
 }: ShareLinkPanelProps) {
   const headingId = useId();
   const [confirmingAction, setConfirmingAction] = useState<
@@ -167,6 +177,15 @@ export function ShareLinkPanel({
             busy={busy}
             onCreateDraft={onCreateDraft}
           />
+        ) : state.previewOpen ? (
+          <PreviewView
+            loading={state.actionPending === "preview"}
+            error={
+              state.actionPending !== "preview" && !state.previewData ? state.actionError : null
+            }
+            data={state.previewData}
+            onClose={onClosePreview}
+          />
         ) : (
           <>
             <LinkStateView
@@ -201,6 +220,7 @@ export function ShareLinkPanel({
               onWhatsApp={onWhatsApp}
               onRequestRotate={() => runWithConfirm("rotate", onRotate)}
               onCancelRotateConfirm={() => setConfirmingAction(null)}
+              onOpenPreview={onOpenPreview}
             />
             {state.project && state.data ? (
               <ShareLinkConfigurationEditor
@@ -255,6 +275,47 @@ function NoLinkView({
       >
         Create draft link
       </DashboardButton>
+    </div>
+  );
+}
+
+function PreviewView({
+  loading,
+  error,
+  data,
+  onClose,
+}: {
+  loading: boolean;
+  error: string | null;
+  data: ClientProjectProjection | null;
+  onClose: () => void;
+}) {
+  return (
+    <div style={stack(3)}>
+      <div style={previewFrameStyle}>
+        <div style={previewBannerStyle}>
+          <div style={stack(1)}>
+            <span style={previewBannerTitleStyle}>Client preview</span>
+            <span style={previewBannerSubtitleStyle}>
+              This is what your client will see. No client link or secret is
+              used to generate this preview.
+            </span>
+          </div>
+          <DashboardButton variant="ghost" size="sm" onClick={onClose}>
+            Close preview
+          </DashboardButton>
+        </div>
+
+        {loading ? (
+          <div style={statusRowStyle}>Loading preview...</div>
+        ) : error ? (
+          <div style={errorTextStyle}>{error}</div>
+        ) : data ? (
+          <div style={previewBodyStyle}>
+            <ClientProjectView projection={data} />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -393,4 +454,38 @@ const fieldLabelStyle: CSSProperties = {
   fontSize: dashboardTypography.size.sm,
   fontWeight: dashboardTypography.weight.medium,
   color: dashboardColors.text.muted,
+};
+
+const previewFrameStyle: CSSProperties = {
+  border: `2px solid ${dashboardColors.primary[500]}`,
+  borderRadius: dashboardRadii.xl,
+  overflow: "hidden",
+};
+
+const previewBannerStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: dashboardSpacing[3],
+  padding: dashboardSpacing[3],
+  background: dashboardColors.primary[50],
+  borderBottom: `1px solid ${dashboardColors.primary[100]}`,
+};
+
+const previewBannerTitleStyle: CSSProperties = {
+  fontSize: dashboardTypography.size.sm,
+  fontWeight: dashboardTypography.weight.black,
+  letterSpacing: "0.04em",
+  textTransform: "uppercase",
+  color: dashboardColors.primary[700],
+};
+
+const previewBannerSubtitleStyle: CSSProperties = {
+  fontSize: dashboardTypography.size.xs,
+  color: dashboardColors.primary[700],
+};
+
+const previewBodyStyle: CSSProperties = {
+  maxHeight: "60vh",
+  overflowY: "auto",
 };

@@ -70,6 +70,7 @@ export type ShareLinkChannelsProps = {
   onWhatsApp: (popup: Window | null) => void;
   onRequestRotate: () => void;
   onCancelRotateConfirm: () => void;
+  onOpenPreview: () => void;
 };
 
 const ROTATE_WARNING =
@@ -86,9 +87,15 @@ export function ShareLinkChannels({
   onWhatsApp,
   onRequestRotate,
   onCancelRotateConfirm,
+  onOpenPreview,
 }: ShareLinkChannelsProps) {
   const canRevealForSharing = linkState === "active";
   const canRotate = linkState === "active" || linkState === "disabled";
+  // Preview is a configuration-inspection capability, not a public-access
+  // one -- it never calls reveal, so it is available for every state this
+  // component ever renders for (draft/active/disabled/expired; revoked
+  // links are already structurally excluded upstream, reading back as
+  // `link: null`), unlike Copy/Native Share/WhatsApp/Rotate above.
 
   // Deterministic on every server render and every first client render:
   // always false until the post-mount effect below runs. See this file's
@@ -134,13 +141,18 @@ export function ShareLinkChannels({
     onWhatsApp(popup);
   }
 
-  if (!canRevealForSharing && !canRotate) {
-    return null;
-  }
-
   return (
     <div style={stack(4)}>
       <SectionHeading title="Link" />
+
+      <DashboardButton
+        variant="secondary"
+        onClick={onOpenPreview}
+        loading={actionPending === "preview"}
+        disabled={disabled}
+      >
+        Preview
+      </DashboardButton>
 
       {canRevealForSharing ? (
         <div style={stack(2)}>

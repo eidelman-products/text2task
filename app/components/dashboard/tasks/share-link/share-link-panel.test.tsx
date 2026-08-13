@@ -52,6 +52,8 @@ function baseState(overrides: Partial<ShareLinkPanelState> = {}): ShareLinkPanel
     resources: [],
     resourcesLoading: false,
     resourcesError: null,
+    previewOpen: false,
+    previewData: null,
     ...overrides,
   };
 }
@@ -112,6 +114,8 @@ function renderPanel(state: ShareLinkPanelState, overrides: Partial<Parameters<t
         onRotate={vi.fn()}
         onNativeShare={vi.fn()}
         onWhatsApp={vi.fn()}
+        onOpenPreview={vi.fn()}
+        onClosePreview={vi.fn()}
         {...overrides}
       />
     );

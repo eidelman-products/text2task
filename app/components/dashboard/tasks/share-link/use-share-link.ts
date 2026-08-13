@@ -4,6 +4,7 @@ import type {
   SaveShareConfigurationRequest,
   ShareLinkManagementStateData,
 } from "@/lib/share/share-contracts";
+import type { ClientProjectProjection } from "@/lib/share/client-share-projection-contracts";
 import type { TaskProjectGroup } from "../task-types";
 import { fetchTaskResources, type TaskResource } from "../../resources/resource-api";
 import {
@@ -14,6 +15,7 @@ import {
   createShareLinkDraft as createShareLinkDraftRequest,
   disableShareLink as disableShareLinkRequest,
   getShareLinkManagementState,
+  previewShareLink as previewShareLinkRequest,
   reenableShareLink as reenableShareLinkRequest,
   revealShareLinkSecret as revealShareLinkSecretRequest,
   revokeShareLink as revokeShareLinkRequest,
@@ -65,7 +67,8 @@ export type ShareLinkActionKind =
   | "clearExpiry"
   | "rotate"
   | "nativeShare"
-  | "whatsapp";
+  | "whatsapp"
+  | "preview";
 
 export type ShareLinkPanelState = {
   isOpen: boolean;
@@ -87,6 +90,14 @@ export type ShareLinkPanelState = {
   resources: TaskResource[];
   resourcesLoading: boolean;
   resourcesError: string | null;
+  // Phase 2D owner Preview. `previewData` holds only the strict
+  // client-facing projection (never the raw project/link) and is
+  // discarded on close so a stale preview can never linger past the
+  // session that fetched it. Loading/error for the fetch itself reuse
+  // the existing generic actionPending==="preview"/actionError fields,
+  // matching every other action here.
+  previewOpen: boolean;
+  previewData: ClientProjectProjection | null;
 };
 
 const INITIAL_STATE: ShareLinkPanelState = {
@@ -102,6 +113,8 @@ const INITIAL_STATE: ShareLinkPanelState = {
   resources: [],
   resourcesLoading: false,
   resourcesError: null,
+  previewOpen: false,
+  previewData: null,
 };
 
 export function getShareLinkProjectId(
@@ -578,6 +591,40 @@ export function useShareLink() {
     [runAction]
   );
 
+  /*
+    Phase 2D owner Preview. Fetches the SAME strict projection Phase 3's
+    future public route will build, via the authenticated-owner-only
+    /preview endpoint -- never the secure share link or secret, never a
+    reveal call, never a public-view side effect (see the route's own
+    doc comment: no view_count increment, no last_viewed_at mutation, no
+    share_link_events row). `openPreview` sets previewOpen synchronously
+    (so the panel can render its "loading" state immediately) and then
+    runs the fetch through the same reentrancy-guarded runAction every
+    other action here uses. `closePreview` discards the fetched
+    projection entirely rather than merely hiding it, so reopening
+    Preview always fetches fresh, current data instead of showing a
+    possibly-stale one.
+  */
+  const openPreview = useCallback(() => {
+    setState((current) => ({ ...current, previewOpen: true }));
+
+    return runAction("preview", async () => {
+      const linkId = latestLinkIdRef.current;
+      if (!linkId) throw new Error("Missing share link id.");
+      const projectId = latestProjectIdRef.current;
+
+      const data = await previewShareLinkRequest(linkId);
+
+      setState((current) =>
+        current.projectId === projectId ? { ...current, previewData: data } : current
+      );
+    });
+  }, [runAction]);
+
+  const closePreview = useCallback(() => {
+    setState((current) => ({ ...current, previewOpen: false, previewData: null }));
+  }, []);
+
   return {
     state,
     triggerRef,
@@ -599,5 +646,7 @@ export function useShareLink() {
     rotate,
     nativeShare,
     whatsapp,
+    openPreview,
+    closePreview,
   };
 }

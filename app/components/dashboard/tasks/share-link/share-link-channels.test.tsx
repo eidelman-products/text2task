@@ -14,6 +14,7 @@ function renderChannels(overrides: Partial<ShareLinkChannelsProps> = {}) {
   const onWhatsApp = vi.fn();
   const onRequestRotate = vi.fn();
   const onCancelRotateConfirm = vi.fn();
+  const onOpenPreview = vi.fn();
 
   const defaultProps: ShareLinkChannelsProps = {
     linkState: "active",
@@ -26,6 +27,7 @@ function renderChannels(overrides: Partial<ShareLinkChannelsProps> = {}) {
     onWhatsApp,
     onRequestRotate,
     onCancelRotateConfirm,
+    onOpenPreview,
     ...overrides,
   };
 
@@ -92,6 +94,7 @@ describe("ShareLinkChannels - Native Share hydration safety", () => {
     onWhatsApp: vi.fn(),
     onRequestRotate: vi.fn(),
     onCancelRotateConfirm: vi.fn(),
+    onOpenPreview: vi.fn(),
   };
 
   it("server-rendered markup always shows the unsupported fallback -- Node has no Web Share API, and the render body never reads navigator.share to decide otherwise", () => {
@@ -235,14 +238,20 @@ describe("ShareLinkChannels - disabled/pending state", () => {
     vi.stubGlobal("navigator", { share: vi.fn() });
     renderChannels({ linkState: "active", disabled: true });
 
+    expect(screen.getByRole("button", { name: /preview/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /copy client link/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /share\.\.\./i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /whatsapp/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /^rotate link$/i })).toBeDisabled();
   });
 
-  it("renders nothing for a fully non-revealable, non-rotatable state (expired)", () => {
-    const { container } = renderChannels({ linkState: "expired" });
-    expect(container).toBeEmptyDOMElement();
+  it("renders only Preview for a fully non-revealable, non-rotatable state (expired) -- Preview is a configuration-inspection capability, not public access, so it remains available", () => {
+    renderChannels({ linkState: "expired" });
+
+    expect(screen.getByRole("button", { name: /preview/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /copy client link/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /share\.\.\./i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /whatsapp/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^rotate link$/i })).not.toBeInTheDocument();
   });
 });

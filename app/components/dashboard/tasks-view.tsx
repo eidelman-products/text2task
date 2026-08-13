@@ -763,6 +763,8 @@ export default function TasksView({
         onRotate={() => void shareLink.rotate()}
         onNativeShare={() => void shareLink.nativeShare()}
         onWhatsApp={(popup) => void shareLink.whatsapp(popup)}
+        onOpenPreview={() => void shareLink.openPreview()}
+        onClosePreview={shareLink.closePreview}
       />
 
       <TaskDeleteModals
