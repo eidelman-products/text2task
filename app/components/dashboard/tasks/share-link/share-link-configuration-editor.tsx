@@ -123,8 +123,27 @@ function suggestPublicGroup(internalStatus: string): SaveShareConfigurationTaskI
   return "in_progress";
 }
 
-function isShareableResource(resource: TaskResource): boolean {
+/** Exported so the quick-share flow (quick-share-defaults.ts) can apply
+ * the exact same Note-exclusion rule when building its own attachment
+ * picker -- one source of truth for "what counts as a shareable
+ * Resource", never a second, potentially-drifting copy. */
+export function isShareableResource(resource: TaskResource): boolean {
   return !isNoteResource(resource) && (isFileResource(resource) || isLinkResource(resource));
+}
+
+/** The safe new-selection defaults for a Resource with no persisted
+ * mapping -- shared between buildInitialResourceDrafts' unmapped branch
+ * and toggle/updateResourceField's own fallback (see the resources-
+ * loading-race comment on the re-initialization effect below), so a
+ * Resource can never end up with a draft object missing publicLabel/
+ * canDownload/displayOrder entirely. */
+function defaultResourceDraft(resource: TaskResource): ResourceDraft {
+  return {
+    selected: false,
+    publicLabel: resource.title?.trim() || "Shared resource",
+    canDownload: false,
+    displayOrder: null,
+  };
 }
 
 /**
@@ -187,12 +206,7 @@ function buildInitialResourceDrafts(
           canDownload: mapped.canDownload,
           displayOrder: mapped.displayOrder,
         }
-      : {
-          selected: false,
-          publicLabel: resource.title?.trim() || "Shared resource",
-          canDownload: false,
-          displayOrder: null,
-        };
+      : defaultResourceDraft(resource);
   }
 
   return drafts;
@@ -261,6 +275,27 @@ export function ShareLinkConfigurationEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [link.id, link.configurationVersion]);
 
+  // REAL BROWSER DEFECT FIX: ShareLinkPanel mounts this editor as soon as
+  // the management-state read (mappedResources) resolves -- it does not
+  // wait for the separate, independently-timed Resources fetch
+  // (loadResources) to finish. save_share_configuration also never bumps
+  // configurationVersion for a resource-only change ("task, Resource and
+  // update-publication changes never touch it"), so the effect above,
+  // keyed only on [link.id, link.configurationVersion], cannot be relied
+  // on to re-run once Resources finishes loading. If that fetch resolves
+  // AFTER this component's first mount, buildInitialResourceDrafts above
+  // ran against an empty `resources` array and every already-mapped
+  // Resource's persisted publicLabel/canDownload/displayOrder was never
+  // applied. This effect re-applies the persisted mapping once Resources
+  // (or the mapping itself) actually changes, but only while the owner
+  // has not yet touched this section this session -- it must never
+  // clobber an in-progress edit.
+  useEffect(() => {
+    if (resourcesTouched) return;
+    setResourceDrafts(buildInitialResourceDrafts(shareableResources, mappedResources));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shareableResources, mappedResources, resourcesTouched]);
+
   function toggleTask(id: string) {
     setTasksTouched(true);
     setTaskDrafts((current) => ({
@@ -277,12 +312,33 @@ export function ShareLinkConfigurationEditor({
     }));
   }
 
+  // Falls back to defaultResourceDraft(resource) rather than spreading a
+  // possibly-undefined current[id] -- if this row's draft was never
+  // initialized (e.g. the owner interacts with it in the split second
+  // before the resources-loading-race effect above has re-applied the
+  // persisted mapping), the resulting draft must still carry a real
+  // publicLabel, never `undefined`. An `undefined` publicLabel would
+  // otherwise reach buildSaveRequest's `draft.publicLabel.trim()` and
+  // throw, which is the exact mechanism behind the generic "That action
+  // could not be completed." save failure this fix also closes off.
+  function resourceDraftBase(current: Record<string, ResourceDraft>, id: string): ResourceDraft {
+    const existing = current[id];
+    if (existing) return existing;
+    const resource = shareableResources.find((candidate) => candidate.id === id);
+    return resource ? defaultResourceDraft(resource) : {
+      selected: false,
+      publicLabel: "Shared resource",
+      canDownload: false,
+      displayOrder: null,
+    };
+  }
+
   function toggleResource(id: string) {
     setResourcesTouched(true);
-    setResourceDrafts((current) => ({
-      ...current,
-      [id]: { ...current[id], selected: !current[id]?.selected },
-    }));
+    setResourceDrafts((current) => {
+      const base = resourceDraftBase(current, id);
+      return { ...current, [id]: { ...base, selected: !base.selected } };
+    });
   }
 
   function updateResourceField<K extends keyof ResourceDraft>(
@@ -293,7 +349,7 @@ export function ShareLinkConfigurationEditor({
     setResourcesTouched(true);
     setResourceDrafts((current) => ({
       ...current,
-      [id]: { ...current[id], [field]: value },
+      [id]: { ...resourceDraftBase(current, id), [field]: value },
     }));
   }
 

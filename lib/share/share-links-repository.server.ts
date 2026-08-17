@@ -40,12 +40,50 @@ import { hashSharePin } from "@/lib/share/share-pin.server";
 import {
   createShareSecretDigest,
   generateRawShareSecret,
+  isShareSecretError,
   SHARE_SECRET_DIGEST_VERSION,
 } from "@/lib/share/share-secret.server";
 import {
   decryptShareSecret,
   encryptShareSecret,
+  isShareSecretEncryptionError,
 } from "@/lib/share/share-secret-encryption.server";
+
+/**
+ * Real browser defect #3 investigation: activateShareLink/
+ * rotateShareLinkSecret both generate and encrypt a fresh secret BEFORE
+ * calling their RPC, and both previously discarded any failure from that
+ * step with a bare `catch { return UNEXPECTED }` -- meaning a missing or
+ * malformed TEXT2TASK_SHARE_SECRET_HMAC_KEY_V1/
+ * TEXT2TASK_SHARE_SECRET_ENCRYPTION_KEY_V1 environment variable on a
+ * given deployment (a real, plausible, and byte-for-byte-reproducing
+ * explanation for the reported "activate returns 500 with only
+ * 'Failed to activate the share link.'" symptom -- config succeeds
+ * because save_share_configuration never touches secret material at
+ * all) was completely invisible in every log. This helper logs ONLY a
+ * fixed operation tag and, when the error is one of the two typed
+ * secret-material error classes, its own safe enum `.code` (e.g.
+ * "encryption_key_missing") -- never the key, never the raw secret,
+ * never the digest/ciphertext. The HTTP response and owner-facing
+ * message are completely unchanged by this -- both still return
+ * `UNEXPECTED` -> INTERNAL_ERROR -> the existing generic fallback text;
+ * this only makes the cause visible in Vercel's own function logs.
+ */
+function logSecretMaterialFailure(operation: string, error: unknown): void {
+  if (isShareSecretError(error) || isShareSecretEncryptionError(error)) {
+    console.error("share_links_secret_material_failure", {
+      operation,
+      reason: error.code,
+    });
+    return;
+  }
+
+  console.error("share_links_secret_material_failure", {
+    operation,
+    reason: "unexpected_error",
+    category: error instanceof Error ? "Error" : "UnknownThrownValue",
+  });
+}
 
 /**
  * Minimal structural shape of the Supabase RPC call this repository
@@ -286,6 +324,27 @@ function mapSaveConfigurationRpcError(
     case "SHARE_RESOURCE_PROJECT_MISMATCH":
     case "SHARE_RESOURCE_TASK_PROJECT_MISMATCH":
       return { code: "INVALID_REQUEST" };
+    // Objective B real browser defect #2 investigation: these four codes
+    // are enforce_share_link_update_integrity's (202608030005) own
+    // defense-in-depth checks on the publishUpdate insert/retire this RPC
+    // performs -- SHARE_UPDATE_LINK_NOT_FOUND, SHARE_UPDATE_OWNER_MISMATCH
+    // and SHARE_UPDATE_CREATED_BY_MISMATCH on insert, SHARE_UPDATE_IMMUTABLE
+    // on the retire-current-row update. This RPC's own logic always
+    // inserts with user_id = created_by = the already-ownership-verified
+    // caller and never touches the retired row's immutable columns, so
+    // none of these should ever fire in practice -- but until this fix
+    // they fell through to the `default: UNEXPECTED` branch below
+    // unmapped, exactly like the SHARE_TASK_*/SHARE_RESOURCE_* trigger
+    // codes did before this file's own precedent for them was added.
+    // Mapped the same way, for the same reason: never leak the trigger's
+    // own message, but never silently collapse a real defense-in-depth
+    // signal into the same generic bucket reserved for the three verified
+    // "should be structurally impossible" row-count assertions below.
+    case "SHARE_UPDATE_LINK_NOT_FOUND":
+    case "SHARE_UPDATE_OWNER_MISMATCH":
+    case "SHARE_UPDATE_CREATED_BY_MISMATCH":
+    case "SHARE_UPDATE_IMMUTABLE":
+      return { code: "INVALID_REQUEST" };
     default:
       // Includes TASK_SET_VERIFICATION_FAILED,
       // RESOURCE_SET_VERIFICATION_FAILED and
@@ -508,7 +567,8 @@ export async function activateShareLink<Client>(
     nonceHex = hexFromBuffer(encrypted.nonce);
     authTagHex = hexFromBuffer(encrypted.authTag);
     encryptionVersion = encrypted.encryptionVersion;
-  } catch {
+  } catch (error) {
+    logSecretMaterialFailure("activate_share_link", error);
     return { ok: false, error: { code: "UNEXPECTED" } };
   }
 
@@ -795,7 +855,8 @@ export async function rotateShareLinkSecret<Client>(
     nonceHex = hexFromBuffer(encrypted.nonce);
     authTagHex = hexFromBuffer(encrypted.authTag);
     encryptionVersion = encrypted.encryptionVersion;
-  } catch {
+  } catch (error) {
+    logSecretMaterialFailure("rotate_share_link_secret", error);
     return { ok: false, error: { code: "UNEXPECTED" } };
   }
 
@@ -924,7 +985,8 @@ export async function revealShareLinkSecret<Client>(
       encryptionVersion: parsedRpc.data.encryptionVersion,
       shareLinkId: canonicalLinkId,
     });
-  } catch {
+  } catch (error) {
+    logSecretMaterialFailure("reveal_share_link_secret", error);
     return { ok: false, error: { code: "SHARE_LINK_SECRET_UNAVAILABLE" } };
   }
 

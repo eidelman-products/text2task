@@ -3,17 +3,32 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { shouldSkipAnalyticsPath } from "@/lib/analytics/analytics-paths";
 import {
   useAnalyticsConsentChoice,
   writeAnalyticsConsentChoice,
 } from "@/lib/analytics/analytics-consent";
 
-const HOMEPAGE_DEMO_REVIEW_PATH = "/homepage-demo/review";
-
+/*
+  Real browser defect #4 turn -- analytics finding: MicrosoftClarity/
+  GoogleAdsTag/ConsentAwareVercelAnalytics/AttributionCapture already all
+  gate on shouldSkipAnalyticsPath, so no third-party script or session-
+  replay ever actually initializes on /share/** (or /admin, or the
+  homepage-demo review path) -- confirmed by direct inspection, not
+  assumed. This banner was the one remaining piece that did not share
+  that same exclusion: it used its own hand-rolled single-path check
+  (only /homepage-demo/review), so it still rendered on /share/** even
+  though every actual tracking script there was already suppressed. Now
+  reuses the exact same canonical shouldSkipAnalyticsPath check every
+  analytics component already uses -- one source of truth for "which
+  paths are analytics-excluded", not a second, drifting copy -- so the
+  banner is silent everywhere no analytics can fire, and unchanged
+  everywhere it can.
+*/
 export function CookieConsentBanner() {
   const pathname = usePathname();
 
-  if (pathname === HOMEPAGE_DEMO_REVIEW_PATH) {
+  if (shouldSkipAnalyticsPath(pathname)) {
     return null;
   }
 

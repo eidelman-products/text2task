@@ -611,8 +611,13 @@ const sharePublicIdSchema = z.string().regex(/^[A-Za-z0-9_-]{16,64}$/);
  * never in the create-draft, disable or re-enable data contracts, which
  * have nothing to reveal. Exactly 43 base64url characters, matching
  * lib/share/share-secret.server.ts's generateRawShareSecret output shape.
+ *
+ * Exported (this file carries no `server-only` import) so the Phase 3
+ * public browser fragment handler can validate the #secret's shape using
+ * this SAME canonical schema -- never a second, independently
+ * hand-rolled regex that could silently drift from the real shape.
  */
-const rawShareSecretSchema = z
+export const rawShareSecretSchema = z
   .string()
   .regex(/^[A-Za-z0-9_-]{43}$/, "Must be exactly 43 base64url characters.");
 

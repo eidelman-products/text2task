@@ -6,6 +6,7 @@ import {
   isNoteResource,
   type TaskResource,
 } from "@/app/components/dashboard/resources/resource-api";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { canonicalizeUuid } from "./share-contracts";
 import {
   clientProjectProjectionSchema,
@@ -168,6 +169,143 @@ function classifyResource(row: ResourceRow): "file" | "link" | "note" {
   return "note";
 }
 
+/*
+  Phase 3 refactor -- the shared strict-projection CORE, extracted
+  unchanged in behavior from Phase 2D's single implementation. Every
+  privacy rule (visibility gating, progress-from-shared-tasks-only,
+  Note-Resource exclusion, http/https URL allowlist, fail-closed
+  disappearance for an unresolved mapped task/Resource) lives in exactly
+  ONE place, used by both callers below:
+
+    authorized owner Preview (buildClientShareProjection)
+                    \
+                     -> assembleClientProjection -> ClientProjectProjection
+                    /
+    verified public session/grant (buildPublicClientShareProjection)
+
+  This function performs no I/O -- both callers resolve their own rows
+  first (through their own, differently-authorized data sources) and pass
+  already-resolved values in. Neither caller's authorization model is
+  hardcoded here.
+*/
+
+type LinkPublicationFields = {
+  titleVisible: boolean;
+  statusVisible: boolean;
+  targetDateVisible: boolean;
+  clientFacingSubtitle: string | null;
+  contentDirection: "auto" | "ltr" | "rtl";
+  commentsEnabled: boolean;
+};
+
+type MappedTaskInput = {
+  subtaskId: string;
+  publicGroup: ClientProjectTask["publicGroup"];
+  waitingForClientFeedback: boolean;
+};
+
+type MappedResourceInput = {
+  resourceId: string;
+  publicLabel: string;
+  canDownload: boolean;
+};
+
+type CurrentUpdateInput = { body: string; publishedAt: string } | null;
+
+function assembleClientProjection(input: {
+  link: LinkPublicationFields;
+  project: ProjectRow | null;
+  mappedTasks: readonly MappedTaskInput[];
+  mappedResources: readonly MappedResourceInput[];
+  currentUpdate: CurrentUpdateInput;
+  taskTitleById: Map<number, string>;
+  resourceRowById: Map<string, ResourceRow>;
+}): ClientSharePreviewResult {
+  // Only the mapped tasks' titles -- share_link_tasks itself never
+  // stores a copy of the title, only the subtask_id plus the
+  // owner-curated publicGroup/waitingForClientFeedback. A mapped task
+  // that no longer resolves (soft-deleted) is simply left out of
+  // taskTitleById by the caller and therefore disappears from the
+  // projection here -- fail-closed disappearance, never a placeholder.
+  const tasks: ClientProjectTask[] = [];
+  for (const mapped of input.mappedTasks) {
+    const title = input.taskTitleById.get(Number(mapped.subtaskId));
+    if (title === undefined) continue;
+    tasks.push({
+      title,
+      publicGroup: mapped.publicGroup,
+      waitingForClientFeedback: mapped.waitingForClientFeedback,
+    });
+  }
+
+  // Only the mapped Resources' safe display metadata -- share_link_resources
+  // already stores the owner-authored publicLabel and canDownload; the
+  // resolved task_resources row is used here ONLY to classify file-vs-link
+  // (never to return storage_path/file_name/mime_type/size_bytes, per
+  // AGENTS.md rule 4) and, for a link resource only, its owner-provided
+  // external url, filtered through the http/https allowlist. A Note
+  // Resource is excluded outright. A mapped Resource that no longer
+  // resolves is simply left out by the caller -- fail-closed disappearance.
+  const resources: ClientProjectResource[] = [];
+  for (const mapped of input.mappedResources) {
+    const row = input.resourceRowById.get(mapped.resourceId);
+    if (!row) continue;
+
+    const kind = classifyResource(row);
+    if (kind === "note") continue;
+
+    if (kind === "file") {
+      resources.push({ kind: "file", label: mapped.publicLabel, canDownload: mapped.canDownload });
+    } else {
+      const safeUrl = toSafeExternalClientUrl(row.url);
+      if (safeUrl) {
+        resources.push({ kind: "link", label: mapped.publicLabel, url: safeUrl });
+      }
+      // else: an unsafe scheme (javascript:/data:/file:/vbscript:/etc.) or
+      // a malformed/non-absolute value -- fail closed, the resource is
+      // omitted entirely, never exposed with a stripped or raw fallback
+      // URL.
+    }
+  }
+
+  // Progress computed ONLY from the shared tasks that actually resolved
+  // above -- never from any internal project-wide task count.
+  const progress =
+    tasks.length === 0
+      ? null
+      : {
+          completed: tasks.filter((t) => t.publicGroup === "completed").length,
+          total: tasks.length,
+          percent: Math.round(
+            (tasks.filter((t) => t.publicGroup === "completed").length / tasks.length) * 100
+          ),
+        };
+
+  const projection: ClientProjectProjection = {
+    title: input.link.titleVisible ? input.project?.title ?? null : null,
+    subtitle: input.link.clientFacingSubtitle,
+    status: input.link.statusVisible
+      ? mapProjectStatusForClient(input.project?.status ?? null)
+      : null,
+    targetDate: input.link.targetDateVisible ? input.project?.deadline_date ?? null : null,
+    contentDirection: input.link.contentDirection,
+    commentsEnabled: input.link.commentsEnabled,
+    progress,
+    latestUpdate: input.currentUpdate
+      ? { body: input.currentUpdate.body, publishedAt: input.currentUpdate.publishedAt }
+      : null,
+    tasks,
+    resources,
+  };
+
+  const parsed = clientProjectProjectionSchema.safeParse(projection);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  return { ok: true, data: parsed.data };
+}
+
 export async function buildClientShareProjection<Client>(
   supabase: Client,
   input: { linkId: string; userId: string }
@@ -226,14 +364,8 @@ export async function buildClientShareProjection<Client>(
   }
   const project = (projectRow as ProjectRow | null) ?? null;
 
-  // Step 4: only the mapped tasks' titles -- share_link_tasks itself
-  // never stores a copy of the title, only the subtask_id plus the
-  // owner-curated publicGroup/waitingForClientFeedback/displayOrder
-  // (already present on managementState.data.mappedTasks). A mapped
-  // task that no longer resolves (soft-deleted) is simply left out of
-  // the id->title map below and therefore disappears from the
-  // projection -- fail-closed disappearance, never a placeholder.
-  const mappedTasks = "mappedTasks" in managementState.data ? managementState.data.mappedTasks : [];
+  const mappedTasks: MappedTaskInput[] =
+    "mappedTasks" in managementState.data ? managementState.data.mappedTasks : [];
   const taskIds = mappedTasks.map((t) => Number(t.subtaskId)).filter((id) => Number.isFinite(id));
 
   const taskTitleById = new Map<number, string>();
@@ -256,29 +388,7 @@ export async function buildClientShareProjection<Client>(
     }
   }
 
-  const tasks: ClientProjectTask[] = [];
-  for (const mapped of mappedTasks) {
-    const title = taskTitleById.get(Number(mapped.subtaskId));
-    if (title === undefined) continue;
-    tasks.push({
-      title,
-      publicGroup: mapped.publicGroup,
-      waitingForClientFeedback: mapped.waitingForClientFeedback,
-    });
-  }
-
-  // Step 5: only the mapped Resources' safe display metadata --
-  // share_link_resources already stores the owner-authored publicLabel
-  // and canDownload; task_resources is read here ONLY to classify
-  // file-vs-link (never to return storage_path/file_name/mime_type/
-  // size_bytes, per AGENTS.md rule 4) and, for a link resource only, its
-  // owner-provided external url. A Note Resource can never reach
-  // share_link_resources in the first place (Phase 2B's editor only
-  // offers file/link resources for selection), but classifyResource
-  // still defensively excludes one if it somehow appeared. A mapped
-  // Resource that no longer resolves (task_resources hard-deletes) is
-  // simply left out -- fail-closed disappearance.
-  const mappedResources =
+  const mappedResources: MappedResourceInput[] =
     "mappedResources" in managementState.data ? managementState.data.mappedResources : [];
   const resourceIds = mappedResources.map((r) => r.resourceId);
 
@@ -299,65 +409,214 @@ export async function buildClientShareProjection<Client>(
     }
   }
 
-  const resources: ClientProjectResource[] = [];
-  for (const mapped of mappedResources) {
-    const row = resourceRowById.get(mapped.resourceId);
-    if (!row) continue;
-
-    const kind = classifyResource(row);
-    if (kind === "note") continue;
-
-    if (kind === "file") {
-      resources.push({ kind: "file", label: mapped.publicLabel, canDownload: mapped.canDownload });
-    } else {
-      const safeUrl = toSafeExternalClientUrl(row.url);
-      if (safeUrl) {
-        resources.push({ kind: "link", label: mapped.publicLabel, url: safeUrl });
-      }
-      // else: an unsafe scheme (javascript:/data:/file:/vbscript:/etc.) or
-      // a malformed/non-absolute value -- fail closed, the resource is
-      // omitted entirely, never exposed with a stripped or raw fallback
-      // URL.
-    }
-  }
-
-  // Step 6: progress computed ONLY from the shared tasks that actually
-  // resolved above -- never from any internal project-wide task count,
-  // which this function never even queries.
-  const progress =
-    tasks.length === 0
-      ? null
-      : {
-          completed: tasks.filter((t) => t.publicGroup === "completed").length,
-          total: tasks.length,
-          percent: Math.round(
-            (tasks.filter((t) => t.publicGroup === "completed").length / tasks.length) * 100
-          ),
-        };
-
-  const projection: ClientProjectProjection = {
-    title: link.titleVisible ? project?.title ?? null : null,
-    subtitle: link.clientFacingSubtitle,
-    status: link.statusVisible ? mapProjectStatusForClient(project?.status ?? null) : null,
-    targetDate: link.targetDateVisible ? project?.deadline_date ?? null : null,
-    contentDirection: link.contentDirection,
-    commentsEnabled: link.commentsEnabled,
-    progress,
-    latestUpdate:
+  return assembleClientProjection({
+    link,
+    project,
+    mappedTasks,
+    mappedResources,
+    currentUpdate:
       "currentUpdate" in managementState.data && managementState.data.currentUpdate
         ? {
             body: managementState.data.currentUpdate.body,
             publishedAt: managementState.data.currentUpdate.publishedAt,
           }
         : null,
-    tasks,
-    resources,
-  };
+    taskTitleById,
+    resourceRowById,
+  });
+}
 
-  const parsed = clientProjectProjectionSchema.safeParse(projection);
-  if (!parsed.success) {
+/*
+  Phase 3 -- the public, service-role-mediated counterpart of
+  buildClientShareProjection. MUST be called only after the caller has
+  already performed its own full session/grant verification
+  (lib/share/share-session-grant.server.ts's verifyShareProjectionAuthorization)
+  -- this function trusts shareLinkId/projectId/userId as already-proven
+  inputs, exactly like the owner path trusts its own auth-verified linkId.
+  It never calls the owner-authenticated get_share_link_management_state
+  RPC (that RPC requires auth.uid(), which is null under the service-role
+  key) -- instead it reads project_share_links/share_link_tasks/
+  share_link_resources/share_link_updates directly via the service-role
+  client, using explicit bounded column selects, each scoped by
+  share_link_id/project_id/user_id, exactly as the Phase 3 rate-limit
+  foundation's sibling migrations already grant
+  (`grant select on table public.project_share_links/share_link_tasks/
+  share_link_resources/share_link_updates to service_role`) -- no new RPC,
+  no new migration, no weakened privilege.
+*/
+
+type PublicLinkFieldsRow = {
+  title_visible: boolean;
+  status_visible: boolean;
+  target_date_visible: boolean;
+  client_facing_subtitle: string | null;
+  content_direction: string;
+  comments_enabled: boolean;
+};
+
+type TaskMappingRow = {
+  subtask_id: string;
+  public_group: string;
+  waiting_for_client_feedback: boolean;
+};
+
+type ResourceMappingRow = {
+  resource_id: string;
+  public_label: string;
+  can_download: boolean;
+};
+
+type UpdateRow = { body: string; published_at: string };
+
+export type ClientSharePublicProjectionInput = {
+  shareLinkId: string;
+  projectId: string;
+  userId: string;
+};
+
+export async function buildPublicClientShareProjection(
+  input: ClientSharePublicProjectionInput
+): Promise<ClientSharePreviewResult> {
+  const client = supabaseAdmin as unknown as ProjectionSupabaseLikeClient;
+  const shareLinkId = canonicalizeUuid(input.shareLinkId);
+  const projectId = canonicalizeUuid(input.projectId);
+
+  const { data: linkRow, error: linkError } = await client
+    .from("project_share_links")
+    .select(
+      "title_visible, status_visible, target_date_visible, client_facing_subtitle, content_direction, comments_enabled"
+    )
+    .eq("id", shareLinkId)
+    .eq("user_id", input.userId)
+    .maybeSingle();
+
+  if (linkError) {
     return { ok: false, error: { code: "UNEXPECTED" } };
   }
+  if (!linkRow) {
+    return { ok: false, error: { code: "SHARE_LINK_NOT_FOUND" } };
+  }
+  const linkFields = linkRow as unknown as PublicLinkFieldsRow;
+  const link: LinkPublicationFields = {
+    titleVisible: linkFields.title_visible,
+    statusVisible: linkFields.status_visible,
+    targetDateVisible: linkFields.target_date_visible,
+    clientFacingSubtitle: linkFields.client_facing_subtitle,
+    contentDirection: linkFields.content_direction as LinkPublicationFields["contentDirection"],
+    commentsEnabled: linkFields.comments_enabled,
+  };
 
-  return { ok: true, data: parsed.data };
+  const { data: taskMappingRows, error: taskMappingError } = await client
+    .from("share_link_tasks")
+    .select("subtask_id, public_group, waiting_for_client_feedback")
+    .eq("share_link_id", shareLinkId)
+    .eq("user_id", input.userId);
+
+  if (taskMappingError) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+  const mappedTasks: MappedTaskInput[] = (
+    (taskMappingRows as unknown as TaskMappingRow[] | null) ?? []
+  ).map((row) => ({
+    subtaskId: String(row.subtask_id),
+    publicGroup: row.public_group as ClientProjectTask["publicGroup"],
+    waitingForClientFeedback: row.waiting_for_client_feedback,
+  }));
+
+  const { data: resourceMappingRows, error: resourceMappingError } = await client
+    .from("share_link_resources")
+    .select("resource_id, public_label, can_download")
+    .eq("share_link_id", shareLinkId)
+    .eq("user_id", input.userId);
+
+  if (resourceMappingError) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+  const mappedResources: MappedResourceInput[] = (
+    (resourceMappingRows as unknown as ResourceMappingRow[] | null) ?? []
+  ).map((row) => ({
+    resourceId: row.resource_id,
+    publicLabel: row.public_label,
+    canDownload: row.can_download,
+  }));
+
+  const { data: updateRow, error: updateError } = await client
+    .from("share_link_updates")
+    .select("body, published_at")
+    .eq("share_link_id", shareLinkId)
+    .eq("user_id", input.userId)
+    .eq("is_current", true)
+    .maybeSingle();
+
+  if (updateError) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+  const currentUpdate: CurrentUpdateInput = updateRow
+    ? {
+        body: (updateRow as unknown as UpdateRow).body,
+        publishedAt: (updateRow as unknown as UpdateRow).published_at,
+      }
+    : null;
+
+  const { data: projectRow, error: projectError } = await client
+    .from("projects")
+    .select("title, status, deadline_date")
+    .eq("id", projectId)
+    .eq("user_id", input.userId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (projectError) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+  const project = (projectRow as ProjectRow | null) ?? null;
+
+  const taskIds = mappedTasks.map((t) => Number(t.subtaskId)).filter((id) => Number.isFinite(id));
+  const taskTitleById = new Map<number, string>();
+  if (taskIds.length > 0) {
+    const { data: taskRows, error: taskError } = await client
+      .from("tasks")
+      .select("id, task_title")
+      .eq("project_id", projectId)
+      .eq("user_id", input.userId)
+      .is("deleted_at", null)
+      .in("id", taskIds);
+
+    if (taskError) {
+      return { ok: false, error: { code: "UNEXPECTED" } };
+    }
+    for (const row of (taskRows as unknown as TaskRow[] | null) ?? []) {
+      if (typeof row.task_title === "string" && row.task_title.trim().length > 0) {
+        taskTitleById.set(row.id, row.task_title);
+      }
+    }
+  }
+
+  const resourceIds = mappedResources.map((r) => r.resourceId);
+  const resourceRowById = new Map<string, ResourceRow>();
+  if (resourceIds.length > 0) {
+    const { data: resourceRows, error: resourceError } = await client
+      .from("task_resources")
+      .select("id, url, storage_path, file_name, resource_type")
+      .eq("project_id", projectId)
+      .eq("user_id", input.userId)
+      .in("id", resourceIds);
+
+    if (resourceError) {
+      return { ok: false, error: { code: "UNEXPECTED" } };
+    }
+    for (const row of (resourceRows as unknown as ResourceRow[] | null) ?? []) {
+      resourceRowById.set(row.id, row);
+    }
+  }
+
+  return assembleClientProjection({
+    link,
+    project,
+    mappedTasks,
+    mappedResources,
+    currentUpdate,
+    taskTitleById,
+    resourceRowById,
+  });
 }

@@ -24,6 +24,44 @@ import {
   setShareLinkExpiry as setShareLinkExpiryRequest,
   setSharePin as setSharePinRequest,
 } from "./share-link-client";
+import {
+  buildQuickShareResourceItems,
+  buildQuickShareTaskItems,
+} from "./quick-share-defaults";
+
+/**
+ * Real browser defect #2 fix: shareUpdate orchestrates up to four
+ * sequential network calls (create draft, save configuration, set PIN,
+ * activate) behind one actionPending/actionError pair. Before this,
+ * whichever call failed, the owner (and any test/log) saw only the exact
+ * same generic fallback text, with no way to tell which of the four
+ * calls actually failed. Every call site inside shareUpdate below is
+ * wrapped to re-throw a ShareUpdateStageError carrying a fixed `stage`
+ * tag instead of the bare caught error -- describeError unwraps it back
+ * to the original error before running its existing
+ * ShareLinkClientError-code switch (so the owner-facing message is
+ * unchanged for any error code it already recognizes), and runAction
+ * separately records the stage on state.actionErrorStage for
+ * tests/diagnostics. Never exposes DB internals or secrets -- only one
+ * of a small fixed set of stage identifiers.
+ */
+export type ShareUpdateStage =
+  | "share_update_create_draft_failed"
+  | "share_update_save_failed"
+  | "share_update_pin_failed"
+  | "share_update_activate_failed";
+
+export class ShareUpdateStageError extends Error {
+  readonly stage: ShareUpdateStage;
+  readonly cause: unknown;
+
+  constructor(stage: ShareUpdateStage, cause: unknown) {
+    super(cause instanceof Error ? cause.message : "Share update failed.");
+    this.name = "ShareUpdateStageError";
+    this.stage = stage;
+    this.cause = cause;
+  }
+}
 
 /**
  * Reveals the current share secret and builds the ephemeral client URL
@@ -68,7 +106,9 @@ export type ShareLinkActionKind =
   | "rotate"
   | "nativeShare"
   | "whatsapp"
-  | "preview";
+  | "email"
+  | "preview"
+  | "shareUpdate";
 
 export type ShareLinkPanelState = {
   isOpen: boolean;
@@ -79,6 +119,14 @@ export type ShareLinkPanelState = {
   data: ShareLinkManagementStateData | null;
   actionPending: ShareLinkActionKind | null;
   actionError: string | null;
+  // Real browser defect #2 fix: which of shareUpdate's sequential calls
+  // failed, when actionError came from a ShareUpdateStageError -- null
+  // for every other action, and for a shareUpdate failure that somehow
+  // did not go through the stage-tagged path. Never shown to the owner
+  // directly (the UI still shows only the existing safe actionError
+  // text); exists purely so tests/logging can pinpoint the exact failed
+  // step instead of only ever seeing the generic fallback message.
+  actionErrorStage: ShareUpdateStage | null;
   copyStatus: "idle" | "copied" | "failed";
   // Project-level Resources available to select for sharing (Phase 2B).
   // Loaded once when the panel opens, alongside the management-state
@@ -109,6 +157,7 @@ const INITIAL_STATE: ShareLinkPanelState = {
   data: null,
   actionPending: null,
   actionError: null,
+  actionErrorStage: null,
   copyStatus: "idle",
   resources: [],
   resourcesLoading: false,
@@ -147,8 +196,15 @@ export function getShareLinkProjectId(
 }
 
 function describeError(error: unknown, fallback: string): string {
-  if (error instanceof ShareLinkClientError) {
-    switch (error.code) {
+  // Unwrap a stage-tagged shareUpdate failure to the real underlying
+  // error first, so every ShareLinkClientError code this function already
+  // recognizes still produces its existing safe message -- the stage tag
+  // itself is recorded separately (see runAction below), never woven into
+  // the owner-facing text.
+  const underlying = error instanceof ShareUpdateStageError ? error.cause : error;
+
+  if (underlying instanceof ShareLinkClientError) {
+    switch (underlying.code) {
       case "UNAUTHENTICATED":
         return "You need to be signed in to manage this share link.";
       case "PROJECT_NOT_FOUND":
@@ -190,6 +246,23 @@ export function useShareLink() {
 
   const latestLinkIdRef = useRef<string | null>(null);
   latestLinkIdRef.current = state.data?.link?.id ?? null;
+
+  // Objective B (quick-share orchestration): mirrors of the currently
+  // loaded link/data/project, read by shareUpdate/emailLink below so they
+  // can make a single-pass decision (create a draft? activate? apply
+  // automatic task defaults?) without threading extra parameters through
+  // every call site.
+  const latestLinkStateRef = useRef<"draft" | "active" | "disabled" | "expired" | null>(null);
+  latestLinkStateRef.current = state.data?.link?.state ?? null;
+
+  const latestDataRef = useRef<ShareLinkManagementStateData | null>(null);
+  latestDataRef.current = state.data;
+
+  const latestProjectRef = useRef<TaskProjectGroup | null>(null);
+  latestProjectRef.current = state.project;
+
+  const latestResourcesRef = useRef<TaskResource[]>([]);
+  latestResourcesRef.current = state.resources;
 
   // Synchronous reentrancy guard for runAction, mirroring the existing
   // pendingProjectActionRef pattern in tasks-view.tsx's runProjectAction:
@@ -326,6 +399,7 @@ export function useShareLink() {
         ...current,
         actionPending: kind,
         actionError: null,
+        actionErrorStage: null,
       }));
 
       try {
@@ -336,6 +410,7 @@ export function useShareLink() {
           ...current,
           actionPending: null,
           actionError: describeError(error, "That action could not be completed."),
+          actionErrorStage: error instanceof ShareUpdateStageError ? error.stage : null,
         }));
         return;
       }
@@ -625,6 +700,197 @@ export function useShareLink() {
     setState((current) => ({ ...current, previewOpen: false, previewData: null }));
   }, []);
 
+  /*
+    Objective B -- the ONE primary "Share update" action. Owner UI
+    orchestration only: no new backend, no new RPC. Reuses the exact same
+    request functions every existing action above already calls
+    (createShareLinkDraftRequest, saveShareConfigurationRequest,
+    setSharePinRequest, activateShareLinkRequest) -- it cannot call the
+    createDraft/saveConfiguration/activate *action* functions above
+    directly, because those each go through runAction's own reentrancy
+    guard, which is already held by this action's own runAction call by
+    the time they would run, so they would silently no-op. This is the
+    single place that sequence lives, under one actionPending value
+    ("shareUpdate"), so the owner sees one "Sharing..." state instead of
+    five separate ones for what the previous UI made five separate
+    conceptual steps.
+
+    - A brand-new link (no link at all yet) gets its safe default
+      settings (title/status visible, target date hidden, comments off,
+      auto direction) -- see share-contracts.ts's
+      saveShareConfigurationSettingsSchema for the exact accepted keys.
+      An existing link's settings are never touched here; changing them
+      is an "Edit what client sees" concern.
+    - Tasks: buildQuickShareTaskItems only returns an automatic set when
+      NOTHING is mapped yet for this link (see quick-share-defaults.ts's
+      own header comment for why a persisted mapping, once it exists, is
+      never recomputed here).
+    - Attachments/resources are opt-in only: nothing is sent unless the
+      owner explicitly picked at least one this session.
+    - PIN: `input.pin` (a freshly-typed value) sets a brand-new PIN;
+      `input.clearPin` disables an existing one via the same clear-PIN
+      path the old "Manage link" control used; the two are mutually
+      exclusive by construction in the quick-share component (see
+      share-link-quick-share.tsx's own handleShare). Neither ever fires
+      when the checkbox's state simply matches what the link already had
+      (no PIN change intended this submission).
+    - Activation only happens when the link is not already active,
+      satisfying "do not unnecessarily reactivate" for an already-active
+      link.
+  */
+  const shareUpdate = useCallback(
+    (input: {
+      updateBody: string;
+      pin: string | null;
+      clearPin: boolean;
+      attachmentResourceIds: string[];
+    }) => {
+      return runAction("shareUpdate", async () => {
+        const projectId = latestProjectIdRef.current;
+        if (!projectId) throw new Error("Missing project id.");
+
+        const project = latestProjectRef.current;
+        if (!project) throw new Error("Missing project.");
+
+        const dataAtStart = latestDataRef.current;
+        const isFirstShare = !dataAtStart || !dataAtStart.link;
+        const mappedTasksAtStart = dataAtStart?.link ? dataAtStart.mappedTasks : [];
+        const mappedResourcesAtStart = dataAtStart?.link ? dataAtStart.mappedResources : [];
+
+        let linkId = latestLinkIdRef.current;
+        const needsActivation = latestLinkStateRef.current !== "active";
+
+        if (!linkId) {
+          try {
+            await createShareLinkDraftRequest(projectId);
+            const fresh = await getShareLinkManagementState(projectId);
+            if (!fresh.link) throw new Error("Could not create the share link.");
+            linkId = fresh.link.id;
+          } catch (error) {
+            throw new ShareUpdateStageError("share_update_create_draft_failed", error);
+          }
+        }
+
+        const request: SaveShareConfigurationRequest = {};
+
+        if (isFirstShare) {
+          request.settings = {
+            titleVisible: true,
+            statusVisible: true,
+            targetDateVisible: false,
+            commentsEnabled: false,
+            contentDirection: "auto",
+            clientFacingSubtitle: null,
+          };
+        }
+
+        const taskItems = buildQuickShareTaskItems(project.subtasks, mappedTasksAtStart);
+        if (taskItems !== undefined) {
+          request.tasks = taskItems;
+        }
+
+        if (input.attachmentResourceIds.length > 0) {
+          const resourceItems = buildQuickShareResourceItems(
+            input.attachmentResourceIds,
+            latestResourcesRef.current,
+            mappedResourcesAtStart
+          );
+
+          // Defense in depth against ever sending a silently-truncated
+          // resources array: save_share_configuration treats a supplied
+          // `resources` group as a full-set replacement, so a shorter
+          // array than what the owner actually selected would silently
+          // DROP an existing persisted mapping (the exact regression
+          // class real browser defect #1 fixed) rather than merely fail
+          // to add one. If any selected id could not be resolved (neither
+          // already mapped nor found in the loaded Resources list), fail
+          // loudly here, before any network call, instead of sending a
+          // request that could delete a persisted Resource mapping the
+          // owner never asked to remove.
+          if (resourceItems.length !== input.attachmentResourceIds.length) {
+            throw new ShareUpdateStageError(
+              "share_update_save_failed",
+              new Error("One or more selected attachments could not be resolved.")
+            );
+          }
+
+          request.resources = resourceItems;
+        }
+
+        const trimmedUpdate = input.updateBody.trim();
+        if (trimmedUpdate.length > 0) {
+          request.publishUpdate = { body: trimmedUpdate };
+        }
+
+        if (Object.keys(request).length > 0) {
+          try {
+            await saveShareConfigurationRequest(linkId, request);
+          } catch (error) {
+            throw new ShareUpdateStageError("share_update_save_failed", error);
+          }
+        }
+
+        if (input.pin) {
+          try {
+            await setSharePinRequest(linkId, input.pin);
+          } catch (error) {
+            throw new ShareUpdateStageError("share_update_pin_failed", error);
+          }
+        } else if (input.clearPin) {
+          // Owner unchecked "Protect with a PIN" on an already-protected
+          // link -- disable it via the existing clear-PIN path. Never
+          // rotates/recreates the link, and touches nothing else (task/
+          // Resource mappings, the share secret, configuration_version
+          // outside this field, and latest-update state are all
+          // untouched by clear_share_pin, exactly as they already were
+          // for the pre-existing "Manage link" clear-PIN control).
+          try {
+            await clearSharePinRequest(linkId);
+          } catch (error) {
+            throw new ShareUpdateStageError("share_update_pin_failed", error);
+          }
+        }
+
+        if (needsActivation) {
+          try {
+            await activateShareLinkRequest(linkId);
+          } catch (error) {
+            throw new ShareUpdateStageError("share_update_activate_failed", error);
+          }
+        }
+      });
+    },
+    [runAction]
+  );
+
+  /*
+    Email channel (mailto: only this phase -- no email-delivery backend).
+    Mirrors copyLink's own reveal-then-discard pattern: the secret URL is
+    read into a local variable and handed straight to the mailto: link,
+    never assigned to any state. The recipient is prefilled only from the
+    project's own client email already visible to the authenticated owner
+    in this same dashboard (never a new exposure); left blank otherwise.
+    subject/body are composed entirely client-side and opened via the
+    browser's own mailto: handoff -- Text2Task never sends this email.
+  */
+  const emailLink = useCallback(() => {
+    return runAction("email", async () => {
+      const linkId = latestLinkIdRef.current;
+      if (!linkId) throw new Error("Missing share link id.");
+
+      const url = await revealEphemeralShareUrl(linkId);
+      const project = latestProjectRef.current;
+      const projectTitle = project?.projectTitle?.trim() || "your project";
+      const recipient = project?.client_email?.trim() || "";
+
+      const subject = `Project update: ${projectTitle}`;
+      const body = `Hi,\n\nHere's the latest update on your project:\n${url}\n`;
+      const mailto = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+      window.location.href = mailto;
+    });
+  }, [runAction]);
+
   return {
     state,
     triggerRef,
@@ -646,6 +912,8 @@ export function useShareLink() {
     rotate,
     nativeShare,
     whatsapp,
+    emailLink,
+    shareUpdate,
     openPreview,
     closePreview,
   };

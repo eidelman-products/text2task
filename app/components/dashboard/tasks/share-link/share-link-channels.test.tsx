@@ -12,6 +12,7 @@ function renderChannels(overrides: Partial<ShareLinkChannelsProps> = {}) {
   const onCopyLink = vi.fn();
   const onNativeShare = vi.fn();
   const onWhatsApp = vi.fn();
+  const onEmail = vi.fn();
   const onRequestRotate = vi.fn();
   const onCancelRotateConfirm = vi.fn();
   const onOpenPreview = vi.fn();
@@ -25,6 +26,7 @@ function renderChannels(overrides: Partial<ShareLinkChannelsProps> = {}) {
     onCopyLink,
     onNativeShare,
     onWhatsApp,
+    onEmail,
     onRequestRotate,
     onCancelRotateConfirm,
     onOpenPreview,
@@ -32,7 +34,7 @@ function renderChannels(overrides: Partial<ShareLinkChannelsProps> = {}) {
   };
 
   const view = render(<ShareLinkChannels {...defaultProps} />);
-  return { onCopyLink, onNativeShare, onWhatsApp, onRequestRotate, onCancelRotateConfirm, ...view };
+  return { onCopyLink, onNativeShare, onWhatsApp, onEmail, onRequestRotate, onCancelRotateConfirm, ...view };
 }
 
 afterEach(() => {
@@ -60,6 +62,52 @@ describe("ShareLinkChannels - Copy Link", () => {
     expect(screen.queryByRole("button", { name: /copy client link/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /share\.\.\./i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /whatsapp/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("ShareLinkChannels - Email (Objective B, mailto: only)", () => {
+  it("renders Email for an active link and calls onEmail", async () => {
+    const { onEmail } = renderChannels({ linkState: "active" });
+
+    await userEvent.click(screen.getByRole("button", { name: /^email$/i }));
+
+    expect(onEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render Email for a non-active link", () => {
+    renderChannels({ linkState: "draft" });
+    expect(screen.queryByRole("button", { name: /^email$/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("ShareLinkChannels - showChannelButtons/showRotate variants (Objective B secondary views)", () => {
+  it("showChannelButtons=false hides Copy/Native Share/WhatsApp/Email but keeps Preview and Rotate -- the 'Manage link' view", () => {
+    vi.stubGlobal("navigator", { share: vi.fn() });
+    renderChannels({ linkState: "active", showChannelButtons: false });
+
+    expect(screen.queryByRole("button", { name: /copy client link/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /share\.\.\./i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /whatsapp/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^email$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /preview/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^rotate link$/i })).toBeInTheDocument();
+  });
+
+  it("showRotate=false hides Rotate but keeps the sharing channels -- the post-share 'result' view", () => {
+    renderChannels({ linkState: "active", showRotate: false });
+
+    expect(screen.getByRole("button", { name: /copy client link/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /whatsapp/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^email$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /rotate link/i })).not.toBeInTheDocument();
+  });
+
+  it("omitting both flags preserves the original full-channel-set behavior for every pre-existing call site", () => {
+    renderChannels({ linkState: "active" });
+
+    expect(screen.getByRole("button", { name: /copy client link/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^email$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^rotate link$/i })).toBeInTheDocument();
   });
 });
 
@@ -92,6 +140,7 @@ describe("ShareLinkChannels - Native Share hydration safety", () => {
     onCopyLink: vi.fn(),
     onNativeShare: vi.fn(),
     onWhatsApp: vi.fn(),
+    onEmail: vi.fn(),
     onRequestRotate: vi.fn(),
     onCancelRotateConfirm: vi.fn(),
     onOpenPreview: vi.fn(),

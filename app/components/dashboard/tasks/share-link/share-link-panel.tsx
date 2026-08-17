@@ -1,40 +1,44 @@
 "use client";
 
-import { useEffect, useId, useState, type CSSProperties, type RefObject } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type RefObject } from "react";
 
-import { DashboardBadge } from "../../ui/badge";
 import { DashboardButton } from "../../ui/button";
 import { ResponsiveDialog } from "../../ui/responsive-dialog";
-import { row, stack } from "../../ui/styles";
+import { stack } from "../../ui/styles";
 import {
   dashboardColors,
   dashboardRadii,
   dashboardSpacing,
   dashboardTypography,
 } from "../../ui/tokens";
-import type { SaveShareConfigurationRequest } from "@/lib/share/share-contracts";
 import type { ClientProjectProjection } from "@/lib/share/client-share-projection-contracts";
 import { ClientProjectView } from "./client-project-view";
-import { ShareLinkAccessControls } from "./share-link-access-controls";
 import { ShareLinkChannels } from "./share-link-channels";
-import { ConfirmableActionButton } from "./share-link-confirmable-button";
-import { ShareLinkConfigurationEditor } from "./share-link-configuration-editor";
+import { ShareLinkQuickShare, type ShareUpdateSubmission } from "./share-link-quick-share";
 import type { ShareLinkActionKind, ShareLinkPanelState } from "./use-share-link";
 
 /*
-  Phase 2A management shell (no-link/draft/active/disabled/expired states,
-  create draft, activate, disable, re-enable, revoke), joined by the
-  Phase 2B content-configuration editor (rendered below the lifecycle
-  controls whenever a managed link exists, in any state -- saving is only
-  ever rejected server-side for a revoked link, and this panel already
-  can't reach that combination since a revoked link reads back as `link:
-  null`), Phase 2C's owner access controls (PIN, expiry) and share
-  channels (Copy, Native Share, WhatsApp, Rotate), and now Phase 2D's
-  owner Preview -- toggling `state.previewOpen` structurally REPLACES the
-  management sections below with the reusable `ClientProjectView`
-  rendering the strict server-built projection, so the client-facing view
-  is never visually mixed with dashboard/private project controls. Still
-  excludes anything public -- that remains Phase 3.
+  Final owner-UX simplification (real browser defect #3 turn): this
+  panel now has exactly two states -- the short "Share project update"
+  quick-share view (ShareLinkQuickShare: draft creation, safe default
+  configuration, automatic task grouping, optional PIN/attachments/
+  update, save and activation all orchestrated by one call,
+  onShareUpdate, behind one primary button) and the post-share "Project
+  shared" result view (Copy/Native Share/WhatsApp/Email/Preview via
+  ShareLinkChannels, showRotate=false). There is no other entry point
+  inside this panel -- no "Edit what client sees", no "Manage link", no
+  advanced/settings/kebab-menu escape hatch of any kind. Sharing a
+  project update is meant to feel like sending a message, not
+  configuring a system.
+
+  This does NOT delete any backend capability: activate/disable/
+  re-enable/revoke/rotate/PIN/expiry/manual task-and-Resource mapping
+  all remain fully implemented in useShareLink and in
+  share-link-configuration-editor.tsx/share-link-access-controls.tsx --
+  they are simply not wired into this panel's props anymore, since
+  nothing here calls them. Opening the panel itself still never calls
+  any mutating endpoint (only the read-only management-state/resources
+  loads it always performed).
 */
 
 export type ShareLinkPanelProps = {
@@ -42,73 +46,52 @@ export type ShareLinkPanelProps = {
   triggerRef: RefObject<HTMLElement | null>;
   onClose: () => void;
   onRetry: () => void;
-  onRetryResources: () => void;
-  onCreateDraft: () => void;
-  onActivate: () => void;
-  onDisable: () => void;
-  onReenable: () => void;
-  onRevoke: () => void;
   onCopyLink: () => void;
-  onSaveConfiguration: (request: SaveShareConfigurationRequest) => void;
-  onSetPin: (pin: string) => void;
-  onClearPin: () => void;
-  onSetExpiry: (expiresAtIso: string) => void;
-  onClearExpiry: () => void;
-  onRotate: () => void;
   onNativeShare: () => void;
   onWhatsApp: (popup: Window | null) => void;
+  onEmail: () => void;
+  onShareUpdate: (submission: ShareUpdateSubmission) => void;
   onOpenPreview: () => void;
   onClosePreview: () => void;
 };
 
-const STATE_LABELS: Record<string, { label: string; variant: "neutral" | "blue" | "green" | "amber" }> = {
-  draft: { label: "Draft", variant: "neutral" },
-  active: { label: "Active", variant: "green" },
-  disabled: { label: "Disabled", variant: "amber" },
-  expired: { label: "Expired", variant: "amber" },
-};
+type PanelView = "quick" | "result";
 
 export function ShareLinkPanel({
   state,
   triggerRef,
   onClose,
   onRetry,
-  onRetryResources,
-  onCreateDraft,
-  onActivate,
-  onDisable,
-  onReenable,
-  onRevoke,
   onCopyLink,
-  onSaveConfiguration,
-  onSetPin,
-  onClearPin,
-  onSetExpiry,
-  onClearExpiry,
-  onRotate,
   onNativeShare,
   onWhatsApp,
+  onEmail,
+  onShareUpdate,
   onOpenPreview,
   onClosePreview,
 }: ShareLinkPanelProps) {
   const headingId = useId();
-  const [confirmingAction, setConfirmingAction] = useState<
-    "disable" | "revoke" | "clearPin" | "rotate" | null
-  >(null);
+  const [view, setView] = useState<PanelView>("quick");
 
-  // Reset any pending destructive confirmation whenever the panel opens
-  // for a (possibly different) project, or once an action completes.
+  // A fresh open always starts back at the quick-share view.
   useEffect(() => {
     if (!state.isOpen) {
-      setConfirmingAction(null);
+      setView("quick");
     }
   }, [state.isOpen, state.projectId]);
 
+  // Detects the exact pending("shareUpdate") -> not-pending transition
+  // for a successful Share update and shows the result screen. A ref
+  // (not state) tracks the previous actionPending value so this only
+  // fires once per completed shareUpdate, not on every idle render.
+  const previousActionPendingRef = useRef<ShareLinkActionKind | null>(null);
   useEffect(() => {
-    if (state.actionPending) {
-      setConfirmingAction(null);
+    const wasSharing = previousActionPendingRef.current === "shareUpdate";
+    previousActionPendingRef.current = state.actionPending;
+    if (wasSharing && state.actionPending === null && !state.actionError) {
+      setView("result");
     }
-  }, [state.actionPending]);
+  }, [state.actionPending, state.actionError]);
 
   if (!state.isOpen) {
     return null;
@@ -120,20 +103,7 @@ export function ShareLinkPanel({
 
   function handleRequestClose() {
     if (busy) return;
-    setConfirmingAction(null);
     onClose();
-  }
-
-  function runWithConfirm(
-    action: "disable" | "revoke" | "clearPin" | "rotate",
-    run: () => void
-  ) {
-    if (confirmingAction === action) {
-      setConfirmingAction(null);
-      run();
-      return;
-    }
-    setConfirmingAction(action);
   }
 
   return (
@@ -157,7 +127,7 @@ export function ShareLinkPanel({
 
         <div style={stack(1)}>
           <h2 id={headingId} style={headingStyle}>
-            Share with client
+            {view === "result" ? "Project shared" : "Share with client"}
           </h2>
           <p style={subheadingStyle}>{projectTitle}</p>
         </div>
@@ -171,12 +141,6 @@ export function ShareLinkPanel({
               Try again
             </DashboardButton>
           </div>
-        ) : !link ? (
-          <NoLinkView
-            pending={state.actionPending === "createDraft"}
-            busy={busy}
-            onCreateDraft={onCreateDraft}
-          />
         ) : state.previewOpen ? (
           <PreviewView
             loading={state.actionPending === "preview"}
@@ -186,60 +150,35 @@ export function ShareLinkPanel({
             data={state.previewData}
             onClose={onClosePreview}
           />
-        ) : (
-          <>
-            <LinkStateView
-              state={link.state}
-              actionPending={state.actionPending}
-              confirmingAction={confirmingAction}
-              onActivate={onActivate}
-              onDisable={() => runWithConfirm("disable", onDisable)}
-              onReenable={onReenable}
-              onRevoke={() => runWithConfirm("revoke", onRevoke)}
-              onCancelConfirm={() => setConfirmingAction(null)}
-            />
-            <ShareLinkAccessControls
-              link={link}
-              disabled={busy}
-              actionPending={state.actionPending}
-              confirmingClearPin={confirmingAction === "clearPin"}
-              onSetPin={onSetPin}
-              onRequestClearPin={() => runWithConfirm("clearPin", onClearPin)}
-              onCancelClearPinConfirm={() => setConfirmingAction(null)}
-              onSetExpiry={onSetExpiry}
-              onClearExpiry={onClearExpiry}
-            />
-            <ShareLinkChannels
-              linkState={link.state}
-              actionPending={state.actionPending}
-              disabled={busy}
-              copyStatus={state.copyStatus}
-              confirmingRotate={confirmingAction === "rotate"}
-              onCopyLink={onCopyLink}
-              onNativeShare={onNativeShare}
-              onWhatsApp={onWhatsApp}
-              onRequestRotate={() => runWithConfirm("rotate", onRotate)}
-              onCancelRotateConfirm={() => setConfirmingAction(null)}
-              onOpenPreview={onOpenPreview}
-            />
-            {state.project && state.data ? (
-              <ShareLinkConfigurationEditor
-                link={link}
-                mappedTasks={state.data.mappedTasks}
-                mappedResources={state.data.mappedResources}
-                currentUpdate={state.data.currentUpdate}
-                project={state.project}
-                resources={state.resources}
-                resourcesLoading={state.resourcesLoading}
-                resourcesError={state.resourcesError}
-                onRetryResources={onRetryResources}
-                pending={state.actionPending === "saveConfiguration"}
-                disabled={busy}
-                onSave={onSaveConfiguration}
-              />
-            ) : null}
-          </>
-        )}
+        ) : view === "result" && link ? (
+          <ShareLinkChannels
+            linkState={link.state}
+            actionPending={state.actionPending}
+            disabled={busy}
+            copyStatus={state.copyStatus}
+            confirmingRotate={false}
+            onCopyLink={onCopyLink}
+            onNativeShare={onNativeShare}
+            onWhatsApp={onWhatsApp}
+            onEmail={onEmail}
+            onRequestRotate={() => {}}
+            onCancelRotateConfirm={() => {}}
+            onOpenPreview={onOpenPreview}
+            showRotate={false}
+          />
+        ) : state.project ? (
+          <ShareLinkQuickShare
+            link={link}
+            mappedTasks={state.data?.mappedTasks ?? []}
+            mappedResources={state.data?.mappedResources ?? []}
+            project={state.project}
+            resources={state.resources}
+            resourcesLoading={state.resourcesLoading}
+            pending={state.actionPending === "shareUpdate"}
+            disabled={busy}
+            onShare={onShareUpdate}
+          />
+        ) : null}
 
         {state.actionError ? (
           <div style={errorTextStyle} role="alert">
@@ -248,34 +187,6 @@ export function ShareLinkPanel({
         ) : null}
       </div>
     </ResponsiveDialog>
-  );
-}
-
-function NoLinkView({
-  pending,
-  busy,
-  onCreateDraft,
-}: {
-  pending: boolean;
-  busy: boolean;
-  onCreateDraft: () => void;
-}) {
-  return (
-    <div style={stack(3)}>
-      <p style={bodyTextStyle}>
-        No client share link exists for this project yet. Creating a draft
-        does not publish anything -- nothing is visible to your client until
-        you activate the link.
-      </p>
-      <DashboardButton
-        variant="primary"
-        onClick={onCreateDraft}
-        loading={pending}
-        disabled={busy}
-      >
-        Create draft link
-      </DashboardButton>
-    </div>
   );
 }
 
@@ -320,84 +231,6 @@ function PreviewView({
   );
 }
 
-function LinkStateView({
-  state: linkState,
-  actionPending,
-  confirmingAction,
-  onActivate,
-  onDisable,
-  onReenable,
-  onRevoke,
-  onCancelConfirm,
-}: {
-  state: "draft" | "active" | "disabled" | "expired";
-  actionPending: ShareLinkActionKind | null;
-  confirmingAction: "disable" | "revoke" | "clearPin" | "rotate" | null;
-  onActivate: () => void;
-  onDisable: () => void;
-  onReenable: () => void;
-  onRevoke: () => void;
-  onCancelConfirm: () => void;
-}) {
-  const busy = actionPending !== null;
-  const stateInfo = STATE_LABELS[linkState] ?? STATE_LABELS.draft;
-
-  return (
-    <div style={stack(4)}>
-      <div style={row(2)}>
-        <span style={fieldLabelStyle}>Status</span>
-        <DashboardBadge variant={stateInfo.variant}>{stateInfo.label}</DashboardBadge>
-      </div>
-
-      {linkState === "draft" ? (
-        <DashboardButton
-          variant="primary"
-          onClick={onActivate}
-          loading={actionPending === "activate"}
-          disabled={busy}
-        >
-          Activate link
-        </DashboardButton>
-      ) : null}
-
-      {linkState === "disabled" ? (
-        <DashboardButton
-          variant="secondary"
-          onClick={onReenable}
-          loading={actionPending === "reenable"}
-          disabled={busy}
-        >
-          Re-enable link
-        </DashboardButton>
-      ) : null}
-
-      {linkState === "active" ? (
-        <ConfirmableActionButton
-          label="Disable link"
-          confirmLabel="Confirm disable"
-          isConfirming={confirmingAction === "disable"}
-          loading={actionPending === "disable"}
-          disabled={busy}
-          variant="secondary"
-          onClick={onDisable}
-          onCancel={onCancelConfirm}
-        />
-      ) : null}
-
-      <ConfirmableActionButton
-        label="Revoke link"
-        confirmLabel="Confirm revoke"
-        isConfirming={confirmingAction === "revoke"}
-        loading={actionPending === "revoke"}
-        disabled={busy}
-        variant="danger"
-        onClick={onRevoke}
-        onCancel={onCancelConfirm}
-      />
-    </div>
-  );
-}
-
 const panelStyle: CSSProperties = {
   position: "relative",
   ...stack(5),
@@ -433,13 +266,6 @@ const subheadingStyle: CSSProperties = {
   color: dashboardColors.text.muted,
 };
 
-const bodyTextStyle: CSSProperties = {
-  margin: 0,
-  fontSize: dashboardTypography.size.md,
-  lineHeight: 1.5,
-  color: dashboardColors.text.secondary,
-};
-
 const statusRowStyle: CSSProperties = {
   fontSize: dashboardTypography.size.md,
   color: dashboardColors.text.muted,
@@ -448,12 +274,6 @@ const statusRowStyle: CSSProperties = {
 const errorTextStyle: CSSProperties = {
   fontSize: dashboardTypography.size.sm,
   color: dashboardColors.status.red,
-};
-
-const fieldLabelStyle: CSSProperties = {
-  fontSize: dashboardTypography.size.sm,
-  fontWeight: dashboardTypography.weight.medium,
-  color: dashboardColors.text.muted,
 };
 
 const previewFrameStyle: CSSProperties = {

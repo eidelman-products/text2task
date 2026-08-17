@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ShareSecretError } from "./share-secret.server";
+import { ShareSecretEncryptionError } from "./share-secret-encryption.server";
 
 const generateSharePublicIdMock = vi.fn();
 vi.mock("@/lib/share/share-public-id.server", () => ({
@@ -9,19 +11,33 @@ vi.mock("@/lib/share/share-public-id.server", () => ({
 
 const generateRawShareSecretMock = vi.fn();
 const createShareSecretDigestMock = vi.fn();
-vi.mock("@/lib/share/share-secret.server", () => ({
-  generateRawShareSecret: () => generateRawShareSecretMock(),
-  createShareSecretDigest: (secret: string) => createShareSecretDigestMock(secret),
-  SHARE_SECRET_DIGEST_VERSION: 1,
-}));
+vi.mock("@/lib/share/share-secret.server", async () => {
+  const actual = await vi.importActual<typeof import("./share-secret.server")>(
+    "./share-secret.server"
+  );
+  return {
+    generateRawShareSecret: () => generateRawShareSecretMock(),
+    createShareSecretDigest: (secret: string) => createShareSecretDigestMock(secret),
+    SHARE_SECRET_DIGEST_VERSION: 1,
+    ShareSecretError: actual.ShareSecretError,
+    isShareSecretError: actual.isShareSecretError,
+  };
+});
 
 const encryptShareSecretMock = vi.fn();
 const decryptShareSecretMock = vi.fn();
-vi.mock("@/lib/share/share-secret-encryption.server", () => ({
-  encryptShareSecret: (plaintext: string, linkId: string) =>
-    encryptShareSecretMock(plaintext, linkId),
-  decryptShareSecret: (input: unknown) => decryptShareSecretMock(input),
-}));
+vi.mock("@/lib/share/share-secret-encryption.server", async () => {
+  const actual = await vi.importActual<typeof import("./share-secret-encryption.server")>(
+    "./share-secret-encryption.server"
+  );
+  return {
+    encryptShareSecret: (plaintext: string, linkId: string) =>
+      encryptShareSecretMock(plaintext, linkId),
+    decryptShareSecret: (input: unknown) => decryptShareSecretMock(input),
+    ShareSecretEncryptionError: actual.ShareSecretEncryptionError,
+    isShareSecretEncryptionError: actual.isShareSecretEncryptionError,
+  };
+});
 
 const hashSharePinMock = vi.fn();
 vi.mock("@/lib/share/share-pin.server", () => ({
@@ -1812,6 +1828,119 @@ describe("revealShareLinkSecret", () => {
   });
 });
 
+describe("REAL BROWSER DEFECT #3 REGRESSION: safe diagnostic logging for secret-material generation/encryption/decryption failures", () => {
+  // A missing or malformed TEXT2TASK_SHARE_SECRET_HMAC_KEY_V1/
+  // TEXT2TASK_SHARE_SECRET_ENCRYPTION_KEY_V1 on a given deployment makes
+  // generateRawShareSecret/createShareSecretDigest/encryptShareSecret/
+  // decryptShareSecret throw a typed ShareSecretError/
+  // ShareSecretEncryptionError. Before this fix, activateShareLink/
+  // rotateShareLinkSecret/revealShareLinkSecret discarded that error
+  // with a bare `catch {}`, leaving no trace anywhere of which key was
+  // missing or malformed -- exactly reproducing "activate returns 500
+  // with only the generic message" with no way to diagnose it. These
+  // tests prove the new safe, structured console.error call fires with
+  // the operation name and the error's own safe `.code` enum value, and
+  // that the HTTP-facing result (and its error code) is completely
+  // unchanged by this -- only server-side diagnostics gained information,
+  // never the browser response.
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("activateShareLink logs the safe reason when the encryption key is missing/malformed, never the key itself", async () => {
+    encryptShareSecretMock.mockImplementation(() => {
+      throw new ShareSecretEncryptionError("encryption_key_missing");
+    });
+    const rpc = vi.fn();
+    const client = buildFakeClient(rpc);
+
+    const result = await activateShareLink(client, VALID_UUID);
+
+    expect(rpc).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+    expect(consoleErrorSpy).toHaveBeenCalledWith("share_links_secret_material_failure", {
+      operation: "activate_share_link",
+      reason: "encryption_key_missing",
+    });
+  });
+
+  it("activateShareLink logs the safe reason when the HMAC key is missing/malformed, never the key itself", async () => {
+    createShareSecretDigestMock.mockImplementation(() => {
+      throw new ShareSecretError("hmac_key_missing");
+    });
+    const rpc = vi.fn();
+    const client = buildFakeClient(rpc);
+
+    const result = await activateShareLink(client, VALID_UUID);
+
+    expect(rpc).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+    expect(consoleErrorSpy).toHaveBeenCalledWith("share_links_secret_material_failure", {
+      operation: "activate_share_link",
+      reason: "hmac_key_missing",
+    });
+  });
+
+  it("activateShareLink logs a safe fallback reason for an untyped error, without crashing and without leaking its message", async () => {
+    encryptShareSecretMock.mockImplementation(() => {
+      throw new Error("some internal detail -- SENSITIVE");
+    });
+    const rpc = vi.fn();
+    const client = buildFakeClient(rpc);
+
+    const result = await activateShareLink(client, VALID_UUID);
+
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+    expect(consoleErrorSpy).toHaveBeenCalledWith("share_links_secret_material_failure", {
+      operation: "activate_share_link",
+      reason: "unexpected_error",
+      category: "Error",
+    });
+    expect(
+      consoleErrorSpy.mock.calls.flat().some((arg: unknown) => JSON.stringify(arg).includes("SENSITIVE"))
+    ).toBe(false);
+  });
+
+  it("rotateShareLinkSecret logs the safe reason when the encryption key is missing/malformed", async () => {
+    encryptShareSecretMock.mockImplementation(() => {
+      throw new ShareSecretEncryptionError("encryption_key_wrong_length");
+    });
+    const rpc = vi.fn();
+    const client = buildFakeClient(rpc);
+
+    const result = await rotateShareLinkSecret(client, VALID_UUID);
+
+    expect(rpc).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+    expect(consoleErrorSpy).toHaveBeenCalledWith("share_links_secret_material_failure", {
+      operation: "rotate_share_link_secret",
+      reason: "encryption_key_wrong_length",
+    });
+  });
+
+  it("revealShareLinkSecret logs the safe reason when decryption fails due to a key problem", async () => {
+    decryptShareSecretMock.mockImplementation(() => {
+      throw new ShareSecretEncryptionError("encryption_key_missing");
+    });
+    const rpc = vi.fn().mockResolvedValue({ data: validRevealRpcData(), error: null });
+    const client = buildFakeClient(rpc);
+
+    const result = await revealShareLinkSecret(client, VALID_UUID);
+
+    expect(result).toEqual({ ok: false, error: { code: "SHARE_LINK_SECRET_UNAVAILABLE" } });
+    expect(consoleErrorSpy).toHaveBeenCalledWith("share_links_secret_material_failure", {
+      operation: "reveal_share_link_secret",
+      reason: "encryption_key_missing",
+    });
+  });
+});
+
 function validSaveConfigurationRpcData(overrides: Record<string, unknown> = {}) {
   return {
     linkId: VALID_UUID,
@@ -2085,6 +2214,24 @@ describe("saveShareConfiguration", () => {
       const client = buildFakeClient(rpc);
       const result = await saveShareConfiguration(client, VALID_UUID, {
         settings: { commentsEnabled: true },
+      });
+      expect(result).toEqual({ ok: false, error: { code: "INVALID_REQUEST" } });
+      expect(JSON.stringify(result)).not.toContain(message);
+    }
+  );
+
+  it.each([
+    "SHARE_UPDATE_LINK_NOT_FOUND",
+    "SHARE_UPDATE_OWNER_MISMATCH",
+    "SHARE_UPDATE_CREATED_BY_MISMATCH",
+    "SHARE_UPDATE_IMMUTABLE",
+  ])(
+    "maps the enforce_share_link_update_integrity trigger error %s to INVALID_REQUEST, never leaking it directly or falling through to UNEXPECTED",
+    async (message) => {
+      const rpc = vi.fn().mockResolvedValue({ data: null, error: { code: "P0001", message } });
+      const client = buildFakeClient(rpc);
+      const result = await saveShareConfiguration(client, VALID_UUID, {
+        publishUpdate: { body: "Update body" },
       });
       expect(result).toEqual({ ok: false, error: { code: "INVALID_REQUEST" } });
       expect(JSON.stringify(result)).not.toContain(message);

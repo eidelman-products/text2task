@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 
 import type { ShareLinkManagementStateData } from "@/lib/share/share-contracts";
-import type { TaskProjectGroup, TaskRow } from "../task-types";
+import type { TaskProjectGroup, TaskProjectSubtask, TaskRow } from "../task-types";
 import { ShareLinkClientError } from "./share-link-client";
 
 const getShareLinkManagementStateMock = vi.fn();
@@ -97,6 +97,23 @@ function projectGroup(): TaskProjectGroup {
     hasContactDetails: false,
     subtaskCount: 1,
     completedSubtaskCount: 0,
+  };
+}
+
+function projectGroupWithSubtasks(subtasks: TaskProjectSubtask[]): TaskProjectGroup {
+  return { ...projectGroup(), subtasks };
+}
+
+function subtask(overrides: Partial<TaskProjectSubtask> = {}): TaskProjectSubtask {
+  return {
+    id: 1,
+    project_id: PROJECT_ID,
+    title: "Design hero",
+    status: "New",
+    priority: "Medium",
+    amount: "",
+    deadline: "",
+    ...overrides,
   };
 }
 
@@ -931,5 +948,604 @@ describe("useShareLink - Phase 2C Copy/Native Share/WhatsApp", () => {
     });
 
     expect(revealShareLinkSecretMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("useShareLink - Objective B: shareUpdate (one-action orchestration)", () => {
+  async function openAndLoad(
+    initialData: ShareLinkManagementStateData,
+    project: TaskProjectGroup = projectGroup()
+  ) {
+    getShareLinkManagementStateMock.mockResolvedValueOnce(initialData);
+    const { result } = renderHook(() => useShareLink());
+
+    act(() => {
+      result.current.openPanel(project);
+    });
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+
+    return result;
+  }
+
+  it("category A: first-time share creates a draft transparently, applies safe default settings and automatic task grouping, saves, and activates", async () => {
+    const result = await openAndLoad(
+      noLinkState(),
+      projectGroupWithSubtasks([
+        subtask({ id: 1, title: "New task", status: "New" }),
+        subtask({ id: 2, title: "Done task", status: "Done" }),
+      ])
+    );
+    createShareLinkDraftMock.mockResolvedValue({
+      linkId: LINK_ID,
+      publicId: "abcdefgh12345678",
+      state: "draft",
+      createdAt: "2026-08-10T00:00:00Z",
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce(draftLinkState());
+    saveShareConfigurationMock.mockResolvedValue({
+      linkId: LINK_ID,
+      configurationVersion: 1,
+      currentUpdate: null,
+    });
+    activateShareLinkMock.mockResolvedValue({
+      linkId: LINK_ID,
+      publicId: "abcdefgh12345678",
+      state: "active",
+      configurationVersion: 1,
+      activatedAt: "2026-08-10T00:01:00Z",
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce(activeLinkState());
+
+    await act(async () => {
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: false, attachmentResourceIds: [] });
+    });
+
+    expect(createShareLinkDraftMock).toHaveBeenCalledWith(PROJECT_ID);
+    expect(saveShareConfigurationMock).toHaveBeenCalledWith(LINK_ID, {
+      settings: {
+        titleVisible: true,
+        statusVisible: true,
+        targetDateVisible: false,
+        commentsEnabled: false,
+        contentDirection: "auto",
+        clientFacingSubtitle: null,
+      },
+      tasks: [
+        { subtaskId: "1", publicGroup: "coming_up", waitingForClientFeedback: false, displayOrder: 0 },
+        { subtaskId: "2", publicGroup: "completed", waitingForClientFeedback: false, displayOrder: 1 },
+      ],
+    });
+    expect(activateShareLinkMock).toHaveBeenCalledWith(LINK_ID);
+    expect(result.current.state.actionError).toBeNull();
+  });
+
+  it("category B: an already-active link with a persisted task mapping is not reactivated, and its task mapping is never resent/recomputed", async () => {
+    const existingMappedTasks = [
+      { subtaskId: "1", publicGroup: "in_progress" as const, waitingForClientFeedback: false, displayOrder: 0 },
+    ];
+    const result = await openAndLoad(
+      { ...activeLinkState(), mappedTasks: existingMappedTasks },
+      projectGroupWithSubtasks([subtask({ id: 1, status: "New" })])
+    );
+    saveShareConfigurationMock.mockResolvedValue({
+      linkId: LINK_ID,
+      configurationVersion: 1,
+      currentUpdate: { version: 1, publishedAt: "2026-08-12T00:00:00Z" },
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce({
+      ...activeLinkState(),
+      mappedTasks: existingMappedTasks,
+    });
+
+    await act(async () => {
+      await result.current.shareUpdate({
+        updateBody: "Homepage is live.",
+        pin: null, clearPin: false,
+        attachmentResourceIds: [],
+      });
+    });
+
+    expect(createShareLinkDraftMock).not.toHaveBeenCalled();
+    expect(activateShareLinkMock).not.toHaveBeenCalled();
+    expect(saveShareConfigurationMock).toHaveBeenCalledWith(LINK_ID, {
+      publishUpdate: { body: "Homepage is live." },
+    });
+  });
+
+  it("category C: owner-customized persisted task mapping always wins -- automatic grouping is never recomputed once anything is mapped", async () => {
+    // Task 1's persisted group ("completed") deliberately disagrees with
+    // what the automatic default would produce for its internal status
+    // ("New" -> "coming_up") -- if shareUpdate ever recomputed instead of
+    // leaving `tasks` untouched, this mismatch would be silently
+    // overwritten on the very next Share update.
+    const customMapping = [
+      { subtaskId: "1", publicGroup: "completed" as const, waitingForClientFeedback: false, displayOrder: 0 },
+    ];
+    const result = await openAndLoad(
+      { ...activeLinkState(), mappedTasks: customMapping },
+      projectGroupWithSubtasks([subtask({ id: 1, status: "New" })])
+    );
+    saveShareConfigurationMock.mockResolvedValue({
+      linkId: LINK_ID,
+      configurationVersion: 1,
+      currentUpdate: { version: 1, publishedAt: "2026-08-12T00:00:00Z" },
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce({
+      ...activeLinkState(),
+      mappedTasks: customMapping,
+    });
+
+    await act(async () => {
+      await result.current.shareUpdate({ updateBody: "Update", pin: null, clearPin: false, attachmentResourceIds: [] });
+    });
+
+    const request = saveShareConfigurationMock.mock.calls[0][1];
+    expect(request.tasks).toBeUndefined();
+  });
+
+  it("category E: PIN is opt-in -- omitted when neither pin nor clearPin is supplied", async () => {
+    const result = await openAndLoad(
+      { ...activeLinkState(), mappedTasks: [{ subtaskId: "1", publicGroup: "in_progress", waitingForClientFeedback: false, displayOrder: 0 }] },
+      projectGroupWithSubtasks([subtask({ id: 1 })])
+    );
+    setSharePinMock.mockResolvedValue({
+      linkId: LINK_ID,
+      hasPin: true,
+      state: "active",
+      configurationVersion: 1,
+      updatedAt: "2026-08-12T00:00:00Z",
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce(activeLinkState());
+
+    await act(async () => {
+      await result.current.shareUpdate({ updateBody: "", pin: "4242", clearPin: false, attachmentResourceIds: [] });
+    });
+
+    expect(setSharePinMock).toHaveBeenCalledWith(LINK_ID, "4242");
+    // Nothing else changed (no update body, no attachments, tasks already
+    // mapped) -- saveShareConfiguration must not be called with an empty
+    // request just to carry the PIN, since PIN is its own separate call.
+    expect(saveShareConfigurationMock).not.toHaveBeenCalled();
+  });
+
+  it("FINAL PIN UX: existing PIN -> clearPin: true calls the existing clear-PIN path exactly once, and never setSharePin", async () => {
+    const mappedTasks = [
+      { subtaskId: "1", publicGroup: "in_progress" as const, waitingForClientFeedback: false, displayOrder: 0 },
+    ];
+    const result = await openAndLoad(
+      { ...activeLinkState({ hasPin: true }), mappedTasks },
+      projectGroupWithSubtasks([subtask({ id: 1 })])
+    );
+    clearSharePinMock.mockResolvedValue({
+      linkId: LINK_ID,
+      hasPin: false,
+      state: "active",
+      configurationVersion: 1,
+      updatedAt: "2026-08-18T00:00:00Z",
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce({
+      ...activeLinkState({ hasPin: false }),
+      mappedTasks,
+    });
+
+    await act(async () => {
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [] });
+    });
+
+    expect(clearSharePinMock).toHaveBeenCalledWith(LINK_ID);
+    expect(clearSharePinMock).toHaveBeenCalledTimes(1);
+    expect(setSharePinMock).not.toHaveBeenCalled();
+    expect(result.current.state.actionError).toBeNull();
+  });
+
+  it("FINAL PIN UX: removing a PIN does not create a draft, does not recreate/rotate the link, and does not resend task/Resource mappings or publicLabel", async () => {
+    const mappedTasks = [
+      { subtaskId: "1", publicGroup: "in_progress" as const, waitingForClientFeedback: false, displayOrder: 0 },
+    ];
+    const mappedResources = [
+      { resourceId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", publicLabel: "Brand brief", canDownload: false, displayOrder: 0 },
+    ];
+    const result = await openAndLoad(
+      { ...activeLinkState({ hasPin: true }), mappedTasks, mappedResources },
+      projectGroupWithSubtasks([subtask({ id: 1 })])
+    );
+    clearSharePinMock.mockResolvedValue({
+      linkId: LINK_ID,
+      hasPin: false,
+      state: "active",
+      configurationVersion: 1,
+      updatedAt: "2026-08-18T00:00:00Z",
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce({
+      ...activeLinkState({ hasPin: false }),
+      mappedTasks,
+      mappedResources,
+    });
+
+    await act(async () => {
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [] });
+    });
+
+    expect(createShareLinkDraftMock).not.toHaveBeenCalled();
+    expect(rotateShareLinkSecretMock).not.toHaveBeenCalled();
+    // No update/attachments/first-share settings were touched, and tasks
+    // are already mapped -- saveShareConfiguration must not be called at
+    // all for a pure PIN-removal submission, so no mapping/publicLabel
+    // can possibly be resent or rewritten.
+    expect(saveShareConfigurationMock).not.toHaveBeenCalled();
+  });
+
+  it("FINAL PIN UX: a failed clear-PIN surfaces stage share_update_pin_failed and never falsely reports success", async () => {
+    const result = await openAndLoad(activeLinkState({ hasPin: true }), projectGroupWithSubtasks([subtask({ id: 1 })]));
+    clearSharePinMock.mockRejectedValue(new ShareLinkClientError("SHARE_LINK_STATE_CONFLICT", "conflict"));
+
+    await act(async () => {
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [] });
+    });
+
+    expect(result.current.state.actionPending).toBeNull();
+    expect(result.current.state.actionError).toBeTruthy();
+    expect(result.current.state.actionErrorStage).toBe("share_update_pin_failed");
+  });
+
+  it("FINAL PIN UX: a successful PIN removal refreshes management state so the owner UI reflects hasPin: false afterward", async () => {
+    const result = await openAndLoad(activeLinkState({ hasPin: true }), projectGroupWithSubtasks([subtask({ id: 1 })]));
+    clearSharePinMock.mockResolvedValue({
+      linkId: LINK_ID,
+      hasPin: false,
+      state: "active",
+      configurationVersion: 1,
+      updatedAt: "2026-08-18T00:00:00Z",
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce(activeLinkState({ hasPin: false }));
+
+    await act(async () => {
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [] });
+    });
+
+    expect(result.current.state.data?.link?.hasPin).toBe(false);
+  });
+
+  it("FINAL PIN UX: the existing PIN value is never present anywhere in hook state or in any client-call argument", async () => {
+    const result = await openAndLoad(activeLinkState({ hasPin: true }), projectGroupWithSubtasks([subtask({ id: 1 })]));
+    clearSharePinMock.mockResolvedValue({
+      linkId: LINK_ID,
+      hasPin: false,
+      state: "active",
+      configurationVersion: 1,
+      updatedAt: "2026-08-18T00:00:00Z",
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce(activeLinkState({ hasPin: false }));
+
+    await act(async () => {
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [] });
+    });
+
+    // clearSharePin's own contract takes only the link id -- there is no
+    // PIN value parameter to leak in the first place. The management
+    // state schema itself (managedShareLinkSchema) exposes only the
+    // boolean hasPin, never a pin/plaintext field, so there is nothing in
+    // result.current.state for an existing PIN's value to appear in.
+    expect(clearSharePinMock).toHaveBeenCalledWith(LINK_ID);
+    expect(clearSharePinMock.mock.calls[0]).toHaveLength(1);
+    expect(result.current.state.data?.link).not.toHaveProperty("pin");
+  });
+
+  it("Attachments: a selected, already-mapped Resource keeps its persisted publicLabel/canDownload/displayOrder in the request", async () => {
+    const mappedResources = [
+      { resourceId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", publicLabel: "Brand brief", canDownload: true, displayOrder: 3 },
+    ];
+    fetchTaskResourcesMock.mockResolvedValue([
+      {
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        user_id: "user-1",
+        project_id: PROJECT_ID,
+        task_id: null,
+        resource_type: "link" as const,
+        title: "brief-internal.pdf",
+        url: "https://example.com/brief",
+        storage_path: null,
+        file_name: null,
+        mime_type: null,
+        size_bytes: null,
+        notes: null,
+        created_at: "2026-08-03T10:00:00.000Z",
+        updated_at: "2026-08-03T10:00:00.000Z",
+      },
+    ]);
+    const result = await openAndLoad(
+      { ...activeLinkState(), mappedTasks: [{ subtaskId: "1", publicGroup: "in_progress", waitingForClientFeedback: false, displayOrder: 0 }], mappedResources },
+      projectGroupWithSubtasks([subtask({ id: 1 })])
+    );
+    saveShareConfigurationMock.mockResolvedValue({
+      linkId: LINK_ID,
+      configurationVersion: 1,
+      currentUpdate: null,
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce({ ...activeLinkState(), mappedResources });
+
+    await act(async () => {
+      await result.current.shareUpdate({
+        updateBody: "",
+        pin: null, clearPin: false,
+        attachmentResourceIds: ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"],
+      });
+    });
+
+    expect(saveShareConfigurationMock).toHaveBeenCalledWith(LINK_ID, {
+      resources: [
+        {
+          resourceId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          publicLabel: "Brand brief",
+          canDownload: true,
+          displayOrder: 3,
+        },
+      ],
+    });
+  });
+
+  it("a failure partway through the orchestration surfaces actionError and never falsely reports success", async () => {
+    const result = await openAndLoad(noLinkState(), projectGroupWithSubtasks([subtask({ id: 1 })]));
+    createShareLinkDraftMock.mockResolvedValue({
+      linkId: LINK_ID,
+      publicId: "abcdefgh12345678",
+      state: "draft",
+      createdAt: "2026-08-10T00:00:00Z",
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce(draftLinkState());
+    saveShareConfigurationMock.mockRejectedValue(
+      new ShareLinkClientError("SHARE_LINK_STATE_CONFLICT", "conflict")
+    );
+
+    await act(async () => {
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: false, attachmentResourceIds: [] });
+    });
+
+    expect(activateShareLinkMock).not.toHaveBeenCalled();
+    expect(result.current.state.actionPending).toBeNull();
+    expect(result.current.state.actionError).toBeTruthy();
+  });
+
+  it("opening the panel never calls shareUpdate's own orchestrated endpoints on its own", async () => {
+    await openAndLoad(noLinkState());
+    expect(createShareLinkDraftMock).not.toHaveBeenCalled();
+    expect(saveShareConfigurationMock).not.toHaveBeenCalled();
+    expect(activateShareLinkMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("useShareLink - REAL BROWSER DEFECT #2 REGRESSION: shareUpdate against an existing, already-configured Draft link", () => {
+  // Reproduces the exact reported browser state: an existing Draft link
+  // (from earlier browser-acceptance work) with title/status already
+  // visible, one persisted mapped task, one persisted mapped Resource
+  // with its own publicLabel, no PIN, and an owner-typed Client update --
+  // then Share update is clicked.
+  const EXISTING_RESOURCE_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const UPDATE_BODY =
+    "Work is currently in progress. This is a test client update for the Phase 3 sharing flow.";
+
+  function existingDraftState(): ShareLinkManagementStateData {
+    const base = draftLinkState();
+    return {
+      link: { ...base.link, titleVisible: true, statusVisible: true },
+      mappedTasks: [
+        { subtaskId: "1", publicGroup: "in_progress", waitingForClientFeedback: false, displayOrder: 0 },
+      ],
+      mappedResources: [
+        {
+          resourceId: EXISTING_RESOURCE_ID,
+          publicLabel: "Phase 3 Browser Fixture Resource",
+          canDownload: false,
+          displayOrder: 0,
+        },
+      ],
+      currentUpdate: null,
+    };
+  }
+
+  async function openAndLoad(initialData: ShareLinkManagementStateData, project: TaskProjectGroup) {
+    getShareLinkManagementStateMock.mockResolvedValueOnce(initialData);
+    const { result } = renderHook(() => useShareLink());
+
+    act(() => {
+      result.current.openPanel(project);
+    });
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+
+    return result;
+  }
+
+  it("preserves persisted configuration exactly: no createDraft, no settings/task-remap, exact resource metadata retained, update published, activated exactly once, no false success on failure", async () => {
+    const project = projectGroupWithSubtasks([subtask({ id: 1, status: "New" })]);
+    const result = await openAndLoad(existingDraftState(), project);
+
+    saveShareConfigurationMock.mockResolvedValue({
+      linkId: LINK_ID,
+      configurationVersion: 1,
+      currentUpdate: { version: 1, publishedAt: "2026-08-13T00:00:00Z" },
+    });
+    activateShareLinkMock.mockResolvedValue({
+      linkId: LINK_ID,
+      publicId: "abcdefgh12345678",
+      state: "active",
+      configurationVersion: 1,
+      activatedAt: "2026-08-13T00:01:00Z",
+    });
+    getShareLinkManagementStateMock.mockResolvedValueOnce({
+      ...existingDraftState(),
+      link: { ...existingDraftState().link, state: "active" },
+    });
+
+    await act(async () => {
+      await result.current.shareUpdate({
+        updateBody: UPDATE_BODY,
+        pin: null, clearPin: false,
+        attachmentResourceIds: [EXISTING_RESOURCE_ID],
+      });
+    });
+
+    // 1. create draft: skipped -- the link already exists.
+    expect(createShareLinkDraftMock).not.toHaveBeenCalled();
+    // 4. PIN: skipped -- PIN is off.
+    expect(setSharePinMock).not.toHaveBeenCalled();
+
+    // 2. save configuration: called exactly once, with settings and tasks
+    // both OMITTED (an existing link's settings are untouched; the one
+    // already-mapped task is never recomputed/resent), the resource's
+    // exact persisted publicLabel/canDownload/displayOrder unchanged, and
+    // the client update included.
+    expect(saveShareConfigurationMock).toHaveBeenCalledTimes(1);
+    const [savedLinkId, request] = saveShareConfigurationMock.mock.calls[0];
+    expect(savedLinkId).toBe(LINK_ID);
+    expect(request.settings).toBeUndefined();
+    expect(request.tasks).toBeUndefined();
+    expect(request.resources).toEqual([
+      {
+        resourceId: EXISTING_RESOURCE_ID,
+        publicLabel: "Phase 3 Browser Fixture Resource",
+        canDownload: false,
+        displayOrder: 0,
+      },
+    ]);
+    expect(request.publishUpdate).toEqual({ body: UPDATE_BODY });
+
+    // 5. activate: called exactly once (the link was a draft).
+    expect(activateShareLinkMock).toHaveBeenCalledTimes(1);
+    expect(activateShareLinkMock).toHaveBeenCalledWith(LINK_ID);
+
+    // Save happened strictly before activate.
+    const saveOrder = saveShareConfigurationMock.mock.invocationCallOrder[0];
+    const activateOrder = activateShareLinkMock.mock.invocationCallOrder[0];
+    expect(saveOrder).toBeLessThan(activateOrder);
+
+    expect(result.current.state.actionError).toBeNull();
+    expect(result.current.state.actionErrorStage).toBeNull();
+  });
+
+  it("a save-configuration failure surfaces stage share_update_save_failed and never reaches activate (no false success)", async () => {
+    const result = await openAndLoad(existingDraftState(), projectGroupWithSubtasks([subtask({ id: 1 })]));
+    saveShareConfigurationMock.mockRejectedValue(
+      new ShareLinkClientError("SHARE_LINK_STATE_CONFLICT", "conflict")
+    );
+
+    await act(async () => {
+      await result.current.shareUpdate({
+        updateBody: UPDATE_BODY,
+        pin: null, clearPin: false,
+        attachmentResourceIds: [EXISTING_RESOURCE_ID],
+      });
+    });
+
+    expect(activateShareLinkMock).not.toHaveBeenCalled();
+    expect(result.current.state.actionPending).toBeNull();
+    expect(result.current.state.actionError).toBeTruthy();
+    expect(result.current.state.actionErrorStage).toBe("share_update_save_failed");
+  });
+
+  it("an activate failure (after save already succeeded) surfaces stage share_update_activate_failed, not the generic save stage", async () => {
+    const result = await openAndLoad(existingDraftState(), projectGroupWithSubtasks([subtask({ id: 1 })]));
+    saveShareConfigurationMock.mockResolvedValue({
+      linkId: LINK_ID,
+      configurationVersion: 1,
+      currentUpdate: null,
+    });
+    activateShareLinkMock.mockRejectedValue(
+      new ShareLinkClientError("SHARE_LINK_ANOTHER_LINK_ACTIVE", "conflict")
+    );
+
+    await act(async () => {
+      await result.current.shareUpdate({ updateBody: UPDATE_BODY, pin: null, clearPin: false, attachmentResourceIds: [] });
+    });
+
+    expect(saveShareConfigurationMock).toHaveBeenCalledTimes(1);
+    expect(result.current.state.actionErrorStage).toBe("share_update_activate_failed");
+    expect(result.current.state.actionError).toMatch(/already active/i);
+  });
+
+  it("a createDraft failure (first-time share) surfaces stage share_update_create_draft_failed and never calls save or activate", async () => {
+    const result = await openAndLoad(noLinkState(), projectGroupWithSubtasks([subtask({ id: 1 })]));
+    createShareLinkDraftMock.mockRejectedValue(new ShareLinkClientError("PROJECT_ARCHIVED", "archived"));
+
+    await act(async () => {
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: false, attachmentResourceIds: [] });
+    });
+
+    expect(saveShareConfigurationMock).not.toHaveBeenCalled();
+    expect(activateShareLinkMock).not.toHaveBeenCalled();
+    expect(result.current.state.actionErrorStage).toBe("share_update_create_draft_failed");
+  });
+
+  it("a PIN failure (after save already succeeded) surfaces stage share_update_pin_failed and never proceeds to activate", async () => {
+    const result = await openAndLoad(existingDraftState(), projectGroupWithSubtasks([subtask({ id: 1 })]));
+    saveShareConfigurationMock.mockResolvedValue({
+      linkId: LINK_ID,
+      configurationVersion: 1,
+      currentUpdate: null,
+    });
+    setSharePinMock.mockRejectedValue(new ShareLinkClientError("SHARE_LINK_STATE_CONFLICT", "conflict"));
+
+    await act(async () => {
+      await result.current.shareUpdate({ updateBody: UPDATE_BODY, pin: "4242", clearPin: false, attachmentResourceIds: [] });
+    });
+
+    expect(saveShareConfigurationMock).toHaveBeenCalledTimes(1);
+    expect(activateShareLinkMock).not.toHaveBeenCalled();
+    expect(result.current.state.actionErrorStage).toBe("share_update_pin_failed");
+  });
+
+  it("a selected attachment that cannot be resolved fails safely before any network call, never sending a truncated resources array that could drop the persisted mapping", async () => {
+    const result = await openAndLoad(existingDraftState(), projectGroupWithSubtasks([subtask({ id: 1 })]));
+
+    await act(async () => {
+      await result.current.shareUpdate({
+        updateBody: "",
+        pin: null, clearPin: false,
+        attachmentResourceIds: ["ffffffff-ffff-4fff-8fff-ffffffffffff"],
+      });
+    });
+
+    expect(saveShareConfigurationMock).not.toHaveBeenCalled();
+    expect(result.current.state.actionErrorStage).toBe("share_update_save_failed");
+  });
+});
+
+describe("useShareLink - Objective B: emailLink (mailto: channel)", () => {
+  async function openAndLoad(initialData: ShareLinkManagementStateData, project: TaskProjectGroup = projectGroup()) {
+    getShareLinkManagementStateMock.mockResolvedValueOnce(initialData);
+    const { result } = renderHook(() => useShareLink());
+
+    act(() => {
+      result.current.openPanel(project);
+    });
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+
+    return result;
+  }
+
+  it("reveals the secret and opens a mailto: link with a safe subject/body containing the URL, never storing the secret", async () => {
+    Object.defineProperty(window, "location", {
+      writable: true,
+      value: { href: "" },
+    });
+
+    const result = await openAndLoad(activeLinkState());
+    revealShareLinkSecretMock.mockResolvedValue({
+      linkId: LINK_ID,
+      publicId: "abcdefgh12345678",
+      secret: "P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc",
+    });
+
+    await act(async () => {
+      await result.current.emailLink();
+    });
+
+    expect(window.location.href).toContain("mailto:");
+    expect(window.location.href).toContain(encodeURIComponent("Project update: Website launch"));
+    expect(window.location.href).toContain(
+      encodeURIComponent("/share/abcdefgh12345678#P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc")
+    );
+
+    const serializedState = JSON.stringify(result.current.state);
+    expect(serializedState).not.toContain("P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc");
   });
 });

@@ -494,6 +494,89 @@ describe("ShareLinkConfigurationEditor - EXACT REGRESSION: reopen, edit only one
   });
 });
 
+describe("ShareLinkConfigurationEditor - REAL BROWSER DEFECT REGRESSION: Resources fetch resolving after the initial mount", () => {
+  it("applies the persisted publicLabel once Resources arrives late, and a second save still succeeds with the correct data", async () => {
+    // Reproduces the exact race: ShareLinkPanel mounts this editor as
+    // soon as the management-state read (mappedResources) resolves --
+    // it does not wait for the separate Resources fetch. Render first
+    // exactly as that race would leave it: resources still loading, so
+    // shareableResources is empty even though mappedResources already
+    // carries the persisted mapping from an earlier save.
+    const { onSave, rerender } = renderEditor({
+      resources: [],
+      resourcesLoading: true,
+      mappedResources: [
+        mappedResource({
+          resourceId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          publicLabel: "Phase 3 Browser Fixture Resource",
+          canDownload: false,
+          displayOrder: 0,
+        }),
+      ],
+    });
+
+    // Nothing to select yet -- Resources hasn't loaded.
+    expect(screen.queryByRole("checkbox", { name: "Brand brief" })).not.toBeInTheDocument();
+
+    // Resources finishes loading, exactly as it would moments after
+    // mount when the two parallel fetches resolve out of order.
+    rerender(
+      <ShareLinkConfigurationEditor
+        link={link()}
+        mappedTasks={[]}
+        mappedResources={[
+          mappedResource({
+            resourceId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            publicLabel: "Phase 3 Browser Fixture Resource",
+            canDownload: false,
+            displayOrder: 0,
+          }),
+        ]}
+        currentUpdate={null}
+        project={project()}
+        resources={[resource({ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", title: "Brand brief" })]}
+        resourcesLoading={false}
+        resourcesError={null}
+        onRetryResources={vi.fn()}
+        pending={false}
+        disabled={false}
+        onSave={onSave}
+      />
+    );
+
+    // The resource must show up selected with its real persisted label --
+    // never blank, never resource.title.
+    expect(screen.getByRole("checkbox", { name: "Brand brief" })).toBeChecked();
+    expect(screen.getByDisplayValue("Phase 3 Browser Fixture Resource")).toBeInTheDocument();
+
+    // A save at this point (section untouched) must not resend a group
+    // that was never edited.
+    await userEvent.click(screen.getByRole("button", { name: /^save configuration$/i }));
+    expect(onSave.mock.calls[0][0].resources).toBeUndefined();
+
+    // Deselecting and reselecting the resource (touching the section)
+    // must still carry its correct, un-clobbered persisted metadata --
+    // the label/canDownload/displayOrder the late-arriving effect above
+    // applied must survive a real user interaction, not just the passive
+    // render.
+    const checkbox = screen.getByRole("checkbox", { name: "Brand brief" });
+    await userEvent.click(checkbox);
+    await userEvent.click(checkbox);
+    await userEvent.click(screen.getByRole("button", { name: /^save configuration$/i }));
+
+    const resources = onSave.mock.calls[1][0].resources;
+    expect(resources).toEqual([
+      {
+        resourceId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        publicLabel: "Phase 3 Browser Fixture Resource",
+        canDownload: false,
+        displayOrder: 0,
+      },
+    ]);
+  });
+
+});
+
 describe("ShareLinkConfigurationEditor - latest update", () => {
   it("shows the currently published update when present", () => {
     renderEditor({

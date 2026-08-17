@@ -47,7 +47,7 @@ describe("ClientProjectView - empty states", () => {
     expect(screen.queryByLabelText("Progress")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Latest update")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Tasks")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Shared files and links")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Attachments")).not.toBeInTheDocument();
     expect(screen.getByText("Shared securely via Text2Task.")).toBeInTheDocument();
   });
 });
@@ -131,7 +131,7 @@ describe("ClientProjectView - latest update", () => {
 });
 
 describe("ClientProjectView - task groups", () => {
-  it("groups tasks by publicGroup, in the fixed display order waiting_for_feedback, in_progress, coming_up, completed", () => {
+  it("groups tasks by publicGroup, in the redesigned fixed display order in_progress, waiting_for_feedback, completed, coming_up", () => {
     const projection = minimalProjection({
       tasks: [
         { title: "Done task", publicGroup: "completed", waitingForClientFeedback: false },
@@ -148,7 +148,19 @@ describe("ClientProjectView - task groups", () => {
       .map((el) => el.textContent);
     // The status badge (if any) could also match "In progress"; here
     // status is null, so all matches are group labels, in document order.
-    expect(labels).toEqual(["Waiting for your feedback", "In progress", "Coming up", "Completed"]);
+    expect(labels).toEqual(["In progress", "Waiting for your feedback", "Completed", "Coming up"]);
+  });
+
+  it("omits the Waiting for client feedback group entirely when no task has it, per the redesign's 'only if applicable' rule", () => {
+    const projection = minimalProjection({
+      tasks: [
+        { title: "Active task", publicGroup: "in_progress", waitingForClientFeedback: false },
+        { title: "Done task", publicGroup: "completed", waitingForClientFeedback: false },
+      ],
+    });
+
+    render(<ClientProjectView projection={projection} />);
+    expect(screen.queryByText("Waiting for your feedback")).not.toBeInTheDocument();
   });
 
   it("shows a 'Feedback needed' badge only for tasks with waitingForClientFeedback true", () => {
@@ -211,9 +223,9 @@ describe("ClientProjectView - resources", () => {
     expect(screen.queryByRole("link", { name: "Draft brief" })).not.toBeInTheDocument();
   });
 
-  it("omits the Shared files & links section entirely when there are no mapped resources", () => {
+  it("omits the Attachments section entirely when there are no mapped resources", () => {
     render(<ClientProjectView projection={minimalProjection({ resources: [] })} />);
-    expect(screen.queryByLabelText("Shared files and links")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Attachments")).not.toBeInTheDocument();
   });
 });
 
@@ -228,7 +240,7 @@ describe("ClientProjectView - mobile-safe semantic structure", () => {
 
     render(<ClientProjectView projection={projection} />);
 
-    for (const name of ["Progress", "Latest update", "Tasks", "Shared files and links"]) {
+    for (const name of ["Progress", "Latest update", "Tasks", "Attachments"]) {
       expect(screen.getByRole("region", { name })).toBeInTheDocument();
     }
   });

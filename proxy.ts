@@ -15,6 +15,31 @@ const HOMEPAGE_DEMO_REVIEW_PAGE_HEADERS = [
   ["X-Robots-Tag", "noindex, nofollow, noarchive"],
 ] as const;
 
+/**
+ * Phase 3 -- the public, no-login Client Share page's own security
+ * baseline. Mirrors the /homepage-demo/review precedent above exactly
+ * (page routes get proxy-level headers here; the sibling public API
+ * routes under /api/share/** set their own no-store/Referrer-Policy/
+ * nosniff headers directly in each route handler instead, matching how
+ * /api/homepage-demo/review passes through untouched below). The CSP is
+ * deliberately minimal -- only frame-ancestors/object-src/base-uri -- and
+ * does not lock down script-src/style-src, which would require a
+ * nonce-based rewrite of Next.js's own script injection; that is
+ * explicitly the later, already-planned full hardening phase's work, not
+ * this one's.
+ */
+const SHARE_PUBLIC_PAGE_HEADERS = [
+  ["Cache-Control", "private, no-store"],
+  ["Pragma", "no-cache"],
+  ["Referrer-Policy", "no-referrer"],
+  ["X-Content-Type-Options", "nosniff"],
+  ["X-Robots-Tag", "noindex, nofollow, noarchive"],
+  [
+    "Content-Security-Policy",
+    "frame-ancestors 'none'; object-src 'none'; base-uri 'none'",
+  ],
+] as const;
+
 function cleanPathname(pathname: string) {
   return pathname
     .replace(/%5C/gi, "")
@@ -31,6 +56,19 @@ export async function proxy(request: NextRequest) {
     const response = NextResponse.next();
 
     for (const [name, value] of HOMEPAGE_DEMO_REVIEW_PAGE_HEADERS) {
+      response.headers.set(name, value);
+    }
+
+    return response;
+  }
+
+  if (
+    request.nextUrl.pathname === "/share" ||
+    request.nextUrl.pathname.startsWith("/share/")
+  ) {
+    const response = NextResponse.next();
+
+    for (const [name, value] of SHARE_PUBLIC_PAGE_HEADERS) {
       response.headers.set(name, value);
     }
 

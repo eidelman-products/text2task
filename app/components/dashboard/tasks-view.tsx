@@ -748,21 +748,11 @@ export default function TasksView({
         triggerRef={shareLink.triggerRef}
         onClose={shareLink.closePanel}
         onRetry={shareLink.refresh}
-        onRetryResources={shareLink.retryResources}
-        onCreateDraft={() => void shareLink.createDraft()}
-        onActivate={() => void shareLink.activate()}
-        onDisable={() => void shareLink.disable()}
-        onReenable={() => void shareLink.reenable()}
-        onRevoke={() => void shareLink.revoke()}
         onCopyLink={() => void shareLink.copyLink()}
-        onSaveConfiguration={(request) => void shareLink.saveConfiguration(request)}
-        onSetPin={(pin) => void shareLink.setPin(pin)}
-        onClearPin={() => void shareLink.clearPin()}
-        onSetExpiry={(expiresAt) => void shareLink.setExpiry(expiresAt)}
-        onClearExpiry={() => void shareLink.clearExpiry()}
-        onRotate={() => void shareLink.rotate()}
         onNativeShare={() => void shareLink.nativeShare()}
         onWhatsApp={(popup) => void shareLink.whatsapp(popup)}
+        onEmail={() => void shareLink.emailLink()}
+        onShareUpdate={(submission) => void shareLink.shareUpdate(submission)}
         onOpenPreview={() => void shareLink.openPreview()}
         onClosePreview={shareLink.closePreview}
       />

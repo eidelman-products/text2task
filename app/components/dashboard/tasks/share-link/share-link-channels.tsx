@@ -68,9 +68,23 @@ export type ShareLinkChannelsProps = {
   onCopyLink: () => void;
   onNativeShare: () => void;
   onWhatsApp: (popup: Window | null) => void;
+  // Objective B: mailto: only -- see use-share-link.ts's emailLink for
+  // why this never opens a popup/gesture-sensitive window the way
+  // WhatsApp does (a plain navigation-scheme href, not a new tab).
+  onEmail: () => void;
   onRequestRotate: () => void;
   onCancelRotateConfirm: () => void;
   onOpenPreview: () => void;
+  // Objective B: ShareLinkPanel now renders this component in two
+  // different secondary views -- the post-share "result" screen (Copy/
+  // Native Share/WhatsApp/Email/Preview; no Rotate, which is a "Manage
+  // link" concern) and the "Manage link" view (Preview/Rotate only, no
+  // sharing channels -- those belong to the moment right after a share,
+  // not general link management). Both default to true so every
+  // pre-existing call site (and every test that does not pass these)
+  // keeps the original, full-channel-set behavior unchanged.
+  showChannelButtons?: boolean;
+  showRotate?: boolean;
 };
 
 const ROTATE_WARNING =
@@ -85,12 +99,15 @@ export function ShareLinkChannels({
   onCopyLink,
   onNativeShare,
   onWhatsApp,
+  onEmail,
   onRequestRotate,
   onCancelRotateConfirm,
   onOpenPreview,
+  showChannelButtons = true,
+  showRotate = true,
 }: ShareLinkChannelsProps) {
-  const canRevealForSharing = linkState === "active";
-  const canRotate = linkState === "active" || linkState === "disabled";
+  const canRevealForSharing = linkState === "active" && showChannelButtons;
+  const canRotate = (linkState === "active" || linkState === "disabled") && showRotate;
   // Preview is a configuration-inspection capability, not a public-access
   // one -- it never calls reveal, so it is available for every state this
   // component ever renders for (draft/active/disabled/expired; revoked
@@ -192,6 +209,15 @@ export function ShareLinkChannels({
             disabled={disabled}
           >
             Share via WhatsApp
+          </DashboardButton>
+
+          <DashboardButton
+            variant="secondary"
+            onClick={onEmail}
+            loading={actionPending === "email"}
+            disabled={disabled}
+          >
+            Email
           </DashboardButton>
         </div>
       ) : null}

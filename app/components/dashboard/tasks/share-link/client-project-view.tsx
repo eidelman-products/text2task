@@ -27,11 +27,16 @@ const STATUS_LABELS: Record<ClientProjectStatus, string> = {
   completed: "Completed",
 };
 
+// Objective B client-page redesign: In progress, then Waiting for client
+// feedback (only rendered when at least one task actually has it -- the
+// filter below already hides an empty group), then Completed, then
+// Coming up -- matching the redesign's target hierarchy exactly. Groups
+// with zero tasks are still skipped entirely (see the .filter below).
 const TASK_GROUP_ORDER: ClientProjectTask["publicGroup"][] = [
-  "waiting_for_feedback",
   "in_progress",
-  "coming_up",
+  "waiting_for_feedback",
   "completed",
+  "coming_up",
 ];
 
 const TASK_GROUP_LABELS: Record<ClientProjectTask["publicGroup"], string> = {
@@ -121,8 +126,8 @@ export function ClientProjectView({ projection }: ClientProjectViewProps) {
         ) : null}
 
         {projection.resources.length > 0 ? (
-          <section style={sectionStyle} aria-label="Shared files and links">
-            <span style={sectionLabelStyle}>Shared files &amp; links</span>
+          <section style={sectionStyle} aria-label="Attachments">
+            <span style={sectionLabelStyle}>Attachments</span>
             <ul style={resourceListStyle}>
               {projection.resources.map((resource, index) => (
                 <li key={index} style={resourceItemStyle}>

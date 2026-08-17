@@ -48,6 +48,7 @@ function baseState(overrides: Partial<ShareLinkPanelState> = {}): ShareLinkPanel
     data: null,
     actionPending: null,
     actionError: null,
+    actionErrorStage: null,
     copyStatus: "idle",
     resources: [],
     resourcesLoading: false,
@@ -90,40 +91,37 @@ function linkData(
   };
 }
 
-function renderPanel(state: ShareLinkPanelState, overrides: Partial<Parameters<typeof ShareLinkPanel>[0]> = {}) {
-  function Wrapper() {
-    const triggerRef = useRef<HTMLElement | null>(null);
-    return (
-      <ShareLinkPanel
-        state={state}
-        triggerRef={triggerRef}
-        onClose={vi.fn()}
-        onRetry={vi.fn()}
-        onRetryResources={vi.fn()}
-        onCreateDraft={vi.fn()}
-        onActivate={vi.fn()}
-        onDisable={vi.fn()}
-        onReenable={vi.fn()}
-        onRevoke={vi.fn()}
-        onCopyLink={vi.fn()}
-        onSaveConfiguration={vi.fn()}
-        onSetPin={vi.fn()}
-        onClearPin={vi.fn()}
-        onSetExpiry={vi.fn()}
-        onClearExpiry={vi.fn()}
-        onRotate={vi.fn()}
-        onNativeShare={vi.fn()}
-        onWhatsApp={vi.fn()}
-        onOpenPreview={vi.fn()}
-        onClosePreview={vi.fn()}
-        {...overrides}
-      />
-    );
-  }
-  return render(<Wrapper />);
+function PanelHarness({
+  state,
+  overrides = {},
+}: {
+  state: ShareLinkPanelState;
+  overrides?: Partial<Parameters<typeof ShareLinkPanel>[0]>;
+}) {
+  const triggerRef = useRef<HTMLElement | null>(null);
+  return (
+    <ShareLinkPanel
+      state={state}
+      triggerRef={triggerRef}
+      onClose={vi.fn()}
+      onRetry={vi.fn()}
+      onCopyLink={vi.fn()}
+      onNativeShare={vi.fn()}
+      onWhatsApp={vi.fn()}
+      onEmail={vi.fn()}
+      onShareUpdate={vi.fn()}
+      onOpenPreview={vi.fn()}
+      onClosePreview={vi.fn()}
+      {...overrides}
+    />
+  );
 }
 
-describe("ShareLinkPanel - rendering per state", () => {
+function renderPanel(state: ShareLinkPanelState, overrides: Partial<Parameters<typeof ShareLinkPanel>[0]> = {}) {
+  return render(<PanelHarness state={state} overrides={overrides} />);
+}
+
+describe("ShareLinkPanel - top-level rendering", () => {
   it("renders nothing when closed", () => {
     renderPanel(baseState({ isOpen: false }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -143,102 +141,6 @@ describe("ShareLinkPanel - rendering per state", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the no-link setup state with a create-draft action", async () => {
-    const onCreateDraft = vi.fn();
-    renderPanel(baseState({ data: { link: null, mappedTasks: [], mappedResources: [], currentUpdate: null } }), {
-      onCreateDraft,
-    });
-
-    expect(screen.getByText(/no client share link exists/i)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /create draft link/i }));
-    expect(onCreateDraft).toHaveBeenCalledTimes(1);
-  });
-
-  it("draft state shows Activate and Revoke, not Copy/Disable/Re-enable", () => {
-    renderPanel(baseState({ data: linkData("draft") }));
-
-    expect(screen.getByRole("button", { name: /activate link/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /revoke link/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /copy client link/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /disable link/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /re-enable link/i })).not.toBeInTheDocument();
-  });
-
-  it("active state shows Copy link and Disable, not Activate/Re-enable", async () => {
-    const onCopyLink = vi.fn();
-    renderPanel(baseState({ data: linkData("active") }), { onCopyLink });
-
-    expect(screen.getByRole("button", { name: /copy client link/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /disable link/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /activate link/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /re-enable link/i })).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: /copy client link/i }));
-    expect(onCopyLink).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows 'Link copied' once copyStatus is copied", () => {
-    renderPanel(baseState({ data: linkData("active"), copyStatus: "copied" }));
-    expect(screen.getByRole("button", { name: /link copied/i })).toBeInTheDocument();
-  });
-
-  it("disabled state shows Re-enable, not Copy/Activate/Disable", async () => {
-    const onReenable = vi.fn();
-    renderPanel(baseState({ data: linkData("disabled") }), { onReenable });
-
-    expect(screen.getByRole("button", { name: /re-enable link/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /copy client link/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^activate link$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^disable link$/i })).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: /re-enable link/i }));
-    expect(onReenable).toHaveBeenCalledTimes(1);
-  });
-
-  it("expired state shows only Status and Revoke -- no Activate/Copy/Disable/Re-enable", async () => {
-    // 'expired' is not currently reachable through any delivered Phase 1B
-    // RPC (no write path sets it -- see the migration's own "future expiry
-    // sweep" comment), but the read contract's type retains it for
-    // forward compatibility, and share-link-panel.tsx already renders it
-    // defensively. This test covers that defensive branch directly.
-    const onRevoke = vi.fn();
-    renderPanel(baseState({ data: linkData("expired") }), { onRevoke });
-
-    expect(screen.getByText("Expired")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^revoke link$/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /activate link/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /copy client link/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^disable link$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /re-enable link/i })).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: /^revoke link$/i }));
-    await userEvent.click(screen.getByRole("button", { name: /confirm revoke/i }));
-    expect(onRevoke).toHaveBeenCalledTimes(1);
-  });
-
-  it("revoke requires a second confirming click before calling onRevoke", async () => {
-    const onRevoke = vi.fn();
-    renderPanel(baseState({ data: linkData("active") }), { onRevoke });
-
-    await userEvent.click(screen.getByRole("button", { name: /^revoke link$/i }));
-    expect(onRevoke).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: /confirm revoke/i })).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: /confirm revoke/i }));
-    expect(onRevoke).toHaveBeenCalledTimes(1);
-  });
-
-  it("disable requires a second confirming click before calling onDisable", async () => {
-    const onDisable = vi.fn();
-    renderPanel(baseState({ data: linkData("active") }), { onDisable });
-
-    await userEvent.click(screen.getByRole("button", { name: /^disable link$/i }));
-    expect(onDisable).not.toHaveBeenCalled();
-
-    await userEvent.click(screen.getByRole("button", { name: /confirm disable/i }));
-    expect(onDisable).toHaveBeenCalledTimes(1);
-  });
-
   it("shows the action error banner when present", () => {
     renderPanel(baseState({ data: linkData("active"), actionError: "That action failed." }));
     expect(screen.getByRole("alert")).toHaveTextContent("That action failed.");
@@ -250,151 +152,121 @@ describe("ShareLinkPanel - rendering per state", () => {
   });
 });
 
-describe("ShareLinkPanel - configuration editor wiring", () => {
-  it("renders the configuration editor once a managed link exists", () => {
+describe("ShareLinkPanel - final simplified normal panel content (real browser defect #3 turn)", () => {
+  it("shows exactly the required simplified content for a no-link project: Share with client, Project progress, Client update, Attachments, PIN, Share update", () => {
+    renderPanel(baseState({ data: { link: null, mappedTasks: [], mappedResources: [], currentUpdate: null } }));
+
+    expect(screen.getByRole("heading", { name: /^share with client$/i })).toBeInTheDocument();
+    expect(screen.getByText(/^project progress$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^client update$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^attachments$/i)).toBeInTheDocument();
+    expect(screen.getByText(/protect with a pin \(optional\)/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^share update$/i })).toBeInTheDocument();
+  });
+
+  it("shows the same simplified content for an existing active link -- no old flat layout, no technical controls", () => {
     renderPanel(baseState({ data: linkData("active") }));
-    expect(screen.getByRole("button", { name: /^save configuration$/i })).toBeInTheDocument();
+
+    expect(screen.getByRole("heading", { name: /^share with client$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^share update$/i })).toBeInTheDocument();
+
+    for (const forbidden of [
+      /^share project update$/i,
+      /edit what client sees/i,
+      /^manage link$/i,
+      /^draft$/i,
+      /activate link/i,
+      /revoke link/i,
+      /set expiry/i,
+      /text direction/i,
+      /allow client comments/i,
+      /save configuration/i,
+    ]) {
+      expect(screen.queryByText(forbidden)).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: forbidden })).not.toBeInTheDocument();
+    }
   });
 
-  it("does not render the configuration editor while there is no managed link", () => {
-    renderPanel(
-      baseState({ data: { link: null, mappedTasks: [], mappedResources: [], currentUpdate: null } })
-    );
-    expect(screen.queryByRole("button", { name: /^save configuration$/i })).not.toBeInTheDocument();
+  it("does not show a duplicate 'Share project update' heading -- only the dialog's own 'Share with client' heading appears", () => {
+    renderPanel(baseState({ data: linkData("active") }));
+    const heading = screen.getByRole("heading", { level: 2 });
+    expect(heading).toHaveTextContent("Share with client");
+    expect(screen.queryByText(/share project update/i)).not.toBeInTheDocument();
   });
 
-  it("Save configuration calls onSaveConfiguration with the built request", async () => {
-    const onSaveConfiguration = vi.fn();
-    renderPanel(baseState({ data: linkData("active") }), { onSaveConfiguration });
+  it("Share update calls onShareUpdate with the built submission", async () => {
+    const onShareUpdate = vi.fn();
+    renderPanel(baseState({ data: linkData("active") }), { onShareUpdate });
 
-    await userEvent.click(screen.getByRole("button", { name: /^save configuration$/i }));
+    await userEvent.type(screen.getByPlaceholderText(/optional message to your client/i), "Homepage is live.");
+    await userEvent.click(screen.getByRole("button", { name: /^share update$/i }));
 
-    expect(onSaveConfiguration).toHaveBeenCalledTimes(1);
-    expect(onSaveConfiguration.mock.calls[0][0]).toHaveProperty("settings");
+    expect(onShareUpdate).toHaveBeenCalledTimes(1);
+    expect(onShareUpdate.mock.calls[0][0]).toMatchObject({
+      updateBody: "Homepage is live.",
+      pin: null,
+      attachmentResourceIds: [],
+    });
   });
 
-  it("opening the panel never calls onSaveConfiguration on its own", () => {
-    const onSaveConfiguration = vi.fn();
-    renderPanel(baseState({ data: linkData("active") }), { onSaveConfiguration });
-    expect(onSaveConfiguration).not.toHaveBeenCalled();
-  });
-
-  it("a Resources load error inside the editor shows a retry that calls onRetryResources", async () => {
-    const onRetryResources = vi.fn();
-    renderPanel(
-      baseState({ data: linkData("active"), resourcesError: "Could not load Resources. Please try again." }),
-      { onRetryResources }
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: /try again/i, hidden: false }));
-    expect(onRetryResources).toHaveBeenCalledTimes(1);
+  it("opening the panel never calls onShareUpdate on its own", () => {
+    const onShareUpdate = vi.fn();
+    renderPanel(baseState({ data: linkData("active") }), { onShareUpdate });
+    expect(onShareUpdate).not.toHaveBeenCalled();
   });
 });
 
-describe("ShareLinkPanel - Phase 2C access controls wiring", () => {
-  it("renders PIN and expiry controls once a managed link exists", () => {
-    renderPanel(baseState({ data: linkData("active") }));
-    expect(screen.getByRole("button", { name: /add pin/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /set expiry/i })).toBeInTheDocument();
-  });
+describe("ShareLinkPanel - result view after a successful Share update", () => {
+  it("shows the result view (Copy/WhatsApp/Email/Preview, no Rotate, no Manage link) once a Share update completes successfully", () => {
+    const { rerender } = renderPanel(baseState({ data: linkData("draft"), actionPending: "shareUpdate" }));
 
-  it("Add PIN -> Save PIN calls onSetPin with the entered value", async () => {
-    const onSetPin = vi.fn();
-    renderPanel(baseState({ data: linkData("active") }), { onSetPin });
+    rerender(
+      <PanelHarness state={baseState({ data: linkData("active"), actionPending: null, actionError: null })} />
+    );
 
-    await userEvent.click(screen.getByRole("button", { name: /add pin/i }));
-    await userEvent.type(screen.getByLabelText(/new pin/i), "4242");
-    await userEvent.click(screen.getByRole("button", { name: /save pin/i }));
-
-    expect(onSetPin).toHaveBeenCalledWith("4242");
-  });
-
-  it("Remove PIN requires a second confirming click before calling onClearPin", async () => {
-    const onClearPin = vi.fn();
-    renderPanel(baseState({ data: linkData("active", { hasPin: true }) }), { onClearPin });
-
-    await userEvent.click(screen.getByRole("button", { name: /remove pin/i }));
-    expect(onClearPin).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: /confirm remove/i })).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: /confirm remove/i }));
-    expect(onClearPin).toHaveBeenCalledTimes(1);
-  });
-
-  it("Set expiry calls onSetExpiry with a converted UTC ISO timestamp", async () => {
-    const onSetExpiry = vi.fn();
-    renderPanel(baseState({ data: linkData("active") }), { onSetExpiry });
-
-    await userEvent.click(screen.getByRole("button", { name: /set expiry/i }));
-    const futureYear = new Date().getFullYear() + 2;
-    await userEvent.type(screen.getByLabelText(/expiry date and time/i), `${futureYear}-05-01T09:00`);
-    await userEvent.click(screen.getByRole("button", { name: /save expiry/i }));
-
-    expect(onSetExpiry).toHaveBeenCalledWith(new Date(futureYear, 4, 1, 9, 0, 0, 0).toISOString());
-  });
-});
-
-describe("ShareLinkPanel - Phase 2C share channels wiring", () => {
-  it("Native Share calls onNativeShare when supported", async () => {
-    vi.stubGlobal("navigator", { share: vi.fn() });
-    const onNativeShare = vi.fn();
-    renderPanel(baseState({ data: linkData("active") }), { onNativeShare });
-
-    await userEvent.click(screen.getByRole("button", { name: /share\.\.\./i }));
-
-    expect(onNativeShare).toHaveBeenCalledTimes(1);
-    vi.unstubAllGlobals();
-  });
-
-  it("WhatsApp calls onWhatsApp with a synchronously opened window handle", async () => {
-    const popupStub = { closed: false } as unknown as Window;
-    const windowOpenMock = vi.spyOn(window, "open").mockReturnValue(popupStub);
-    const onWhatsApp = vi.fn();
-    renderPanel(baseState({ data: linkData("active") }), { onWhatsApp });
-
-    await userEvent.click(screen.getByRole("button", { name: /whatsapp/i }));
-
-    expect(onWhatsApp).toHaveBeenCalledWith(popupStub);
-    windowOpenMock.mockRestore();
-  });
-
-  it("Rotate shows the explicit invalidation warning and requires a second confirming click", async () => {
-    const onRotate = vi.fn();
-    renderPanel(baseState({ data: linkData("active") }), { onRotate });
-
-    await userEvent.click(screen.getByRole("button", { name: /^rotate link$/i }));
-    expect(onRotate).not.toHaveBeenCalled();
-    expect(
-      screen.getByText(/immediately invalidate the previously shared client link/i)
-    ).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: /confirm rotate/i }));
-    expect(onRotate).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not render Copy/Share/WhatsApp/Rotate secret-sharing controls for a draft (non-revealable, non-rotatable) link", () => {
-    renderPanel(baseState({ data: linkData("draft") }));
-    expect(screen.queryByRole("button", { name: /copy client link/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /share\.\.\./i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /whatsapp/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /project shared/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /copy client link/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /whatsapp/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^email$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /preview/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /rotate link/i })).not.toBeInTheDocument();
-  });
-});
-
-describe("ShareLinkPanel - Phase 2C regression safety", () => {
-  it("never renders the plaintext secret anywhere in the DOM with the new sections present", () => {
-    renderPanel(baseState({ data: linkData("active", { hasPin: true, expiresAt: "2026-09-01T00:00:00Z" }) }));
-    expect(document.body.textContent).not.toMatch(/[A-Za-z0-9_-]{43}/);
+    expect(screen.queryByRole("button", { name: /^manage link$/i })).not.toBeInTheDocument();
   });
 
-  it("existing Phase 2A lifecycle controls (activate/disable/re-enable/revoke) are unchanged", () => {
-    renderPanel(baseState({ data: linkData("draft") }));
-    expect(screen.getByRole("button", { name: /activate link/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /revoke link/i })).toBeInTheDocument();
+  it("does NOT show the result view when Share update fails, and never reports false success", () => {
+    const { rerender } = renderPanel(baseState({ data: linkData("draft"), actionPending: "shareUpdate" }));
+
+    rerender(
+      <PanelHarness
+        state={baseState({
+          data: linkData("draft"),
+          actionPending: null,
+          actionError: "That action could not be completed.",
+          actionErrorStage: "share_update_activate_failed",
+        })}
+      />
+    );
+
+    expect(screen.queryByRole("heading", { name: /project shared/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^share update$/i })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("That action could not be completed.");
   });
 
-  it("the Phase 2B configuration editor still renders alongside the new Phase 2C sections", () => {
-    renderPanel(baseState({ data: linkData("active") }));
-    expect(screen.getByRole("button", { name: /^save configuration$/i })).toBeInTheDocument();
+  it("a fresh panel open always returns to the quick-share view, even if the previous session ended on the result view", () => {
+    const activeState = baseState({ data: linkData("active"), actionPending: null, actionError: null });
+    const { rerender } = renderPanel(baseState({ data: linkData("draft"), actionPending: "shareUpdate" }));
+    rerender(<PanelHarness state={activeState} />);
+    expect(screen.getByRole("heading", { name: /project shared/i })).toBeInTheDocument();
+
+    // Close, then reopen for a different project -- projectId changes.
+    rerender(<PanelHarness state={baseState({ isOpen: false })} />);
+    rerender(
+      <PanelHarness
+        state={baseState({ projectId: "99999999-9999-4999-8999-999999999999", data: linkData("active") })}
+      />
+    );
+
+    expect(screen.queryByRole("heading", { name: /project shared/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^share update$/i })).toBeInTheDocument();
   });
 });
