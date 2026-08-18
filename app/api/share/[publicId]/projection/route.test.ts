@@ -51,13 +51,22 @@ const { GET } = await import("./route");
 const VALID_PUBLIC_ID = "abcdefgh12345678ijklmnop";
 const VALID_RAW_SESSION_SECRET = "P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc";
 
-function buildRequest(options: { cookieValue?: string | null; secFetchSite?: string } = {}) {
+function buildRequest(
+  options: {
+    cookieValue?: string | null;
+    secFetchSite?: string;
+    secFetchMode?: string;
+  } = {}
+) {
   const headers: Record<string, string> = {};
   if (options.cookieValue !== undefined && options.cookieValue !== null) {
     headers.cookie = `${COOKIE_NAME}=${options.cookieValue}`;
   }
   if (options.secFetchSite) {
     headers["sec-fetch-site"] = options.secFetchSite;
+  }
+  if (options.secFetchMode) {
+    headers["sec-fetch-mode"] = options.secFetchMode;
   }
   return new NextRequest(`http://localhost/api/share/${VALID_PUBLIC_ID}/projection`, {
     method: "GET",
@@ -141,6 +150,19 @@ describe("GET /api/share/[publicId]/projection - request security", () => {
     verifyAuthorizationMock.mockResolvedValue(null);
     const response = await GET(
       buildRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    expect(response.status).not.toBe(403);
+  });
+
+  it("PHASE 4B DEFECT #1 REGRESSION -- accepts Sec-Fetch-Site: none paired with Mode: navigate (the same shared-helper fix the file route needed)", async () => {
+    verifyAuthorizationMock.mockResolvedValue(null);
+    const response = await GET(
+      buildRequest({
+        cookieValue: VALID_RAW_SESSION_SECRET,
+        secFetchSite: "none",
+        secFetchMode: "navigate",
+      }),
       buildContext(VALID_PUBLIC_ID)
     );
     expect(response.status).not.toBe(403);

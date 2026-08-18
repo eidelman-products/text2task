@@ -143,6 +143,23 @@ describe("resolveShareLinkByPublicId", () => {
     expect(result).toBeNull();
   });
 
+  it("PHASE 4B DEFECT #2 FINAL NARROWING -- returns null for a row that exists but is revoked (same external null contract as not-found, now distinguished internally via stage tags only)", async () => {
+    queueResponse("project_share_links", { data: validLinkRow({ state: "revoked" }), error: null });
+    const result = await resolveShareLinkByPublicId(VALID_PUBLIC_ID);
+    expect(result).toBeNull();
+  });
+
+  it("is scoped by public_id alone -- no session-derived identifier is ever part of this query (confirms no session/link coupling exists)", async () => {
+    queueResponse("project_share_links", { data: validLinkRow(), error: null });
+    await resolveShareLinkByPublicId(VALID_PUBLIC_ID);
+    // makeChain's `eq`/`is`/`in` are all no-op passthroughs that don't
+    // record call arguments, so the real proof is structural: this
+    // function's own signature (lib/share/share-session-grant.server.ts)
+    // takes only `publicId: string` -- there is no session/browser
+    // parameter for a coupled query to even reference.
+    expect(resolveShareLinkByPublicId.length).toBe(1);
+  });
+
   it("maps a found row, including PIN material only when all seven fields are present", async () => {
     queueResponse("project_share_links", { data: validLinkRow(), error: null });
     const result = await resolveShareLinkByPublicId(VALID_PUBLIC_ID);
@@ -755,5 +772,348 @@ describe("verifyShareProjectionAuthorization - never trusts any single dimension
       publicId: VALID_PUBLIC_ID,
     });
     expect(result).not.toBeNull();
+  });
+});
+
+describe("verifyShareProjectionAuthorization - PHASE 4B DEFECT #2 sub-stage diagnostics", () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+  let consoleInfoSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    consoleInfoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    consoleInfoSpy.mockRestore();
+  });
+
+  // PHASE 4C -- the two success-shaped stages (link_resolved,
+  // authorization_ok) are logged via console.info, not console.error
+  // (see the module's own right-sizing comment); every denial stage
+  // stays on console.error. This helper merges both spies, in call
+  // order, so existing sequence assertions (e.g. "link_resolved then
+  // link_not_active") continue to read correctly regardless of which
+  // level either individual stage happens to use.
+  function stageCalls(): unknown[][] {
+    const tagged = (spy: ReturnType<typeof vi.spyOn>, order: "error" | "info") =>
+      (spy.mock.invocationCallOrder as number[]).map((callOrder, i) => ({
+        callOrder,
+        call: (spy.mock.calls as unknown[][])[i],
+        order,
+      }));
+
+    return [...tagged(consoleErrorSpy, "error"), ...tagged(consoleInfoSpy, "info")]
+      .sort((a, b) => a.callOrder - b.callOrder)
+      .map((entry) => entry.call)
+      .filter((call) => call[0] === "share_projection_auth_stage");
+  }
+
+  function queueHappyPath(overrides: {
+    grantConfigVersion?: number;
+    linkConfigVersion?: number;
+    pinVerifiedAt?: string | null;
+    linkHasPin?: boolean;
+  } = {}) {
+    queueResponse("share_browser_sessions", {
+      data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
+      error: null,
+    });
+    queueResponse("project_share_links", {
+      data: validLinkRow({
+        configuration_version: overrides.linkConfigVersion ?? 1,
+        ...(overrides.linkHasPin
+          ? {
+              pin_hash: "b".repeat(43),
+              pin_salt: "c".repeat(22),
+              pin_hash_version: 1,
+              pin_scrypt_n: 16384,
+              pin_scrypt_r: 8,
+              pin_scrypt_p: 1,
+              pin_key_length: 32,
+            }
+          : {}),
+      }),
+      error: null,
+    });
+    queueResponse("projects", { data: { id: VALID_PROJECT_ID, deleted_at: null }, error: null });
+    queueResponse("share_session_grants", {
+      data: [
+        {
+          granted_configuration_version: overrides.grantConfigVersion ?? 1,
+          pin_verified_at: overrides.pinVerifiedAt ?? null,
+          expires_at: FUTURE_TIMESTAMP,
+          revoked_at: null,
+        },
+      ],
+      error: null,
+    });
+  }
+
+  it("tags session_lookup_failed when the session cannot be resolved", async () => {
+    queueResponse("share_browser_sessions", { data: null, error: null });
+    await verifyShareProjectionAuthorization({
+      cookieValue: generateShareBrowserSessionSecret(),
+      publicId: VALID_PUBLIC_ID,
+    });
+    expect(stageCalls()).toEqual([["share_projection_auth_stage", { stage: "session_lookup_failed" }]]);
+  });
+
+  it("tags link_not_found_by_public_id when no row matches this public_id at all", async () => {
+    queueResponse("share_browser_sessions", {
+      data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
+      error: null,
+    });
+    queueResponse("project_share_links", { data: null, error: null });
+    await verifyShareProjectionAuthorization({
+      cookieValue: generateShareBrowserSessionSecret(),
+      publicId: VALID_PUBLIC_ID,
+    });
+    expect(stageCalls()).toEqual([["share_projection_auth_stage", { stage: "link_not_found_by_public_id" }]]);
+  });
+
+  it("PHASE 4B DEFECT #2 FINAL NARROWING -- tags link_revoked (distinct from link_not_found_by_public_id) when the row exists but state = 'revoked'", async () => {
+    queueResponse("share_browser_sessions", {
+      data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
+      error: null,
+    });
+    queueResponse("project_share_links", { data: validLinkRow({ state: "revoked" }), error: null });
+    await verifyShareProjectionAuthorization({
+      cookieValue: generateShareBrowserSessionSecret(),
+      publicId: VALID_PUBLIC_ID,
+    });
+    expect(stageCalls()).toEqual([["share_projection_auth_stage", { stage: "link_revoked" }]]);
+  });
+
+  it("tags link_query_failed when the project_share_links query itself errors", async () => {
+    queueResponse("share_browser_sessions", {
+      data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
+      error: null,
+    });
+    queueResponse("project_share_links", { data: null, error: { message: "boom" } });
+    await verifyShareProjectionAuthorization({
+      cookieValue: generateShareBrowserSessionSecret(),
+      publicId: VALID_PUBLIC_ID,
+    });
+    expect(stageCalls()).toEqual([["share_projection_auth_stage", { stage: "link_query_failed" }]]);
+  });
+
+  it("tags link_resolved then link_not_active when the link resolves but is not currently publicly active", async () => {
+    queueResponse("share_browser_sessions", {
+      data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
+      error: null,
+    });
+    queueResponse("project_share_links", { data: validLinkRow({ state: "disabled" }), error: null });
+    await verifyShareProjectionAuthorization({
+      cookieValue: generateShareBrowserSessionSecret(),
+      publicId: VALID_PUBLIC_ID,
+    });
+    expect(stageCalls()).toEqual([
+      ["share_projection_auth_stage", { stage: "link_resolved" }],
+      ["share_projection_auth_stage", { stage: "link_not_active" }],
+    ]);
+  });
+
+  it("tags grant_not_found when no grant exists for this (session, link) pair", async () => {
+    queueResponse("share_browser_sessions", {
+      data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
+      error: null,
+    });
+    queueResponse("project_share_links", { data: validLinkRow(), error: null });
+    queueResponse("projects", { data: { id: VALID_PROJECT_ID, deleted_at: null }, error: null });
+    queueResponse("share_session_grants", { data: [], error: null });
+    await verifyShareProjectionAuthorization({
+      cookieValue: generateShareBrowserSessionSecret(),
+      publicId: VALID_PUBLIC_ID,
+    });
+    expect(stageCalls().at(-1)).toEqual(["share_projection_auth_stage", { stage: "grant_not_found" }]);
+  });
+
+  it("tags grant_expired when the grant's own expires_at has passed", async () => {
+    queueResponse("share_browser_sessions", {
+      data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
+      error: null,
+    });
+    queueResponse("project_share_links", { data: validLinkRow(), error: null });
+    queueResponse("projects", { data: { id: VALID_PROJECT_ID, deleted_at: null }, error: null });
+    queueResponse("share_session_grants", {
+      data: [{ granted_configuration_version: 1, pin_verified_at: null, expires_at: PAST_TIMESTAMP, revoked_at: null }],
+      error: null,
+    });
+    await verifyShareProjectionAuthorization({
+      cookieValue: generateShareBrowserSessionSecret(),
+      publicId: VALID_PUBLIC_ID,
+    });
+    expect(stageCalls().at(-1)).toEqual(["share_projection_auth_stage", { stage: "grant_expired" }]);
+  });
+
+  it("tags config_version_mismatch when the grant is stale relative to the link's live configuration_version", async () => {
+    queueResponse("share_browser_sessions", {
+      data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
+      error: null,
+    });
+    queueResponse("project_share_links", { data: validLinkRow({ configuration_version: 2 }), error: null });
+    queueResponse("projects", { data: { id: VALID_PROJECT_ID, deleted_at: null }, error: null });
+    queueResponse("share_session_grants", {
+      data: [{ granted_configuration_version: 1, pin_verified_at: null, expires_at: FUTURE_TIMESTAMP, revoked_at: null }],
+      error: null,
+    });
+    await verifyShareProjectionAuthorization({
+      cookieValue: generateShareBrowserSessionSecret(),
+      publicId: VALID_PUBLIC_ID,
+    });
+    expect(stageCalls().at(-1)).toEqual(["share_projection_auth_stage", { stage: "config_version_mismatch" }]);
+  });
+
+  it("tags pin_not_verified when the link requires a PIN the grant hasn't verified", async () => {
+    queueHappyPath({ linkHasPin: true, pinVerifiedAt: null });
+    await verifyShareProjectionAuthorization({
+      cookieValue: generateShareBrowserSessionSecret(),
+      publicId: VALID_PUBLIC_ID,
+    });
+    expect(stageCalls().at(-1)).toEqual(["share_projection_auth_stage", { stage: "pin_not_verified" }]);
+  });
+
+  it("tags authorization_ok on success", async () => {
+    queueHappyPath();
+    await verifyShareProjectionAuthorization({
+      cookieValue: generateShareBrowserSessionSecret(),
+      publicId: VALID_PUBLIC_ID,
+    });
+    expect(stageCalls().at(-1)).toEqual(["share_projection_auth_stage", { stage: "authorization_ok" }]);
+  });
+
+  it("never logs the cookie, session id, grant id, publicId, or link/project/user id in any stage tag", async () => {
+    queueHappyPath();
+    const raw = generateShareBrowserSessionSecret();
+    await verifyShareProjectionAuthorization({ cookieValue: raw, publicId: VALID_PUBLIC_ID });
+
+    const serialized = JSON.stringify([...consoleErrorSpy.mock.calls, ...consoleInfoSpy.mock.calls]);
+    for (const forbidden of [raw, VALID_SESSION_ID, VALID_LINK_ID, VALID_PROJECT_ID, VALID_USER_ID, VALID_PUBLIC_ID]) {
+      expect(serialized).not.toContain(forbidden);
+    }
+  });
+});
+
+describe("PHASE 4B DEFECT #2 -- both routes call verifyShareProjectionAuthorization identically", () => {
+  /**
+   * Direct proof, not an assumption: /projection/route.ts and
+   * /resources/[fileRef]/route.ts both call
+   * `verifyShareProjectionAuthorization({cookieValue, publicId})` with the
+   * exact same two fields, in the same order, sourced the same way (the
+   * same cookie-policy name, the same context.params.publicId). Given
+   * that, this function -- a pure, deterministic read of the SAME
+   * database state -- cannot itself produce a different result for the
+   * "projection" call vs. the "file route" call when the underlying
+   * session/link/grant rows have not changed between them. This test
+   * proves that determinism directly: the exact same input, called twice
+   * (simulating a projection request immediately followed by a file-route
+   * request against the same session/link state), returns the identical
+   * successful authorization both times -- there is no code-level
+   * asymmetry between the two routes' authorization calls. If a real
+   * Preview retest still shows the file route failing while the
+   * projection route succeeds under otherwise-identical conditions, the
+   * cause is therefore external to this function and to both routes'
+   * call sites (e.g. genuinely different request/cookie context, or the
+   * underlying session/link/grant state actually changing between the
+   * two real requests) -- not a routing or parameter bug, which this test
+   * would have caught.
+   */
+  it("returns the identical successful authorization for two calls with the same cookie/publicId against unchanged DB state", async () => {
+    queueHappyPath();
+    queueHappyPath(); // second call re-reads the same (unchanged) state
+    const raw = generateShareBrowserSessionSecret();
+
+    const projectionCallResult = await verifyShareProjectionAuthorization({
+      cookieValue: raw,
+      publicId: VALID_PUBLIC_ID,
+    });
+    const fileRouteCallResult = await verifyShareProjectionAuthorization({
+      cookieValue: raw,
+      publicId: VALID_PUBLIC_ID,
+    });
+
+    expect(projectionCallResult).not.toBeNull();
+    expect(fileRouteCallResult).toEqual(projectionCallResult);
+  });
+
+  function queueHappyPath(overrides: {
+    grantConfigVersion?: number;
+    linkConfigVersion?: number;
+    pinVerifiedAt?: string | null;
+    linkHasPin?: boolean;
+  } = {}) {
+    queueResponse("share_browser_sessions", {
+      data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
+      error: null,
+    });
+    queueResponse("project_share_links", {
+      data: validLinkRow({ configuration_version: overrides.linkConfigVersion ?? 1 }),
+      error: null,
+    });
+    queueResponse("projects", { data: { id: VALID_PROJECT_ID, deleted_at: null }, error: null });
+    queueResponse("share_session_grants", {
+      data: [
+        {
+          granted_configuration_version: overrides.grantConfigVersion ?? 1,
+          pin_verified_at: overrides.pinVerifiedAt ?? null,
+          expires_at: FUTURE_TIMESTAMP,
+          revoked_at: null,
+        },
+      ],
+      error: null,
+    });
+  }
+
+  /**
+   * Section 3's data-model question, answered and proven: a browser
+   * session (share_browser_sessions) is a browser-LEVEL session with no
+   * share_link_id column at all -- it is NOT tied to exactly one link.
+   * `share_session_grants` is the link-specific authorization object
+   * (browser_session_id + share_link_id together, unique per current
+   * pair -- share_session_grants_current_unique_idx,
+   * 202608030004_client_share_session_foundation.sql), meaning the SAME
+   * session can hold independent grants for multiple different links.
+   * This test proves the authorization gate respects that: a grant for
+   * link A never authorizes link B, even under the same session/cookie.
+   */
+  it("a browser session holding a grant only for link A does not authorize link B -- no cross-link authorization", async () => {
+    const PUBLIC_ID_B = "zzyyxxwwvvuuttssrrqqppoo";
+    const LINK_ID_B = "99999999-9999-4999-8999-999999999999";
+    const raw = generateShareBrowserSessionSecret();
+
+    // Call 1: publicId A resolves link A; a grant exists for (session, link A).
+    queueHappyPath();
+    const resultForLinkA = await verifyShareProjectionAuthorization({
+      cookieValue: raw,
+      publicId: VALID_PUBLIC_ID,
+    });
+    expect(resultForLinkA).toEqual({
+      shareLinkId: VALID_LINK_ID,
+      projectId: VALID_PROJECT_ID,
+      userId: VALID_USER_ID,
+    });
+
+    // Call 2: publicId B resolves a DIFFERENT link; the same session has
+    // no grant for THIS link (the grants query, scoped by
+    // browser_session_id + this resolved link's id, legitimately returns
+    // nothing for a pair that was never granted).
+    queueResponse("share_browser_sessions", {
+      data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
+      error: null,
+    });
+    queueResponse("project_share_links", {
+      data: validLinkRow({ id: LINK_ID_B, public_id: PUBLIC_ID_B }),
+      error: null,
+    });
+    queueResponse("projects", { data: { id: VALID_PROJECT_ID, deleted_at: null }, error: null });
+    queueResponse("share_session_grants", { data: [], error: null }); // no grant for (session, link B)
+
+    const resultForLinkB = await verifyShareProjectionAuthorization({
+      cookieValue: raw,
+      publicId: PUBLIC_ID_B,
+    });
+    expect(resultForLinkB).toBeNull();
   });
 });

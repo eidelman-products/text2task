@@ -206,11 +206,11 @@ describe("ClientProjectView - resources", () => {
     expect(relTokens).toContain("nofollow");
   });
 
-  it("renders a file resource as plain text (never a downloadable link/signed URL), with '(downloadable)' only when canDownload is true", () => {
+  it("without a publicId (e.g. the owner's own authenticated Preview, which has no Client Share session cookie to authorize the file route), a FILE resource falls back to the original inert-label rendering -- never a broken/unauthorizable link", () => {
     const projection = minimalProjection({
       resources: [
-        { kind: "file", label: "Final logo", canDownload: true },
-        { kind: "file", label: "Draft brief", canDownload: false },
+        { kind: "file", label: "Final logo", canDownload: true, fileRef: "final-logo-ref" },
+        { kind: "file", label: "Draft brief", canDownload: false, fileRef: "draft-brief-ref" },
       ],
     });
 
@@ -226,6 +226,191 @@ describe("ClientProjectView - resources", () => {
   it("omits the Attachments section entirely when there are no mapped resources", () => {
     render(<ClientProjectView projection={minimalProjection({ resources: [] })} />);
     expect(screen.queryByLabelText("Attachments")).not.toBeInTheDocument();
+  });
+});
+
+describe("ClientProjectView - PHASE 4C FILE attachment affordance (publicId provided, the real public /share route)", () => {
+  const PUBLIC_ID = "abcdefgh12345678ijklmnop";
+
+  // (A) LINK resource still renders as an external link, unchanged, even
+  // when publicId is provided alongside FILE resources.
+  it("(A) LINK resource still renders as a real external anchor when publicId is also provided", () => {
+    const projection = minimalProjection({
+      resources: [
+        { kind: "link", label: "Brand guide", url: "https://example.com/brand-guide" },
+        { kind: "file", label: "Final logo", canDownload: false, fileRef: "abc123" },
+      ],
+    });
+
+    render(<ClientProjectView projection={projection} publicId={PUBLIC_ID} />);
+
+    const link = screen.getByRole("link", { name: "Brand guide" });
+    expect(link).toHaveAttribute("href", "https://example.com/brand-guide");
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+
+  // (B) FILE resource renders an "Open file" affordance when canDownload
+  // is false.
+  it("(B) FILE resource renders an 'Open file' link when canDownload is false", () => {
+    const projection = minimalProjection({
+      resources: [{ kind: "file", label: "Draft brief", canDownload: false, fileRef: "abc123" }],
+    });
+
+    render(<ClientProjectView projection={projection} publicId={PUBLIC_ID} />);
+
+    expect(screen.getByText("Draft brief")).toBeInTheDocument();
+    const action = screen.getByRole("link", { name: "Open file" });
+    expect(action).toBeInTheDocument();
+    expect(action).toHaveAttribute("target", "_blank");
+    const relTokens = (action.getAttribute("rel") ?? "").split(" ");
+    expect(relTokens).toContain("noopener");
+    expect(relTokens).toContain("noreferrer");
+    expect(relTokens).toContain("nofollow");
+  });
+
+  // (C) FILE href is exactly /api/share/<publicId>/resources/<encoded fileRef>.
+  it("(C) FILE action href is exactly /api/share/<publicId>/resources/<encoded fileRef>", () => {
+    const projection = minimalProjection({
+      resources: [{ kind: "file", label: "Draft brief", canDownload: false, fileRef: "abc123" }],
+    });
+
+    render(<ClientProjectView projection={projection} publicId={PUBLIC_ID} />);
+
+    const action = screen.getByRole("link", { name: "Open file" });
+    expect(action).toHaveAttribute("href", `/api/share/${PUBLIC_ID}/resources/abc123`);
+  });
+
+  it("(C) both publicId and fileRef are percent-encoded into the href, never interpolated raw", () => {
+    const projection = minimalProjection({
+      resources: [{ kind: "file", label: "Draft brief", canDownload: false, fileRef: "weird/ref?a=b" }],
+    });
+
+    render(<ClientProjectView projection={projection} publicId="weird/id?x=y" />);
+
+    const action = screen.getByRole("link", { name: "Open file" });
+    expect(action).toHaveAttribute(
+      "href",
+      `/api/share/${encodeURIComponent("weird/id?x=y")}/resources/${encodeURIComponent("weird/ref?a=b")}`
+    );
+  });
+
+  // (D) no resourceId/storage_path/internal filename appears anywhere in
+  // the rendered output -- the component never receives them in the
+  // first place (structural guarantee), asserted here against the
+  // rendered DOM directly.
+  it("(D) never renders a resourceId, storage_path, or internal filename -- only the public label and the public fileRef appear", () => {
+    const projection = minimalProjection({
+      resources: [
+        {
+          kind: "file",
+          label: "Draft brief",
+          canDownload: true,
+          fileRef: "PUBLIC_SAFE_FILE_REF_VALUE",
+        },
+      ],
+    });
+
+    const { container } = render(<ClientProjectView projection={projection} publicId={PUBLIC_ID} />);
+
+    const html = container.innerHTML;
+    for (const forbidden of [
+      "storage_path",
+      "TOXIC_INTERNAL_FILENAME",
+      "resourceId",
+      "task_resources",
+      "supabase.co",
+    ]) {
+      expect(html).not.toContain(forbidden);
+    }
+    // The one identifier that IS expected to appear is the opaque,
+    // already-public fileRef itself (inside the constructed href) --
+    // confirming the assertions above are meaningful, not vacuous.
+    expect(html).toContain("PUBLIC_SAFE_FILE_REF_VALUE");
+  });
+
+  // (E) NOTE never renders, even defensively, even if an unexpected
+  // resource kind somehow reached this component.
+  it("(E) an unexpected resource kind (e.g. a hypothetical 'note') renders nothing -- not coerced into the file branch", () => {
+    const projection = minimalProjection({
+      resources: [
+        { kind: "note", label: "TOXIC_NOTE_SHOULD_NEVER_RENDER" } as unknown as ClientProjectProjection["resources"][number],
+      ],
+    });
+
+    const { container } = render(<ClientProjectView projection={projection} publicId={PUBLIC_ID} />);
+
+    expect(container.textContent ?? "").not.toContain("TOXIC_NOTE_SHOULD_NEVER_RENDER");
+  });
+
+  // (F) malformed/missing fileRef does not create a broken public link --
+  // falls back to inert rendering instead of an href pointing at
+  // ".../resources/" or ".../resources/undefined".
+  it("(F) an empty-string fileRef does not create a broken link -- falls back to inert rendering", () => {
+    const projection = minimalProjection({
+      resources: [{ kind: "file", label: "Draft brief", canDownload: false, fileRef: "" }],
+    });
+
+    render(<ClientProjectView projection={projection} publicId={PUBLIC_ID} />);
+
+    expect(screen.getByText("Draft brief")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open file" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Download" })).not.toBeInTheDocument();
+  });
+
+  it("(F) an empty-string publicId does not create a broken link -- falls back to inert rendering", () => {
+    const projection = minimalProjection({
+      resources: [{ kind: "file", label: "Draft brief", canDownload: false, fileRef: "abc123" }],
+    });
+
+    render(<ClientProjectView projection={projection} publicId="" />);
+
+    expect(screen.getByText("Draft brief")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open file" })).not.toBeInTheDocument();
+  });
+
+  // (G) canDownload=true: the established Content-Disposition semantic
+  // (server-side "attachment", a Save-As prompt) is reflected accurately
+  // by "Download" action text -- never claiming more than that.
+  it("(G) canDownload=true renders a 'Download' action pointing at the same file endpoint", () => {
+    const projection = minimalProjection({
+      resources: [{ kind: "file", label: "Final logo", canDownload: true, fileRef: "abc123" }],
+    });
+
+    render(<ClientProjectView projection={projection} publicId={PUBLIC_ID} />);
+
+    const action = screen.getByRole("link", { name: "Download" });
+    expect(action).toHaveAttribute("href", `/api/share/${PUBLIC_ID}/resources/abc123`);
+    expect(screen.queryByRole("link", { name: "Open file" })).not.toBeInTheDocument();
+  });
+
+  // (H) canDownload=false: "Open file" action, matching the established
+  // "opens/previews inline, no forced download prompt" semantic.
+  it("(H) canDownload=false renders an 'Open file' action, not 'Download'", () => {
+    const projection = minimalProjection({
+      resources: [{ kind: "file", label: "Draft brief", canDownload: false, fileRef: "abc123" }],
+    });
+
+    render(<ClientProjectView projection={projection} publicId={PUBLIC_ID} />);
+
+    expect(screen.getByRole("link", { name: "Open file" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Download" })).not.toBeInTheDocument();
+  });
+
+  // (I) RTL/dir=auto/public layout remains unchanged with publicId and
+  // FILE actions present.
+  it("(I) RTL/dir and overall layout are unaffected by the new FILE action -- dir attribute and section landmarks still render correctly", () => {
+    const projection = minimalProjection({
+      contentDirection: "rtl",
+      title: "השקת אתר",
+      resources: [{ kind: "file", label: "קובץ", canDownload: false, fileRef: "abc123" }],
+    });
+
+    const { container } = render(<ClientProjectView projection={projection} publicId={PUBLIC_ID} />);
+
+    expect(container.querySelector('[dir="rtl"]')).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Attachments" })).toBeInTheDocument();
+    expect(screen.getByText("קובץ")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open file" })).toBeInTheDocument();
   });
 });
 

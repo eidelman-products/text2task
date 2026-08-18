@@ -135,6 +135,25 @@ describe("ShareView - authorized -> ready renders the real Phase 2D ClientProjec
     await screen.findByText("Website launch");
     await screen.findByText("Shared securely via Text2Task.");
   });
+
+  it("PHASE 4C -- passes this exact route's own publicId through to ClientProjectView, so a FILE resource's action points at THIS publicId's file endpoint", async () => {
+    setLocation(`/share/${VALID_PUBLIC_ID}`, `#${VALID_SECRET}`);
+    fetchMock.mockImplementation((url: string) => {
+      if (url === "/api/share/session") return jsonResponse({ ok: true, status: "authorized" });
+      return jsonResponse({
+        ok: true,
+        data: {
+          ...fakeProjection(),
+          resources: [{ kind: "file", label: "Final logo", canDownload: false, fileRef: "opaque-ref-1" }],
+        },
+      });
+    });
+
+    render(<ShareView publicId={VALID_PUBLIC_ID} />);
+
+    const action = await screen.findByRole("link", { name: "Open file" });
+    expect(action).toHaveAttribute("href", `/api/share/${VALID_PUBLIC_ID}/resources/opaque-ref-1`);
+  });
 });
 
 describe("ShareView - PIN flow", () => {

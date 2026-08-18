@@ -12,6 +12,7 @@ import {
 } from "@/lib/share/share-browser-session.server";
 import { checkShareRateLimit } from "@/lib/share/share-rate-limit.server";
 import { isValidSharePublicId } from "@/lib/share/share-public-id.server";
+import { isRejectableCrossSiteRequest } from "@/lib/share/share-request-security.server";
 import { verifyShareProjectionAuthorization } from "@/lib/share/share-session-grant.server";
 
 /*
@@ -71,17 +72,6 @@ function rateLimited(retryAfterSeconds: number): NextResponse {
   );
 }
 
-/** Lightweight same-origin defense in depth for a read-only GET: only
- * rejects when Sec-Fetch-Site is PRESENT and not same-origin. A missing
- * Sec-Fetch-Site (top-level navigations, some webviews) is accepted --
- * this route's real authorization boundary is the HttpOnly session
- * cookie plus the browser's own same-origin policy on the response body,
- * not this header. */
-function isCrossSiteFetch(headers: Headers): boolean {
-  const secFetchSite = headers.get("sec-fetch-site");
-  return secFetchSite !== null && secFetchSite.toLowerCase() !== "same-origin";
-}
-
 function logShareRouteError(stage: string, error: unknown): void {
   console.error("share_public_route_error", {
     stage,
@@ -95,7 +85,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   try {
     assertClientShareEnabled();
 
-    if (isCrossSiteFetch(request.headers)) {
+    if (isRejectableCrossSiteRequest(request.headers)) {
       return jsonResponse(
         { ok: false, code: "INVALID_ORIGIN", error: "Invalid request origin." } satisfies ProjectionErrorResponse,
         403

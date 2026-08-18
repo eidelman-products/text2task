@@ -60,6 +60,13 @@ export const clientProjectFileResourceSchema = z
     kind: z.literal("file"),
     label: z.string(),
     canDownload: z.boolean(),
+    /** PHASE 4B -- opaque, unpersisted, per-(shareLinkId, resourceId)
+     * HMAC reference (lib/share/share-file-ref.server.ts). Lets the
+     * browser ask GET /api/share/[publicId]/resources/[fileRef] for this
+     * exact file without ever learning task_resources.id or any other
+     * internal identifier. Structurally cannot be decoded back into an
+     * internal id. */
+    fileRef: z.string(),
   })
   .strict();
 export type ClientProjectFileResource = z.infer<

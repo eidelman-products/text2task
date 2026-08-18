@@ -42,11 +42,15 @@ export const SHARE_BROWSER_SESSION_DIGEST_VERSION = 1 as const;
  * see share-session-grant.server.ts's own grant-expiry clamp. */
 export const SHARE_BROWSER_SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
-/** Cookie is scoped to the narrowest path that still covers both public
- * Client Share API routes (POST /api/share/session,
- * GET /api/share/[publicId]/projection) -- the public PAGE itself never
- * needs to read this cookie. Deliberately not `__Host-`-prefixed: that
- * prefix requires Path=/, which would be broader than necessary here. */
+/** Cookie is scoped to the narrowest path that still covers every public
+ * Client Share API route under /api/share/** (POST /api/share/session,
+ * GET /api/share/[publicId]/projection, and, since Phase 4B,
+ * GET /api/share/[publicId]/resources/[fileRef]) -- RFC 6265 path
+ * matching means Path=/api/share already covers any deeper route under
+ * that prefix without needing to be updated per new route. The public
+ * PAGE itself never needs to read this cookie. Deliberately not
+ * `__Host-`-prefixed: that prefix requires Path=/, which would be
+ * broader than necessary here. */
 export const SHARE_BROWSER_SESSION_COOKIE_PATH = "/api/share";
 
 function isProductionRuntime(): boolean {

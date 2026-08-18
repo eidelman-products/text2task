@@ -48,9 +48,34 @@ const TASK_GROUP_LABELS: Record<ClientProjectTask["publicGroup"], string> = {
 
 export type ClientProjectViewProps = {
   projection: ClientProjectProjection;
+  /**
+   * PHASE 4C -- the current public share route's own publicId
+   * (`/share/[publicId]`), needed only to construct the FILE-delivery
+   * endpoint URL `/api/share/[publicId]/resources/[fileRef]`. Optional
+   * and deliberately never defaulted/guessed: when absent (the owner's
+   * own authenticated Preview modal, share-link-panel.tsx, which has no
+   * public route of its own to derive this from and whose browser has
+   * no Client Share session cookie to authorize that endpoint anyway),
+   * FILE resources fall back to the original inert-label rendering
+   * rather than presenting a link that would 401 for that specific
+   * caller. Never a resourceId, shareLinkId, or any other internal
+   * identifier -- this component still receives nothing beyond the
+   * strict projection plus this one already-public route parameter.
+   */
+  publicId?: string;
 };
 
-export function ClientProjectView({ projection }: ClientProjectViewProps) {
+/** Constructs the public file-delivery endpoint URL from ONLY the two
+ * values that are already public/opaque: the current share route's own
+ * publicId and the projection's own opaque fileRef for this resource.
+ * Never a resourceId or any other internal identifier -- there is
+ * nothing else this function could leak even by mistake, since it
+ * receives nothing else. */
+function buildShareFileUrl(publicId: string, fileRef: string): string {
+  return `/api/share/${encodeURIComponent(publicId)}/resources/${encodeURIComponent(fileRef)}`;
+}
+
+export function ClientProjectView({ projection, publicId }: ClientProjectViewProps) {
   const groupedTasks = groupTasksByPublicGroup(projection.tasks);
 
   return (
@@ -129,27 +154,66 @@ export function ClientProjectView({ projection }: ClientProjectViewProps) {
           <section style={sectionStyle} aria-label="Attachments">
             <span style={sectionLabelStyle}>Attachments</span>
             <ul style={resourceListStyle}>
-              {projection.resources.map((resource, index) => (
-                <li key={index} style={resourceItemStyle}>
-                  {resource.kind === "link" ? (
-                    <a
-                      href={resource.url}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      style={resourceLinkStyle}
-                    >
-                      {resource.label}
-                    </a>
-                  ) : (
-                    <span style={resourceFileStyle}>
-                      {resource.label}
-                      {resource.canDownload ? (
-                        <span style={mutedInlineStyle}> (downloadable)</span>
+              {projection.resources.map((resource, index) => {
+                if (resource.kind === "link") {
+                  return (
+                    <li key={index} style={resourceItemStyle}>
+                      <a
+                        href={resource.url}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        style={resourceLinkStyle}
+                      >
+                        {resource.label}
+                      </a>
+                    </li>
+                  );
+                }
+
+                if (resource.kind !== "file") {
+                  // Exhaustive, not a catch-all `else`: the server-side
+                  // projection can structurally never emit a "note" kind
+                  // (assembleClientProjection excludes Note resources
+                  // entirely -- there is no "note" member of this
+                  // discriminated union at all), but this component does
+                  // not additionally trust that as its only safeguard --
+                  // any kind other than the two known ones renders
+                  // nothing, rather than being silently coerced into the
+                  // file branch below.
+                  return null;
+                }
+
+                // FILE resource. A clickable "Open file"/"Download"
+                // action only when this component was given a publicId
+                // AND the projection gave this resource a real, non-empty
+                // fileRef -- otherwise falls back to the exact original
+                // inert-label rendering rather than ever constructing a
+                // broken/empty href.
+                const fileUrl =
+                  publicId && resource.fileRef
+                    ? buildShareFileUrl(publicId, resource.fileRef)
+                    : null;
+
+                return (
+                  <li key={index} style={resourceItemStyle}>
+                    <div style={resourceFileRowStyle}>
+                      <span style={resourceFileStyle}>{resource.label}</span>
+                      {fileUrl ? (
+                        <a
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer nofollow"
+                          style={resourceFileActionStyle}
+                        >
+                          {resource.canDownload ? "Download" : "Open file"}
+                        </a>
+                      ) : resource.canDownload ? (
+                        <span style={mutedInlineStyle}>(downloadable)</span>
                       ) : null}
-                    </span>
-                  )}
-                </li>
-              ))}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         ) : null}
@@ -344,6 +408,20 @@ const resourceLinkStyle: CSSProperties = {
 const resourceFileStyle: CSSProperties = {
   color: dashboardColors.text.primary,
   fontWeight: dashboardTypography.weight.medium,
+};
+
+const resourceFileRowStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: dashboardSpacing[3],
+};
+
+const resourceFileActionStyle: CSSProperties = {
+  color: dashboardColors.primary[700],
+  fontWeight: dashboardTypography.weight.semibold,
+  textDecoration: "underline",
+  whiteSpace: "nowrap",
 };
 
 const mutedInlineStyle: CSSProperties = {

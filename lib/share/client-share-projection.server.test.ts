@@ -89,9 +89,17 @@ vi.mock("@/lib/supabase/admin", () => ({
   },
 }));
 
+// PHASE 4B -- assembleClientProjection's file branch now computes
+// `fileRef` via deriveShareFileRef, which requires this dedicated env
+// var to be present (fails closed otherwise, per
+// share-file-ref.server.ts). Set before importing the module under test
+// so every call in this file has a valid key available.
+process.env.TEXT2TASK_SHARE_FILE_REF_HMAC_KEY_V1 = Buffer.alloc(32, 5).toString("base64url");
+
 const { buildClientShareProjection, buildPublicClientShareProjection } = await import(
   "./client-share-projection.server"
 );
+const { deriveShareFileRef } = await import("./share-file-ref.server");
 
 const VALID_LINK_ID = "22222222-2222-4222-8222-222222222222";
 const VALID_USER_ID = "33333333-3333-4333-8333-333333333333";
@@ -492,11 +500,18 @@ describe("buildClientShareProjection - resource projection", () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data.resources).toEqual([{ kind: "file", label: "Final logo", canDownload: false }]);
+      expect(result.data.resources).toEqual([
+        {
+          kind: "file",
+          label: "Final logo",
+          canDownload: false,
+          fileRef: deriveShareFileRef(VALID_LINK_ID, VALID_RESOURCE_ID),
+        },
+      ]);
     }
   });
 
-  it("never returns storage_path or a signed URL for a file resource", async () => {
+  it("never returns storage_path, a signed URL, or the internal resourceId for a file resource", async () => {
     const client = fullFixture();
     const result = await buildClientShareProjection(client, { linkId: VALID_LINK_ID, userId: VALID_USER_ID });
 
@@ -506,6 +521,23 @@ describe("buildClientShareProjection - resource projection", () => {
       expect(text).not.toContain("private/logo.png");
       expect(text).not.toContain("storage_path");
       expect(text).not.toContain("signed");
+      expect(text).not.toContain(VALID_RESOURCE_ID);
+      expect(text).not.toContain(VALID_LINK_ID);
+    }
+  });
+
+  it("fileRef is deterministic for the same (link, resource) pair, and differs for a different resource", async () => {
+    const client = fullFixture();
+    const first = await buildClientShareProjection(client, { linkId: VALID_LINK_ID, userId: VALID_USER_ID });
+    const second = await buildClientShareProjection(client, { linkId: VALID_LINK_ID, userId: VALID_USER_ID });
+
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+    if (first.ok && second.ok) {
+      const firstFileRef = (first.data.resources[0] as { fileRef: string }).fileRef;
+      const secondFileRef = (second.data.resources[0] as { fileRef: string }).fileRef;
+      expect(firstFileRef).toBe(secondFileRef);
+      expect(firstFileRef).not.toBe(deriveShareFileRef(VALID_LINK_ID, VALID_RESOURCE_ID_2));
     }
   });
 
@@ -774,7 +806,14 @@ describe("buildClientShareProjection - MANDATORY toxic fixture privacy test", ()
     expect(result.data.tasks).toEqual([
       { title: "Design hero section", publicGroup: "completed", waitingForClientFeedback: false },
     ]);
-    expect(result.data.resources).toEqual([{ kind: "file", label: "Shared logo", canDownload: false }]);
+    expect(result.data.resources).toEqual([
+      {
+        kind: "file",
+        label: "Shared logo",
+        canDownload: false,
+        fileRef: deriveShareFileRef(VALID_LINK_ID, VALID_RESOURCE_ID),
+      },
+    ]);
   });
 });
 
@@ -1087,6 +1126,13 @@ describe("buildPublicClientShareProjection - MANDATORY toxic fixture privacy tes
     expect(result.data.tasks).toEqual([
       { title: "Design hero section", publicGroup: "completed", waitingForClientFeedback: false },
     ]);
-    expect(result.data.resources).toEqual([{ kind: "file", label: "Shared logo", canDownload: false }]);
+    expect(result.data.resources).toEqual([
+      {
+        kind: "file",
+        label: "Shared logo",
+        canDownload: false,
+        fileRef: deriveShareFileRef(VALID_LINK_ID, VALID_RESOURCE_ID),
+      },
+    ]);
   });
 });

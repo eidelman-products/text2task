@@ -8,6 +8,7 @@ import {
 } from "@/app/components/dashboard/resources/resource-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { canonicalizeUuid } from "./share-contracts";
+import { deriveShareFileRef } from "./share-file-ref.server";
 import {
   clientProjectProjectionSchema,
   type ClientProjectProjection,
@@ -213,6 +214,7 @@ type MappedResourceInput = {
 type CurrentUpdateInput = { body: string; publishedAt: string } | null;
 
 function assembleClientProjection(input: {
+  shareLinkId: string;
   link: LinkPublicationFields;
   project: ProjectRow | null;
   mappedTasks: readonly MappedTaskInput[];
@@ -255,7 +257,12 @@ function assembleClientProjection(input: {
     if (kind === "note") continue;
 
     if (kind === "file") {
-      resources.push({ kind: "file", label: mapped.publicLabel, canDownload: mapped.canDownload });
+      resources.push({
+        kind: "file",
+        label: mapped.publicLabel,
+        canDownload: mapped.canDownload,
+        fileRef: deriveShareFileRef(input.shareLinkId, mapped.resourceId),
+      });
     } else {
       const safeUrl = toSafeExternalClientUrl(row.url);
       if (safeUrl) {
@@ -410,6 +417,7 @@ export async function buildClientShareProjection<Client>(
   }
 
   return assembleClientProjection({
+    shareLinkId: canonicalLinkId,
     link,
     project,
     mappedTasks,
@@ -611,6 +619,7 @@ export async function buildPublicClientShareProjection(
   }
 
   return assembleClientProjection({
+    shareLinkId,
     link,
     project,
     mappedTasks,

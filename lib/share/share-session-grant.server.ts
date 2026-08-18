@@ -127,7 +127,12 @@ function toResolvedShareLink(row: ShareLinkRow): ResolvedShareLink {
  * null for any malformed input or non-existent link -- callers must
  * treat "malformed publicId" and "link genuinely absent" identically
  * (no enumeration oracle). Revoked links resolve to null structurally,
- * matching every owner-facing read's own `state <> 'revoked'` posture. */
+ * matching every owner-facing read's own `state <> 'revoked'` posture --
+ * scoped by `public_id` alone, never by any session-derived identifier
+ * (there is no coupling between browser-session state and this lookup;
+ * grants, not sessions, are the link-specific authorization object --
+ * see verifyShareProjectionAuthorization's own grant query below, scoped
+ * to the link this function independently resolved). */
 export async function resolveShareLinkByPublicId(
   publicId: string
 ): Promise<ResolvedShareLink | null> {
@@ -135,18 +140,37 @@ export async function resolveShareLinkByPublicId(
     return null;
   }
 
+  // Deliberately NOT filtered by `.neq("state", "revoked")` at the query
+  // level any more -- fetching the row regardless of state and checking
+  // `state` in code afterward is what lets "not found at all" and
+  // "found but revoked" be distinguished from the exact same single
+  // query, with no extra round trip and no change to the function's own
+  // external null-for-either-case contract.
   const { data, error } = await supabaseAdmin
     .from("project_share_links")
     .select(SHARE_LINK_COLUMNS)
     .eq("public_id", publicId)
-    .neq("state", "revoked")
     .maybeSingle();
 
-  if (error || !data) {
+  if (error) {
+    logShareProjectionAuthStage("link_query_failed");
     return null;
   }
 
-  return toResolvedShareLink(data as unknown as ShareLinkRow);
+  if (!data) {
+    logShareProjectionAuthStage("link_not_found_by_public_id");
+    return null;
+  }
+
+  const row = data as unknown as ShareLinkRow;
+
+  if (row.state === "revoked") {
+    logShareProjectionAuthStage("link_revoked");
+    return null;
+  }
+
+  logShareProjectionAuthStage("link_resolved");
+  return toResolvedShareLink(row);
 }
 
 /** Re-resolves a link by its trusted internal id (already known to the
@@ -462,14 +486,71 @@ export type VerifiedShareProjectionAuthorization = Readonly<{
 }>;
 
 /**
- * The single authorization gate for GET /api/share/[publicId]/projection.
- * Never trusts the cookie or the publicId alone -- every dimension
- * (session live+unrevoked, link active+unexpired+project-not-deleted,
- * grant same-session+same-link+unexpired+unrevoked+exact-configuration-
- * version-match+PIN-requirement-satisfied) is re-checked against the
- * database on every call. Returns null for ANY failure -- callers must
- * respond with the same generic unavailable posture regardless of which
- * check failed (AGENTS.md rule 10).
+ * PHASE 4B DEFECT #2 DIAGNOSTICS -- logs a fixed, safe sub-stage
+ * identifier for `verifyShareProjectionAuthorization`, server-side only
+ * (Vercel function logs), never echoed to any caller. This is the SAME
+ * gate every public route (projection, the file-delivery route, and any
+ * future sibling) shares -- a real-Preview retest found the file route
+ * failing here with only "authorization_failed" visible, while the
+ * projection route (calling this exact same function, with the same
+ * cookie/publicId, seconds earlier) had succeeded. Code-level comparison
+ * of both routes' call sites found them identical, and this function's
+ * own extensive existing test coverage
+ * (share-session-grant.server.test.ts) found no internal defect either.
+ *
+ * Also called from `resolveShareLinkByPublicId` (defined above this
+ * function but hoisted, so the call resolves correctly) -- real Preview
+ * evidence narrowed the failure specifically to link resolution, so that
+ * function's own single generic "not found" case was split into its
+ * three genuinely distinct outcomes (query error / not found at all /
+ * found but revoked) rather than adding another broad, undifferentiated
+ * pass. Never logs the cookie, session id, grant id, publicId,
+ * link/project/user ids, or any other per-request value -- only the
+ * fixed stage name.
+ */
+type ShareProjectionAuthStage =
+  | "link_query_failed"
+  | "link_not_found_by_public_id"
+  | "link_revoked"
+  | "link_resolved"
+  | "session_lookup_failed"
+  | "link_not_active"
+  | "grant_query_failed"
+  | "grant_not_found"
+  | "grant_expired"
+  | "config_version_mismatch"
+  | "pin_not_verified"
+  | "authorization_ok";
+
+// PHASE 4C -- retained permanently as a low-risk operational diagnostic
+// (see the Phase 4 audit doc's own "diagnostics retain/remove" section
+// for the full rationale). Right-sized by log level here: the two
+// success-shaped stages use `console.info` so a healthy, high-volume
+// public endpoint doesn't emit a `console.error` line for every single
+// successful request, which would otherwise dilute error-level
+// monitoring/alerting with non-error events; every actual denial reason
+// stays on `console.error`, where it belongs.
+const SHARE_PROJECTION_AUTH_SUCCESS_STAGES: ReadonlySet<ShareProjectionAuthStage> = new Set([
+  "link_resolved",
+  "authorization_ok",
+]);
+
+function logShareProjectionAuthStage(stage: ShareProjectionAuthStage): void {
+  const log = SHARE_PROJECTION_AUTH_SUCCESS_STAGES.has(stage) ? console.info : console.error;
+  log("share_projection_auth_stage", { stage });
+}
+
+/**
+ * The single authorization gate for GET /api/share/[publicId]/projection
+ * (and, since Phase 4B, GET /api/share/[publicId]/resources/[fileRef] --
+ * both routes call this exact function with the exact same two
+ * arguments). Never trusts the cookie or the publicId alone -- every
+ * dimension (session live+unrevoked, link active+unexpired+project-not-
+ * deleted, grant same-session+same-link+unexpired+unrevoked+exact-
+ * configuration-version-match+PIN-requirement-satisfied) is re-checked
+ * against the database on every call. Returns null for ANY failure --
+ * callers must respond with the same generic unavailable posture
+ * regardless of which check failed (AGENTS.md rule 10).
  */
 export async function verifyShareProjectionAuthorization(input: {
   cookieValue: string | null;
@@ -477,9 +558,13 @@ export async function verifyShareProjectionAuthorization(input: {
 }): Promise<VerifiedShareProjectionAuthorization | null> {
   const session = await resolveBrowserSessionFromCookie(input.cookieValue);
   if (!session) {
+    logShareProjectionAuthStage("session_lookup_failed");
     return null;
   }
 
+  // resolveShareLinkByPublicId already logs its own precise outcome
+  // (link_query_failed / link_not_found_by_public_id / link_revoked /
+  // link_resolved) -- no redundant generic tag needed here.
   const link = await resolveShareLinkByPublicId(input.publicId);
   if (!link) {
     return null;
@@ -487,6 +572,7 @@ export async function verifyShareProjectionAuthorization(input: {
 
   const linkActive = await isShareLinkCurrentlyPubliclyActive(link);
   if (!linkActive) {
+    logShareProjectionAuthStage("link_not_active");
     return null;
   }
 
@@ -499,28 +585,34 @@ export async function verifyShareProjectionAuthorization(input: {
 
   if (grantError) {
     logShareGrantFailure("validate_grant", { postgresCode: grantError.code });
+    logShareProjectionAuthStage("grant_query_failed");
     return null;
   }
 
   const grant = ((grantRows as GrantRow[] | null) ?? [])[0];
 
   if (!grant) {
+    logShareProjectionAuthStage("grant_not_found");
     return null;
   }
 
   if (new Date(grant.expires_at).getTime() <= Date.now()) {
+    logShareProjectionAuthStage("grant_expired");
     return null;
   }
 
   if (grant.granted_configuration_version !== link.configurationVersion) {
+    logShareProjectionAuthStage("config_version_mismatch");
     return null;
   }
 
   const linkRequiresPin = link.pinMaterial !== null;
 
   if (linkRequiresPin && grant.pin_verified_at === null) {
+    logShareProjectionAuthStage("pin_not_verified");
     return null;
   }
 
+  logShareProjectionAuthStage("authorization_ok");
   return { shareLinkId: link.id, projectId: link.projectId, userId: link.userId };
 }

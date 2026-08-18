@@ -204,7 +204,7 @@ export function ShareView({ publicId }: { publicId: string }) {
     [exchange]
   );
 
-  return <ShareViewBody state={state} onSubmitPin={submitPin} />;
+  return <ShareViewBody state={state} onSubmitPin={submitPin} publicId={publicId} />;
 }
 
 async function safeJson(response: Response): Promise<unknown> {
@@ -218,9 +218,11 @@ async function safeJson(response: Response): Promise<unknown> {
 function ShareViewBody({
   state,
   onSubmitPin,
+  publicId,
 }: {
   state: PublicShareState;
   onSubmitPin: (pin: string) => void;
+  publicId: string;
 }) {
   switch (state.status) {
     case "loading":
@@ -230,7 +232,7 @@ function ShareViewBody({
     case "pin_required":
       return <SharePinForm error={state.error} onSubmit={onSubmitPin} />;
     case "ready":
-      return <ClientProjectView projection={state.projection} />;
+      return <ClientProjectView projection={state.projection} publicId={publicId} />;
     case "rate_limited":
       return (
         <ShareViewMessage title="Please wait a moment and try again." />
