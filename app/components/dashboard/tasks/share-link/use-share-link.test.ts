@@ -997,7 +997,13 @@ describe("useShareLink - Objective B: shareUpdate (one-action orchestration)", (
     getShareLinkManagementStateMock.mockResolvedValueOnce(activeLinkState());
 
     await act(async () => {
-      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: false, attachmentResourceIds: [] });
+      await result.current.shareUpdate({
+        updateBody: "",
+        pin: null,
+        clearPin: false,
+        attachmentResourceIds: [],
+        commentsEnabled: false,
+      });
     });
 
     expect(createShareLinkDraftMock).toHaveBeenCalledWith(PROJECT_ID);
@@ -1042,6 +1048,7 @@ describe("useShareLink - Objective B: shareUpdate (one-action orchestration)", (
         updateBody: "Homepage is live.",
         pin: null, clearPin: false,
         attachmentResourceIds: [],
+        commentsEnabled: true,
       });
     });
 
@@ -1076,7 +1083,7 @@ describe("useShareLink - Objective B: shareUpdate (one-action orchestration)", (
     });
 
     await act(async () => {
-      await result.current.shareUpdate({ updateBody: "Update", pin: null, clearPin: false, attachmentResourceIds: [] });
+      await result.current.shareUpdate({ updateBody: "Update", pin: null, clearPin: false, attachmentResourceIds: [], commentsEnabled: true });
     });
 
     const request = saveShareConfigurationMock.mock.calls[0][1];
@@ -1098,7 +1105,7 @@ describe("useShareLink - Objective B: shareUpdate (one-action orchestration)", (
     getShareLinkManagementStateMock.mockResolvedValueOnce(activeLinkState());
 
     await act(async () => {
-      await result.current.shareUpdate({ updateBody: "", pin: "4242", clearPin: false, attachmentResourceIds: [] });
+      await result.current.shareUpdate({ updateBody: "", pin: "4242", clearPin: false, attachmentResourceIds: [], commentsEnabled: true });
     });
 
     expect(setSharePinMock).toHaveBeenCalledWith(LINK_ID, "4242");
@@ -1129,7 +1136,7 @@ describe("useShareLink - Objective B: shareUpdate (one-action orchestration)", (
     });
 
     await act(async () => {
-      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [] });
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [], commentsEnabled: true });
     });
 
     expect(clearSharePinMock).toHaveBeenCalledWith(LINK_ID);
@@ -1163,7 +1170,7 @@ describe("useShareLink - Objective B: shareUpdate (one-action orchestration)", (
     });
 
     await act(async () => {
-      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [] });
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [], commentsEnabled: true });
     });
 
     expect(createShareLinkDraftMock).not.toHaveBeenCalled();
@@ -1180,7 +1187,7 @@ describe("useShareLink - Objective B: shareUpdate (one-action orchestration)", (
     clearSharePinMock.mockRejectedValue(new ShareLinkClientError("SHARE_LINK_STATE_CONFLICT", "conflict"));
 
     await act(async () => {
-      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [] });
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [], commentsEnabled: true });
     });
 
     expect(result.current.state.actionPending).toBeNull();
@@ -1200,7 +1207,7 @@ describe("useShareLink - Objective B: shareUpdate (one-action orchestration)", (
     getShareLinkManagementStateMock.mockResolvedValueOnce(activeLinkState({ hasPin: false }));
 
     await act(async () => {
-      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [] });
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [], commentsEnabled: true });
     });
 
     expect(result.current.state.data?.link?.hasPin).toBe(false);
@@ -1218,7 +1225,7 @@ describe("useShareLink - Objective B: shareUpdate (one-action orchestration)", (
     getShareLinkManagementStateMock.mockResolvedValueOnce(activeLinkState({ hasPin: false }));
 
     await act(async () => {
-      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [] });
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: true, attachmentResourceIds: [], commentsEnabled: true });
     });
 
     // clearSharePin's own contract takes only the link id -- there is no
@@ -1269,6 +1276,7 @@ describe("useShareLink - Objective B: shareUpdate (one-action orchestration)", (
         updateBody: "",
         pin: null, clearPin: false,
         attachmentResourceIds: ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"],
+        commentsEnabled: true,
       });
     });
 
@@ -1298,7 +1306,7 @@ describe("useShareLink - Objective B: shareUpdate (one-action orchestration)", (
     );
 
     await act(async () => {
-      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: false, attachmentResourceIds: [] });
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: false, attachmentResourceIds: [], commentsEnabled: true });
     });
 
     expect(activateShareLinkMock).not.toHaveBeenCalled();
@@ -1381,6 +1389,7 @@ describe("useShareLink - REAL BROWSER DEFECT #2 REGRESSION: shareUpdate against 
         updateBody: UPDATE_BODY,
         pin: null, clearPin: false,
         attachmentResourceIds: [EXISTING_RESOURCE_ID],
+        commentsEnabled: true,
       });
     });
 
@@ -1433,6 +1442,7 @@ describe("useShareLink - REAL BROWSER DEFECT #2 REGRESSION: shareUpdate against 
         updateBody: UPDATE_BODY,
         pin: null, clearPin: false,
         attachmentResourceIds: [EXISTING_RESOURCE_ID],
+        commentsEnabled: true,
       });
     });
 
@@ -1454,7 +1464,7 @@ describe("useShareLink - REAL BROWSER DEFECT #2 REGRESSION: shareUpdate against 
     );
 
     await act(async () => {
-      await result.current.shareUpdate({ updateBody: UPDATE_BODY, pin: null, clearPin: false, attachmentResourceIds: [] });
+      await result.current.shareUpdate({ updateBody: UPDATE_BODY, pin: null, clearPin: false, attachmentResourceIds: [], commentsEnabled: true });
     });
 
     expect(saveShareConfigurationMock).toHaveBeenCalledTimes(1);
@@ -1467,7 +1477,7 @@ describe("useShareLink - REAL BROWSER DEFECT #2 REGRESSION: shareUpdate against 
     createShareLinkDraftMock.mockRejectedValue(new ShareLinkClientError("PROJECT_ARCHIVED", "archived"));
 
     await act(async () => {
-      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: false, attachmentResourceIds: [] });
+      await result.current.shareUpdate({ updateBody: "", pin: null, clearPin: false, attachmentResourceIds: [], commentsEnabled: true });
     });
 
     expect(saveShareConfigurationMock).not.toHaveBeenCalled();
@@ -1485,7 +1495,7 @@ describe("useShareLink - REAL BROWSER DEFECT #2 REGRESSION: shareUpdate against 
     setSharePinMock.mockRejectedValue(new ShareLinkClientError("SHARE_LINK_STATE_CONFLICT", "conflict"));
 
     await act(async () => {
-      await result.current.shareUpdate({ updateBody: UPDATE_BODY, pin: "4242", clearPin: false, attachmentResourceIds: [] });
+      await result.current.shareUpdate({ updateBody: UPDATE_BODY, pin: "4242", clearPin: false, attachmentResourceIds: [], commentsEnabled: true });
     });
 
     expect(saveShareConfigurationMock).toHaveBeenCalledTimes(1);
@@ -1501,6 +1511,7 @@ describe("useShareLink - REAL BROWSER DEFECT #2 REGRESSION: shareUpdate against 
         updateBody: "",
         pin: null, clearPin: false,
         attachmentResourceIds: ["ffffffff-ffff-4fff-8fff-ffffffffffff"],
+        commentsEnabled: true,
       });
     });
 

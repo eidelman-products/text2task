@@ -164,6 +164,7 @@ describe("ShareLinkQuickShare - Share update submission", () => {
       pin: null,
       clearPin: false,
       attachmentResourceIds: [],
+      commentsEnabled: false,
     });
   });
 
@@ -175,6 +176,7 @@ describe("ShareLinkQuickShare - Share update submission", () => {
       pin: null,
       clearPin: false,
       attachmentResourceIds: [],
+      commentsEnabled: false,
     });
   });
 });
@@ -218,6 +220,7 @@ describe("ShareLinkQuickShare - Attachments", () => {
       pin: null,
       clearPin: false,
       attachmentResourceIds: ["r1"],
+      commentsEnabled: false,
     });
   });
 });

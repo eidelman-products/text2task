@@ -744,6 +744,7 @@ export function useShareLink() {
       pin: string | null;
       clearPin: boolean;
       attachmentResourceIds: string[];
+      commentsEnabled: boolean;
     }) => {
       return runAction("shareUpdate", async () => {
         const projectId = latestProjectIdRef.current;
@@ -773,15 +774,32 @@ export function useShareLink() {
 
         const request: SaveShareConfigurationRequest = {};
 
+        // Phase 5A -- a brand-new link gets commentsEnabled straight from
+        // this submission, exactly like every other first-share default.
+        // An EXISTING link only sends a `settings` group at all when
+        // commentsEnabled genuinely differs from what's already
+        // persisted -- preserving the established "an unchanged
+        // submission triggers no saveShareConfiguration call at all"
+        // behavior (see the PIN-only "category E" test) rather than
+        // always resending it and relying solely on the RPC's own
+        // IS DISTINCT FROM no-op. This is what actually lets the
+        // quick-share checkbox persist a change on an EXISTING link --
+        // previously `request.settings` was populated only for a
+        // brand-new link (isFirstShare), so an existing link's
+        // commentsEnabled could never change through this action at all.
+        const currentCommentsEnabled = dataAtStart?.link?.commentsEnabled ?? false;
+
         if (isFirstShare) {
           request.settings = {
             titleVisible: true,
             statusVisible: true,
             targetDateVisible: false,
-            commentsEnabled: false,
+            commentsEnabled: input.commentsEnabled,
             contentDirection: "auto",
             clientFacingSubtitle: null,
           };
+        } else if (input.commentsEnabled !== currentCommentsEnabled) {
+          request.settings = { commentsEnabled: input.commentsEnabled };
         }
 
         const taskItems = buildQuickShareTaskItems(project.subtasks, mappedTasksAtStart);

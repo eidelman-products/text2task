@@ -56,6 +56,14 @@ export type ShareUpdateSubmission = {
   // handleShare below): a submission is never both setting and clearing.
   clearPin: boolean;
   attachmentResourceIds: string[];
+  // Phase 5A -- the checkbox's current value, always sent (never
+  // conditionally omitted): save_share_configuration's own
+  // IS DISTINCT FROM comparison already no-ops (no configuration_version
+  // bump, no row write) when this matches the link's current persisted
+  // value, so always including it here needs no "did it actually
+  // change" logic on this side. Reuses the existing commentsEnabled
+  // column/RPC field -- not a second comments flag.
+  commentsEnabled: boolean;
 };
 
 export type ShareLinkQuickShareProps = {
@@ -87,6 +95,12 @@ export function ShareLinkQuickShare({
   // untouched or being disabled" (no input, nothing to type -- the
   // existing PIN value is never fetched or shown, see the file header).
   const initialHasPin = link?.hasPin ?? false;
+  // Phase 5A -- a brand-new link (no link yet) has no persisted
+  // commentsEnabled value to reflect; false matches the column's own
+  // default (comments_enabled boolean not null default false) and the
+  // existing isFirstShare settings default in useShareLink's own
+  // shareUpdate action.
+  const initialCommentsEnabled = link?.commentsEnabled ?? false;
 
   const [updateBody, setUpdateBody] = useState("");
   const [pinEnabled, setPinEnabled] = useState(initialHasPin);
@@ -96,21 +110,27 @@ export function ShareLinkQuickShare({
   const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<Set<string>>(
     () => new Set(mappedResources.map((resource) => resource.resourceId))
   );
+  const [commentsEnabled, setCommentsEnabled] = useState(initialCommentsEnabled);
 
   // A fresh authoritative read (open, or the refresh after a successful
   // share) resets every local draft field -- an owner's typed update
   // must never linger past the share it was written for. The PIN
   // checkbox specifically resets to the link's own current hasPin, not
   // unconditionally to false -- an already-protected link must always
-  // reopen with the checkbox checked.
+  // reopen with the checkbox checked. The "Allow client messages"
+  // checkbox follows the exact same rule for commentsEnabled: toggling
+  // it alone (without clicking Share update) never persists, so a
+  // reopen/refresh must always reflect the link's own last-PERSISTED
+  // value, never a discarded local draft.
   useEffect(() => {
     setUpdateBody("");
     setPinEnabled(initialHasPin);
     setPinValue("");
     setPinError(null);
     setSelectedAttachmentIds(new Set(mappedResources.map((resource) => resource.resourceId)));
+    setCommentsEnabled(initialCommentsEnabled);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [link?.id ?? null, link?.configurationVersion ?? null, initialHasPin]);
+  }, [link?.id ?? null, link?.configurationVersion ?? null, initialHasPin, initialCommentsEnabled]);
 
   const progress = buildQuickShareTaskProgress(project.subtasks, mappedTasks);
   const percent = percentComplete(progress);
@@ -161,6 +181,7 @@ export function ShareLinkQuickShare({
       pin,
       clearPin,
       attachmentResourceIds: Array.from(selectedAttachmentIds),
+      commentsEnabled,
     });
   }
 
@@ -234,6 +255,15 @@ export function ShareLinkQuickShare({
       <div style={stack(2)}>
         <span style={fieldLabel}>Security</span>
         <div style={stack(2)}>
+          <label style={{ ...row(2), cursor: disabled ? "not-allowed" : "pointer" }}>
+            <input
+              type="checkbox"
+              checked={commentsEnabled}
+              disabled={disabled}
+              onChange={(event) => setCommentsEnabled(event.target.checked)}
+            />
+            <span style={toggleLabelStyle}>Allow client messages</span>
+          </label>
           <label style={{ ...row(2), cursor: disabled ? "not-allowed" : "pointer" }}>
             <input
               type="checkbox"
