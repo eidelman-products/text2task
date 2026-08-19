@@ -1572,3 +1572,429 @@ project, ENV variable, or deployment was touched.
 # PHASE 5C STATUS: IMPLEMENTED
 
 # PHASE 5D READINESS: READY
+
+---
+
+# PHASE 5D — PUBLIC MESSAGE UI + OWNER CLIENT COMMUNICATION HISTORY
+
+Checkpoint at the start of this slice: `b760d6f Add Client Share Phase
+5C communication APIs`. Scope: the complete V1 user-facing UI on top of
+the already-implemented 5A-5C API layer -- public send/view, owner
+history/reply/status. No realtime, no polling, no Phase 6. The Phase 5A
+migration still has not been executed against any environment.
+
+## 1. Public Client Messages UI
+
+New: `public-messages-section.tsx` + `use-public-share-messages.ts`
+(`app/components/dashboard/tasks/share-link/`). Rendered as a sibling of
+`ClientProjectView` inside `ShareView`'s own "ready" state
+(`app/share/[publicId]/share-view.client.tsx`) -- deliberately NOT
+added inside `ClientProjectView` itself, which is documented as purely
+presentational/data-free and reused unchanged by the owner's own
+authenticated Preview modal (`share-link-panel.tsx`'s `PreviewView`,
+which renders `ClientProjectView` with no `publicId` at all). Keeping
+the fetch-owning component out of `ClientProjectView` means the owner
+Preview never gains a live public-message fetch of its own.
+
+Renders only when `projection.commentsEnabled === true`; the underlying
+hook performs zero fetches when it is false, and the section returns
+`null` outright (verified: "no fetch at all when disabled").
+
+## 2. Public state/data flow
+
+`usePublicShareMessages(publicId, enabled)` follows
+`share-view.client.tsx`'s own established fetch conventions exactly
+(`credentials: "same-origin"`, `cache: "no-store"`, a `safeJson` that
+never throws): `GET /api/share/[publicId]/messages` once when `enabled`
+becomes true, `POST` on submit, one more `GET` after a successful `POST`.
+No polling. A monotonic request-id guards against a slow, stale GET
+overwriting a fresher one (tested explicitly). Component-level state
+(`name`, `body`) lives in `PublicMessagesSection` itself, not the hook --
+name is preserved across a send (session-only, not persisted to
+storage), body is cleared only on send success.
+
+## 3. Public validation / error behavior
+
+Client-side validation mirrors the server contract exactly: trimmed
+non-empty check, `[...value].length` codepoint counting (not
+`.length`) for the 4000/80 limits, matching Postgres `char_length`
+semantics the same way the Phase 5B/5C server validators already do.
+Errors are the exact copy specified: "Enter a message.", "Message must
+be 4,000 characters or fewer.", "Name must be 80 characters or fewer."
+Server error codes are mapped to safe, generic copy (rate limit →
+"Too many messages sent..."; anything else → a single generic fallback)
+-- never a raw server error string. A failed history GET renders its
+own inline error and leaves the send form fully usable; it cannot throw
+past the component boundary (verified: rendering continues after a
+rejected fetch).
+
+## 4. Owner Client Communication UI
+
+Entry point: a "Client messages [unread badge]" button added directly
+inside `ShareLinkPanel` (`share-link-panel.tsx`), visible whenever a
+link exists, in both the "quick" and "result" panel views (not gated to
+only the post-share result screen, since a returning owner's panel
+always opens back at "quick" -- see §13 below).
+
+New: `client-communication-history-modal.tsx`. **Architecture
+decision**: this is NOT a second, independent `ResponsiveDialog`. It is
+rendered as swapped-in CONTENT inside `ShareLinkPanel`'s own
+already-open `ResponsiveDialog`, exactly the same pattern
+`PreviewView` already uses for "Client preview" (`state.previewOpen`).
+Two independent top-level `ResponsiveDialog`s would each run their own
+Escape-key/focus-trap handling with no coordination between them (a
+`ResponsiveDialog`'s nested-overlay context is designed for a much
+smaller popover-from-inside-a-dialog case, e.g. `DatePickerPopover`, not
+a second full-size dialog) -- swapping content inside the ONE already-open
+dialog sidesteps that entirely, at the cost of the view being a "Back"
+affordance rather than its own close button. This mirrors the UX shape
+of `project-update-history-modal.tsx` (header + toolbar + chronological
+list, loading/empty/error states) but shares none of its data, types,
+or styles -- confirmed by a dedicated test that no import statement in
+the new file names any Project Timeline/Project Update module, and no
+executable code references `project_timeline_events`.
+
+Opening the view performs exactly one `GET
+/api/share-links/[id]/messages` and mutates nothing -- verified
+explicitly (§9's "opening does not mark reviewed" requirement).
+
+## 5. Owner unread strategy (§12 decision, documented as required)
+
+**Chosen: Option A**, fetched via the SAME endpoint the full modal uses
+(no new endpoint was added). `useOwnerShareMessages(shareLinkId,
+enabled)` is instantiated **twice, independently**: once inside
+`ShareLinkPanel` itself (`enabled = state.isOpen && linkId !== null`,
+for the badge only) and once inside
+`ClientCommunicationHistoryModal` (`enabled = true` while that view is
+mounted, for the full list). Each instance performs its own isolated
+fetch; there is no shared cache or lifted state between them. This
+means opening the modal shortly after the panel opens issues a second,
+independent `GET` -- an accepted, small cost in exchange for keeping
+both call sites simple, decoupled, and independently testable (Phase
+5D's own "failure isolation" principle: a badge-fetch failure can never
+prevent the modal from opening or fetching on its own). No polling in
+either instance -- each fetches once when its own `enabled` flag
+transitions to true (verified: the badge re-fetches on each panel
+re-open, not merely once when the link id first appears).
+
+## 6. Owner reply UX
+
+Each client-authored message card offers a "Reply" button; only ONE
+reply composer can be open at a time (`replyingToId` is a single piece
+of state in the modal, not per-message state) -- verified with two
+client messages present, confirming only one "Submit reply" control
+ever renders. "Cancel" discards the draft without calling the API.
+Submitting calls `sendShareMessageReply(shareLinkId, {parentMessageId,
+body})` (`share-link-client.ts`, added this slice, itself calling `POST
+/api/share-links/[id]/messages/reply`) with the exact clicked message's
+id as `parentMessageId` -- never inferred, never defaulted. On success:
+composer closes, history refetches. Reply is offered ONLY on
+client-authored messages (verified: an owner-authored message in the
+same list never gets its own Reply control) -- no
+owner-reply-to-owner-reply UI exists.
+
+**Confirmed (§11 of the task, verified by a dedicated test)**: replying
+never calls `setShareMessageStatus`. The reply RPC's own
+`status='reviewed'` (Phase 5A) applies only to the new reply row it
+creates, never to the parent client message -- reviewing/resolving/
+dismissing the parent remains a fully separate, explicit action.
+
+## 7. Owner status UX
+
+Each client message shows a compact status label (`New` / `Reviewed` /
+`Resolved` / `Dismissed`, or `Converted` on a row Phase 6 has already
+touched -- read-only, no action ever produces it) plus three always-visible
+action buttons: "Mark reviewed", "Resolve", "Dismiss". Each calls
+`setShareMessageStatus(shareLinkId, messageId, status)` → `PATCH
+/api/share-links/[id]/messages/[messageId]`. No "Convert"/"Turn into
+task"/"Apply update" button exists anywhere in the component (verified
+by both a rendered-DOM check and a source-level regex check for the
+literal word "convert" outside the read-only status label). A failed
+status change shows one generic, safe error string, never the
+underlying `ShareLinkClientError`'s raw code/message. A successful
+change refetches history, so `unreadCount` updates from the server's
+own recomputed value -- never decremented client-side.
+
+## 8. RTL / mobile / accessibility
+
+Every message body (public and owner) renders inside a `<p dir="auto">`
+(or the compose `<textarea dir="auto">`) -- individual human-entered
+text auto-detects its own direction regardless of the surrounding
+page's `dir`, matching the task's own "prefer dir=auto over hardcoding"
+guidance. The public section's own root carries an explicit
+`dir={contentDirection}` (never omitted, matching
+`ClientProjectView`'s own established convention for the same prop).
+Every input has a real `<label htmlFor>` association (`Your name
+(optional)`, `Message`, `Reply`). Long unbroken text/URLs cannot break
+mobile layout (`overflowWrap: "anywhere"` + `wordBreak: "break-word"`
+on every message-body/bubble style). Loading and error states use
+`role="status"`/`role="alert"` so they are announced to assistive
+tech. Verified directly for Hebrew, Arabic, and emoji rendering in both
+the public section and (via the owner test file's own reply-body
+pass-through) the owner reply path.
+
+## 9. Failure isolation
+
+`usePublicShareMessages` and `useOwnerShareMessages` are each fully
+self-contained -- neither is part of `ShareView`'s own state machine nor
+`useShareLink`'s central reducer. A Messages fetch/send failure can
+never put the projection/tasks/resources view, or the Share panel's own
+core management request, into an error state (verified: a rejected
+history fetch still renders the compose form; a rejected badge fetch in
+`ShareLinkPanel`'s tests never affects any other panel assertion, and
+the panel's own test file was updated with a network-free `fetch` stub
+specifically so this hook's own fetch attempt never becomes a source of
+flakiness for unrelated panel tests).
+
+## 10. Phase 6 boundary confirmation
+
+Both new components' source is scanned (comment-stripped, matching the
+`code`/`normalizedExecutable` distinction established in Phase 5A-5C)
+for `share_message_conversions`, `project_updates`,
+`project_timeline_events`, and the literal word "convert" outside the
+read-only status label -- all clean. Neither component imports any
+task/project/CRM mutation function, an email module, or an AI-analysis
+module. No disabled "Convert" placeholder was added, per the explicit
+instruction not to even stub one this slice.
+
+## 11. A defect found and fixed during implementation
+
+Adding `messagesOpen`'s reset logic to `ShareLinkPanel`'s existing
+"fresh open always starts at quick-share" `useEffect` tripped this
+repo's `react-hooks/set-state-in-effect` lint rule -- and running eslint
+on the file surfaced a SECOND, pre-existing violation of the same rule
+(the unrelated `setView("result")` effect, present in the file before
+this turn, confirmed via `git show HEAD`). Both were fixed by converting
+to the render-time state-adjustment pattern
+`project-update-history-modal.tsx` already established elsewhere in
+this codebase (comparing a snapshot to the latest props/state during
+render, rather than in a committed effect) -- re-verified against the
+full pre-existing `share-link-panel.test.tsx` suite (all 13
+pre-existing assertions about the result-view transition still pass
+unchanged) before adding any new tests.
+
+## 12. Owner link selection (§13 -- documented, not changed)
+
+Unchanged V1 behavior, preserved as-is: `ShareLinkPanel` already
+operates on exactly one link (`state.data?.link`), the same one the
+Quick Share/Channels views already manage -- no new link-selection UI
+was introduced for Client Messages. `getOwnerShareLinkMessages`
+(Phase 5C) already reads history regardless of the link's own state
+(revoked/disabled/expired all remain owner-readable), so this carries
+through unchanged to the new UI with no additional work needed.
+
+## 13. commentsEnabled UI relationship (§14 -- confirmed, not changed)
+
+Verified directly: turning the Quick Share "Allow client messages"
+toggle off hides the PUBLIC section only (`PublicMessagesSection`
+returns `null`, `use-public-share-messages` performs no fetch) -- it has
+no effect on the owner's `ClientCommunicationHistoryModal`, which reads
+via `getOwnerShareLinkMessages` (an owner-scoped read with no
+`comments_enabled` gate at all, per Phase 5C's own design). Owner
+history is never hidden by turning comments off.
+
+## 14. Exact files changed
+
+New:
+- `app/components/dashboard/tasks/share-link/use-public-share-messages.ts`
+- `app/components/dashboard/tasks/share-link/public-messages-section.tsx` + `.test.tsx`
+- `app/components/dashboard/tasks/share-link/use-owner-share-messages.ts`
+- `app/components/dashboard/tasks/share-link/client-communication-history-modal.tsx` + `.test.tsx`
+
+Modified:
+- `app/share/[publicId]/share-view.client.tsx` (renders
+  `PublicMessagesSection` after `ClientProjectView` in the "ready"
+  state) + `.test.tsx`
+- `app/components/dashboard/tasks/share-link/share-link-panel.tsx`
+  (Client messages entry point + badge + messages-view swap; two
+  pre-existing/newly-introduced `set-state-in-effect` lint violations
+  fixed, see §11) + `.test.tsx`
+- `app/components/dashboard/tasks/share-link/share-link-client.ts`
+  (added `getShareLinkMessages`/`sendShareMessageReply`/
+  `setShareMessageStatus` client wrappers) + `.test.ts`
+- `lib/share/share-contracts.ts` (added the owner communication
+  response schemas these wrappers validate against)
+
+## 15. Exact tests / counts (all actually executed this turn)
+
+- `public-messages-section.test.tsx`: **34/34** (new)
+- `client-communication-history-modal.test.tsx`: **29/29** (new)
+- `share-view.client.test.tsx`: **17/17** (15 pre-existing + 2 new)
+- `share-link-panel.test.tsx`: **20/20** (13 pre-existing + 7 new)
+- `share-link-client.test.ts`: **23/23** (17 pre-existing + 6 new)
+- Full Client Share regression sweep (`lib/share`, `app/api/share`,
+  `app/api/share-links`, every share-link dashboard component,
+  `app/share`, plus the Phase 5A migration test), run together: **54
+  test files, 1976 tests, all passing**.
+- Analytics isolation suite (`lib/analytics`, `app/components/analytics`):
+  **23/23, all passing** -- `/share/**`'s exclusion from
+  `ConsentAwareVercelAnalytics`/`CookieConsentBanner` is unaffected by
+  this slice's new UI.
+
+## 16. TypeScript / eslint / diff / build
+
+- `tsc --noEmit`: clean.
+- `eslint` on every file touched this turn (13 files): **0 errors, 0
+  warnings**.
+- `git diff --check`: clean (only expected LF→CRLF line-ending notices).
+- **`npm run build`**: succeeded. Compiled successfully; all new routes
+  registered correctly (`/api/share-links/[id]/messages`,
+  `/api/share-links/[id]/messages/[messageId]`,
+  `/api/share-links/[id]/messages/reply`,
+  `/api/share/[publicId]/messages`); no new warnings.
+
+Nothing was staged, committed, or pushed this turn. No migration was
+executed against any database, disposable or Production. No Supabase
+project, ENV variable, or deployment was touched.
+
+## 17. Next manual step — Phase 5D runtime/browser acceptance (PLAN ONLY, not executed this turn)
+
+1. Apply ONLY the Phase 5A migration
+   (`202608190001_client_share_message_owner_rpcs.sql`) to the existing
+   disposable Supabase project -- no other migration is pending.
+2. Deploy the current branch to a disposable Vercel Preview.
+3. On a real project's share link (disposable, non-Production): turn on
+   "Allow client messages" via Quick Share, share it.
+4. Open the public link in an incognito/second browser context; confirm
+   the Messages section renders and is empty.
+5. Client sends a message (with and without a name); confirm it appears
+   after send, confirm the DB row look correct via the disposable
+   project's own SQL console (never Production).
+6. Owner opens "Client messages" from the Share panel; confirm the
+   message appears, confirm the unread badge count, confirm opening did
+   NOT mark it reviewed.
+7. Owner clicks Reply on the client message, sends a reply; confirm the
+   composer closes and the reply appears in the owner list.
+8. Client refreshes the public page; confirm the owner's reply now
+   appears in the public history, in order.
+9. Owner explicitly clicks Mark reviewed / Resolve / Dismiss in turn on
+   a client message; confirm each status transition and confirm the
+   unread badge updates correctly after "Mark reviewed" (client message
+   leaves the unread definition).
+10. Owner turns "Allow client messages" back OFF; confirm the public
+    Messages section disappears (or denies) on the client's next
+    refresh, while the owner's Client Communication History still shows
+    the full prior conversation.
+11. Confirm no console errors, no unexpected network polling (verify in
+    devtools that GET requests occur only on the specific actions listed
+    above, never on an interval), and no regression in the rest of the
+    public project view or the Share panel's own management flows.
+
+No step above should be executed without the user's explicit go-ahead;
+this is a plan for the next turn, not an instruction executed now.
+
+---
+
+# PHASE 5D IMPLEMENTATION STATUS: IMPLEMENTED
+
+# PHASE 5D RUNTIME ACCEPTANCE READINESS: READY
+
+---
+
+# PHASE 5D RUNTIME DEFECT — STALE OWNER UNREAD BADGE (found in real Vercel Preview acceptance, fixed)
+
+Found during the real-browser acceptance pass this doc's own §17 plan
+called for. Repro: client sends a message → panel badge shows `Client
+messages [1]` → owner opens the modal (correctly shows `1 unread`) →
+owner moves the message through New → Reviewed → Resolved → Dismissed
+(modal correctly updates to `0 unread`) → owner clicks Back → **panel
+still shows `Client messages [1]`** until the whole Share panel is
+closed and reopened.
+
+## Root cause
+
+Exactly the tradeoff the Phase 5D doc's own §5 ("Owner unread
+strategy") already named explicitly: `ShareLinkPanel`'s badge and
+`ClientCommunicationHistoryModal`'s own list are two deliberately
+**independent** `useOwnerShareMessages` instances, each with its own
+isolated fetch and no shared state. A status mutation made through the
+modal's instance updates only that instance's state; nothing was ever
+wired to tell the panel's separate badge instance that server truth had
+changed. The database/API were correct the entire time — only the
+already-fetched badge value in the panel's own hook instance was stale.
+
+## Exact fix
+
+`app/components/dashboard/tasks/share-link/share-link-panel.tsx`: the
+`onClose` callback passed to `ClientCommunicationHistoryModal` (fired
+by the modal's own "Back" button) now also calls
+`badgeMessages.refetch()`, in addition to `setMessagesOpen(false)`.
+This is the "refetch badge when transitioning from communication-history
+view back to the main Share panel" option from the original Phase 5D
+instructions — chosen over threading a new
+`onMessagesChanged`/`onUnreadChanged` callback prop through the modal
+because it requires no change to the modal's own props/API at all, is
+triggered unconditionally (not gated on detecting which specific
+mutation happened), and therefore also covers any future owner action
+inside the modal that could affect the unread count without needing a
+new callback wired for each one. The two `useOwnerShareMessages`
+instances remain fully isolated, exactly as designed — this fix adds
+one explicit, user-action-triggered refetch call at the exact moment
+the owner leaves the modal, not a subscription, not shared state, not
+polling. `refetch()` already had a monotonic request-id staleness guard
+from Phase 5D's original implementation, so this call is race-safe
+against the badge's own initial fetch by construction.
+
+No change was made to `client-communication-history-modal.tsx`,
+`use-owner-share-messages.ts`, or any API route — the defect and its
+fix are both entirely contained to how `ShareLinkPanel` reacts to the
+modal closing.
+
+## Files changed
+
+- `app/components/dashboard/tasks/share-link/share-link-panel.tsx` (the
+  fix: one added `refetch()` call in the modal's `onClose` handler)
+- `app/components/dashboard/tasks/share-link/share-link-panel.test.tsx`
+  (4 new regression tests)
+
+## Tests / counts (all actually executed this turn)
+
+- `share-link-panel.test.tsx`: **24/24** (20 pre-existing + 4 new),
+  covering: the exact repro (badge 1 → modal open → explicit status
+  mutation → modal shows 0 unread → Back → panel badge reflects 0
+  immediately, dialog never unmounted/remounted); a **failed** status
+  mutation leaves the panel badge showing the correct still-unread
+  server truth (1) after Back, never silently cleared; a reply-only
+  interaction (no status change) leaves the badge unchanged after Back;
+  and a fixed, non-growing GET count across the whole scenario (4 total:
+  badge-on-mount, modal-on-open, modal-refetch-after-mutation,
+  badge-refetch-on-Back), re-checked after an extra tick to prove
+  nothing keeps firing on its own -- no polling was introduced.
+- `client-communication-history-modal.test.tsx`: **29/29** (unchanged,
+  re-run to confirm the modal itself was untouched by this fix).
+- `public-messages-section.test.tsx` + `share-view.client.test.tsx`:
+  **34/34 + 17/17** (unchanged, re-run as part of the full Phase 5D UI
+  sweep).
+- Full Client Share regression sweep (`lib/share`, `app/api/share`,
+  `app/api/share-links`, every share-link dashboard component,
+  `app/share`, plus the Phase 5A migration test), run together: **54
+  test files, 1980 tests, all passing** (1976 + the 4 new regression
+  tests).
+
+## TypeScript / eslint / diff
+
+- `tsc --noEmit`: clean.
+- `eslint` on both touched files: **0 errors, 0 warnings** (one
+  transient `no-unused-vars` warning from an unused counter variable in
+  a first draft of the new test was found and removed before this
+  final run).
+- `git diff --check`: clean (only expected LF→CRLF line-ending
+  notices).
+
+Nothing was staged, committed, or pushed this turn. No SQL was
+executed, no deploy was performed, Production was not touched.
+
+## Whether a new Preview deployment is required
+
+**Yes.** This fix changes application code
+(`share-link-panel.tsx`) that is already running on the Preview
+deployment where the defect was observed — the currently-deployed
+Preview still has the stale-badge bug. A new deployment of the current
+branch is needed before this specific fix can be re-verified in the
+same real-browser acceptance flow that found it. No database/migration
+change is involved, so no other part of the disposable environment
+needs to change.
+
+---
+
+# PHASE 5D RUNTIME DEFECT STATUS: FIXED (awaiting redeploy + re-verification in Preview)

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { rawShareSecretSchema } from "@/lib/share/share-contracts";
 import type { ClientProjectProjection } from "@/lib/share/client-share-projection-contracts";
 import { ClientProjectView } from "@/app/components/dashboard/tasks/share-link/client-project-view";
+import { PublicMessagesSection } from "@/app/components/dashboard/tasks/share-link/public-messages-section";
 
 /*
   Phase 3 -- the public, no-login client state machine for
@@ -232,7 +233,18 @@ function ShareViewBody({
     case "pin_required":
       return <SharePinForm error={state.error} onSubmit={onSubmitPin} />;
     case "ready":
-      return <ClientProjectView projection={state.projection} publicId={publicId} />;
+      return (
+        <div style={readyPageStyle}>
+          <ClientProjectView projection={state.projection} publicId={publicId} />
+          <div style={messagesWrapperStyle}>
+            <PublicMessagesSection
+              publicId={publicId}
+              commentsEnabled={state.projection.commentsEnabled}
+              contentDirection={state.projection.contentDirection}
+            />
+          </div>
+        </div>
+      );
     case "rate_limited":
       return (
         <ShareViewMessage title="Please wait a moment and try again." />
@@ -291,6 +303,15 @@ function SharePinForm({
     </div>
   );
 }
+
+const readyPageStyle: CSSProperties = {
+  background: "#f6f8fb",
+  minHeight: "100%",
+};
+
+const messagesWrapperStyle: CSSProperties = {
+  padding: "0 16px 32px",
+};
 
 const containerStyle: CSSProperties = {
   minHeight: "100vh",

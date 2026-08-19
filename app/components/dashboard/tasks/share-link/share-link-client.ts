@@ -12,7 +12,13 @@ import {
   setShareLinkExpiryResponseSchema,
   clearShareLinkExpiryResponseSchema,
   rotateShareLinkSecretResponseSchema,
+  getShareLinkMessagesResponseSchema,
+  sendShareMessageReplyResponseSchema,
+  setShareMessageStatusResponseSchema,
   type ShareLinkApiErrorCode,
+  type GetShareLinkMessagesData,
+  type SendShareMessageReplyData,
+  type SetShareMessageStatusData,
   type ShareLinkManagementStateData,
   type CreateShareLinkDraftData,
   type ActivateShareLinkData,
@@ -255,5 +261,54 @@ export function previewShareLink(linkId: string): Promise<ClientProjectProjectio
     `/api/share-links/${encodeURIComponent(linkId)}/preview`,
     undefined,
     previewShareLinkResponseSchema
+  );
+}
+
+/**
+ * Phase 5D -- owner Client Communication History. `getShareLinkMessages`
+ * is a plain read (chronological messages + unreadCount, both directions,
+ * every workflow status); `sendShareMessageReply` and
+ * `setShareMessageStatus` are the two owner-write actions, each going
+ * through their own already-existing API route
+ * (`app/api/share-links/[id]/messages/**`), which themselves call the
+ * narrow Phase 5A RPCs -- this module performs no DB access of its own,
+ * exactly like every other function in this file.
+ */
+export function getShareLinkMessages(linkId: string): Promise<GetShareLinkMessagesData> {
+  return requestShareLink(
+    `/api/share-links/${encodeURIComponent(linkId)}/messages`,
+    undefined,
+    getShareLinkMessagesResponseSchema
+  );
+}
+
+export function sendShareMessageReply(
+  linkId: string,
+  input: { parentMessageId: string; body: string }
+): Promise<SendShareMessageReplyData> {
+  return requestShareLink(
+    `/api/share-links/${encodeURIComponent(linkId)}/messages/reply`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+    sendShareMessageReplyResponseSchema
+  );
+}
+
+export function setShareMessageStatus(
+  linkId: string,
+  messageId: string,
+  status: "new" | "reviewed" | "resolved" | "dismissed"
+): Promise<SetShareMessageStatusData> {
+  return requestShareLink(
+    `/api/share-links/${encodeURIComponent(linkId)}/messages/${encodeURIComponent(messageId)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    },
+    setShareMessageStatusResponseSchema
   );
 }

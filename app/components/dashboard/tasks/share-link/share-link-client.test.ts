@@ -8,11 +8,14 @@ import {
   createShareLinkDraft,
   disableShareLink,
   getShareLinkManagementState,
+  getShareLinkMessages,
   reenableShareLink,
   revealShareLinkSecret,
   revokeShareLink,
   rotateShareLinkSecret,
+  sendShareMessageReply,
   setShareLinkExpiry,
+  setShareMessageStatus,
   setSharePin,
 } from "./share-link-client";
 
@@ -364,5 +367,140 @@ describe("Phase 2C access-control client wrappers", () => {
     expect(fetchMock).toHaveBeenCalledWith(`/api/share-links/${VALID_UUID}/rotate`, {
       method: "POST",
     });
+  });
+});
+
+const VALID_MESSAGE_ID = "44444444-4444-4444-8444-444444444444";
+const VALID_PARENT_ID = "55555555-5555-4555-8555-555555555555";
+
+function ownerMessageRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: VALID_MESSAGE_ID,
+    shareLinkId: VALID_UUID,
+    projectId: "22222222-2222-4222-8222-222222222222",
+    authorType: "client",
+    authorDisplayName: "Jane",
+    body: "Any update?",
+    parentId: null,
+    isVisibleToClient: true,
+    status: "new",
+    reviewedAt: null,
+    resolvedAt: null,
+    createdAt: "2026-08-19T00:00:00Z",
+    updatedAt: "2026-08-19T00:00:00Z",
+    ...overrides,
+  };
+}
+
+describe("getShareLinkMessages", () => {
+  it("GETs the messages route and returns messages + unreadCount", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockReturnValue(
+        jsonResponse({ ok: true, data: { messages: [ownerMessageRow()], unreadCount: 3 } })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const data = await getShareLinkMessages(VALID_UUID);
+
+    expect(data.unreadCount).toBe(3);
+    expect(data.messages).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledWith(`/api/share-links/${VALID_UUID}/messages`, undefined);
+  });
+
+  it("throws ShareLinkClientError with the server's error code on failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockReturnValue(jsonResponse({ ok: false, code: "SHARE_LINK_NOT_FOUND", error: "x" }, 404))
+    );
+
+    await expect(getShareLinkMessages(VALID_UUID)).rejects.toMatchObject({
+      code: "SHARE_LINK_NOT_FOUND",
+    });
+  });
+});
+
+describe("sendShareMessageReply", () => {
+  it("POSTs parentMessageId + body to the reply route", async () => {
+    const fetchMock = vi.fn().mockReturnValue(
+      jsonResponse({
+        ok: true,
+        data: {
+          messageId: VALID_MESSAGE_ID,
+          shareLinkId: VALID_UUID,
+          parentId: VALID_PARENT_ID,
+          authorType: "owner",
+          createdAt: "2026-08-19T00:00:00Z",
+        },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const data = await sendShareMessageReply(VALID_UUID, {
+      parentMessageId: VALID_PARENT_ID,
+      body: "Thanks!",
+    });
+
+    expect(data.authorType).toBe("owner");
+    expect(fetchMock).toHaveBeenCalledWith(`/api/share-links/${VALID_UUID}/messages/reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parentMessageId: VALID_PARENT_ID, body: "Thanks!" }),
+    });
+  });
+
+  it("throws ShareLinkClientError on a cross-link parent mismatch", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockReturnValue(
+        jsonResponse({ ok: false, code: "SHARE_MESSAGE_PARENT_LINK_MISMATCH", error: "x" }, 400)
+      )
+    );
+
+    await expect(
+      sendShareMessageReply(VALID_UUID, { parentMessageId: VALID_PARENT_ID, body: "x" })
+    ).rejects.toMatchObject({ code: "SHARE_MESSAGE_PARENT_LINK_MISMATCH" });
+  });
+});
+
+describe("setShareMessageStatus", () => {
+  it("PATCHes the exact messageId route with the status body", async () => {
+    const fetchMock = vi.fn().mockReturnValue(
+      jsonResponse({
+        ok: true,
+        data: {
+          messageId: VALID_MESSAGE_ID,
+          status: "reviewed",
+          reviewedAt: "2026-08-19T00:00:00Z",
+          resolvedAt: null,
+        },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const data = await setShareMessageStatus(VALID_UUID, VALID_MESSAGE_ID, "reviewed");
+
+    expect(data.status).toBe("reviewed");
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/share-links/${VALID_UUID}/messages/${VALID_MESSAGE_ID}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "reviewed" }),
+      }
+    );
+  });
+
+  it("throws ShareLinkClientError on SHARE_MESSAGE_STATUS_INVALID", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockReturnValue(
+        jsonResponse({ ok: false, code: "SHARE_MESSAGE_STATUS_INVALID", error: "x" }, 400)
+      )
+    );
+
+    await expect(
+      setShareMessageStatus(VALID_UUID, VALID_MESSAGE_ID, "reviewed")
+    ).rejects.toMatchObject({ code: "SHARE_MESSAGE_STATUS_INVALID" });
   });
 });

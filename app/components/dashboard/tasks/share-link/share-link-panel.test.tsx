@@ -1,11 +1,38 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 
 import { ShareLinkPanel } from "./share-link-panel";
 import type { ShareLinkPanelState } from "./use-share-link";
+
+// Phase 5D -- ShareLinkPanel now conditionally fetches the Client
+// Communication unread badge (useOwnerShareMessages) whenever a link
+// with an id is open. None of the tests below exercise that feature
+// directly, but without a stub, that hook would attempt a real network
+// call on every render that has a link -- stubbed here to a generic,
+// deterministic failure response so every test in this file stays
+// network-free (the badge hook fails closed on any error, so this
+// never affects what these tests assert on).
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ok: false, code: "INTERNAL_ERROR", error: "stub" }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      })
+    )
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function baseState(overrides: Partial<ShareLinkPanelState> = {}): ShareLinkPanelState {
   return {
@@ -268,5 +295,261 @@ describe("ShareLinkPanel - result view after a successful Share update", () => {
 
     expect(screen.queryByRole("heading", { name: /project shared/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^share update$/i })).toBeInTheDocument();
+  });
+});
+
+describe("ShareLinkPanel - Phase 5D Client messages entry point", () => {
+  it("33. renders the Client messages entry point when a link exists", () => {
+    renderPanel(baseState({ data: linkData("active") }));
+    expect(screen.getByRole("button", { name: /client messages/i })).toBeInTheDocument();
+  });
+
+  it("does not render the entry point when there is no link yet (fresh draft)", () => {
+    renderPanel(baseState({ data: null }));
+    expect(screen.queryByRole("button", { name: /client messages/i })).not.toBeInTheDocument();
+  });
+
+  it("34. clicking the entry point swaps the panel content to the communication view", async () => {
+    const user = userEvent.setup();
+    renderPanel(baseState({ data: linkData("active") }));
+
+    await user.click(screen.getByRole("button", { name: /client messages/i }));
+
+    expect(await screen.findByText("Chronological conversation between you and your client.")).toBeInTheDocument();
+  });
+
+  it("35. clicking Back closes the communication view and returns to the previous panel content", async () => {
+    const user = userEvent.setup();
+    renderPanel(baseState({ data: linkData("active") }));
+
+    await user.click(screen.getByRole("button", { name: /client messages/i }));
+    await screen.findByText("Chronological conversation between you and your client.");
+
+    await user.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(
+      screen.queryByText("Chronological conversation between you and your client.")
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /client messages/i })).toBeInTheDocument();
+  });
+
+  it("41. displays the unread badge with the count from the owner messages GET", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Response(
+        JSON.stringify({ ok: true, data: { messages: [], unreadCount: 5 } }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    renderPanel(baseState({ data: linkData("active") }));
+
+    expect(await screen.findByText("5")).toBeInTheDocument();
+  });
+
+  it("does not render a badge when unreadCount is 0", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Response(
+        JSON.stringify({ ok: true, data: { messages: [], unreadCount: 0 } }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    renderPanel(baseState({ data: linkData("active") }));
+
+    await screen.findByRole("button", { name: /client messages/i });
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
+  });
+
+  it("64. no dashboard/project-card changes -- this entry point only ever renders inside the existing Share panel, never elsewhere", () => {
+    const source = readFileSync(join(__dirname, "share-link-panel.tsx"), "utf8");
+    // The entry point button text only appears once, inside this file.
+    expect((source.match(/Client messages/g) ?? []).length).toBe(1);
+  });
+});
+
+describe("ShareLinkPanel - Phase 5D RUNTIME DEFECT regression: stale unread badge after leaving the communication view", () => {
+  const MESSAGE_ID = "33333333-3333-4333-8333-333333333333";
+
+  function messageRow(overrides: Record<string, unknown> = {}) {
+    return {
+      id: MESSAGE_ID,
+      shareLinkId: "22222222-2222-4222-8222-222222222222",
+      projectId: "11111111-1111-4111-8111-111111111111",
+      authorType: "client",
+      authorDisplayName: "Jane",
+      body: "Any update on this?",
+      parentId: null,
+      isVisibleToClient: true,
+      status: "new",
+      reviewedAt: null,
+      resolvedAt: null,
+      createdAt: "2026-08-19T00:00:00Z",
+      updatedAt: "2026-08-19T00:00:00Z",
+      ...overrides,
+    };
+  }
+
+  function jsonResponse(body: unknown, status = 200) {
+    return Promise.resolve(
+      new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })
+    );
+  }
+
+  it("1-6. reproduces the exact real-browser defect: after an explicit status mutation inside the modal, clicking Back refreshes the panel badge with no close/reopen", async () => {
+    let unread = 1;
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    fetchMock.mockImplementation((url: unknown, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (method === "PATCH") {
+        unread = 0;
+        return jsonResponse({
+          ok: true,
+          data: { messageId: MESSAGE_ID, status: "reviewed", reviewedAt: "2026-08-19T01:00:00Z", resolvedAt: null },
+        });
+      }
+      return jsonResponse({
+        ok: true,
+        data: {
+          messages: [messageRow(unread === 0 ? { status: "reviewed", reviewedAt: "2026-08-19T01:00:00Z" } : {})],
+          unreadCount: unread,
+        },
+      });
+    });
+
+    const user = userEvent.setup();
+    renderPanel(baseState({ data: linkData("active") }));
+
+    // 1. panel initially displays unread badge 1
+    expect(await screen.findByText("1")).toBeInTheDocument();
+
+    // 2. open Client messages
+    await user.click(screen.getByRole("button", { name: /client messages/i }));
+    expect(await screen.findByText("1 unread")).toBeInTheDocument();
+
+    // 3. successful status mutation -> modal unreadCount -> 0
+    await user.click(screen.getByRole("button", { name: "Mark reviewed" }));
+    await waitFor(() => {
+      expect(screen.getByText("0 unread")).toBeInTheDocument();
+    });
+
+    // 4. click Back
+    await user.click(screen.getByRole("button", { name: "Back" }));
+
+    // 5. main panel displays no unread badge (server truth is now 0) --
+    // and 6. no close/reopen of the Share panel dialog was required.
+    await waitFor(() => {
+      expect(screen.queryByText("1")).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /client messages/i })).toBeInTheDocument();
+  });
+
+  it("a failed status mutation does not alter the panel badge once Back is clicked", async () => {
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    fetchMock.mockImplementation((url: unknown, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (method === "PATCH") {
+        return jsonResponse({ ok: false, code: "INTERNAL_ERROR", error: "x" }, 500);
+      }
+      return jsonResponse({ ok: true, data: { messages: [messageRow()], unreadCount: 1 } });
+    });
+
+    const user = userEvent.setup();
+    renderPanel(baseState({ data: linkData("active") }));
+
+    expect(await screen.findByText("1")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /client messages/i }));
+    await screen.findByText("1 unread");
+
+    await user.click(screen.getByRole("button", { name: "Mark reviewed" }));
+    // The mutation fails -- the modal's own count must stay at 1.
+    await screen.findByText("1 unread");
+
+    await user.click(screen.getByRole("button", { name: "Back" }));
+
+    // Server truth is still unreadCount=1 -- the panel badge correctly
+    // still shows 1, not silently cleared.
+    expect(await screen.findByText("1")).toBeInTheDocument();
+  });
+
+  it("replying alone (no status change) does not change the unread count reflected on the panel badge after Back", async () => {
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    fetchMock.mockImplementation((url: unknown, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (method === "POST") {
+        return jsonResponse({
+          ok: true,
+          data: {
+            messageId: "44444444-4444-4444-8444-444444444444",
+            shareLinkId: "22222222-2222-4222-8222-222222222222",
+            parentId: MESSAGE_ID,
+            authorType: "owner",
+            createdAt: "2026-08-19T01:00:00Z",
+          },
+        });
+      }
+      // Replying never changes status='new', so unreadCount stays 1 on
+      // every GET, before and after.
+      return jsonResponse({ ok: true, data: { messages: [messageRow()], unreadCount: 1 } });
+    });
+
+    const user = userEvent.setup();
+    renderPanel(baseState({ data: linkData("active") }));
+
+    expect(await screen.findByText("1")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /client messages/i }));
+    await screen.findByText("1 unread");
+
+    await user.click(screen.getByRole("button", { name: "Reply" }));
+    await user.type(screen.getByLabelText("Reply"), "Thanks!");
+    await user.click(screen.getByRole("button", { name: "Submit reply" }));
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Reply")).not.toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(await screen.findByText("1")).toBeInTheDocument();
+  });
+
+  it("does not introduce polling or a duplicate GET loop -- the total GET count stays small and fixed for this scenario", async () => {
+    let unread = 1;
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    const getUrls: unknown[] = [];
+    fetchMock.mockImplementation((url: unknown, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (method === "PATCH") {
+        unread = 0;
+        return jsonResponse({
+          ok: true,
+          data: { messageId: MESSAGE_ID, status: "resolved", reviewedAt: "X", resolvedAt: "Y" },
+        });
+      }
+      getUrls.push(url);
+      return jsonResponse({
+        ok: true,
+        data: { messages: [messageRow(unread === 0 ? { status: "resolved" } : {})], unreadCount: unread },
+      });
+    });
+
+    const user = userEvent.setup();
+    renderPanel(baseState({ data: linkData("active") }));
+
+    await screen.findByText("1");
+    await user.click(screen.getByRole("button", { name: /client messages/i }));
+    await screen.findByText("1 unread");
+    await user.click(screen.getByRole("button", { name: "Resolve" }));
+    await waitFor(() => expect(screen.getByText("0 unread")).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    await waitFor(() => expect(screen.queryByText("1")).not.toBeInTheDocument());
+
+    // Exactly: 1 (badge on mount) + 1 (modal on open) + 1 (modal
+    // refetch after mutation) + 1 (badge refetch on Back) = 4. Not
+    // growing, not interval-driven.
+    expect(getUrls.length).toBe(4);
+
+    // Wait an extra tick to prove nothing keeps firing on its own.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(getUrls.length).toBe(4);
   });
 });

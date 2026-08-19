@@ -279,3 +279,40 @@ describe("ShareView - unavailable posture", () => {
     await screen.findByText(/not available/i);
   });
 });
+
+describe("ShareView - Phase 5D Messages section wiring", () => {
+  function mockEndpoints(commentsEnabled: boolean) {
+    fetchMock.mockImplementation((url: string) => {
+      if (url === `/api/share/${VALID_PUBLIC_ID}/projection`) {
+        return jsonResponse({ ok: true, data: { ...fakeProjection(), commentsEnabled } });
+      }
+      if (url === `/api/share/${VALID_PUBLIC_ID}/messages`) {
+        return jsonResponse({ ok: true, data: { messages: [] } });
+      }
+      return jsonResponse({ ok: true, data: fakeProjection() });
+    });
+  }
+
+  it("renders the Messages section when the projection's commentsEnabled is true", async () => {
+    setLocation(`/share/${VALID_PUBLIC_ID}`, "");
+    mockEndpoints(true);
+
+    render(<ShareView publicId={VALID_PUBLIC_ID} />);
+
+    expect(await screen.findByRole("region", { name: "Messages" })).toBeInTheDocument();
+  });
+
+  it("does not render the Messages section, and never fetches it, when commentsEnabled is false", async () => {
+    setLocation(`/share/${VALID_PUBLIC_ID}`, "");
+    mockEndpoints(false);
+
+    render(<ShareView publicId={VALID_PUBLIC_ID} />);
+
+    await screen.findByText("Website launch");
+    expect(screen.queryByRole("region", { name: "Messages" })).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      `/api/share/${VALID_PUBLIC_ID}/messages`,
+      expect.anything()
+    );
+  });
+});

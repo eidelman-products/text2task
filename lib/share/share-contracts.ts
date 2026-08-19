@@ -1293,3 +1293,92 @@ export const setShareMessageStatusRequestSchema = z
 export type SetShareMessageStatusRequest = z.infer<
   typeof setShareMessageStatusRequestSchema
 >;
+
+// ---------------------------------------------------------------------
+// Phase 5D -- owner communication client-side response contracts.
+// Mirrors every sibling response schema's own `{ok:true,data}|error`
+// envelope shape exactly, re-validated client-side through
+// share-link-client.ts's own requestShareLink wrapper (never trusted
+// merely because the HTTP status looked right).
+// ---------------------------------------------------------------------
+
+export const ownerShareMessageStatusSchema = z.enum([
+  "new",
+  "reviewed",
+  "resolved",
+  "dismissed",
+  "converted",
+]);
+export type OwnerShareMessageStatus = z.infer<typeof ownerShareMessageStatusSchema>;
+
+export const ownerShareMessageSchema = z
+  .object({
+    id: uuidSchema,
+    shareLinkId: uuidSchema,
+    projectId: uuidSchema,
+    authorType: z.enum(["client", "owner"]),
+    authorDisplayName: z.string().nullable(),
+    body: z.string(),
+    parentId: uuidSchema.nullable(),
+    isVisibleToClient: z.boolean(),
+    status: ownerShareMessageStatusSchema,
+    reviewedAt: z.string().nullable(),
+    resolvedAt: z.string().nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .strict();
+export type OwnerShareMessage = z.infer<typeof ownerShareMessageSchema>;
+
+export const getShareLinkMessagesDataSchema = z
+  .object({
+    messages: z.array(ownerShareMessageSchema),
+    unreadCount: z.number().int().nonnegative(),
+  })
+  .strict();
+export type GetShareLinkMessagesData = z.infer<typeof getShareLinkMessagesDataSchema>;
+
+export const getShareLinkMessagesResponseSchema = z.union([
+  z.object({ ok: z.literal(true), data: getShareLinkMessagesDataSchema }).strict(),
+  shareLinkApiErrorSchema,
+]);
+export type GetShareLinkMessagesResponse = z.infer<
+  typeof getShareLinkMessagesResponseSchema
+>;
+
+export const sendShareMessageReplyDataSchema = z
+  .object({
+    messageId: uuidSchema,
+    shareLinkId: uuidSchema,
+    parentId: uuidSchema,
+    authorType: z.literal("owner"),
+    createdAt: z.string(),
+  })
+  .strict();
+export type SendShareMessageReplyData = z.infer<typeof sendShareMessageReplyDataSchema>;
+
+export const sendShareMessageReplyResponseSchema = z.union([
+  z.object({ ok: z.literal(true), data: sendShareMessageReplyDataSchema }).strict(),
+  shareLinkApiErrorSchema,
+]);
+export type SendShareMessageReplyResponse = z.infer<
+  typeof sendShareMessageReplyResponseSchema
+>;
+
+export const setShareMessageStatusDataSchema = z
+  .object({
+    messageId: uuidSchema,
+    status: z.enum(["new", "reviewed", "resolved", "dismissed"]),
+    reviewedAt: z.string().nullable(),
+    resolvedAt: z.string().nullable(),
+  })
+  .strict();
+export type SetShareMessageStatusData = z.infer<typeof setShareMessageStatusDataSchema>;
+
+export const setShareMessageStatusResponseSchema = z.union([
+  z.object({ ok: z.literal(true), data: setShareMessageStatusDataSchema }).strict(),
+  shareLinkApiErrorSchema,
+]);
+export type SetShareMessageStatusResponse = z.infer<
+  typeof setShareMessageStatusResponseSchema
+>;

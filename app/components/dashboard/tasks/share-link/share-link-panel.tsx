@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type CSSProperties, type RefObject } from "react";
+import { useId, useState, type CSSProperties, type RefObject } from "react";
 
 import { DashboardButton } from "../../ui/button";
 import { ResponsiveDialog } from "../../ui/responsive-dialog";
@@ -12,9 +12,11 @@ import {
   dashboardTypography,
 } from "../../ui/tokens";
 import type { ClientProjectProjection } from "@/lib/share/client-share-projection-contracts";
+import { ClientCommunicationHistoryModal } from "./client-communication-history-modal";
 import { ClientProjectView } from "./client-project-view";
 import { ShareLinkChannels } from "./share-link-channels";
 import { ShareLinkQuickShare, type ShareUpdateSubmission } from "./share-link-quick-share";
+import { useOwnerShareMessages } from "./use-owner-share-messages";
 import type { ShareLinkActionKind, ShareLinkPanelState } from "./use-share-link";
 
 /*
@@ -72,26 +74,59 @@ export function ShareLinkPanel({
 }: ShareLinkPanelProps) {
   const headingId = useId();
   const [view, setView] = useState<PanelView>("quick");
+  const [messagesOpen, setMessagesOpen] = useState(false);
 
-  // A fresh open always starts back at the quick-share view.
-  useEffect(() => {
+  const linkId = state.data?.link?.id ?? null;
+
+  // Phase 5D unread badge -- Option A from the Phase 5D doc's own "unread
+  // strategy" section: a single, isolated fetch of the SAME owner
+  // messages GET the communication view itself uses, triggered each time
+  // the panel opens with a real link (never on an interval, never
+  // shared/cached with the communication view's own separate fetch when
+  // it later opens -- see use-owner-share-messages.ts's own doc comment
+  // for why two independent instances is the deliberate, simpler choice).
+  const badgeMessages = useOwnerShareMessages(linkId, state.isOpen && linkId !== null);
+  const unreadCount = badgeMessages.state.status === "loaded" ? badgeMessages.state.unreadCount : null;
+
+  // A fresh open always starts back at the quick-share view. Adjusted
+  // during render rather than in an effect -- mirrors
+  // project-update-history-modal.tsx's own established "reset on
+  // (re)open" pattern exactly (React explicitly supports calling a
+  // setState setter while rendering to respond to a prop change,
+  // avoiding the extra committed render pass an effect would cause).
+  const [resetSnapshot, setResetSnapshot] = useState({
+    isOpen: state.isOpen,
+    projectId: state.projectId,
+  });
+
+  if (resetSnapshot.isOpen !== state.isOpen || resetSnapshot.projectId !== state.projectId) {
+    setResetSnapshot({ isOpen: state.isOpen, projectId: state.projectId });
+
     if (!state.isOpen) {
       setView("quick");
+      setMessagesOpen(false);
     }
-  }, [state.isOpen, state.projectId]);
+  }
 
   // Detects the exact pending("shareUpdate") -> not-pending transition
-  // for a successful Share update and shows the result screen. A ref
-  // (not state) tracks the previous actionPending value so this only
-  // fires once per completed shareUpdate, not on every idle render.
-  const previousActionPendingRef = useRef<ShareLinkActionKind | null>(null);
-  useEffect(() => {
-    const wasSharing = previousActionPendingRef.current === "shareUpdate";
-    previousActionPendingRef.current = state.actionPending;
+  // for a successful Share update and shows the result screen. Adjusted
+  // during render (see the resetSnapshot block above for the same
+  // rationale) rather than in an effect: `previousActionPending` is now
+  // state, not a ref, and is only updated -- together with the
+  // transition check -- when it actually differs from the latest
+  // `state.actionPending`, so this still fires exactly once per
+  // completed shareUpdate, never on every idle render.
+  const [previousActionPending, setPreviousActionPending] = useState<ShareLinkActionKind | null>(
+    state.actionPending
+  );
+
+  if (previousActionPending !== state.actionPending) {
+    const wasSharing = previousActionPending === "shareUpdate";
+    setPreviousActionPending(state.actionPending);
     if (wasSharing && state.actionPending === null && !state.actionError) {
       setView("result");
     }
-  }, [state.actionPending, state.actionError]);
+  }
 
   if (!state.isOpen) {
     return null;
@@ -132,6 +167,20 @@ export function ShareLinkPanel({
           <p style={subheadingStyle}>{projectTitle}</p>
         </div>
 
+        {!state.isLoading && !state.loadError && !state.previewOpen && !messagesOpen && link ? (
+          <button
+            type="button"
+            onClick={() => setMessagesOpen(true)}
+            disabled={busy}
+            style={messagesEntryButtonStyle}
+          >
+            <span>Client messages</span>
+            {unreadCount !== null && unreadCount > 0 ? (
+              <span style={unreadBadgeStyle}>{unreadCount}</span>
+            ) : null}
+          </button>
+        ) : null}
+
         {state.isLoading ? (
           <div style={statusRowStyle}>Loading share link status...</div>
         ) : state.loadError ? (
@@ -149,6 +198,27 @@ export function ShareLinkPanel({
             }
             data={state.previewData}
             onClose={onClosePreview}
+          />
+        ) : messagesOpen && link ? (
+          <ClientCommunicationHistoryModal
+            shareLinkId={link.id}
+            onClose={() => {
+              setMessagesOpen(false);
+              // Runtime defect fix: the badge hook and the modal's own
+              // hook are two deliberately isolated
+              // useOwnerShareMessages instances (see that hook's own
+              // doc comment) -- a status mutation made inside the modal
+              // updates ITS state, never the badge's. Refetching the
+              // badge's server truth here, exactly at the moment the
+              // owner leaves the communication view, is what makes the
+              // panel's own count current again without requiring a
+              // full panel close/reopen. Deliberately unconditional
+              // (not gated on "did a mutation actually happen") so it
+              // also covers any future owner action inside the modal
+              // that could change the unread count -- one extra GET on
+              // an explicit user action is not polling.
+              void badgeMessages.refetch();
+            }}
           />
         ) : view === "result" && link ? (
           <ShareLinkChannels
@@ -308,4 +378,33 @@ const previewBannerSubtitleStyle: CSSProperties = {
 const previewBodyStyle: CSSProperties = {
   maxHeight: "60vh",
   overflowY: "auto",
+};
+
+const messagesEntryButtonStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: dashboardSpacing[2],
+  alignSelf: "start",
+  padding: "6px 12px",
+  borderRadius: dashboardRadii.lg,
+  border: `1px solid ${dashboardColors.border.subtle}`,
+  background: dashboardColors.background.surface,
+  color: dashboardColors.text.secondary,
+  fontSize: dashboardTypography.size.sm,
+  fontWeight: dashboardTypography.weight.medium,
+  cursor: "pointer",
+};
+
+const unreadBadgeStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: 18,
+  height: 18,
+  padding: "0 5px",
+  borderRadius: dashboardRadii.full,
+  background: dashboardColors.status.red,
+  color: dashboardColors.text.inverse,
+  fontSize: dashboardTypography.size.xs,
+  fontWeight: dashboardTypography.weight.bold,
 };
