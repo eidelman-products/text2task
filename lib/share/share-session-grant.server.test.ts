@@ -70,6 +70,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 const {
   resolveShareLinkByPublicId,
   resolveShareLinkById,
+  resolveShareLinkCommentsEnabled,
   isShareLinkCurrentlyPubliclyActive,
   resolveBrowserSessionFromCookie,
   createBrowserSession,
@@ -199,6 +200,28 @@ describe("resolveShareLinkById", () => {
     queueResponse("project_share_links", { data: validLinkRow(), error: null });
     const result = await resolveShareLinkById(VALID_LINK_ID);
     expect(result?.id).toBe(VALID_LINK_ID);
+  });
+});
+
+describe("resolveShareLinkCommentsEnabled - Phase 5B", () => {
+  it("returns true when the link's comments_enabled column is true", async () => {
+    queueResponse("project_share_links", { data: { comments_enabled: true }, error: null });
+    expect(await resolveShareLinkCommentsEnabled(VALID_LINK_ID, VALID_USER_ID)).toBe(true);
+  });
+
+  it("returns false when the link's comments_enabled column is false", async () => {
+    queueResponse("project_share_links", { data: { comments_enabled: false }, error: null });
+    expect(await resolveShareLinkCommentsEnabled(VALID_LINK_ID, VALID_USER_ID)).toBe(false);
+  });
+
+  it("fails closed (false) when no row is found (e.g. cross-owner id)", async () => {
+    queueResponse("project_share_links", { data: null, error: null });
+    expect(await resolveShareLinkCommentsEnabled(VALID_LINK_ID, VALID_USER_ID)).toBe(false);
+  });
+
+  it("fails closed (false) on a query error", async () => {
+    queueResponse("project_share_links", { data: null, error: { code: "500" } });
+    expect(await resolveShareLinkCommentsEnabled(VALID_LINK_ID, VALID_USER_ID)).toBe(false);
   });
 });
 

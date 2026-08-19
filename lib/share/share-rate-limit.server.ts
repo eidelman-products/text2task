@@ -23,7 +23,8 @@ export type ShareRateLimitAction =
   | "session_exchange"
   | "pin_verification"
   | "projection_read"
-  | "invalid_link_access";
+  | "invalid_link_access"
+  | "comment_submission";
 
 export type ShareRateLimitScope = "browser_session" | "network_identity" | "share_link";
 
@@ -42,6 +43,15 @@ const RATE_LIMIT_POLICY: Record<
   pin_verification: { limit: 5, windowSeconds: 300 },
   projection_read: { limit: 120, windowSeconds: 300 },
   invalid_link_access: { limit: 20, windowSeconds: 300 },
+  // Phase 5B -- a dedicated bucket for POST /api/share/[publicId]/messages,
+  // scoped by `browser_session` exactly like `projection_read` (by the
+  // time this action is checked, the caller already has a valid session
+  // cookie -- see that route's own authorization-chain ordering). Kept
+  // deliberately separate from `projection_read`'s own bucket/limit: a
+  // message send is a write, not a read, and 10/300s is this audit's own
+  // recommended starting policy for a human typing occasional messages,
+  // not a per-page-load read.
+  comment_submission: { limit: 10, windowSeconds: 300 },
 };
 
 export type ShareRateLimitCheckInput = Readonly<{

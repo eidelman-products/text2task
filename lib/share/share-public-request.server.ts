@@ -12,11 +12,27 @@ import "server-only";
  * GET /api/share/[publicId]/projection is read-only, carries no request
  * body, and is authorized entirely by the HttpOnly session cookie -- it
  * does not need body/content-type validation, only the Origin/Sec-Fetch-
- * Site check, so this module's origin validator is reused by both routes
- * while the body helpers are used by the exchange route only.
+ * Site check, so this module's origin validator is reused by every public
+ * route while the body-reading helpers are used only by routes that
+ * accept a JSON body (the session-exchange route, and, since Phase 5B,
+ * the message-submission route -- the latter passes its own larger
+ * `maxBytes` to `readSharePublicRequestJson`, since a client message body
+ * is far larger than an exchange request's secret/PIN payload).
  */
 
 export const SHARE_PUBLIC_REQUEST_MAX_BYTES = 4_096;
+
+/** Phase 5B -- a client message body may itself be up to 4000 Unicode
+ * codepoints, which in the worst realistic case (every codepoint outside
+ * the Basic Multilingual Plane, i.e. 4 UTF-8 bytes each) needs up to
+ * ~16,000 raw bytes, plus an 80-codepoint display name (~320 bytes) and a
+ * small amount of JSON structure/quoting overhead. 20,000 bytes leaves
+ * comfortable headroom over that worst case while remaining a small,
+ * bounded limit -- this is deliberately its own constant rather than a
+ * widened `SHARE_PUBLIC_REQUEST_MAX_BYTES`, since the session-exchange
+ * route's own tiny fixed-shape body (publicId/secret/pin) has no reason
+ * to ever accept anything this large. */
+export const SHARE_PUBLIC_MESSAGE_REQUEST_MAX_BYTES = 20_000;
 
 export type SharePublicRequestErrorCode =
   | "invalid_request_origin"
@@ -79,16 +95,19 @@ export function validateSharePublicRequestOrigin({
   validateSecFetchSite(headers);
 }
 
-export async function readSharePublicRequestJson(request: Request): Promise<unknown> {
+export async function readSharePublicRequestJson(
+  request: Request,
+  maxBytes: number = SHARE_PUBLIC_REQUEST_MAX_BYTES
+): Promise<unknown> {
   validateContentType(request.headers);
   validateContentEncoding(request.headers);
-  enforceContentLengthLimit(request.headers);
+  enforceContentLengthLimit(request.headers, maxBytes);
 
   if (request.body === null) {
     throw new SharePublicRequestError("invalid_request_body");
   }
 
-  const bodyText = await readBoundedRequestBodyText(request.body);
+  const bodyText = await readBoundedRequestBodyText(request.body, maxBytes);
 
   try {
     return JSON.parse(bodyText) as unknown;
@@ -145,7 +164,7 @@ function validateContentEncoding(headers: Headers): void {
   }
 }
 
-function enforceContentLengthLimit(headers: Headers): void {
+function enforceContentLengthLimit(headers: Headers, maxBytes: number): void {
   const contentLength = headers.get("content-length");
 
   if (contentLength === null) {
@@ -167,13 +186,14 @@ function enforceContentLengthLimit(headers: Headers): void {
     throw new SharePublicRequestError("invalid_request_body");
   }
 
-  if (contentLengthBytes > SHARE_PUBLIC_REQUEST_MAX_BYTES) {
+  if (contentLengthBytes > maxBytes) {
     throw new SharePublicRequestError("request_body_too_large");
   }
 }
 
 async function readBoundedRequestBodyText(
-  body: ReadableStream<Uint8Array>
+  body: ReadableStream<Uint8Array>,
+  maxBytes: number
 ): Promise<string> {
   const reader = body.getReader();
   const chunks: Uint8Array[] = [];
@@ -195,7 +215,7 @@ async function readBoundedRequestBodyText(
 
       if (
         !Number.isSafeInteger(nextTotalBytes) ||
-        nextTotalBytes > SHARE_PUBLIC_REQUEST_MAX_BYTES
+        nextTotalBytes > maxBytes
       ) {
         await cancelReader(reader);
         throw new SharePublicRequestError("request_body_too_large");

@@ -211,4 +211,36 @@ describe("readSharePublicRequestJson", () => {
       code: "invalid_request_body",
     });
   });
+
+  it("accepts a custom maxBytes larger than the default, for a body between the two limits", async () => {
+    const body = JSON.stringify({ a: "x".repeat(SHARE_PUBLIC_REQUEST_MAX_BYTES) });
+    const request = buildRequest({ body, contentType: "application/json" });
+
+    await expect(readSharePublicRequestJson(request, SHARE_PUBLIC_REQUEST_MAX_BYTES * 4)).resolves.toEqual({
+      a: "x".repeat(SHARE_PUBLIC_REQUEST_MAX_BYTES),
+    });
+  });
+
+  it("still enforces its own custom maxBytes via Content-Length, not the default", async () => {
+    const customMax = SHARE_PUBLIC_REQUEST_MAX_BYTES * 4;
+    const request = buildRequest({
+      body: "{}",
+      contentType: "application/json",
+      contentLength: String(customMax + 1),
+    });
+
+    await expect(readSharePublicRequestJson(request, customMax)).rejects.toMatchObject({
+      code: "request_body_too_large",
+    });
+  });
+
+  it("still enforces its own custom maxBytes via actual streamed size, not the default (regression: the streaming check must use the caller's maxBytes, not the module's default constant)", async () => {
+    const customMax = SHARE_PUBLIC_REQUEST_MAX_BYTES * 4;
+    const oversizedBody = JSON.stringify({ a: "x".repeat(customMax) });
+    const request = buildRequest({ body: oversizedBody, contentType: "application/json" });
+
+    await expect(readSharePublicRequestJson(request, customMax)).rejects.toMatchObject({
+      code: "request_body_too_large",
+    });
+  });
 });

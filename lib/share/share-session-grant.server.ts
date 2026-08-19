@@ -193,6 +193,34 @@ export async function resolveShareLinkById(
   return toResolvedShareLink(data as unknown as ShareLinkRow);
 }
 
+/** Phase 5B -- narrow, additive read of a single link's own
+ * `comments_enabled` flag, scoped by both id and owner. Deliberately kept
+ * separate from `verifyShareProjectionAuthorization`'s own return shape
+ * (`VerifiedShareProjectionAuthorization`) rather than folded into it --
+ * that type is shared by the projection and file-delivery routes and
+ * their own existing exact-shape tests, so this is a standalone read the
+ * messages route calls as its own distinct authorization step, after
+ * `verifyShareProjectionAuthorization` has already succeeded. Fails
+ * closed (`false`) on any error or not-found, never treats an unreadable
+ * flag as "comments allowed". */
+export async function resolveShareLinkCommentsEnabled(
+  shareLinkId: string,
+  userId: string
+): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("project_share_links")
+    .select("comments_enabled")
+    .eq("id", canonicalizeUuid(shareLinkId))
+    .eq("user_id", canonicalizeUuid(userId))
+    .maybeSingle();
+
+  if (error || !data) {
+    return false;
+  }
+
+  return (data as { comments_enabled: boolean }).comments_enabled === true;
+}
+
 /** True only when a link is currently in a state that may serve
  * anonymous public access: active, unexpired, and its project exists and
  * is not soft-deleted. Every public read must re-run this at read time

@@ -1076,3 +1076,256 @@ against any database, disposable or Production.
 # PHASE 5A STATUS: IMPLEMENTED
 
 # PHASE 5B READINESS: READY
+
+---
+
+# PHASE 5B — PUBLIC CLIENT MESSAGE SUBMISSION
+
+Checkpoint at the start of this slice: `3e07fe4 Add Client Share Phase
+5A communication foundation`. Scope, exactly as scoped: `POST
+/api/share/[publicId]/messages`, its own `comment_submission` rate
+limit, and nothing else -- no public history read, no public/owner UI,
+no Phase 6 conversion. The Phase 5A migration still has not been
+executed against any environment; this slice does not depend on it,
+since a public client insert uses the Phase 1 `service_role` grant, not
+the Phase 5A owner RPCs.
+
+## 1. Endpoint contract
+
+`POST /api/share/[publicId]/messages`
+
+Request: `{ body: string, authorDisplayName?: string }`, parsed by a
+`.strict()` Zod schema (`shareMessageSubmissionRequestSchema` in
+`lib/share/share-public-message.server.ts`) -- any unrecognized extra
+key (`id`, `projectId`, `shareLinkId`, `authorType`, `status`,
+`parentId`, anything) causes the whole request to be rejected with
+`INVALID_REQUEST` before any of its fields are read individually; there
+is no path through which a caller-supplied identity field could reach
+the insert.
+
+Success response: `{ ok: true }`, HTTP 200. No row, id, or internal
+field is ever returned.
+
+This endpoint creates only top-level client messages (`parent_id` is
+always `null`, hardcoded server-side) -- public reply-to-owner-message
+behavior is out of scope for this slice.
+
+## 2. Authorization chain
+
+Implemented in `app/api/share/[publicId]/messages/route.ts`, in this
+exact order:
+
+1. `assertClientShareEnabled()`
+2. `validateSharePublicRequestOrigin` -- requires the request's `Origin`
+   header to exactly match the request URL's own origin, and, when
+   present, `Sec-Fetch-Site: same-origin`. This is the same POST-shaped
+   origin validator `POST /api/share/session` already established
+   (deliberately NOT the GET-routes' `isRejectableCrossSiteRequest`,
+   whose tolerance for a direct top-level navigation makes sense for a
+   browser-typed GET URL but not for a same-origin `fetch()`-only POST).
+3. `isValidSharePublicId(publicId)`
+4. Browser-session cookie presence + shape validation, then
+   `hashShareBrowserSessionSecret`
+5. `checkShareRateLimit({ action: "comment_submission", scope:
+   "browser_session", identityDigest: sessionDigest })`
+6. `verifyShareProjectionAuthorization({ cookieValue, publicId })` --
+   the exact same function `GET /projection` and the file-delivery route
+   already share; re-verifies session live+unrevoked, link
+   active+unexpired+project-not-deleted, grant
+   same-session+same-link+unexpired+unrevoked+exact-configuration-
+   version-match+PIN-requirement-satisfied. Not modified in any way by
+   this slice.
+7. `resolveShareLinkCommentsEnabled(shareLinkId, userId)` -- a new,
+   narrow, additive read added to `lib/share/share-session-grant.server.ts`
+   (deliberately NOT folded into `verifyShareProjectionAuthorization`'s
+   own return shape, which is shared by two already-shipped routes with
+   their own exact-shape tests). Fails closed (`false`) on any error or
+   not-found.
+8. Body read (`readSharePublicRequestJson`, with a message-specific
+   20,000-byte limit -- see §5) + schema parse + semantic validation
+   (`validateShareMessageSubmission`)
+9. Trusted server-side insert (`insertPublicShareMessage`)
+10. Generic `{ ok: true }`
+
+Every authorization/link/session failure (steps 1-2-3-4-6-7) returns the
+exact same `401 { code: "UNAVAILABLE" }` body -- indistinguishable,
+matching the projection route's own no-enumeration-oracle posture
+exactly. `commentsEnabled=false` is included in that same generic
+bucket, not given its own distinguishable error.
+
+## 3. Request-security behavior
+
+POST-only. `validateSharePublicRequestOrigin` requires an `Origin`
+header (unlike the GET routes' tolerance for a missing `Sec-Fetch-Site`)
+-- this matches the session-exchange route's own existing behavior
+exactly, not a new architecture. No CSRF token was introduced; the
+existing Origin+Sec-Fetch-Site check plus the HttpOnly, `SameSite=Lax`
+session cookie remain this feature's whole defense here, unchanged from
+Phase 3.
+
+## 4. Validation / normalization rules
+
+Implemented in `lib/share/share-public-message.server.ts`
+(`validateShareMessageSubmission`), covered by 38 unit tests:
+
+- **Body**: line endings normalized (`\r\n`/`\r` → `\n`); every C0
+  control character and DEL stripped EXCEPT tab and newline; emptiness
+  judged on the trimmed value (`SHARE_MESSAGE_BODY_EMPTY`); max length
+  judged on the untrimmed, sanitized value against **4000 Unicode
+  codepoints** (`SHARE_MESSAGE_BODY_TOO_LONG`) -- counted with
+  `[...value].length`, not `.length`, so it matches Postgres's own
+  `char_length()` exactly rather than JS's UTF-16-code-unit count (which
+  would otherwise reject legitimate astral-plane content, e.g. most
+  emoji, roughly twice as early as it should). The sanitized value is
+  stored exactly as submitted otherwise -- never trimmed, never
+  truncated -- matching `send_share_message_reply`'s own "store as
+  submitted" convention. Verified for Hebrew, Arabic, emoji, multiline
+  text, and HTML-like content (stored verbatim as plain text, never
+  interpreted).
+- **authorDisplayName**: optional; trimmed (unlike body -- a display
+  name is a convenience field, not preserved-verbatim content); empty
+  or whitespace-only after trimming normalizes to `null`, never
+  rejected; max 80 codepoints (`SHARE_MESSAGE_AUTHOR_NAME_TOO_LONG`);
+  never validated as an email/phone/identity of any kind, matching the
+  instruction that it is display convenience only.
+
+## 5. Rate-limit policy
+
+`comment_submission` added to `ShareRateLimitAction` in
+`lib/share/share-rate-limit.server.ts`: `{ limit: 10, windowSeconds:
+300 }`, scoped by `browser_session` (matching `projection_read`'s own
+scope choice, since by the time this bucket is checked the caller
+already has a valid session). Uses the exact same atomic
+`increment_share_rate_limit_bucket` RPC every other Client Share action
+already uses -- `comment_submission` was already present in that RPC's
+own `p_action` CHECK constraint (202608130001), unused until now, so
+**no migration was needed** for this. Independent bucket from
+`projection_read` -- verified by a dedicated test.
+
+## 6. Insert trust boundary
+
+`insertPublicShareMessage` in `lib/share/share-public-message.server.ts`
+performs the one and only insert a public client may ever cause,
+through `supabaseAdmin`, writing exactly the 8 columns
+`service_role` is grant-scoped to
+(202608030005): `user_id, share_link_id, project_id, author_type,
+author_display_name, body, parent_id, is_visible_to_client`.
+`author_type='client'`, `parent_id=null`, and `is_visible_to_client=true`
+are hardcoded, never derived from any input. `status`, `reviewed_at`,
+`resolved_at`, `id`, `created_at`, `updated_at` are never in the
+payload at all -- `service_role` has no INSERT grant on those columns
+regardless, so a client-authored row always takes their table DEFAULTs
+(`status` defaults to `'new'`). `user_id`/`share_link_id`/`project_id`
+come only from the already-verified `authorization` object returned by
+`verifyShareProjectionAuthorization`, never from the request body (which
+the `.strict()` schema would reject outright if such fields were even
+present). The existing `enforce_share_message_integrity` trigger
+(202608030005) remains the unconditional second line of defense under
+this insert, re-checking link active/comments_enabled/unexpired/project-
+alive independently, exactly as it already did before this slice.
+
+## 7. Privacy / error behavior
+
+- Authorization/link/session/commentsEnabled failures: one generic,
+  indistinguishable `401 { code: "UNAVAILABLE" }`.
+- Validation failures (empty body, body too long, name too long, schema
+  mismatch): specific, user-correctable `400` codes
+  (`SHARE_MESSAGE_BODY_EMPTY`, `SHARE_MESSAGE_BODY_TOO_LONG`,
+  `SHARE_MESSAGE_AUTHOR_NAME_TOO_LONG`, `INVALID_REQUEST`) -- never
+  leaking internal ids, SQL, or constraint names.
+- Rate limit: existing `429` + `Retry-After` contract, unchanged.
+- Unexpected/DB error (including an insert rejected by the integrity
+  trigger): generic `500 { code: "INTERNAL_ERROR" }` externally; a fixed,
+  safe stage tag logged server-side only (`logShareRouteError`, matching
+  every sibling route), never the underlying error's message.
+- Every response (success and every error branch) carries `Cache-
+  Control: private, no-store`, `Pragma: no-cache`, `Referrer-Policy:
+  no-referrer`, `X-Content-Type-Options: nosniff` -- verified by
+  dedicated tests. `/share/**`'s existing analytics/cookie-consent
+  exclusion (§7 of the Phase 5A section above) is unaffected, since
+  this is an API route, not a page.
+
+## 8. Phase 6 boundary confirmation
+
+`lib/share/share-public-message.server.ts` and its test file each carry
+a dedicated, comment-stripped-source hard test proving: no reference to
+`share_message_conversions`, `project_updates`, or
+`project_timeline_events`; no `.from("tasks")`/`.from("subtasks")` call;
+no occurrence of the string `"converted"` anywhere in executable code;
+and that the module's only `.from(...)` target, anywhere, is
+`share_messages`. The route file itself performs no direct database
+call of its own (all reads/writes go through the already-existing
+`verifyShareProjectionAuthorization`/`resolveShareLinkCommentsEnabled`/
+`insertPublicShareMessage` functions), so it has no additional surface
+to boundary-test.
+
+## 9. Files changed
+
+New:
+- `app/api/share/[publicId]/messages/route.ts`
+- `app/api/share/[publicId]/messages/route.test.ts`
+- `lib/share/share-public-message.server.ts`
+- `lib/share/share-public-message.server.test.ts`
+
+Modified:
+- `lib/share/share-rate-limit.server.ts` (added `comment_submission`)
+- `lib/share/share-public-request.server.ts` (added an optional
+  `maxBytes` parameter to `readSharePublicRequestJson` and its internal
+  helpers, defaulting to the existing `SHARE_PUBLIC_REQUEST_MAX_BYTES`
+  so the session-exchange route's behavior is unchanged; added
+  `SHARE_PUBLIC_MESSAGE_REQUEST_MAX_BYTES = 20_000`)
+- `lib/share/share-public-request.server.test.ts` (added coverage for
+  the new `maxBytes` parameter, both via `Content-Length` and via actual
+  streamed size)
+- `lib/share/share-session-grant.server.ts` (added
+  `resolveShareLinkCommentsEnabled`, purely additive)
+- `lib/share/share-session-grant.server.test.ts` (added coverage for
+  the new function)
+
+## 10. A defect found and fixed during implementation
+
+While adding the `maxBytes` parameter to `readSharePublicRequestJson`,
+the parameter was threaded into `enforceContentLengthLimit` correctly
+but the *streaming* size check inside `readBoundedRequestBodyText` was
+left hardcoded to the module's old fixed
+`SHARE_PUBLIC_REQUEST_MAX_BYTES` constant. Left uncaught, this would
+have silently capped every client message at ~4096 bytes regardless of
+the intended 20,000-byte limit -- rejecting any body over roughly 1000
+non-ASCII characters as "too large" even though it was well within the
+real limit. Caught by inspection before any test was written against
+it, fixed by using the function's own `maxBytes` parameter, and now
+covered by two dedicated regression tests in
+`share-public-request.server.test.ts` (one via `Content-Length`, one via
+actual streamed byte count) that would have failed against the
+unfixed code.
+
+## 11. Exact tests / counts (all actually executed this turn)
+
+- `lib/share/share-public-message.server.test.ts`: **38/38** (new)
+- `app/api/share/[publicId]/messages/route.test.ts`: **40/40** (new)
+- `lib/share/share-public-request.server.test.ts`: **19/19** (15
+  pre-existing + 4 new)
+- `lib/share/share-session-grant.server.test.ts`: **66/66** (62
+  pre-existing + 4 new)
+- Full regression sweep -- `lib/share`, `app/api/share`, every
+  Client-Share dashboard component, `app/share`, plus the Phase 5A
+  migration test, run together: **48 test files, 1802 tests, all
+  passing**.
+
+## 12. TypeScript / eslint / diff results
+
+- `tsc --noEmit`: clean.
+- `eslint` on every file touched this turn: **0 errors, 0 warnings**.
+- `git diff --check`: clean (only expected LF→CRLF line-ending notices).
+- No `npm run build` was run this turn -- no compile issue arose that
+  required it.
+
+Nothing was staged, committed, or pushed this turn. No migration was
+executed against any database, disposable or Production. No Supabase
+project, ENV variable, or deployment was touched.
+
+---
+
+# PHASE 5B STATUS: IMPLEMENTED
+
+# PHASE 5C READINESS: READY
