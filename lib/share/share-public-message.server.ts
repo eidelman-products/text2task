@@ -5,26 +5,39 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
- * Phase 5B -- the public, anonymous client-message-submission contract
- * and its trusted server-side insert. This is a deliberately separate
- * module from `lib/share/share-messages-repository.server.ts` (which is
- * the OWNER-authenticated, RLS-bound, RPC-only write path from Phase
- * 5A): a public client has no `auth.uid()` at all, so its one and only
- * write path is the narrow, column-scoped `service_role` INSERT grant
- * 202608030005 already deliberately carved out on `public.share_messages`
- * (`user_id, share_link_id, project_id, author_type, author_display_name,
- * body, parent_id, is_visible_to_client` -- notably NOT `status`,
- * `reviewed_at`, or `resolved_at`, which service_role has no grant to
- * touch at all and which therefore always take their column DEFAULTs on
- * a client-authored insert, matching `share_messages_status_check`'s own
- * client-safe default of `'new'`).
+ * Phase 5B/5C -- the public, anonymous client-message contract: its
+ * trusted server-side insert (5B) and, since 5C, its trusted
+ * server-side read. This is a deliberately separate module from
+ * `lib/share/share-messages-repository.server.ts` (which is the
+ * OWNER-authenticated, RLS-bound, RPC-only path): a public client has
+ * no `auth.uid()` at all, so both its write and its read must be
+ * mediated by `supabaseAdmin` after the caller's own authorization has
+ * already been independently verified by the route (never by anything
+ * in this file) -- this module never resolves session/grant/link state
+ * itself.
  *
- * The DB's own `enforce_share_message_integrity` trigger
- * (202608030005) independently re-verifies, at insert time, that the
- * link is active/comments_enabled/unexpired and the project alive -- the
- * checks in this module are fail-fast/defense-in-depth on top of that,
- * exactly like every other Client Share write path in this feature, not
- * a replacement for it.
+ * Write: the one and only write path is the narrow, column-scoped
+ * `service_role` INSERT grant 202608030005 already deliberately carved
+ * out on `public.share_messages` (`user_id, share_link_id, project_id,
+ * author_type, author_display_name, body, parent_id,
+ * is_visible_to_client` -- notably NOT `status`, `reviewed_at`, or
+ * `resolved_at`, which service_role has no grant to touch at all and
+ * which therefore always take their column DEFAULTs on a
+ * client-authored insert, matching `share_messages_status_check`'s own
+ * client-safe default of `'new'`). The DB's own
+ * `enforce_share_message_integrity` trigger (202608030005) independently
+ * re-verifies, at insert time, that the link is
+ * active/comments_enabled/unexpired and the project alive -- the checks
+ * in this module are fail-fast/defense-in-depth on top of that, not a
+ * replacement for it.
+ *
+ * Read (5C): `service_role` already holds a plain, unrestricted SELECT
+ * grant on `public.share_messages` (202608030005) -- no new grant is
+ * needed. The read below is scoped by the route's own already-verified
+ * `shareLinkId`/`projectId`/`userId` (never anything client-supplied)
+ * and additionally filters `is_visible_to_client = true` in the query
+ * itself (not merely in the projection step), and returns only the four
+ * client-safe fields a public reader may ever see.
  */
 
 // ---------------------------------------------------------------------
@@ -98,20 +111,32 @@ function sanitizeMessageText(raw: string): string {
   return raw.replace(/\r\n|\r/g, "\n").replace(STRIPPED_CONTROL_CHARACTER_PATTERN, "");
 }
 
-function validateBody(
-  rawBody: string
-): string | "SHARE_MESSAGE_BODY_EMPTY" | "SHARE_MESSAGE_BODY_TOO_LONG" {
+export type ShareMessageBodyValidationResult =
+  | { ok: true; body: string }
+  | { ok: false; code: "SHARE_MESSAGE_BODY_EMPTY" | "SHARE_MESSAGE_BODY_TOO_LONG" };
+
+/**
+ * The one shared message-body normalizer/validator for this feature --
+ * used by the public submission contract below AND, since Phase 5C, by
+ * the owner reply route (`POST /api/share-links/[id]/messages/reply`)
+ * directly, so an owner-authored reply gets the exact same line-ending
+ * normalization, control-character stripping, and 1-4000-codepoint
+ * `share_messages_body_check`-matching validation a public client
+ * message does, rather than a second, potentially-diverging validator.
+ * Exported deliberately for that reuse.
+ */
+export function validateShareMessageBody(rawBody: string): ShareMessageBodyValidationResult {
   const sanitized = sanitizeMessageText(rawBody);
 
   if (countCodepoints(sanitized.trim()) < 1) {
-    return "SHARE_MESSAGE_BODY_EMPTY";
+    return { ok: false, code: "SHARE_MESSAGE_BODY_EMPTY" };
   }
 
   if (countCodepoints(sanitized) > SHARE_MESSAGE_BODY_MAX_CODEPOINTS) {
-    return "SHARE_MESSAGE_BODY_TOO_LONG";
+    return { ok: false, code: "SHARE_MESSAGE_BODY_TOO_LONG" };
   }
 
-  return sanitized;
+  return { ok: true, body: sanitized };
 }
 
 function validateAuthorDisplayName(
@@ -146,10 +171,10 @@ function validateAuthorDisplayName(
 export function validateShareMessageSubmission(
   request: ShareMessageSubmissionRequest
 ): ShareMessageValidationResult {
-  const body = validateBody(request.body);
+  const bodyResult = validateShareMessageBody(request.body);
 
-  if (body === "SHARE_MESSAGE_BODY_EMPTY" || body === "SHARE_MESSAGE_BODY_TOO_LONG") {
-    return { ok: false, code: body };
+  if (!bodyResult.ok) {
+    return { ok: false, code: bodyResult.code };
   }
 
   const authorDisplayName = validateAuthorDisplayName(request.authorDisplayName);
@@ -158,7 +183,7 @@ export function validateShareMessageSubmission(
     return { ok: false, code: authorDisplayName };
   }
 
-  return { ok: true, data: { body, authorDisplayName } };
+  return { ok: true, data: { body: bodyResult.body, authorDisplayName } };
 }
 
 // ---------------------------------------------------------------------
@@ -199,4 +224,77 @@ export async function insertPublicShareMessage(
   });
 
   return error === null;
+}
+
+// ---------------------------------------------------------------------
+// Trusted server-side read (Phase 5C, service-role, already-granted
+// plain SELECT -- no new grant needed)
+// ---------------------------------------------------------------------
+
+export type PublicShareMessage = Readonly<{
+  authorType: "client" | "owner";
+  authorDisplayName: string | null;
+  body: string;
+  createdAt: string;
+}>;
+
+const publicShareMessageRowSchema = z
+  .object({
+    author_type: z.enum(["client", "owner"]),
+    author_display_name: z.string().nullable(),
+    body: z.string(),
+    created_at: z.string(),
+  })
+  .strict();
+
+function toPublicShareMessage(row: z.infer<typeof publicShareMessageRowSchema>): PublicShareMessage {
+  return {
+    authorType: row.author_type,
+    authorDisplayName: row.author_display_name,
+    body: row.body,
+    createdAt: row.created_at,
+  };
+}
+
+export type ListPublicShareMessagesInput = Readonly<{
+  shareLinkId: string;
+  projectId: string;
+  userId: string;
+}>;
+
+/**
+ * Reads the client-visible message history for one already-authorized
+ * public reader: `is_visible_to_client = true` only (a hidden
+ * owner-authored message never reaches this result), `created_at`
+ * ascending (chronological). Scoped by all three of
+ * `share_link_id`/`project_id`/`user_id` from the caller's own
+ * already-verified authorization -- never a value the request itself
+ * supplied. Selects only the four columns a public reader may ever see
+ * (never `id`, `parent_id`, `status`, `reviewed_at`, `resolved_at`, or
+ * `is_visible_to_client` itself) -- there is no raw-row passthrough for
+ * a caller to accidentally widen later. Returns `null` (fail closed,
+ * never throws) on any query or shape error; an empty array is a valid,
+ * distinct "no messages yet" result. */
+export async function listPublicShareMessages(
+  input: ListPublicShareMessagesInput
+): Promise<PublicShareMessage[] | null> {
+  const { data, error } = await supabaseAdmin
+    .from("share_messages")
+    .select("author_type, author_display_name, body, created_at")
+    .eq("share_link_id", input.shareLinkId)
+    .eq("project_id", input.projectId)
+    .eq("user_id", input.userId)
+    .eq("is_visible_to_client", true)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return null;
+  }
+
+  const parsed = z.array(publicShareMessageRowSchema).safeParse(data ?? []);
+  if (!parsed.success) {
+    return null;
+  }
+
+  return parsed.data.map(toPublicShareMessage);
 }

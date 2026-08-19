@@ -553,6 +553,11 @@ export const shareLinkApiErrorCodeSchema = z.enum([
   "SHARE_LINK_STATE_CONFLICT",
   "SHARE_LINK_ANOTHER_LINK_ACTIVE",
   "SHARE_LINK_SECRET_UNAVAILABLE",
+  // Phase 5C -- owner communication API error codes.
+  "SHARE_MESSAGE_NOT_FOUND",
+  "SHARE_MESSAGE_PARENT_NOT_FOUND",
+  "SHARE_MESSAGE_PARENT_LINK_MISMATCH",
+  "SHARE_MESSAGE_STATUS_INVALID",
   "INTERNAL_ERROR",
 ]);
 export type ShareLinkApiErrorCode = z.infer<typeof shareLinkApiErrorCodeSchema>;
@@ -1236,4 +1241,55 @@ export const saveShareConfigurationResponseSchema = z.union([
 ]);
 export type SaveShareConfigurationResponse = z.infer<
   typeof saveShareConfigurationResponseSchema
+>;
+
+// ---------------------------------------------------------------------
+// Phase 5C -- owner communication API contracts
+// ---------------------------------------------------------------------
+
+/** Path parameter for app/api/share-links/[id]/messages/[messageId]/**. */
+export const shareMessageIdParamSchema = z
+  .object({
+    messageId: canonicalUuidSchema,
+  })
+  .strict();
+export type ShareMessageIdParam = z.infer<typeof shareMessageIdParamSchema>;
+
+/**
+ * POST /api/share-links/[id]/messages/reply's request body. `body` is
+ * only shape-checked here (a non-empty-after-whitespace-trim, bounded
+ * string) -- the exact same normalization/validation
+ * `lib/share/share-public-message.server.ts`'s `validateShareMessageBody`
+ * already applies to the public submission path is reused by the route,
+ * not reimplemented here, so this schema deliberately stays loose on the
+ * body's own content rules.
+ */
+export const sendShareMessageReplyRequestSchema = z
+  .object({
+    parentMessageId: canonicalUuidSchema,
+    body: z.string(),
+  })
+  .strict();
+export type SendShareMessageReplyRequest = z.infer<
+  typeof sendShareMessageReplyRequestSchema
+>;
+
+/**
+ * PATCH /api/share-links/[id]/messages/[messageId]'s request body.
+ * Deliberately lists exactly the 4 Phase 5 workflow statuses --
+ * matching `SHARE_MESSAGE_PHASE5_STATUSES`
+ * (`lib/share/share-messages-repository.server.ts`) value-for-value,
+ * not imported from it (this contracts module is the lower-level file
+ * the repository itself already imports from, so the dependency does
+ * not run the other way). `'converted'` and any other value are
+ * rejected as an ordinary Zod enum-parse failure, with no special-case
+ * check required.
+ */
+export const setShareMessageStatusRequestSchema = z
+  .object({
+    status: z.enum(["new", "reviewed", "resolved", "dismissed"]),
+  })
+  .strict();
+export type SetShareMessageStatusRequest = z.infer<
+  typeof setShareMessageStatusRequestSchema
 >;

@@ -1329,3 +1329,246 @@ project, ENV variable, or deployment was touched.
 # PHASE 5B STATUS: IMPLEMENTED
 
 # PHASE 5C READINESS: READY
+
+---
+
+# PHASE 5C — MESSAGE HISTORY + OWNER COMMUNICATION APIs
+
+Checkpoint at the start of this slice: `5ca667d Add Client Share Phase
+5B public message submission`. Scope: the API/repository/contracts
+layer for two-way communication -- public history read, owner history
+read, owner reply, owner status change. No public/owner UI, no Phase 6
+conversion. The Phase 5A migration still has not been executed against
+any environment; owner reply/status routes depend on it existing at
+runtime but every test in this slice uses mocks, so nothing here
+required executing it.
+
+## 1. Public GET contract
+
+`GET /api/share/[publicId]/messages`, added alongside the existing POST
+handler in the same route file
+(`app/api/share/[publicId]/messages/route.ts`). Reuses the exact same
+authorization architecture as `GET /projection` -- no new model was
+created:
+
+1. `assertClientShareEnabled()`
+2. `isRejectableCrossSiteRequest` (the GET-appropriate Sec-Fetch-Site
+   check the projection/file routes already use -- deliberately NOT
+   POST's `validateSharePublicRequestOrigin`, since a GET has no body
+   and tolerates a missing `Sec-Fetch-Site`)
+3. `isValidSharePublicId`
+4. Browser-session cookie validation
+5. `checkShareRateLimit({ action: "projection_read", scope:
+   "browser_session" })` -- reuses the projection route's own bucket; a
+   history read is a read, not a write, so it does not consume the
+   `comment_submission` bucket
+6. `verifyShareProjectionAuthorization` (unmodified, shared with two
+   other routes)
+7. `resolveShareLinkCommentsEnabled` (the same Phase 5B check, reused)
+8. `listPublicShareMessages` (new, `lib/share/share-public-message.server.ts`)
+9. Allowlisted projection, `{ ok: true, data: { messages: [...] } }`
+10. No-store response
+
+## 2. Public projection / privacy model
+
+Each message: `{ authorType, authorDisplayName, body, createdAt }`
+only. `listPublicShareMessages` selects exactly those 4 columns at the
+query level (never `select("*")`) and filters `is_visible_to_client =
+true` in the query itself, ordered `created_at asc`. No `id`,
+`parent_id`, `status`, `reviewed_at`, `resolved_at`, or
+`is_visible_to_client` is ever read, let alone returned -- there is no
+raw-row passthrough to later widen. Scoped by all three of
+`shareLinkId`/`projectId`/`userId` from the route's own already-verified
+authorization object, never anything client-supplied. `commentsEnabled
+= false` denies the read with the same generic `401 UNAVAILABLE` every
+other auth failure uses -- the owner's own history is untouched by this
+(§8 below), only the public reader's ability to see it is gated.
+
+## 3. Owner GET contract
+
+`GET /api/share-links/[id]/messages`
+(`app/api/share-links/[id]/messages/route.ts`), mirroring the
+`preview`/`revoke` routes' exact skeleton: `assertClientShareEnabled` →
+uuid param validation → `createClient()` (RLS-bound) →
+`auth.getUser()` → `getOwnerShareLinkMessages(supabase, {shareLinkId,
+userId})` (new, `lib/share/share-messages-repository.server.ts`) →
+`{ ok: true, data: { messages: [...], unreadCount } }`.
+
+`getOwnerShareLinkMessages` resolves link ownership FIRST (a direct,
+state-unfiltered `project_share_links` read scoped by `id` + `user_id`)
+before calling the pre-existing `listShareLinkMessages`/
+`countUnreadClientMessages` -- without that pre-check, a cross-owner or
+nonexistent link id would silently resolve to an empty, `200`-shaped
+history rather than a `404 SHARE_LINK_NOT_FOUND`, which is the wrong
+signal for an owner-facing route. The ownership check has NO state
+filter at all, so revoked/disabled/expired links remain fully
+owner-readable (§8).
+
+Owner messages include the full `ShareMessage` shape (`id`, `authorType`,
+`authorDisplayName`, `body`, `parentId`, `isVisibleToClient`, `status`,
+`reviewedAt`, `resolvedAt`, `createdAt`, `updatedAt`) -- internal ids and
+workflow state are fine here; only the public surface (§2) is
+allowlisted down.
+
+## 4. Owner reply behavior
+
+`POST /api/share-links/[id]/messages/reply`
+(`app/api/share-links/[id]/messages/reply/route.ts`). Input:
+`{ parentMessageId, body }`. Body is validated with
+`validateShareMessageBody` -- refactored out of
+`lib/share/share-public-message.server.ts` (previously a private
+`validateBody` helper, now exported) specifically so this route reuses
+the exact same normalization the public submission path already
+applies (line-ending/control-character handling,
+1-4000-codepoint `share_messages_body_check` matching), rather than a
+second, potentially-diverging validator. Verified for Hebrew, Arabic,
+and emoji through to the repository call.
+
+The insert itself happens entirely inside `send_share_message_reply`
+(Phase 5A) via the existing `sendShareMessageReply` repository function
+-- this route never touches `share_messages` directly. The RPC already
+takes `p_share_link_id` and independently re-verifies the parent
+message belongs to that SAME link
+(`SHARE_MESSAGE_PARENT_LINK_MISMATCH`), so no separate ownership
+pre-check was needed here (unlike the status route -- see §5).
+
+**Owner-reply + unread audit (§11 of the task, confirmed by test)**:
+`send_share_message_reply` inserts the reply with `status='reviewed'`
+on the NEW REPLY ROW ITSELF, not the parent client message -- the RPC
+never issues an `update` at all (only `insert`), so the parent's own
+`status`/`reviewed_at`/`resolved_at` are untouched by a reply. The route
+passes only `{shareLinkId, parentMessageId, body}` to
+`sendShareMessageReply` -- there is no parameter through which it could
+even attempt to touch the parent's workflow state, and the route's own
+source contains no reference to `setShareMessageStatus` at all
+(confirmed by a dedicated test). Reviewing/resolving/dismissing the
+parent remains a fully separate, explicit owner action via the status
+route.
+
+## 5. Owner status behavior
+
+`PATCH /api/share-links/[id]/messages/[messageId]`
+(`app/api/share-links/[id]/messages/[messageId]/route.ts`). Input:
+`{ status }`, validated by `setShareMessageStatusRequestSchema`
+(`lib/share/share-contracts.ts`) -- a `.strict()` Zod enum of exactly
+the 4 Phase 5 values. `'converted'` and any unknown value fail Zod
+parsing before any repository/RPC call, returning `400
+SHARE_MESSAGE_STATUS_INVALID`.
+
+`set_share_message_status` itself scopes only by `auth.uid()` and the
+message id -- it takes no link-id parameter at all. Without an
+additional check, a same-owner PATCH to
+`/api/share-links/LINK_A/messages/[a messageId actually on LINK_B]`
+would silently succeed, making the route's own `[id]` path segment
+purely decorative. To close that gap, a new repository function,
+`verifyOwnedShareMessageBelongsToLink` (`share-messages-repository.server.ts`),
+runs FIRST -- a direct read scoped by `id` (message) + `share_link_id` +
+`user_id` together -- and the route only calls `setShareMessageStatus`
+after that succeeds. Covered by a dedicated cross-link test.
+
+The RPC remains the sole source of truth for `reviewed_at`/
+`resolved_at` -- the route returns exactly what
+`set_share_message_status` returned, never recomputing a timestamp
+itself.
+
+## 6. Unread behavior
+
+Unchanged definition (`author_type='client' AND status='new'`), served
+by the pre-existing `countUnreadClientMessages`
+(`share_messages_unread_client_idx`), now surfaced through
+`getOwnerShareLinkMessages`'s combined response as `unreadCount`. No new
+index. No dashboard-level badge/UI added this slice.
+
+## 7. Lifecycle behavior
+
+Public GET re-runs the FULL authorization chain (identical to
+`verifyShareProjectionAuthorization`'s own re-verification) on every
+call -- a link that becomes disabled/revoked/expired, a
+`configuration_version` bump, or an expired grant all deny the NEXT
+read the same way they already deny the projection route, with no
+caching of a prior "authorized" result. Re-authorizing (a fresh
+session/grant/PIN verification) restores access to the same stored
+history, since nothing about the read path depends on session/grant
+identity beyond the moment of the read itself.
+
+Owner GET has no such gate at all -- it is scoped only by
+ownership, never by the link's own state, so history is readable
+regardless of disable/revoke/expiry/secret-rotation/browser-session-loss/
+configuration_version changes on the owner side. Project soft-deletion
+remains governed by the table's own existing cascade/RLS behavior,
+unchanged by this slice.
+
+## 8. Phase 6 boundary confirmation
+
+- `share-messages-repository.server.ts`'s existing Phase-6-boundary test
+  block (comment-stripped source scan) automatically covers the two new
+  functions added this slice (`getOwnerShareLinkMessages`,
+  `verifyOwnedShareMessageBelongsToLink`) since it scans the whole file.
+- `share-public-message.server.ts`'s existing equivalent test block
+  likewise automatically covers the new `listPublicShareMessages`.
+- A new dedicated static test file,
+  `app/api/share-links/[id]/messages/phase6-boundary.test.ts` (12
+  tests), scans all three owner route files for
+  `share_message_conversions`/`project_updates`/
+  `project_timeline_events`/`'converted'` in executable code, task/
+  subtask/project-table mutation calls, and email/AI-analysis imports --
+  all clean.
+- The public GET/POST route continues to rely on the repository-level
+  boundary tests (it performs no direct DB call of its own).
+
+## 9. Exact files changed
+
+New:
+- `app/api/share-links/[id]/messages/route.ts` + `.test.ts`
+- `app/api/share-links/[id]/messages/reply/route.ts` + `.test.ts`
+- `app/api/share-links/[id]/messages/[messageId]/route.ts` + `.test.ts`
+- `app/api/share-links/[id]/messages/phase6-boundary.test.ts`
+
+Modified:
+- `app/api/share/[publicId]/messages/route.ts` (added `GET`) + `.test.ts`
+- `lib/share/share-contracts.ts` (extended `shareLinkApiErrorCodeSchema`
+  with 4 message-specific codes; added `shareMessageIdParamSchema`,
+  `sendShareMessageReplyRequestSchema`,
+  `setShareMessageStatusRequestSchema`)
+- `lib/share/share-messages-repository.server.ts` (added
+  `getOwnerShareLinkMessages`, `verifyOwnedShareMessageBelongsToLink`;
+  extended the internal query-builder type with `maybeSingle`) + `.test.ts`
+- `lib/share/share-public-message.server.ts` (exported the previously-private
+  body validator as `validateShareMessageBody`; added
+  `listPublicShareMessages`)
+
+## 10. Exact tests / counts (all actually executed this turn)
+
+- `app/api/share/[publicId]/messages/route.test.ts`: **58/58** (40
+  pre-existing POST + 18 new GET)
+- `lib/share/share-messages-repository.server.test.ts`: **41/41** (32
+  pre-existing + 9 new)
+- `app/api/share-links/[id]/messages/route.test.ts`: **12/12** (new)
+- `app/api/share-links/[id]/messages/reply/route.test.ts`: **22/22** (new)
+- `app/api/share-links/[id]/messages/[messageId]/route.test.ts`:
+  **23/23** (new)
+- `app/api/share-links/[id]/messages/phase6-boundary.test.ts`:
+  **12/12** (new)
+- Full regression sweep -- `lib/share`, `app/api/share`,
+  `app/api/share-links`, every Client-Share dashboard component,
+  `app/share`, plus the Phase 5A migration test, run together: **52
+  test files, 1898 tests, all passing**.
+
+## 11. TypeScript / eslint / diff results
+
+- `tsc --noEmit`: clean.
+- `eslint` on every file touched this turn: **0 errors**; 3 pre-existing
+  `no-unused-vars` warnings on intentionally-unused fake-client mock
+  parameters (same convention already accepted in Phase 5A).
+- `git diff --check`: clean (only expected LF→CRLF line-ending notices).
+- No `npm run build` was run this turn -- no compile issue required it.
+
+Nothing was staged, committed, or pushed this turn. No migration was
+executed against any database, disposable or Production. No Supabase
+project, ENV variable, or deployment was touched.
+
+---
+
+# PHASE 5C STATUS: IMPLEMENTED
+
+# PHASE 5D READINESS: READY

@@ -17,12 +17,14 @@ import {
   SHARE_PUBLIC_MESSAGE_REQUEST_MAX_BYTES,
   validateSharePublicRequestOrigin,
 } from "@/lib/share/share-public-request.server";
+import { isRejectableCrossSiteRequest } from "@/lib/share/share-request-security.server";
 import {
   resolveShareLinkCommentsEnabled,
   verifyShareProjectionAuthorization,
 } from "@/lib/share/share-session-grant.server";
 import {
   insertPublicShareMessage,
+  listPublicShareMessages,
   shareMessageSubmissionRequestSchema,
   validateShareMessageSubmission,
 } from "@/lib/share/share-public-message.server";
@@ -38,9 +40,17 @@ import {
   every security-relevant column on the inserted row is server-derived.
 
   This route creates TOP-LEVEL client messages only (parent_id is always
-  null) -- public reply-to-owner-message behavior, the public message
-  history read, and any owner-facing UI are explicitly out of scope for
+  null) -- public reply-to-owner-message behavior is out of scope for
   this slice.
+
+  Phase 5C -- GET /api/share/[publicId]/messages, added below. Reuses
+  the exact same authorization chain as GET .../projection: the GET-
+  appropriate `isRejectableCrossSiteRequest` (not POST's
+  `validateSharePublicRequestOrigin`), the `projection_read` rate-limit
+  bucket (not `comment_submission` -- a history read is a read, not a
+  write), `verifyShareProjectionAuthorization`, then the same
+  `commentsEnabled` check the POST handler already uses. No new
+  authorization model was created for this.
 */
 
 export const runtime = "nodejs";
@@ -251,6 +261,113 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     logShareRouteError("share.messages.submit", error);
+
+    return jsonResponse(
+      { ok: false, code: "INTERNAL_ERROR", error: "Something went wrong." } satisfies MessageSubmissionErrorResponse,
+      500
+    );
+  }
+}
+
+type PublicMessageReadResponse = {
+  ok: true;
+  data: {
+    messages: ReadonlyArray<{
+      authorType: "client" | "owner";
+      authorDisplayName: string | null;
+      body: string;
+      createdAt: string;
+    }>;
+  };
+};
+
+export async function GET(request: NextRequest, context: RouteContext) {
+  try {
+    assertClientShareEnabled();
+
+    if (isRejectableCrossSiteRequest(request.headers)) {
+      return jsonResponse(
+        { ok: false, code: "INVALID_ORIGIN", error: "Invalid request origin." } satisfies MessageSubmissionErrorResponse,
+        403
+      );
+    }
+
+    const { publicId } = await context.params;
+
+    if (!isValidSharePublicId(publicId)) {
+      return genericUnavailable();
+    }
+
+    const cookiePolicy = getShareBrowserSessionCookiePolicy();
+    const cookieValue = request.cookies.get(cookiePolicy.name)?.value ?? null;
+
+    if (cookieValue === null || !isValidRawShareBrowserSessionSecret(cookieValue)) {
+      return genericUnavailable();
+    }
+
+    let sessionDigest: string;
+    try {
+      sessionDigest = hashShareBrowserSessionSecret(cookieValue);
+    } catch {
+      return genericUnavailable();
+    }
+
+    const readLimit = await checkShareRateLimit({
+      action: "projection_read",
+      scope: "browser_session",
+      identityDigest: sessionDigest,
+      identityDigestVersion: 1,
+    });
+
+    if (!readLimit.allowed) {
+      return rateLimited(readLimit.retryAfterSeconds);
+    }
+
+    const authorization = await verifyShareProjectionAuthorization({
+      cookieValue,
+      publicId,
+    });
+
+    if (!authorization) {
+      return genericUnavailable();
+    }
+
+    const commentsEnabled = await resolveShareLinkCommentsEnabled(
+      authorization.shareLinkId,
+      authorization.userId
+    );
+
+    if (!commentsEnabled) {
+      return genericUnavailable();
+    }
+
+    const messages = await listPublicShareMessages({
+      shareLinkId: authorization.shareLinkId,
+      projectId: authorization.projectId,
+      userId: authorization.userId,
+    });
+
+    if (messages === null) {
+      logShareRouteError("share.messages.read_failed", null);
+      return jsonResponse(
+        { ok: false, code: "INTERNAL_ERROR", error: "Something went wrong." } satisfies MessageSubmissionErrorResponse,
+        500
+      );
+    }
+
+    return jsonResponse(
+      { ok: true, data: { messages } } satisfies PublicMessageReadResponse,
+      200
+    );
+  } catch (error) {
+    if (isShareAvailabilityError(error)) {
+      return jsonResponse(
+        { ok: false, code: "NOT_FOUND", error: "Not found." } satisfies MessageSubmissionErrorResponse,
+        404
+      );
+    }
+
+    logShareRouteError("share.messages.read", error);
 
     return jsonResponse(
       { ok: false, code: "INTERNAL_ERROR", error: "Something went wrong." } satisfies MessageSubmissionErrorResponse,

@@ -50,6 +50,11 @@ vi.mock("@/lib/share/share-public-request.server", () => ({
   SHARE_PUBLIC_MESSAGE_REQUEST_MAX_BYTES: 20_000,
 }));
 
+const isRejectableCrossSiteRequestMock = vi.fn();
+vi.mock("@/lib/share/share-request-security.server", () => ({
+  isRejectableCrossSiteRequest: (headers: unknown) => isRejectableCrossSiteRequestMock(headers),
+}));
+
 const verifyAuthorizationMock = vi.fn();
 const resolveCommentsEnabledMock = vi.fn();
 vi.mock("@/lib/share/share-session-grant.server", () => ({
@@ -68,6 +73,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 const insertMock = vi.fn();
+const listMessagesMock = vi.fn();
 vi.mock("@/lib/share/share-public-message.server", async () => {
   const actual = await vi.importActual<typeof import("@/lib/share/share-public-message.server")>(
     "@/lib/share/share-public-message.server"
@@ -75,12 +81,13 @@ vi.mock("@/lib/share/share-public-message.server", async () => {
   return {
     ...actual,
     insertPublicShareMessage: (input: unknown) => insertMock(input),
+    listPublicShareMessages: (input: unknown) => listMessagesMock(input),
   };
 });
 
 const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-const { POST } = await import("./route");
+const { POST, GET } = await import("./route");
 
 const VALID_PUBLIC_ID = "abcdefgh12345678ijklmnop";
 const VALID_RAW_SESSION_SECRET = "P9k2QwErTyUiOpAsDfGhJkLzXcVbNm1234567890abc";
@@ -106,6 +113,29 @@ function buildRequest(
     method: "POST",
     headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify(options.body ?? { body: "hello" }),
+  });
+}
+
+function buildGetRequest(
+  options: {
+    cookieValue?: string | null;
+    secFetchSite?: string;
+    secFetchMode?: string;
+  } = {}
+) {
+  const headers: Record<string, string> = {};
+  if (options.cookieValue !== undefined && options.cookieValue !== null) {
+    headers.cookie = `${COOKIE_NAME}=${options.cookieValue}`;
+  }
+  if (options.secFetchSite) {
+    headers["sec-fetch-site"] = options.secFetchSite;
+  }
+  if (options.secFetchMode) {
+    headers["sec-fetch-mode"] = options.secFetchMode;
+  }
+  return new NextRequest(`http://localhost/api/share/${VALID_PUBLIC_ID}/messages`, {
+    method: "GET",
+    headers,
   });
 }
 
@@ -138,10 +168,12 @@ beforeEach(() => {
   checkRateLimitMock.mockReset().mockResolvedValue(allow());
   isValidSharePublicIdMock.mockReset().mockReturnValue(true);
   validateOriginMock.mockReset();
+  isRejectableCrossSiteRequestMock.mockReset().mockReturnValue(false);
   readJsonMock.mockReset().mockResolvedValue({ body: "hello" });
   verifyAuthorizationMock.mockReset().mockResolvedValue(validAuthorization());
   resolveCommentsEnabledMock.mockReset().mockResolvedValue(true);
   insertMock.mockReset().mockResolvedValue(true);
+  listMessagesMock.mockReset().mockResolvedValue([]);
   consoleErrorSpy.mockClear();
 });
 
@@ -659,5 +691,247 @@ describe("POST /api/share/[publicId]/messages - unexpected errors never leak det
     expect(body.code).toBe("INTERNAL_ERROR");
     expect(text).not.toContain("relation");
     expect(text).not.toContain("share_messages");
+  });
+});
+
+describe("GET /api/share/[publicId]/messages - feature gate", () => {
+  it("returns 404 before any Client Share DB work when the feature is disabled", async () => {
+    assertClientShareEnabledMock.mockImplementation(() => {
+      const error = new Error("disabled") as Error & { name: string };
+      error.name = "ShareAvailabilityError";
+      throw error;
+    });
+
+    const response = await GET(buildGetRequest(), buildContext(VALID_PUBLIC_ID));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body.code).toBe("NOT_FOUND");
+    expect(verifyAuthorizationMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/share/[publicId]/messages - request security (GET-appropriate, not POST's origin validator)", () => {
+  it("rejects a present, cross-site Sec-Fetch-Site", async () => {
+    isRejectableCrossSiteRequestMock.mockReturnValue(true);
+
+    const response = await GET(buildGetRequest(), buildContext(VALID_PUBLIC_ID));
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body.code).toBe("INVALID_ORIGIN");
+  });
+
+  it("accepts a missing Sec-Fetch-Site", async () => {
+    const response = await GET(
+      buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    expect(response.status).not.toBe(403);
+  });
+
+  it("never uses POST's validateSharePublicRequestOrigin for GET", async () => {
+    await GET(buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }), buildContext(VALID_PUBLIC_ID));
+    expect(validateOriginMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/share/[publicId]/messages - publicId / cookie preconditions", () => {
+  it("generic-unavailable for a malformed publicId", async () => {
+    isValidSharePublicIdMock.mockReturnValue(false);
+
+    const response = await GET(buildGetRequest(), buildContext("not valid"));
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.code).toBe("UNAVAILABLE");
+    expect(checkRateLimitMock).not.toHaveBeenCalled();
+  });
+
+  it("generic-unavailable when no session cookie is present", async () => {
+    const response = await GET(buildGetRequest({ cookieValue: null }), buildContext(VALID_PUBLIC_ID));
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.code).toBe("UNAVAILABLE");
+  });
+
+  it("generic-unavailable for a malformed cookie value, without hashing it", async () => {
+    isValidRawSecretMock.mockReturnValue(false);
+
+    const response = await GET(
+      buildGetRequest({ cookieValue: "not-a-valid-secret" }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(hashSecretMock).not.toHaveBeenCalled();
+    expect(body.code).toBe("UNAVAILABLE");
+  });
+});
+
+describe("GET /api/share/[publicId]/messages - projection_read rate limit (reused, not a new bucket)", () => {
+  it("returns 429 with Retry-After when exceeded, before authorization is even checked", async () => {
+    checkRateLimitMock.mockResolvedValue(deny(9));
+
+    const response = await GET(
+      buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(body.code).toBe("RATE_LIMITED");
+    expect(response.headers.get("Retry-After")).toBe("9");
+    expect(verifyAuthorizationMock).not.toHaveBeenCalled();
+  });
+
+  it("uses the projection_read action, scoped by browser_session -- not comment_submission", async () => {
+    await GET(buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }), buildContext(VALID_PUBLIC_ID));
+
+    expect(checkRateLimitMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "projection_read", scope: "browser_session" })
+    );
+  });
+});
+
+describe("GET /api/share/[publicId]/messages - authorization + commentsEnabled", () => {
+  it("generic-unavailable when full revalidation fails", async () => {
+    verifyAuthorizationMock.mockResolvedValue(null);
+
+    const response = await GET(
+      buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.code).toBe("UNAVAILABLE");
+    expect(listMessagesMock).not.toHaveBeenCalled();
+  });
+
+  it("generic-unavailable when commentsEnabled=false -- history is not readable while comments are disabled, even though the owner still retains it", async () => {
+    resolveCommentsEnabledMock.mockResolvedValue(false);
+
+    const response = await GET(
+      buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.code).toBe("UNAVAILABLE");
+    expect(listMessagesMock).not.toHaveBeenCalled();
+  });
+
+  it("reads using exactly the verified authorization's shareLinkId/projectId/userId", async () => {
+    verifyAuthorizationMock.mockResolvedValue(
+      validAuthorization({
+        shareLinkId: SENSITIVE_LINK_ID,
+        projectId: SENSITIVE_PROJECT_ID,
+        userId: SENSITIVE_USER_ID,
+      })
+    );
+
+    await GET(buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }), buildContext(VALID_PUBLIC_ID));
+
+    expect(listMessagesMock).toHaveBeenCalledWith({
+      shareLinkId: SENSITIVE_LINK_ID,
+      projectId: SENSITIVE_PROJECT_ID,
+      userId: SENSITIVE_USER_ID,
+    });
+  });
+});
+
+describe("GET /api/share/[publicId]/messages - response shape / privacy", () => {
+  it("returns the client-safe message list on success", async () => {
+    listMessagesMock.mockResolvedValue([
+      { authorType: "client", authorDisplayName: "Jane", body: "Any update?", createdAt: "2026-08-19T00:00:00Z" },
+      { authorType: "owner", authorDisplayName: null, body: "On track!", createdAt: "2026-08-19T01:00:00Z" },
+    ]);
+
+    const response = await GET(
+      buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      ok: true,
+      data: {
+        messages: [
+          { authorType: "client", authorDisplayName: "Jane", body: "Any update?", createdAt: "2026-08-19T00:00:00Z" },
+          { authorType: "owner", authorDisplayName: null, body: "On track!", createdAt: "2026-08-19T01:00:00Z" },
+        ],
+      },
+    });
+  });
+
+  it("returns an empty list, not an error, when there is no history yet", async () => {
+    listMessagesMock.mockResolvedValue([]);
+
+    const response = await GET(
+      buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ ok: true, data: { messages: [] } });
+  });
+
+  it("maps a null (failed) read to a generic 500, never a raw DB error", async () => {
+    listMessagesMock.mockResolvedValue(null);
+
+    const response = await GET(
+      buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body.code).toBe("INTERNAL_ERROR");
+  });
+
+  it("never includes an id, status, parentId, isVisibleToClient, shareLinkId, projectId, or userId in the response", async () => {
+    listMessagesMock.mockResolvedValue([
+      { authorType: "client", authorDisplayName: "Jane", body: "Hi", createdAt: "2026-08-19T00:00:00Z" },
+    ]);
+
+    const response = await GET(
+      buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    const text = await response.text();
+    const parsed = JSON.parse(text);
+    const message = parsed.data.messages[0];
+
+    expect(Object.keys(message).sort()).toEqual(["authorDisplayName", "authorType", "body", "createdAt"]);
+    expect(text).not.toContain(VALID_LINK_ID);
+    expect(text).not.toContain(VALID_PROJECT_ID);
+    expect(text).not.toContain(VALID_USER_ID);
+  });
+
+  it("no-store privacy headers on success", async () => {
+    const response = await GET(
+      buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+
+    expect(response.headers.get("Cache-Control")).toContain("no-store");
+    expect(response.headers.get("Referrer-Policy")).toBe("no-referrer");
+  });
+
+  it("no-store privacy headers on an authorization failure", async () => {
+    verifyAuthorizationMock.mockResolvedValue(null);
+
+    const response = await GET(
+      buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+
+    expect(response.headers.get("Cache-Control")).toContain("no-store");
   });
 });

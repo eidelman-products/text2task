@@ -141,10 +141,16 @@ type ShareMessagesQueryResolution = {
   count?: number | null;
 };
 
+type ShareMessagesSingleQueryResolution = {
+  data: unknown | null;
+  error: PostgrestLikeError | null;
+};
+
 type ShareMessagesQueryBuilder = {
   select: (columns: string, options?: { count?: "exact"; head?: boolean }) => ShareMessagesQueryBuilder;
   eq: (column: string, value: unknown) => ShareMessagesQueryBuilder;
   order: (column: string, options?: { ascending?: boolean }) => ShareMessagesQueryBuilder;
+  maybeSingle: () => Promise<ShareMessagesSingleQueryResolution>;
 } & PromiseLike<ShareMessagesQueryResolution>;
 
 export type ShareMessagesSupabaseLikeClient = {
@@ -298,6 +304,104 @@ export async function countUnreadClientMessages<Client>(
   }
 
   return { ok: true, data: count };
+}
+
+/**
+ * Phase 5C -- the owner GET endpoint's combined read: proves the link
+ * is actually owned by this caller FIRST (a plain `listShareLinkMessages`
+ * call alone cannot distinguish "owned link with no messages" from
+ * "someone else's link id" -- both would silently return an empty
+ * array), then returns its chronological history plus its unread count
+ * together, matching the route's own recommended response shape. Fails
+ * with `SHARE_LINK_NOT_FOUND` for any id that does not resolve to a link
+ * owned by `input.userId`, regardless of the link's own state (revoked/
+ * disabled/expired links remain fully owner-readable -- there is no
+ * state filter on this lookup at all, unlike public-facing reads).
+ */
+export async function getOwnerShareLinkMessages<Client>(
+  supabase: Client,
+  input: { shareLinkId: string; userId: string }
+): Promise<ShareMessagesRepositoryResult<{ messages: ShareMessage[]; unreadCount: number }>> {
+  const client = supabase as ShareMessagesSupabaseLikeClient;
+  const canonicalLinkId = canonicalizeUuid(input.shareLinkId);
+  const canonicalUserId = canonicalizeUuid(input.userId);
+
+  const { data: linkRow, error: linkError } = await client
+    .from("project_share_links")
+    .select("id")
+    .eq("id", canonicalLinkId)
+    .eq("user_id", canonicalUserId)
+    .maybeSingle();
+
+  if (linkError) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+  if (!linkRow) {
+    return { ok: false, error: { code: "SHARE_LINK_NOT_FOUND" } };
+  }
+
+  const messagesResult = await listShareLinkMessages(supabase, {
+    shareLinkId: canonicalLinkId,
+    userId: canonicalUserId,
+  });
+  if (!messagesResult.ok) {
+    return messagesResult;
+  }
+
+  const unreadResult = await countUnreadClientMessages(supabase, {
+    shareLinkId: canonicalLinkId,
+    userId: canonicalUserId,
+  });
+  if (!unreadResult.ok) {
+    return unreadResult;
+  }
+
+  return {
+    ok: true,
+    data: { messages: messagesResult.data, unreadCount: unreadResult.data },
+  };
+}
+
+/**
+ * Phase 5C -- proves a specific message both belongs to the caller's own
+ * link AND is owned by the caller, before the status route calls
+ * `set_share_message_status`. This exists because
+ * `set_share_message_status`'s own RPC signature
+ * (`p_message_id, p_status`) scopes only by `auth.uid()`, not by any
+ * link id -- without this check, a PATCH to
+ * `/api/share-links/LINK_A/messages/[messageId]` would silently succeed
+ * even for a `messageId` that actually belongs to the same owner's
+ * LINK_B, making the route's own `[id]` path segment purely decorative.
+ * Returns `SHARE_MESSAGE_NOT_FOUND` (never a distinct "wrong link" vs
+ * "wrong owner" vs "does not exist" code -- all three are
+ * indistinguishable to the caller) when no row matches all three
+ * predicates.
+ */
+export async function verifyOwnedShareMessageBelongsToLink<Client>(
+  supabase: Client,
+  input: { messageId: string; shareLinkId: string; userId: string }
+): Promise<ShareMessagesRepositoryResult<{ id: string }>> {
+  const client = supabase as ShareMessagesSupabaseLikeClient;
+  const canonicalMessageId = canonicalizeUuid(input.messageId);
+  const canonicalLinkId = canonicalizeUuid(input.shareLinkId);
+  const canonicalUserId = canonicalizeUuid(input.userId);
+
+  const { data, error } = await client
+    .from("share_messages")
+    .select("id")
+    .eq("id", canonicalMessageId)
+    .eq("share_link_id", canonicalLinkId)
+    .eq("user_id", canonicalUserId)
+    .maybeSingle();
+
+  if (error) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+  if (!data || typeof (data as { id?: unknown }).id !== "string") {
+    return { ok: false, error: { code: "SHARE_MESSAGE_NOT_FOUND" } };
+  }
+
+  return { ok: true, data: { id: (data as { id: string }).id } };
 }
 
 // ---------------------------------------------------------------------

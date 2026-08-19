@@ -6,6 +6,8 @@ const {
   countUnreadClientMessages,
   sendShareMessageReply,
   setShareMessageStatus,
+  getOwnerShareLinkMessages,
+  verifyOwnedShareMessageBelongsToLink,
   SHARE_MESSAGE_PHASE5_STATUSES,
 } = await import("./share-messages-repository.server");
 
@@ -278,6 +280,186 @@ describe("setShareMessageStatus", () => {
     const client = buildFakeClient({ rpcData: { garbage: true } });
     const result = await setShareMessageStatus(client, { messageId: VALID_MESSAGE_ID, status: "reviewed" });
     expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+});
+
+/**
+ * A per-table FIFO response queue, matching the pattern
+ * `share-session-grant.server.test.ts` already established: each
+ * `.from(table)` call pulls the NEXT queued response for THAT table,
+ * decoupled from calls to any other table -- needed here because
+ * `getOwnerShareLinkMessages` queries `project_share_links` (ownership,
+ * single row) and then `share_messages` TWICE in one call (the list, via
+ * `listShareLinkMessages`, then the count, via
+ * `countUnreadClientMessages`) with two different response shapes.
+ */
+function buildTableQueueClient() {
+  const queues = new Map<string, Array<{ data: unknown; error: unknown; count?: number | null }>>();
+
+  function queueFor(table: string, response: { data: unknown; error: unknown; count?: number | null }): void {
+    const existing = queues.get(table) ?? [];
+    existing.push(response);
+    queues.set(table, existing);
+  }
+
+  function nextFor(table: string): { data: unknown; error: unknown; count?: number | null } {
+    const queue = queues.get(table);
+    if (!queue || queue.length === 0) return { data: null, error: null };
+    return queue.shift() as { data: unknown; error: unknown; count?: number | null };
+  }
+
+  function makeBuilder(table: string): Record<string, unknown> {
+    const builder: Record<string, unknown> = {
+      eq: () => builder,
+      order: () => builder,
+      maybeSingle: () => Promise.resolve(nextFor(table)),
+      then: (
+        resolve: (value: unknown) => unknown,
+        reject: (reason: unknown) => unknown
+      ) => Promise.resolve(nextFor(table)).then(resolve, reject),
+    };
+    return builder;
+  }
+
+  const from = vi.fn((table: string) => ({
+    select: () => makeBuilder(table),
+  }));
+
+  return { from, rpc: vi.fn(), queueFor };
+}
+
+describe("getOwnerShareLinkMessages - Phase 5C owner GET combined read", () => {
+  it("returns SHARE_LINK_NOT_FOUND when the link does not resolve to one owned by this user, without reading messages", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("project_share_links", { data: null, error: null });
+
+    const result = await getOwnerShareLinkMessages(client, {
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "SHARE_LINK_NOT_FOUND" } });
+  });
+
+  it("fails closed (UNEXPECTED) on an ownership-check query error", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("project_share_links", { data: null, error: { message: "boom" } });
+
+    const result = await getOwnerShareLinkMessages(client, {
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+
+  it("on an owned link, returns messages + unreadCount together", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("project_share_links", { data: { id: VALID_LINK_ID }, error: null });
+    client.queueFor("share_messages", { data: [validRow()], error: null });
+    client.queueFor("share_messages", { data: null, error: null, count: 2 });
+
+    const result = await getOwnerShareLinkMessages(client, {
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.messages).toHaveLength(1);
+      expect(result.data.unreadCount).toBe(2);
+    }
+  });
+
+  it("propagates UNEXPECTED if the message list read fails, after ownership already succeeded", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("project_share_links", { data: { id: VALID_LINK_ID }, error: null });
+    client.queueFor("share_messages", { data: null, error: { message: "boom" } });
+
+    const result = await getOwnerShareLinkMessages(client, {
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+
+  it("propagates UNEXPECTED if the unread count read fails, after the message list already succeeded", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("project_share_links", { data: { id: VALID_LINK_ID }, error: null });
+    client.queueFor("share_messages", { data: [], error: null });
+    client.queueFor("share_messages", { data: null, error: null, count: null });
+
+    const result = await getOwnerShareLinkMessages(client, {
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+});
+
+describe("verifyOwnedShareMessageBelongsToLink - Phase 5C cross-link mutation guard", () => {
+  it("succeeds when the message belongs to the given link and owner", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("share_messages", { data: { id: VALID_MESSAGE_ID }, error: null });
+
+    const result = await verifyOwnedShareMessageBelongsToLink(client, {
+      messageId: VALID_MESSAGE_ID,
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: true, data: { id: VALID_MESSAGE_ID } });
+  });
+
+  it("returns SHARE_MESSAGE_NOT_FOUND when no row matches all three predicates (wrong link, wrong owner, or nonexistent -- indistinguishable)", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("share_messages", { data: null, error: null });
+
+    const result = await verifyOwnedShareMessageBelongsToLink(client, {
+      messageId: VALID_MESSAGE_ID,
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "SHARE_MESSAGE_NOT_FOUND" } });
+  });
+
+  it("fails closed (UNEXPECTED) on a query error", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("share_messages", { data: null, error: { message: "boom" } });
+
+    const result = await verifyOwnedShareMessageBelongsToLink(client, {
+      messageId: VALID_MESSAGE_ID,
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+
+  it("scopes the check by id AND share_link_id AND user_id explicitly", async () => {
+    const client = buildTableQueueClient();
+    const eqCalls: unknown[][] = [];
+    const scopedBuilder: Record<string, unknown> = {
+      eq: (...args: unknown[]) => {
+        eqCalls.push(args);
+        return scopedBuilder;
+      },
+      maybeSingle: () => Promise.resolve({ data: { id: VALID_MESSAGE_ID }, error: null }),
+    };
+    client.from = vi.fn(() => ({ select: () => scopedBuilder }));
+
+    await verifyOwnedShareMessageBelongsToLink(client, {
+      messageId: VALID_MESSAGE_ID,
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(eqCalls).toContainEqual(["id", VALID_MESSAGE_ID]);
+    expect(eqCalls).toContainEqual(["share_link_id", VALID_LINK_ID]);
+    expect(eqCalls).toContainEqual(["user_id", VALID_USER_ID]);
   });
 });
 
