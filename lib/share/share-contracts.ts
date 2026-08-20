@@ -1382,3 +1382,48 @@ export const setShareMessageStatusResponseSchema = z.union([
 export type SetShareMessageStatusResponse = z.infer<
   typeof setShareMessageStatusResponseSchema
 >;
+
+// ---------------------------------------------------------------------
+// Phase 5F -- owner historical-link resolution
+// (GET /api/share-links/history-link). A deliberately separate,
+// additive contract from `shareLinkManagementStateDataSchema` above --
+// it answers a different question ("is there ANY link, including a
+// revoked one, whose Communication History remains reachable") and is
+// fetched only as a fallback when that other RPC-backed contract
+// already returned `link: null`. See
+// `lib/share/share-messages-repository.server.ts`'s
+// `resolveMostRecentShareLink` for the full rationale.
+// ---------------------------------------------------------------------
+
+/** The full state vocabulary a `project_share_links` row can actually
+ * hold, including `revoked` -- deliberately NOT reusing
+ * `managedShareLinkStateSchema`, which excludes `revoked` by design for
+ * its own (unrelated) "what can I manage" purpose. */
+export const anyShareLinkStateSchema = z.enum([
+  "draft",
+  "active",
+  "disabled",
+  "expired",
+  "revoked",
+]);
+export type AnyShareLinkState = z.infer<typeof anyShareLinkStateSchema>;
+
+const mostRecentShareLinkDataSchema = z
+  .object({
+    linkId: uuidSchema.nullable(),
+    state: anyShareLinkStateSchema.nullable(),
+  })
+  .strict()
+  .refine(
+    (value) => (value.linkId === null) === (value.state === null),
+    "linkId and state must be both null or both present."
+  );
+export type MostRecentShareLinkData = z.infer<typeof mostRecentShareLinkDataSchema>;
+
+export const mostRecentShareLinkResponseSchema = z.union([
+  z.object({ ok: z.literal(true), data: mostRecentShareLinkDataSchema }).strict(),
+  shareLinkApiErrorSchema,
+]);
+export type MostRecentShareLinkResponse = z.infer<
+  typeof mostRecentShareLinkResponseSchema
+>;

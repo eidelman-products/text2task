@@ -1997,4 +1997,1283 @@ needs to change.
 
 ---
 
-# PHASE 5D RUNTIME DEFECT STATUS: FIXED (awaiting redeploy + re-verification in Preview)
+# PHASE 5D RUNTIME DEFECT STATUS: FIXED, RE-VERIFIED IN PREVIEW (PASS)
+
+Confirmed by real Preview re-verification (see Phase 5F's own §0 below):
+badge 1 → status mutation → modal 0 unread → Back → panel badge
+disappears immediately, no Share panel close/reopen required.
+
+---
+
+# PHASE 5F — LIFECYCLE / SECURITY / FINAL ACCEPTANCE
+
+Checkpoint at the start of this slice: `f4ff8e1 Complete Client Share
+Phase 5D communication UI`. This is a **verification-only** turn — no
+application code was changed. Every claim below is backed by an exact
+file/line citation or a passing test, not an assumption.
+
+## 0. Phase 5D real Preview evidence carried forward
+
+Already proven in a real disposable Vercel Preview (reported by the
+user, not re-run this turn per the task's own "do not waste time
+re-running proven flows" instruction): comments-enable via Quick Share,
+public Messages section appears, client sends a real message, message
+persists across refetch, owner unread badge shows 1, owner opens
+Communication History, owner sees the message, owner replies
+successfully without mutating the parent's status, client sees the
+reply after refresh, public history exposes only client-safe fields,
+owner moves the message New → Reviewed → Resolved → Dismissed with the
+unread count correctly dropping 1 → 0, the stale-badge defect was found
+and the fix (`share-link-panel.tsx`'s `onClose` handler now also calls
+`badgeMessages.refetch()`) was re-verified live, comments-off removes
+the public section entirely while owner history remains fully retained
+and readable, and all other public project content keeps working.
+
+## 1. Expected lifecycle contract (established BEFORE testing, from the actual Phase 3/4/5A-C implementation — not guessed)
+
+The single load-bearing fact underneath this entire table:
+`verifyShareProjectionAuthorization`
+(`lib/share/share-session-grant.server.ts`) is called, **unmodified**,
+by all four public routes —
+`GET /api/share/[publicId]/projection`,
+`GET /api/share/[publicId]/resources/[fileRef]`,
+`GET /api/share/[publicId]/messages`, and
+`POST /api/share/[publicId]/messages`
+(confirmed by direct grep: all four import and call the same function
+from the same module, zero divergence). That function re-verifies, on
+every single call: session live+unrevoked, link
+active+unexpired+project-not-deleted, grant
+same-session+same-link+unexpired+unrevoked+exact-
+`configuration_version`-match+PIN-requirement-satisfied — the exact
+contract `share-session-grant.server.test.ts`'s existing 66 tests
+already exhaustively prove. Phase 5 messaging therefore inherits every
+lifecycle guarantee below **by construction**, not by re-implementing
+or approximating it.
+
+The one Phase-5-specific addition on top of that shared gate is
+`resolveShareLinkCommentsEnabled` (an additive read, called after
+authorization succeeds, by both the GET and POST messages routes) — see
+§4.
+
+| Event | A. Load project? | B. GET messages? | C. POST message? | D. Existing auth valid? | E. Re-auth required? | F. Owner keeps history? | G. Owner reply/status? |
+|---|---|---|---|---|---|---|---|
+| PIN off | Yes | Yes (if comments on) | Yes | Yes | No | Yes | Yes |
+| PIN on, unverified | No | No | No | No | Yes (PIN) | Yes | Yes |
+| PIN on, wrong PIN | No | No | No | No | Yes (retry) | Yes | Yes |
+| PIN on, correct PIN | Yes | Yes | Yes | New grant issued | — | Yes | Yes |
+| Link disabled | No | No | No | No (`link_not_active`) | Only if re-enabled | Yes | Yes |
+| Link re-enabled | Yes | Yes | Yes | No — stale grant, needs fresh exchange | Yes | Yes | Yes |
+| Link revoked | No | No | No | No, permanently (`link_revoked`) | N/A — V1 has no un-revoke | Yes | Yes |
+| Link expired | No | No | No | No (`link_not_active`) | Only if owner clears/extends expiry | Yes | Yes |
+| Secret rotated | Yes, with NEW secret | Yes | Yes | No — `configuration_version` bumped | Yes (new secret) | Yes | Yes |
+| `configuration_version` changed (any config field) | Yes, after re-auth | Yes, after re-auth | Yes, after re-auth | No — exact-match check fails | Yes | Yes | Yes |
+| Grant expired (TTL) | No | No | No | No | Yes | Yes | Yes |
+| Browser session cookie missing/malformed | No | No | No | No | Yes | Yes | Yes |
+| Archived project, link still active | Yes (unaffected) | Yes | Yes | Yes | No | Yes | Owner mutation RPCs blocked (`PROJECT_ARCHIVED`) — unrelated to messaging |
+| Project soft-deleted (`deleted_at`) | No | No | No | No | N/A | Yes (rows remain, just unreachable via the dead link) | Owner RPCs return not-found too (project gate is shared) |
+| Project hard-deleted (FK cascade; not a path this product currently uses) | No (row gone) | No | No | N/A | N/A | No — cascades away by schema design (the one documented exception) | N/A |
+
+## 2. PIN lifecycle — PASS, no code change
+
+Reuses the shared gate unchanged. `verifyShareProjectionAuthorization`'s
+own PIN check: `linkRequiresPin && grant.pin_verified_at === null` →
+deny (`share-session-grant.server.ts` line ~611). `POST
+/api/share/session`'s PIN-verification branch
+(`app/api/share/session/route.ts`) is untouched by Phase 5 — grep
+confirms no Phase 5 file imports `verifySharePin` or touches PIN
+material at all. Public denials remain the single generic `401
+{code:"UNAVAILABLE"}` for every one of PIN-unverified /
+PIN-wrong-before-retry / link-not-found — verified by
+`app/api/share/[publicId]/messages/route.test.ts`'s existing
+authorization-chain tests (both GET and POST), which assert the exact
+same generic body/status `verifyShareProjectionAuthorization` returning
+`null` always produces, regardless of which internal check failed.
+
+## 3. Disable / re-enable — PASS, no code change
+
+`isShareLinkCurrentlyPubliclyActive` requires `link.state === "active"`
+— a disabled link fails this on every messaging call exactly as it
+already fails it for projection/file reads. `reenable_share_link`
+(`202608060001_client_share_lifecycle_operations.sql`) is one of the
+RPCs the access-operations file's own header comment documents as
+bumping `configuration_version` on every genuine transition — so a
+grant issued before disable is stale after re-enable too, requiring a
+fresh `/api/share/session` exchange before messaging works again
+(matches column E above). No duplicate/lost history: none of
+`disable_share_link`/`reenable_share_link` reference `share_messages`
+at all (confirmed by source inspection of
+`202608060001_client_share_lifecycle_operations.sql` — those two
+functions only ever touch `project_share_links`).
+
+## 4. Revocation — PASS, no code change
+
+`resolveShareLinkByPublicId` treats `state === 'revoked'` as
+structurally equivalent to "not found" (`link_revoked` →
+`null`) — the exact same no-enumeration-oracle posture every other
+denial already uses. Once revoked, V1 has no un-revoke RPC at all (no
+`unrevoke_share_link` function exists anywhere in the migrations) —
+correctly not invented here. `revoke_share_link`
+(`202608060002_client_share_access_operations.sql`) only touches
+`project_share_links`; owner history remains fully readable via
+`getOwnerShareLinkMessages`, which has no link-state filter at all (by
+design, confirmed in the Phase 5C section above).
+
+## 5. Expiry — PASS, no code change
+
+Two independent expiry dimensions, both already gate messaging: (a)
+`link.expiresAt` checked in `isShareLinkCurrentlyPubliclyActive`
+(`new Date(link.expiresAt).getTime() <= Date.now()` → inactive); (b)
+grant TTL checked separately in `verifyShareProjectionAuthorization`
+(`grant.expires_at`). `computeGrantExpiresAt`
+(`share-session-grant.server.ts`) takes `Math.min(sessionExpiry,
+linkExpiry)` — a grant can never outlive its own link's expiry, so
+session/grant TTL cannot extend communication access past link expiry
+by construction. Owner history read is unaffected (no expiry check in
+`getOwnerShareLinkMessages`).
+
+## 6. `configuration_version` invalidation — PASS, no code change (security-sensitive, verified explicitly)
+
+This is the exact mechanism §21's Phase 5A finding already exercises
+for `commentsEnabled`: `save_share_configuration` only bumps
+`configuration_version` when a supplied field's value genuinely differs
+(`IS DISTINCT FROM`) — confirmed in `use-share-link.ts`'s own
+`shareUpdate` design (Phase 5A turn) and the RPC's own no-op-preserving
+behavior. Once bumped, `verifyShareProjectionAuthorization`'s
+`grant.granted_configuration_version !== link.configurationVersion` →
+deny, on the VERY NEXT call — this is not a per-route reimplementation,
+it is the identical single check every Phase 5 route already goes
+through. No client can bypass this: `configuration_version` is never
+client-supplied anywhere in the request surface (not in the public
+GET/POST messages routes, not in the exchange route) — it is read only
+from the live `project_share_links` row, server-side.
+
+## 7. Secret rotation — PASS, no code change
+
+`rotate_share_link_secret`
+(`202608060002_client_share_access_operations.sql`) is explicitly
+documented, in that migration's own header comment (lines 25-47, quoted
+directly), as one of the operations that "increases
+`configuration_version` exactly once" — the same invalidation
+mechanism as §6. The OLD secret cannot establish a new session at all
+post-rotation: `POST /api/share/session` compares the supplied secret's
+digest against the link's CURRENT `secret_digest`
+(`constantTimeHexEqual`), which rotation overwrites — an old secret
+fails secret verification outright, before configuration_version even
+matters. Message history is untouched (rotation only writes
+`project_share_links`/`project_share_secret_material`, confirmed by the
+same source inspection as §3-4 — no `share_messages` reference exists
+in `202608060002_client_share_access_operations.sql`).
+
+## 8. Browser session / grant loss — PASS, no code change
+
+`resolveBrowserSessionFromCookie` returns `null` for a missing,
+malformed, expired, or revoked session — every one of those collapses
+into the same generic denial through `verifyShareProjectionAuthorization`.
+Clearing cookies never deletes `share_messages` rows (no cookie/session
+table is ever joined into a delete path) — a returning visitor simply
+needs to re-enter through the normal fragment-secret/PIN flow again, no
+persistent client identity was added or would be needed.
+
+## 9. Archived project — CONFIRMED CONSISTENT, not a Phase 5 blocker (inherited pre-existing behavior, unchanged)
+
+Re-verified this turn with a fresh grep across
+`202608030005_client_share_integrity_and_security.sql` (every
+ongoing-access trigger): **zero** occurrences of `is_archived`. Every
+occurrence of `is_archived` across the whole Client Share feature is
+confined to exactly three OWNER MUTATION RPCs —
+`activate_share_link`/`reenable_share_link`
+(`202608060001`), and `save_share_configuration`
+(`202608060003`/`202608110001`) — all raising `PROJECT_ARCHIVED` only
+when the OWNER tries to activate/re-enable/reconfigure. **Actual
+behavior**: an archived project's already-active share link remains
+fully publicly accessible, and Phase 5 messaging inherits that exactly
+(no new check was added, none was needed, since messaging reuses the
+same gate). This is the pre-existing Phase 3/4 contract, not a Phase 5
+regression or inconsistency — filed informationally, exactly as it was
+in the Phase 5A audit, not as a blocker. A product decision on whether
+archiving *should* revoke public access is out of this turn's scope.
+
+## 10. Project deletion — PASS, no code change, confirmed via schema
+
+This product only ever soft-deletes projects (`deleted_at`) — confirmed
+by a repo-wide search finding zero hard `DELETE FROM projects` call
+sites anywhere in application code. Soft-delete is already the
+mechanism every gate checks (`project.deleted_at is not null` → deny),
+proven since Phase 3. As defense-in-depth for the schema's own
+documented "this is the one lifecycle event that is communication-
+destructive by design" case: `share_messages.project_id`,
+`.share_link_id`, `.user_id`, and `.parent_id` are ALL declared `on
+delete cascade` (confirmed directly:
+`202608030003_client_share_owner_foundation.sql` lines 572-580), and
+`project_share_links.project_id` is also `on delete cascade`
+(line 99) — so even a genuine hard delete (not currently reachable
+through any code path) would cascade cleanly with no orphaned
+communication rows, exactly as expected.
+
+## 11. `commentsEnabled` API defense-in-depth — PASS, no code change, re-confirmed independent of UI
+
+Both `GET` and `POST /api/share/[publicId]/messages` call
+`resolveShareLinkCommentsEnabled` AFTER `verifyShareProjectionAuthorization`
+succeeds, denying generically if `false` — proven directly by
+`route.test.ts`'s existing tests for both handlers
+("generic-unavailable when commentsEnabled=false", checked for GET and
+POST independently, each asserting the downstream read/insert function
+is never called). The DB's own `enforce_share_message_integrity`
+trigger independently re-checks `comments_enabled` for any
+`author_type='client'` insert regardless of what the application layer
+does — confirmed present in
+`202608030005_client_share_integrity_and_security.sql` (unchanged since
+Phase 1A) — so even a hypothetical application-layer bug could not
+turn into a real bypass; the DB is the final, independent write guard,
+exactly as designed.
+
+## 12. Cross-owner / cross-link / cross-project isolation — PASS, no code change
+
+Already proven by automated tests built directly for this purpose in
+Phase 5C, re-run clean this turn:
+- Public: `listPublicShareMessages` scoped by all three of
+  `shareLinkId`/`projectId`/`userId` from the route's own verified
+  authorization, never request input;
+  `shareMessageSubmissionRequestSchema` is `.strict()` with only
+  `body`/`authorDisplayName` — no `shareLinkId`/`projectId`/`userId`
+  field exists for a caller to even attempt to supply.
+- Owner: `getOwnerShareLinkMessages` proves link ownership before any
+  read (`SHARE_LINK_NOT_FOUND` for cross-owner);
+  `verifyOwnedShareMessageBelongsToLink` proves a `messageId` belongs to
+  BOTH the path's own `shareLinkId` AND the authenticated owner before
+  any status PATCH (closing the exact gap where
+  `set_share_message_status`'s own RPC signature has no link-scoping
+  parameter); `send_share_message_reply`'s RPC independently re-verifies
+  the parent belongs to the same link
+  (`SHARE_MESSAGE_PARENT_LINK_MISMATCH`). All three layers (repository,
+  API route, RPC) fail closed.
+
+## 13. Public privacy / projection — PASS, no code change
+
+`listPublicShareMessages` selects exactly `author_type,
+author_display_name, body, created_at` at the query level (never
+`select("*")`) — there is no raw-row passthrough for a later bug to
+widen. Verified by 3 dedicated tests in
+`public-messages-section.test.tsx` (no internal id in rendered DOM) and
+by the route's own test asserting the exact 4-key response shape.
+
+## 14. Hidden message visibility — PASS, no code change, confirmed as engineered but currently dormant
+
+Every current write path (public client insert, owner reply RPC)
+hardcodes `is_visible_to_client = true` — grep confirms there is
+currently no RPC/route/UI action anywhere that ever sets it `false`.
+The defense-in-depth is nonetheless already fully in place for when a
+future feature needs it: `listPublicShareMessages`'s query filters
+`.eq("is_visible_to_client", true)` at the DB level (not a React-only
+hide), and the integrity trigger independently requires
+`new.is_visible_to_client is true` for any client-authored insert
+(`202608030005`, line 690). Status (`new`/`reviewed`/`resolved`/
+`dismissed`) has no effect on public visibility at all — confirmed
+structurally, since the public query never reads or filters on
+`status`.
+
+## 15. Rate limit / abuse — PASS, no code change
+
+`comment_submission` exists in the TypeScript action union
+(`share-rate-limit.server.ts`) and in the DB's own `p_action` CHECK
+constraint (`202608130001_client_share_rate_limit_increment.sql`);
+`increment_share_rate_limit_bucket` is a single atomic `insert ... on
+conflict ... do update`, never read-then-write. The bucket is scoped
+`browser_session`, independent from `projection_read`'s own bucket
+(confirmed: GET /messages uses `projection_read`, POST /messages uses
+`comment_submission` — different action strings, different DB rows).
+The identity key is the session-cookie digest only — no client-supplied
+body field can influence it, so rate limiting cannot be bypassed by
+supplying fake fields. The rate-limit check in
+`POST /api/share/[publicId]/messages` runs and can return 429 BEFORE
+authorization, `commentsEnabled`, validation, or the insert are ever
+reached (confirmed by reading the route's own top-to-bottom order) — so
+no DB row is ever inserted after a 429. Client-side double-submission is
+already prevented (`PublicMessagesSection` disables its submit button
+while `send.status === "pending"`, tested). A real 11x-click browser
+test was deliberately NOT performed, per this turn's own explicit
+instruction to prefer automated proof of the policy/ordering over
+manual spam.
+
+## 16. Public request security — PASS, no code change
+
+GET routes (`projection`, `messages`, file delivery) use
+`isRejectableCrossSiteRequest` (tolerant of a missing `Sec-Fetch-Site`,
+matching Phase 4B's own real-browser-proven direct-navigation fix).
+`POST /messages` uses `validateSharePublicRequestOrigin` — the same
+strict same-origin+matching-Origin-header policy `POST /api/share/session`
+already used before Phase 5 existed. No Phase 5 file weakens or
+duplicates Phase 4's shared `share-request-security.server.ts` helper;
+both GET and POST request-security paths are exercised by existing
+passing tests (cross-site rejected, missing Sec-Fetch-Site accepted for
+GET, Origin mismatch rejected for POST).
+
+## 17. Message content safety — PASS, no code change
+
+Re-confirmed via the existing, still-passing test suites: plain-text
+only (React text nodes, `dangerouslySetInnerHTML` absent by grep across
+every Phase 5 UI file), HTML-like input stored/rendered verbatim as
+text, Hebrew/Arabic/emoji/multiline preserved, control characters
+stripped consistently by the SAME shared `validateShareMessageBody`
+function used by both the public route and the owner reply route (no
+second, divergent validator), 4000-codepoint / 80-codepoint limits
+counted via `[...value].length` (codepoints, matching Postgres
+`char_length`) on both client and server. The Phase 5B streaming-limit
+defect (found and fixed in that turn) remains covered by its own
+regression tests in `share-public-request.server.test.ts`, re-run clean
+this turn — confirming a non-ASCII message under 4000 characters is
+never rejected merely for exceeding the old 4096-byte ceiling.
+
+## 18. Owner workflow invariants — PASS, no code change
+
+Reply creates only a new owner-authored row (`send_share_message_reply`
+is `insert`-only, no `update` statement exists in its body at all —
+confirmed by direct reading of the RPC and by the migration's own
+40-test static-source suite). Status changes are the ONLY path that
+touches `status`/`reviewed_at`/`resolved_at`, always an explicit owner
+action (`set_share_message_status`), never automatic. `'converted'` is
+unreachable from every Phase 5 surface: rejected by the route's Zod
+schema before any DB call, and absent from the RPC's own accepted-value
+list. Opening or refreshing the modal performs only a `GET` — confirmed
+by dedicated tests ("opening the modal never calls
+setShareMessageStatus") — reading is never workflow mutation.
+
+## 19. Unread consistency — PASS, no code change (plus the now-closed stale-badge regression)
+
+Definition unchanged (`author_type='client' AND status='new'`), served
+by the existing partial index, never recomputed client-side anywhere —
+every unread number displayed (badge and modal) comes directly from a
+server response. `'new'` remains a settable target status through
+`set_share_message_status` (confirmed in the RPC body), so an owner CAN
+reopen a message via the API even though no UI button currently exposes
+it — permitted, not required, matching the task's own phrasing. The
+Phase 5D stale-badge defect (two isolated hook instances, no
+synchronization) is closed: `ShareLinkPanel`'s modal-`onClose` handler
+now also calls its own badge hook's `refetch()`, re-verified by 4
+regression tests and by real Preview re-verification (§0). No
+optimistic decrement was introduced, and no polling/global cache was
+introduced to fix it.
+
+## 20. Owner-history retention matrix
+
+| Event | Owner history retained? | Evidence |
+|---|---|---|
+| Comments disabled | Yes | `getOwnerShareLinkMessages` has no `comments_enabled` gate |
+| Link disabled | Yes | `disable_share_link` touches only `project_share_links` |
+| Link revoked | Yes | `revoke_share_link` touches only `project_share_links` |
+| Link expired | Yes | Expiry is a public-read-time check only, never a write |
+| Secret rotated | Yes | `rotate_share_link_secret` touches only `project_share_links`/secret material |
+| `configuration_version` changed | Yes | `save_share_configuration` never references `share_messages` |
+| Browser grant expired | Yes | Grant expiry is public-side only, irrelevant to owner reads |
+| Client cookie deleted | Yes | No session/cookie join exists in any owner read path |
+| Project archived | Yes | `is_archived` never gates reads, only owner activation/reconfig RPCs |
+| Project soft-deleted | Rows persist in DB but become unreachable via the now-dead link/project | Owner routes share the same `deleted_at` gate as everything else |
+| Project hard-deleted (schema-only; not a reachable path today) | **No — cascades away by design** | `on delete cascade` on every relevant FK (§10) |
+
+## 21. Analytics / session replay — PASS, no code change
+
+`shouldSkipAnalyticsPath` (`lib/analytics/analytics-paths.ts`) excludes
+`/share` and every `/share/*` path from both
+`ConsentAwareVercelAnalytics` and `CookieConsentBanner` — a path-based
+check with no knowledge of Messages at all, so it applies unchanged. No
+Phase 5 file (public or owner) imports any analytics/tracking module —
+confirmed by grep across every new/modified Phase 5 file. The 23-test
+analytics isolation suite re-ran clean this turn.
+
+## 22. Public security headers / indexing — PASS, no code change
+
+Unchanged since Phase 3/5A: page-level `robots: {index:false,
+follow:false, noarchive:true}` (`app/share/[publicId]/page.tsx`);
+`proxy.ts`'s `SHARE_PUBLIC_PAGE_HEADERS` (`Cache-Control: private,
+no-store`, `Referrer-Policy: no-referrer`, minimal CSP) applied to
+every `/share` and `/share/*` request, which covers the page but not
+the API routes; the two `/api/share/[publicId]/messages` handlers set
+their own `NO_STORE_HEADERS` (`Cache-Control: private, no-store`,
+`Pragma: no-cache`, `Referrer-Policy: no-referrer`,
+`X-Content-Type-Options: nosniff`) on every response branch, matching
+the projection/file routes' own established convention exactly.
+
+## 23. Failure isolation — PASS, no code change
+
+Both `usePublicShareMessages` and `useOwnerShareMessages` remain fully
+outside `ShareView`'s and `useShareLink`'s own state machines — proven
+by dedicated tests: a rejected public history fetch still renders the
+compose form and never blanks `ClientProjectView`; `ShareLinkPanel`'s
+own tests run with a stubbed, always-failing `fetch` for the badge hook
+specifically to prove the rest of the panel (PIN controls, copy/share
+actions, configuration) is unaffected by a Messages-layer failure.
+
+## 24. Phase 6 boundary — final hard check, PASS
+
+Every Phase 5 file's own dedicated comment-stripped static test
+(migration: 40 tests; repository: covered in its own boundary describe
+block; public-message module: covered; three owner routes: 12 dedicated
+tests in `phase6-boundary.test.ts`) re-ran clean this turn as part of
+the full regression sweep. No Phase 5 file references
+`share_message_conversions`, writes `project_updates`, writes
+`project_timeline_events`, sets `status='converted'`, or imports any
+task/project/CRM mutation, email, or AI-analysis module.
+
+## 25. Regression against Phases 1-4 — PASS
+
+Full Client Share suite (`lib/share`, `app/api/share`,
+`app/api/share-links`, every share-link dashboard component,
+`app/share`, the Phase 5A migration test, plus `lib/analytics`/
+`app/components/analytics`), run together this turn: **57 test files,
+2003 tests, all passing** — covering owner activation, copy-link,
+native share, WhatsApp, email, PIN set/clear, expiry set/clear,
+disable/re-enable, revoke, preview, public projection, task mapping,
+resource mapping, LINK attachments, secure FILE delivery, fileRef
+privacy, and analytics isolation, none of which regressed.
+
+## 26. Exact tests / counts (all actually executed this turn)
+
+- Full Client Share + analytics regression sweep, run together: **57
+  test files, 2003 tests, all passing** (no new tests were added this
+  turn — verification-only, no defect found).
+- `tsc --noEmit`: clean.
+- `npm run build`: succeeded, all routes (including every Phase 5
+  route) registered correctly.
+- `git diff --check` / `git status`: clean — zero files modified this
+  turn (one stray, empty isolated-agent worktree directory left over
+  from a failed tool invocation earlier in this turn was found and
+  removed via `git worktree remove`; it contained no changes and was
+  not part of the tracked repository).
+
+## 27. Remaining real-Preview acceptance gap (minimal, targeted)
+
+Every lifecycle event in §1's table is proven either by (a) Phase 3/4's
+own already-accepted real-browser evidence acting on the identical,
+unmodified authorization gate Phase 5 reuses, or (b) Phase 5D's own
+already-completed real Preview acceptance (§0). Two genuinely new
+combinations remain unobserved in any real browser so far:
+
+**Check 1 — Revoke with real message history present.**
+Purpose: prove revocation denies public messaging while owner history
+survives, in the one combination (revoke + existing messages) neither
+Phase 3/4 nor Phase 5D's own acceptance list directly exercised
+together.
+Starting state: an active, comments-enabled share link with at least
+one real client message and one owner reply already exchanged (reuse
+the state from the already-proven flow).
+Action: owner clicks Revoke in the Share panel.
+Expected: the client's tab (on refresh) shows the generic unavailable
+state; a direct POST to the messages endpoint (e.g. via browser
+devtools) also fails generically; the owner still sees the full,
+unchanged message history in Client Communication History.
+
+**Check 2 — Live `configuration_version` invalidation with an already-open client tab.**
+Purpose: directly observe the security-sensitive §6 guarantee in a real
+two-tab scenario, not just via code+unit-test proof.
+Starting state: a client tab already loaded and authorized (grant at
+version N), Messages section visible; owner's Share panel open
+separately.
+Action: owner changes any share configuration field (e.g. toggles
+"Allow client messages" off and back on), bumping
+`configuration_version` to N+1, without the client refreshing.
+Expected: the client's already-rendered page is unaffected until its
+next action (no realtime push, expected); the client's next
+GET/POST (either an explicit refresh or a send attempt) is denied
+generically until the browser re-authorizes through the normal
+fragment/PIN flow, proving the stale grant was never silently honored.
+
+No other item in §1-§26 requires a new manual check.
+
+---
+
+# PHASE 5F VERIFICATION STATUS (SUPERSEDED BY THE REAL DEFECT BELOW):
+~~PASS~~ -- see "PHASE 5F REAL PREVIEW DEFECT" section immediately below.
+The lifecycle/security verification in §1-§26 above remains valid and
+unchanged; this new section documents a UI-reachability defect the real
+Preview acceptance pass this doc's own §27 called for actually found.
+
+---
+
+# PHASE 5F REAL PREVIEW DEFECT — REVOKED LINK HIDES OWNER CLIENT COMMUNICATION HISTORY
+
+Found during the exact "revoke with real message history present" real
+Preview check this doc's own §27 recommended. Disposable fixture:
+share link `39e539e1-598f-4df8-ac2f-a20f55e65e45`, revoked, with real
+Phase 5 message history (client message → owner reply → client
+message) still in the database. Left untouched by this turn, exactly as
+instructed, for post-fix re-verification.
+
+## Public revoke security — PASS (unchanged)
+
+`POST /api/share-links/<linkId>/revoke` returned 200; the client's
+existing tab, on refresh, correctly showed "This shared project view is
+not available." This is exactly Phase 5F's own §4 revocation contract,
+already verified by code+tests before this defect was found, now also
+confirmed live. No change was needed or made here.
+
+## Owner-history UI accessibility — FAIL (now fixed, pending redeploy)
+
+After revoking, the owner reopened "Share with client" and the panel
+reset to a fresh sharing configuration -- the "Client messages" entry
+point had disappeared entirely, even though the link's real message
+history remained fully intact in the database (`getOwnerShareLinkMessages`
+was, and remains, correctly state-unfiltered — this was never a data
+problem, only a UI-reachability one).
+
+## Exact root cause
+
+`get_share_link_management_state` (the RPC behind `ShareLinkPanel`'s
+`state.data.link`) filters `link.state <> 'revoked'` by design
+(`202608110002_client_share_management_mapping_metadata.sql` line 167,
+and identically in `list_share_link_summaries`,
+`202608050001_client_share_owner_reads.sql` line 272) -- correct and
+intentional for that RPC's own purpose (which link can the owner
+activate/reconfigure right now), never previously a problem because
+nothing else depended on it for anything but that purpose. Once an
+owner's only link is revoked, this RPC deterministically returns
+`link: null`. `ShareLinkPanel`'s "Client messages" entry point,
+however, was conditioned directly on that same `link` being non-null --
+a conflation of two genuinely different questions ("what can I manage"
+vs. "what history can I still read") that had never previously mattered,
+since every other lifecycle event that clears `link` to `null` (a
+freshly-created project with no share history at all) is indistinguishable
+from "no history exists" -- revoke is the one event that creates a real
+gap between the two.
+
+No RPC, migration, or SQL was touched or needed to fix this -- it was a
+pure application-layer link-selection gap, exactly as the task's own
+root-cause hypothesis anticipated.
+
+## Exact minimal fix
+
+A new, deliberately separate, read-only fallback resolution path, used
+ONLY when `get_share_link_management_state` has already returned
+`link: null` for the project:
+
+1. **`resolveMostRecentShareLink`**
+   (`lib/share/share-messages-repository.server.ts`) -- a direct
+   RLS-bound read (not an RPC; no migration needed) of
+   `project_share_links`, scoped by `project_id` + `user_id`, with
+   **no state filter at all**. This needs no new grant or policy: the
+   table's existing "Users can view own project share links" RLS
+   policy (`auth.uid() = user_id`, 202608030003) already has no state
+   restriction of its own -- only the two "managed link" RPCs
+   deliberately narrow it for their own purpose. Selection is
+   deterministic, not arbitrary: it reuses the IDENTICAL tie-break
+   order both existing RPCs already establish (`updated_at desc,
+   created_at desc, id desc`, `limit 1`). Documented explicitly as a
+   fallback-only helper, never a replacement for the RPC's own
+   selection logic -- callers must only invoke it after confirming
+   `link: null`.
+2. **`GET /api/share-links/history-link?projectId=`**
+   (new route) + **`getMostRecentShareLink`** (`share-link-client.ts`
+   wrapper) -- read-only, returns `{linkId, state} | {linkId:null,
+   state:null}`. Never activates, re-enables, or otherwise mutates
+   anything; a dedicated test greps the route's own source to prove it
+   imports no activate/reenable/revoke/create function at all.
+3. **`useShareLinkHistory`** (new hook,
+   `use-share-link-history.ts`) -- mirrors `useOwnerShareMessages`'s
+   own isolation rationale exactly: fetched only when
+   `state.isOpen && linkId === null` (no active/manageable link), never
+   on an interval, and its own failure cannot affect the rest of the
+   panel.
+4. **`ShareLinkPanel`** now computes `messagesLinkId = linkId ??
+   historicalLinkId` and uses THAT (not `link?.id` alone) for both the
+   "Client messages" entry-point condition and the unread badge's own
+   `useOwnerShareMessages` instance. The entry point still renders when
+   no active link exists but a historical one does, now captioned "From
+   a previous share" so the owner cannot mistake it for a live share.
+
+No multi-link selector, inbox, or history list was built: the
+resolution always yields exactly one deterministic link id, matching
+the task's own explicit "do not build multi-link management" constraint.
+A fresh project with genuinely zero share links ever created still
+correctly shows no entry point at all (the fallback query simply finds
+no row).
+
+## Revoked-link selection semantics (confirmed unambiguous, not arbitrary)
+
+`get_share_link_management_state`'s own `state <> 'revoked'` filter
+means that by the time the new fallback is ever invoked, the only rows
+it can possibly find are `state = 'revoked'` -- every other state
+already satisfies that filter and would already have been returned by
+the primary RPC. There is no scenario, in this V1 schema, where the
+fallback must choose among multiple DIFFERENT non-revoked states; if a
+project happens to have multiple revoked links, the existing
+deterministic tie-break (already proven correct and already used twice
+elsewhere in this codebase) picks exactly one, never arbitrarily.
+
+## Owner read/reply/status behavior after revoke (audited, decision documented)
+
+- **Read**: unaffected and unchanged -- `getOwnerShareLinkMessages` was
+  already, and remains, fully state-unfiltered (Phase 5C's own explicit
+  design).
+- **Status** (`set_share_message_status`): unaffected -- the RPC has no
+  link-state check at all (only message ownership), and status is
+  purely the owner's own private workflow bookkeeping, never
+  client-visible in the first place. Left exactly as-is; no reason to
+  restrict it on a revoked link.
+- **Reply** (`send_share_message_reply`): audited and found to have no
+  link-state check either -- an owner reply on a revoked link would be
+  silently ACCEPTED by the RPC yet could never reach the client, since
+  public access to a revoked link is already (correctly) denied. This
+  is not a security defect (still fully owner-scoped, no cross-tenant
+  issue) but a real UX trap: an action that looks successful but is
+  functionally meaningless. **Decision (UI-layer only, RPC
+  unchanged)**: `ClientCommunicationHistoryModal` now accepts a
+  `canReply` prop; `ShareLinkPanel` passes `canReply={false}` exactly
+  when the resolved link's own state is `'revoked'` (`isRevokedMessagesLink`,
+  derived from `historicalLinkState`, not merely "no active link
+  exists" -- a deliberately precise condition). The Reply trigger and
+  composer are both suppressed; status actions remain fully available.
+  A visible notice ("This share link has been revoked. Clients can no
+  longer send or receive messages here, but the history below is
+  preserved.") reinforces that the owner must not infer the link still
+  works. `set_share_message_status`'s own RPC security was **not**
+  altered, per the explicit instruction not to change RPC security
+  without a concrete defect -- none was found there.
+
+## Files changed
+
+New:
+- `lib/share/share-messages-repository.server.ts` --
+  `resolveMostRecentShareLink` (added function; file already existed)
+- `app/api/share-links/history-link/route.ts` + `.test.ts`
+- `app/components/dashboard/tasks/share-link/use-share-link-history.ts`
+
+Modified:
+- `lib/share/share-messages-repository.server.ts` (added function +
+  `.limit()` added to the internal query-builder type) + `.test.ts`
+- `lib/share/share-contracts.ts` (added `anyShareLinkStateSchema`,
+  `mostRecentShareLinkDataSchema`/`Response` -- purely additive, the
+  existing `shareLinkManagementStateDataSchema` contract was not
+  touched)
+- `app/components/dashboard/tasks/share-link/share-link-client.ts`
+  (added `getMostRecentShareLink`) + `.test.ts`
+- `app/components/dashboard/tasks/share-link/share-link-panel.tsx`
+  (resolves and uses `messagesLinkId`/`isHistoricalMessagesLink`/
+  `isRevokedMessagesLink`; the entry point and badge hook now key off
+  the resolved link, not `link` alone) + `.test.ts`
+- `app/components/dashboard/tasks/share-link/client-communication-history-modal.tsx`
+  (new optional `isHistorical`/`canReply` props, both defaulting to
+  the prior unchanged behavior) + `.test.ts`
+
+## Tests / counts (all actually executed this turn)
+
+- `share-messages-repository.server.test.ts`: **47/47** (41 pre-existing
+  + 6 new, covering `resolveMostRecentShareLink`'s row resolution,
+  null-when-no-link, fail-closed error handling, exact scoping/order/
+  limit, and a source-level check that it applies no state filter of
+  its own)
+- `app/api/share-links/history-link/route.test.ts`: **11/11** (new)
+- `share-link-client.test.ts`: **26/26** (23 pre-existing + 3 new)
+- `share-link-panel.test.tsx`: **31/31** (24 pre-existing + 7 new,
+  including the exact real-Preview repro: badge/entry point survives
+  revoke, resolves the correct revoked link id, renders retained
+  history, keeps public-link controls separate from history access, no
+  automatic re-enable/new-link creation, no multi-link selector, no
+  polling, no Project Timeline/Phase 6 reference)
+- `client-communication-history-modal.test.tsx`: **35/35** (29
+  pre-existing + 6 new, covering default-unchanged behavior,
+  `isHistorical` notice, `canReply=false` suppressing Reply while
+  leaving status actions available, and unaffected read access)
+- Full Client Share + analytics regression sweep, run together: **58
+  test files, 2036 tests, all passing**.
+
+## TypeScript / eslint / diff / build
+
+- `tsc --noEmit`: clean.
+- `eslint` on every file touched this turn: **0 errors**; 3 pre-existing
+  `no-unused-vars` warnings on intentionally-unused fake-client mock
+  parameters (same accepted convention as every earlier Phase 5 slice).
+- `git diff --check`: clean (only expected LF→CRLF notices).
+- `npm run build`: succeeded -- `/api/share-links/history-link`
+  registered correctly alongside every other route; no new warnings.
+
+Nothing was staged, committed, or pushed this turn. No SQL was executed,
+no migration was run, no Supabase state was modified, no new share link
+was created, and the revoked disposable fixture
+(`39e539e1-598f-4df8-ac2f-a20f55e65e45`) was left exactly as found.
+
+## Exact real Preview re-verification required (after redeploy)
+
+1. Deploy this branch to the same disposable Preview.
+2. Owner reopens "Share with client" for the project that owns the
+   already-revoked link `39e539e1-598f-4df8-ac2f-a20f55e65e45`.
+3. Confirm the panel now shows a "Client messages" entry point
+   (captioned "From a previous share"), even though the panel is
+   otherwise back in its fresh quick-share state.
+4. Click it; confirm the full retained history renders (client message
+   → owner reply → client message), unread/status metadata intact.
+5. Confirm the notice "This share link has been revoked..." is shown,
+   and that no Reply control is offered anywhere in the view.
+6. Confirm status actions (Mark reviewed / Resolve / Dismiss) remain
+   available and functional on the historical messages.
+7. Confirm the original public URL for this link is still denied
+   (regression check -- should already be unaffected, since no public
+   route or authorization code was touched).
+8. Confirm creating/sharing a brand-new link for the same project does
+   not alter or remove the historical link's own retained messages.
+
+---
+
+# PHASE 5F VERIFICATION STATUS (SUPERSEDED — see PHASE 5G FINAL CLOSURE at the end of this document):
+~~BLOCKED~~ → **PASS**. At the time this line was first written, the
+revoked-owner-history-UI defect had been fixed in code but not yet
+re-verified in a real Preview deployment. It has since been re-verified
+live (fresh deploy + hard-refresh, per the follow-up investigation
+immediately below) and confirmed working. All other Phase 5F findings
+(§1-§26 above) remain PASS and unaffected. Do not read this line in
+isolation -- the PHASE 5G FINAL CLOSURE section at the end of this
+document is the authoritative final status.
+
+---
+
+# PHASE 5F FOLLOW-UP — FRONTEND WIRING INVESTIGATION
+
+Real Preview diagnostics narrowed the remaining defect to
+frontend-only, having confirmed `resolveMostRecentShareLink`, the
+`history-link` API, and revoked-state detection all PASS in isolation
+(the endpoint was confirmed returning the correct
+`{linkId: "39e539e1-...", state: "revoked"}` for the affected project
+when called directly), yet `ShareLinkPanel` still did not render the
+"Client messages" entry point live.
+
+## Investigation performed
+
+Re-read `use-share-link-history.ts`, `share-link-panel.tsx`'s full
+`messagesLinkId`/`historicalLinkId`/`historyEnabled` computation, the
+render condition for the entry point, and `useShareLink.ts`'s exact
+`isLoading`/`data` transition sequence during `openPanel()` (the real
+sequence: `isLoading:true, data:null` → `isLoading:false, data:{link:
+null,...}` once `get_share_link_management_state` resolves). Confirmed
+`ShareLinkPanel` is mounted unconditionally by its one caller
+(`tasks-view.tsx`), so it never unmounts/remounts merely from
+`state.isOpen` toggling -- ruling out a stale-`isMountedRef` theory.
+Confirmed no duplicate/shadow component file exists.
+
+Wrote and ran six test scenarios reproducing the exact real state
+(`state.data.link === null`, `linkHistory` resolved to
+`{linkId:"...", state:"revoked"}`) plus the surrounding conditions most
+likely to expose a timing/wiring bug if one existed:
+1. Pre-settled render (management state and history both already
+   resolved).
+2. The REAL `openPanel()` transition sequence, replayed via
+   `rerender()`: active-link session → close → reopen with
+   `isLoading:true/data:null` → settle on `isLoading:false/data.link:
+   null`.
+3. History fetch left deliberately pending (in-flight), confirming the
+   entry is correctly absent while loading and appears the instant the
+   fetch resolves -- its absence during loading is not permanent/sticky.
+4. A slower, stale history response arriving AFTER a fresher one,
+   confirming the existing request-id staleness guard discards it
+   rather than overwriting the already-resolved (and already-rendered)
+   link id.
+5. No active link + no historical link → correctly no entry point.
+6. Active link + a historical link also existing → the active link
+   correctly wins, and the historical-fallback fetch is never even
+   triggered.
+
+**All six passed against the code exactly as shipped in the previous
+turn.** No test scenario reproduced the reported symptom.
+
+## Root cause
+
+**Could not be conclusively reproduced or isolated to a specific code
+defect.** The `messagesLinkId`/`historicalLinkId` computation, the
+`historyEnabled` gate, the render condition, and the fetch/race-safety
+logic all behave correctly under exhaustive code review and under every
+realistic and adversarial timing scenario tested. Given the API layer
+is independently confirmed correct and the frontend logic withstood
+every test constructed to break it, the most plausible explanation for
+a live discrepancy is environmental rather than a code defect in the
+reviewed files -- most likely a stale client-side JS bundle in the
+tested Preview deployment (Vercel/CDN edge caching can serve an updated
+server-side API route alongside an unrefreshed client bundle after a
+deploy, especially without a hard browser refresh) rather than a logic
+error in `ShareLinkPanel`/`useShareLinkHistory`.
+
+## Fix applied (defensive hardening, not a confirmed bug fix)
+
+`historyEnabled` in `share-link-panel.tsx` changed from depending on
+`!state.isLoading && !state.loadError` to depending on `state.data !==
+null` directly:
+
+```
+- const historyEnabled = state.isOpen && linkId === null && !state.isLoading && !state.loadError;
++ const historyEnabled = state.isOpen && state.data !== null && linkId === null;
+```
+
+This is a strictly more direct signal ("has the management-state call
+actually produced a result we can read `link` from") than the previous
+proxy (`isLoading`/`loadError`, whose true purpose is the panel's own
+top-level loading spinner, not this fallback's trigger condition) --
+shipped as a genuine robustness improvement even though no test
+scenario distinguished the old and new gates' behavior. All 6 scenarios
+above, plus the full existing suite, pass identically under both the
+old and new gate, which is itself further evidence this was not the
+actual root cause -- included anyway because it removes a real,
+if unconfirmed, class of risk (an accidental extra dependency on an
+unrelated loading flag) at zero behavioral cost.
+
+## Files changed
+
+- `app/components/dashboard/tasks/share-link/share-link-panel.tsx`
+  (`historyEnabled` gate condition only)
+- `app/components/dashboard/tasks/share-link/share-link-panel.test.tsx`
+  (3 new tests: the real `openPanel()` transition sequence, the
+  in-flight/pending-fetch case, and the stale-response race)
+
+## Tests / counts
+
+- `share-link-panel.test.tsx`: **34/34** (31 pre-existing + 3 new)
+- Full Client Share + analytics regression sweep: **58 test files, 2039
+  tests, all passing**
+- `tsc --noEmit`: clean
+- `eslint` on both touched files: **0 errors, 0 warnings**
+- `git diff --check`: clean
+- `npm run build`: succeeded
+
+## Recommended next step
+
+Before further code investigation: **redeploy this branch to a fresh
+Preview and hard-refresh (bypass cache) the browser tab before
+re-testing** the exact revoked fixture
+(`39e539e1-598f-4df8-ac2f-a20f55e65e45`). If the entry point still does
+not appear after a confirmed-fresh client bundle, capture the browser's
+Network tab during the exact repro (does `GET
+/api/share-links/history-link?projectId=...` fire at all from the app
+itself, not just when hit directly? what does it return in that
+in-app call specifically?) and the React DevTools component tree for
+`ShareLinkPanel` at the moment of the bug (`historyEnabled`,
+`linkHistory.state`, `messagesLinkId` values) -- that direct evidence
+would let this investigation move from "could not reproduce" to an
+exact fix, if a real code defect still exists after ruling out a stale
+bundle.
+
+---
+
+# PHASE 5G CLOSURE READINESS (SUPERSEDED — see PHASE 5G FINAL CLOSURE below):
+~~BLOCKED~~ → **READY**. The real Preview re-verification requested
+above has since been completed: a fresh deploy with a hard-refreshed
+client bundle confirmed "Client messages" / "From a previous share"
+renders correctly for the revoked historical link, full history is
+readable, Reply is suppressed with a clear revoked notice, and explicit
+owner status actions (including a genuine mixed-state check across two
+independent client messages) succeed correctly. See the PHASE 5G FINAL
+CLOSURE section immediately below for the complete, authoritative final
+record.
+
+---
+
+# PHASE 5G — FINAL CLOSURE
+
+This section is the authoritative, final summary of the entire Client
+Share Communication (Phase 5) effort. Where an earlier section in this
+document reads as an in-progress plan or carries a since-resolved
+BLOCKED marker, THIS section supersedes it. Nothing below required a
+new application-code change -- Phase 5G is a documentation/verification
+closure turn only.
+
+## 1. Implementation results, phase by phase
+
+- **Phase 5A** (owner communication foundation): two narrow
+  SECURITY DEFINER RPCs (`send_share_message_reply`,
+  `set_share_message_status`), `commentsEnabled` exposed in Quick Share,
+  owner repository foundation. Migration:
+  `supabase/migrations/202608190001_client_share_message_owner_rpcs.sql`
+  -- applied to the disposable Supabase project only, confirmed **not**
+  applied to Production.
+- **Phase 5B** (public submission): `POST
+  /api/share/[publicId]/messages`, the dedicated `comment_submission`
+  rate-limit bucket, trusted server-side insert. Uses only the
+  Phase 1A `service_role` grant -- no new migration required.
+- **Phase 5C** (communication APIs): public history `GET`, owner
+  history `GET`, owner reply `POST`, owner status `PATCH`. All reuse
+  the Phase 3/4 public authorization gate and Phase 1 RLS unchanged.
+- **Phase 5D** (UI): public Messages section, owner Client
+  Communication History modal, unread badge, reply UX, explicit
+  reviewed/resolved/dismissed workflow. Full build passed; full real
+  Preview core flow passed (§0 of the Phase 5D defect section above).
+- **Phase 5F** (lifecycle/security verification + 2 real defects found
+  and closed): see §2-§3 below.
+
+## 2. Stale unread badge defect — CLOSED / PASS
+
+Root cause: the panel badge and the Communication History modal used
+two deliberately isolated `useOwnerShareMessages` instances (by
+design, for failure isolation); a status mutation made through the
+modal updated only its own state, never the panel badge's. Fix: the
+modal's `onClose` handler (fired by "Back") now also calls the panel's
+own badge hook's `refetch()`. Real Preview re-verification: badge
+showed 1 → status mutation inside the modal → modal showed 0 unread →
+Back → panel badge disappeared immediately, with no Share panel
+close/reopen required. **CLOSED / PASS.**
+
+## 3. Revoked owner-history accessibility defect — CLOSED / PASS
+
+Root cause: `get_share_link_management_state` deliberately excludes
+revoked links from what it calls "managed" (correct for its own "what
+can the owner activate/reconfigure" purpose) -- but the "Client
+messages" entry point was incorrectly conditioned on that same,
+necessarily-null result, with no separate path to the link's own
+still-fully-retained message history. `getOwnerShareLinkMessages`
+itself was never affected -- it remained state-unfiltered throughout,
+confirmed both before and after this fix.
+
+Fix (read-only, additive, no SQL): `resolveMostRecentShareLink`
+(a direct RLS-bound read of `project_share_links`, no state filter,
+reusing the exact deterministic tie-break `get_share_link_management_state`/
+`list_share_link_summaries` already establish) → `GET
+/api/share-links/history-link` → `useShareLinkHistory` → `ShareLinkPanel`
+now computes `messagesLinkId = manageable link id ?? historical
+fallback link id` (never the reverse), used for both the entry point
+and the badge.
+
+An initial real Preview check appeared not to show the result even
+though the API itself was independently confirmed correct
+(`{"linkId":"39e539e1-598f-4df8-ac2f-a20f55e65e45","state":"revoked"}`).
+Extensive code review plus six adversarial/timing test scenarios (the
+real `openPanel()` loading-state transition, an in-flight/pending
+fetch, a stale-response race, no-link/no-history, active-link-wins, and
+the pre-settled case) could not reproduce a frontend logic defect
+against the code as shipped. One defensible hardening change was made
+regardless (`historyEnabled` now keys directly off `state.data !==
+null` rather than the more indirect `!state.isLoading` proxy). A fresh
+deploy with a hard-refreshed client bundle then confirmed the entry
+point renders correctly, resolving what had most likely been a stale
+client bundle from the prior deploy rather than a code defect.
+
+Full real Preview re-verification, final pass:
+- "Client messages" / "From a previous share" renders for the project
+  owning the revoked link, with no active/manageable link present.
+- Opening it shows the full retained history (client message → owner
+  reply → client message).
+- A clear notice is shown: clients can no longer send or receive
+  messages on this link; the history is preserved.
+- Reply is correctly suppressed (the RPC has no link-state check of its
+  own -- a reply would be silently accepted yet undeliverable to the
+  client, so this is a UI-layer decision, not an RPC change).
+- Owner-private workflow status actions (Mark reviewed / Resolve /
+  Dismiss) remain fully available and were exercised successfully on
+  the revoked history.
+
+**CLOSED / PASS.**
+
+## 4. Correction: discarded false "status isolation" suspicion
+
+During the final revoked-history real Preview pass, a status action
+applied to one client message appeared, briefly, to have also changed
+a second message's status -- raising a suspected "one status action
+changes multiple rows" defect. **This suspicion is false and is
+explicitly retracted.** The user clarified both client messages had
+already been independently changed during earlier manual testing in
+the same session, before the final check. A clean, final real Preview
+state proved correct, independent per-row status:
+
+- Message A: `REVIEWED`
+- Message B: `RESOLVED`
+
+This is exactly what `set_share_message_status`'s own `where id =
+p_message_id and user_id = v_user_id` scoping (a single-row `update`,
+confirmed by that RPC's own 40-test static-source suite) already
+guarantees -- there was never a code path capable of mutating more than
+one row per call. **No status-isolation defect exists. No fix was
+needed or made.** (This document contained no prior claim of such a
+defect to retract -- the suspicion was raised and resolved entirely
+within the same live testing session; this section exists solely to
+place the correction on the record, per instruction.)
+
+## 5. Final lifecycle acceptance matrix
+
+| Event | Real Preview evidence | Status |
+|---|---|---|
+| Core communication (enable → send → badge → reply → refresh → owner status workflow) | Full flow items 1-16 (see PHASE 5F REAL PREVIEW DEFECT section evidence list) | PASS |
+| `configuration_version` stale-grant invalidation | Owner changed config; the client's already-open, previously-valid tab, on refresh, got "This shared project view is not available." -- the existing grant did not silently inherit the new configuration | PASS |
+| Revoke (public denial) | Fresh valid client access existed; owner revoked `39e539e1-598f-4df8-ac2f-a20f55e65e45`; the same already-authorized client tab, on refresh, got the same generic unavailable message; no bypass | PASS |
+| Revoke (owner-history retention + UI accessibility) | See §3 above | PASS (after fix + re-verification) |
+| PIN / disable / expiry / secret rotation / browser-session loss / archived project | Verified by code+test evidence reusing the identical, unmodified Phase 3/4 authorization gate every Phase 5 route calls (§1-§8 of the original Phase 5F verification, unchanged and still valid) | PASS |
+| Project (hard) deletion | Schema-level `on delete cascade` on every `share_messages` FK confirmed; this product only ever soft-deletes in practice | PASS (by design) |
+
+## 6. Final owner-history retention matrix
+
+| Event | Owner history retained? |
+|---|---|
+| Comments disabled | Yes |
+| Link disabled | Yes |
+| Link revoked | Yes (now also UI-reachable, per §3) |
+| Link expired | Yes |
+| Secret rotated | Yes |
+| `configuration_version` changed | Yes |
+| Browser grant expired / client cookie deleted | Yes |
+| Project archived | Yes |
+| Project soft-deleted | Rows persist, unreachable via the dead link -- consistent with every other gate |
+| Project hard-deleted (schema-only; not a path this product uses) | No -- cascades away by design, the one documented exception |
+
+## 7. Phase 6 boundary — final confirmation
+
+Re-confirmed clean across every Phase 5 file (migration, repository,
+public routes, owner routes, public UI, owner UI, the new
+`history-link` route/resolver/hook added this closure). No Phase 5 path
+inserts `share_message_conversions`, sets `status='converted'`,
+creates or mutates `project_updates`, creates/updates tasks, changes
+project status/priority/deadline, mutates CRM/client data, writes
+`project_timeline_events`, sends email, or triggers AI analysis. No
+disabled "Convert" placeholder was added anywhere. Phase 6 remains a
+deliberately separate, not-yet-started future phase.
+
+## 8. Uncommitted-diff audit (this turn)
+
+`git status --short` / `git diff --stat` reviewed file by file; every
+uncommitted file classified:
+
+**A. Required Phase 5F fix:**
+`app/components/dashboard/tasks/share-link/client-communication-history-modal.tsx`,
+`app/components/dashboard/tasks/share-link/share-link-client.ts`,
+`app/components/dashboard/tasks/share-link/share-link-panel.tsx`,
+`app/components/dashboard/tasks/share-link/use-share-link-history.ts` (new),
+`lib/share/share-contracts.ts`,
+`lib/share/share-messages-repository.server.ts`,
+`app/api/share-links/history-link/route.ts` (new)
+
+**B. Required test:**
+`app/components/dashboard/tasks/share-link/client-communication-history-modal.test.tsx`,
+`app/components/dashboard/tasks/share-link/share-link-client.test.ts`,
+`app/components/dashboard/tasks/share-link/share-link-panel.test.tsx`,
+`lib/share/share-messages-repository.server.test.ts`,
+`app/api/share-links/history-link/route.test.ts` (new)
+
+**C. Required documentation:**
+`docs/TEXT2TASK_CLIENT_SHARE_LINK_PHASE_5_AUDIT_AND_PLAN_2026-08-19.md`
+
+**D. Accidental/unrelated:** none found. Every uncommitted file belongs
+to Phase 5F/5G closure.
+
+## 9. Final revoked-history architecture confirmation (re-audited this turn)
+
+- `get_share_link_management_state` is unchanged in purpose and source
+  -- still correctly excludes revoked links; no SQL/RPC/migration
+  change was made merely to support history lookup.
+- The fallback (`resolveMostRecentShareLink`) is read-only, RLS-bound
+  (relies entirely on `project_share_links`'s existing owner-scoped
+  `auth.uid() = user_id` policy, no new grant), owner-scoped,
+  project-scoped, and deterministic (identical tie-break to the two
+  existing RPCs).
+- The active/manageable link always wins:
+  `messagesLinkId = linkId ?? historicalLinkId`, never the reverse --
+  confirmed both by direct source reading and by a dedicated test
+  ("active link + historical fallback => active link wins, historical
+  fetch never even triggered").
+- The fallback fetch is enabled only when the primary management-state
+  call has resolved with no link (`state.data !== null && linkId ===
+  null`) -- never fetched merely because the panel is open.
+- No multi-link management UI was introduced -- the resolution always
+  yields exactly one deterministic id, and a project with zero share
+  links ever created still shows no entry point.
+- No revoked link can become publicly active through this path -- the
+  fallback is a plain, unauthenticated-irrelevant OWNER-side read; no
+  public route, public authorization check, or `project_share_links`
+  write was touched anywhere in Phase 5F.
+- No secret/PIN/configuration is copied from the revoked link into any
+  future link -- `resolveMostRecentShareLink` selects only `id, state`;
+  nothing else is read, carried forward, or reused.
+
+## 10. Final revoked-history UX contract (confirmed, unchanged from §3 above)
+
+- **Active/manageable link**: ordinary "Client messages" entry,
+  ordinary communication behavior, no revoked-mode indicators.
+- **No manageable link + revoked history exists**: "Client messages"
+  entry remains visible, captioned "From a previous share"; opening it
+  uses the exact historical revoked link id; a clear revoked notice is
+  shown; Reply is suppressed; owner-private status actions (Mark
+  reviewed / Resolve / Dismiss) remain fully available.
+- **No current link + no history**: no entry point rendered at all.
+
+No additional states were introduced this turn.
+
+## 11. Final public security contract (reconfirmed, architecture unchanged)
+
+Public communication (`GET`/`POST /api/share/[publicId]/messages`)
+still requires, unconditionally: the feature flag enabled, a valid
+session exchange, a valid browser-session cookie, a valid link-specific
+grant, an active/non-disabled/non-revoked/non-expired link, an
+exact-matching `configuration_version`, PIN verification where
+required, `commentsEnabled=true`, request-origin/security checks
+(GET tolerant of missing `Sec-Fetch-Site`, POST strict same-origin),
+and the `comment_submission` rate limit on POST. Revoke and
+configuration changes remain fail-closed, both verified live in this
+turn's real Preview evidence (§5 above). The historical-link owner
+lookup added in Phase 5F has zero code-path overlap with any of this --
+it is a separate, owner-authenticated, read-only endpoint that never
+touches session/grant/public authorization state.
+
+## 12. Final owner communication contract (V1, confirmed)
+
+**Client**: top-level messages only, optional display name,
+chronological public history, no threading UI, no realtime, no read
+receipts. **Owner**: chronological history (both directions), unread =
+`author_type='client' AND status='new'`, Reply to client messages while
+communication is viable (suppressed only on revoked-history), explicit
+reviewed/resolved/dismissed status actions (owner-private, never
+public), revoked history remains readable, communication stays
+structurally separate from Project Timeline throughout. No automatic
+project/task mutation exists anywhere in Phase 5.
+
+## 13. Temporary diagnostic / debug audit
+
+Every Phase 5F runtime file (`client-communication-history-modal.tsx`,
+`share-link-client.ts`, `share-link-panel.tsx`,
+`use-share-link-history.ts`, `share-contracts.ts`,
+`share-messages-repository.server.ts`,
+`app/api/share-links/history-link/route.ts`) was scanned for
+`console.log`, hardcoded fixture/project ids, `TODO`/`FIXME`/`XXX`, and
+`debugger` statements -- **none found**. No temporary browser-acceptance
+scaffolding, diagnostic-only UI, or hypothesis-as-fact comments remain
+in application code. Existing structured diagnostics retained from
+earlier phases (e.g. `logShareRouteError`'s fixed-stage-tag console
+logging) were left exactly as they already were -- not Phase 5F debug
+code, not touched.
+
+## 14. Final test / verification counts (all actually executed this turn)
+
+- Full Client Share + analytics regression sweep (`lib/share`,
+  `app/api/share`, `app/api/share-links`, every share-link dashboard
+  component, `app/share`, the Phase 5A migration test,
+  `lib/analytics`, `app/components/analytics`), run together:
+  **58 test files, 2039 tests, all passing.**
+- `tsc --noEmit`: clean.
+- `eslint` on every file touched across Phase 5F: **0 errors**; 3
+  pre-existing `no-unused-vars` warnings on intentionally-unused
+  fake-client mock parameters (same accepted convention throughout
+  this feature).
+- `git diff --check`: clean (only expected LF→CRLF line-ending
+  notices).
+- `npm run build`: succeeded; every Phase 5 route (public and owner,
+  including `/api/share-links/history-link`) registered correctly.
+
+This sweep covers, by file, every item the closure test matrix
+requested: Phase 5A migration source tests, share-messages repository
+tests (including `resolveMostRecentShareLink`), public message
+validation, public GET/POST message routes, owner GET/reply/status
+routes, the history-link route and resolver, public Messages UI, the
+owner Communication modal (including historical/revoked mode), the
+three Phase 5 hooks (`useOwnerShareMessages`, `usePublicShareMessages`,
+`useShareLinkHistory`), `ShareLinkPanel` (stale-badge regression,
+revoked-historical entry, no-history case, active-link-wins,
+loading/race cases), session/grant tests, `configuration_version`
+invalidation, PIN, revoke, expiry/disable, rate-limit, public
+projection/privacy, analytics isolation, security headers, the Phase 6
+aggregate boundary, and the full Phase 1-4 Client Share regression --
+all green in the one sweep above (no test in any of these categories
+was skipped or is failing).
+
+## 15. Production rollout prerequisites — PLAN ONLY, not executed
+
+**Known fact**: Production does not yet have
+`202608190001_client_share_message_owner_rpcs.sql` applied. Every other
+Client Share migration was already live in Production before this
+Phase 5 engagement began (the feature has been in active Production use
+since Phase 4's own closure) -- but this document cannot independently
+re-confirm that from the repository alone, and does not assume it
+without a check.
+
+**Every Client Share migration, in chronological order** (for
+reference -- all except the last are believed already Production-applied
+from prior phases, not re-verified this turn):
+1. `202608030003_client_share_owner_foundation.sql`
+2. `202608030004_client_share_session_foundation.sql`
+3. `202608030005_client_share_integrity_and_security.sql`
+4. `202608050001_client_share_owner_reads.sql`
+5. `202608060001_client_share_lifecycle_operations.sql`
+6. `202608060002_client_share_access_operations.sql`
+7. `202608060003_client_share_configuration_save.sql`
+8. `202608110001_client_share_publication_intent.sql`
+9. `202608110002_client_share_management_mapping_metadata.sql`
+10. `202608130001_client_share_rate_limit_increment.sql`
+11. **`202608190001_client_share_message_owner_rpcs.sql`** -- confirmed
+    NOT yet applied to Production. This is the ONE migration Phase 5
+    requires that Production does not yet have.
+
+**Why the release order matters**: Phase 5C's owner reply/status routes
+(`POST/PATCH /api/share-links/[id]/messages/**`) call
+`send_share_message_reply`/`set_share_message_status` directly. If the
+Phase 5 application code were deployed to Production before
+`202608190001` is applied, those two owner actions would fail (the RPC
+would not exist) -- safely, as a generic `500 INTERNAL_ERROR` (the
+existing `mapReplyRpcError`/`mapStatusRpcError` fail closed on any
+unrecognized Postgres error, never a raw crash), but visibly broken to
+any owner who tries to reply or change a message's status. Public
+message send/view (Phase 5B/5C) would work fine even in that
+misordered state, since they depend only on the pre-existing Phase 1A
+`service_role` grant, not on the new migration. The correct order
+nonetheless applies the migration first, so no owner-facing capability
+is ever partially broken, even briefly.
+
+**This document cannot establish Production's exact current migration
+state without querying Production, which this turn explicitly must
+not do.** The recommended, read-only first step of the actual future
+rollout (not executed now, not scheduled, just documented) is:
+
+> Run a read-only migration-status check against Production (e.g.
+> `supabase migration list --linked` against the Production project, or
+> an equivalent read-only query of Supabase's own migration-history
+> table) to confirm exactly which of the 11 migrations above are
+> already applied, before applying anything.
+
+**Expected high-level rollout sequence** (plan only):
+1. Final Phase 5 commit (this turn's reviewed diff, once approved).
+2. Push branch/history.
+3. Read-only Production migration-status check (above).
+4. Apply only the migration(s) the check reveals are actually missing
+   -- expected to be exactly `202608190001`, but confirm rather than
+   assume.
+5. Verify the new RPCs (`send_share_message_reply`,
+   `set_share_message_status`) exist and have the expected grants in
+   Production.
+6. Confirm required existing Client Share Production ENV values are
+   already present (no new ENV variable was introduced by Phase 5 at
+   any point).
+7. Deploy Production.
+8. If a feature flag / staged-rollout convention is already
+   established for this repository, keep Client Share communication
+   gated behind it initially, exactly as that existing convention
+   already dictates -- this document does not invent a new flag.
+9. Owner-only smoke checks on a real (non-disposable) Production
+   project: open Share panel, confirm Client messages entry/badge
+   behave correctly, confirm no error for a project with no share
+   history.
+10. Enable/release according to whatever staged-rollout plan already
+    governs this repository's other recent feature launches.
+
+## 16. Known out-of-scope item (unchanged, not touched this turn)
+
+Owner resource upload UI claims support for roughly 10 MB, but a real
+~9.5 MiB upload through the current Vercel inbound route produced
+`FUNCTION_PAYLOAD_TOO_LARGE` in earlier testing. This is unrelated to
+Client Share communication and is not a Phase 5 blocker. Recorded here
+only as a separate, later platform/product issue -- not addressed in
+Phase 5G.
+
+## 17. Disposable environment — final state (left untouched this turn)
+
+- The Phase 5A migration (`202608190001`) is applied there.
+- Real communication rows exist (client messages, an owner reply, and
+  the final mixed-status pair used to disprove the false
+  status-isolation suspicion in §4).
+- Share link `39e539e1-598f-4df8-ac2f-a20f55e65e45` is revoked and
+  intentionally left that way -- its original public URL is
+  confirmed unavailable; its owner-side history remains fully
+  accessible via the fix in §3.
+- No SQL was executed, and no fixture data was created, modified, or
+  deleted by this turn. If cleanup of the disposable fixture is ever
+  wanted, that should be its own separate, explicitly-requested step --
+  not bundled into any future rollout turn.
+
+## 18. Final working-tree state (see exact command output below)
+
+Nothing was staged, committed, or pushed this turn. `git status
+--short` / `git diff --check` at the end of this turn are reproduced
+verbatim in the final chat response, not restated here.
+
+---
+
+# PHASE 5 STATUS:
+COMPLETE / PASS
+
+# PHASE 6 READINESS:
+READY

@@ -17,6 +17,7 @@ import { ClientProjectView } from "./client-project-view";
 import { ShareLinkChannels } from "./share-link-channels";
 import { ShareLinkQuickShare, type ShareUpdateSubmission } from "./share-link-quick-share";
 import { useOwnerShareMessages } from "./use-owner-share-messages";
+import { useShareLinkHistory } from "./use-share-link-history";
 import type { ShareLinkActionKind, ShareLinkPanelState } from "./use-share-link";
 
 /*
@@ -76,7 +77,50 @@ export function ShareLinkPanel({
   const [view, setView] = useState<PanelView>("quick");
   const [messagesOpen, setMessagesOpen] = useState(false);
 
-  const linkId = state.data?.link?.id ?? null;
+  const link = state.data?.link ?? null;
+  const linkId = link?.id ?? null;
+
+  // PHASE 5F REAL PREVIEW DEFECT FIX -- get_share_link_management_state
+  // (the RPC behind state.data.link) deliberately excludes revoked links
+  // from what it calls "managed" -- correct for its own "what can the
+  // owner activate/reconfigure right now" purpose, but that previously
+  // left the owner with NO way to reopen Client Communication History
+  // once their only link was revoked (linkId above becomes null, so the
+  // old "Client messages" entry point, gated on `link`, disappeared
+  // entirely even though the link's real message history was still
+  // fully retained). This second, isolated hook resolves that fallback
+  // ONLY when there is no active/manageable link -- never replacing or
+  // duplicating the primary management-state call, never fetched when
+  // an active link already exists. See use-share-link-history.ts's own
+  // doc comment for the full rationale and resolveMostRecentShareLink's
+  // doc comment (share-messages-repository.server.ts) for why the
+  // selection is deterministic, not arbitrary.
+  // Gated on `state.data !== null` (the management-state call has
+  // actually resolved at least once) rather than `!state.isLoading` --
+  // a more DIRECT signal of "we have real data to read `link` from",
+  // and one fewer accidental dependency on a flag whose only true
+  // purpose is the panel's own top-level loading spinner, not this
+  // fallback's own trigger condition.
+  const historyEnabled = state.isOpen && state.data !== null && linkId === null;
+  const linkHistory = useShareLinkHistory(state.projectId, historyEnabled);
+  const historicalLinkId =
+    linkHistory.state.status === "loaded" ? linkHistory.state.linkId : null;
+  const historicalLinkState =
+    linkHistory.state.status === "loaded" ? linkHistory.state.state : null;
+
+  // The single link id Client Messages should operate against: the
+  // active/manageable link when one exists, otherwise the resolved
+  // historical (typically revoked) one. `isRevokedMessagesLink` gates
+  // Reply specifically (a reply on a revoked link would be accepted by
+  // the RPC -- it has no state check, only ownership -- but could never
+  // reach a client, since public access is already denied for a revoked
+  // link; see the Phase 5F doc's own "message actions after revoke"
+  // section for the full audit). Status changes remain available on a
+  // historical link -- they are purely the owner's own workflow
+  // bookkeeping and were never client-visible in the first place.
+  const messagesLinkId = linkId ?? historicalLinkId;
+  const isHistoricalMessagesLink = linkId === null && historicalLinkId !== null;
+  const isRevokedMessagesLink = historicalLinkState === "revoked";
 
   // Phase 5D unread badge -- Option A from the Phase 5D doc's own "unread
   // strategy" section: a single, isolated fetch of the SAME owner
@@ -85,7 +129,12 @@ export function ShareLinkPanel({
   // shared/cached with the communication view's own separate fetch when
   // it later opens -- see use-owner-share-messages.ts's own doc comment
   // for why two independent instances is the deliberate, simpler choice).
-  const badgeMessages = useOwnerShareMessages(linkId, state.isOpen && linkId !== null);
+  // Phase 5F: now keyed on messagesLinkId (active OR historical) so the
+  // badge also reflects a historical link's own unread count.
+  const badgeMessages = useOwnerShareMessages(
+    messagesLinkId,
+    state.isOpen && messagesLinkId !== null
+  );
   const unreadCount = badgeMessages.state.status === "loaded" ? badgeMessages.state.unreadCount : null;
 
   // A fresh open always starts back at the quick-share view. Adjusted
@@ -133,7 +182,6 @@ export function ShareLinkPanel({
   }
 
   const busy = state.actionPending !== null;
-  const link = state.data?.link ?? null;
   const projectTitle = state.project?.projectTitle || "this project";
 
   function handleRequestClose() {
@@ -167,14 +215,19 @@ export function ShareLinkPanel({
           <p style={subheadingStyle}>{projectTitle}</p>
         </div>
 
-        {!state.isLoading && !state.loadError && !state.previewOpen && !messagesOpen && link ? (
+        {!state.isLoading && !state.loadError && !state.previewOpen && !messagesOpen && messagesLinkId ? (
           <button
             type="button"
             onClick={() => setMessagesOpen(true)}
             disabled={busy}
             style={messagesEntryButtonStyle}
           >
-            <span>Client messages</span>
+            <span style={messagesEntryLabelStyle}>
+              <span>Client messages</span>
+              {isHistoricalMessagesLink ? (
+                <span style={historicalCaptionStyle}>From a previous share</span>
+              ) : null}
+            </span>
             {unreadCount !== null && unreadCount > 0 ? (
               <span style={unreadBadgeStyle}>{unreadCount}</span>
             ) : null}
@@ -199,9 +252,11 @@ export function ShareLinkPanel({
             data={state.previewData}
             onClose={onClosePreview}
           />
-        ) : messagesOpen && link ? (
+        ) : messagesOpen && messagesLinkId ? (
           <ClientCommunicationHistoryModal
-            shareLinkId={link.id}
+            shareLinkId={messagesLinkId}
+            isHistorical={isHistoricalMessagesLink}
+            canReply={!isRevokedMessagesLink}
             onClose={() => {
               setMessagesOpen(false);
               // Runtime defect fix: the badge hook and the modal's own
@@ -393,6 +448,19 @@ const messagesEntryButtonStyle: CSSProperties = {
   fontSize: dashboardTypography.size.sm,
   fontWeight: dashboardTypography.weight.medium,
   cursor: "pointer",
+};
+
+const messagesEntryLabelStyle: CSSProperties = {
+  display: "inline-flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: 2,
+};
+
+const historicalCaptionStyle: CSSProperties = {
+  fontSize: dashboardTypography.size.xs,
+  fontWeight: dashboardTypography.weight.regular,
+  color: dashboardColors.text.muted,
 };
 
 const unreadBadgeStyle: CSSProperties = {

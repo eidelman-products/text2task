@@ -15,10 +15,12 @@ import {
   getShareLinkMessagesResponseSchema,
   sendShareMessageReplyResponseSchema,
   setShareMessageStatusResponseSchema,
+  mostRecentShareLinkResponseSchema,
   type ShareLinkApiErrorCode,
   type GetShareLinkMessagesData,
   type SendShareMessageReplyData,
   type SetShareMessageStatusData,
+  type MostRecentShareLinkData,
   type ShareLinkManagementStateData,
   type CreateShareLinkDraftData,
   type ActivateShareLinkData,
@@ -310,5 +312,20 @@ export function setShareMessageStatus(
       body: JSON.stringify({ status }),
     },
     setShareMessageStatusResponseSchema
+  );
+}
+
+/**
+ * Phase 5F -- fallback resolution of the most recent share link for a
+ * project, INCLUDING a revoked one, used only when
+ * `getShareLinkManagementState` has already returned `link: null` for
+ * the same project. See `app/api/share-links/history-link/route.ts` for
+ * the full rationale (the real Preview defect this closes).
+ */
+export function getMostRecentShareLink(projectId: string): Promise<MostRecentShareLinkData> {
+  return requestShareLink(
+    `/api/share-links/history-link?projectId=${encodeURIComponent(projectId)}`,
+    undefined,
+    mostRecentShareLinkResponseSchema
   );
 }

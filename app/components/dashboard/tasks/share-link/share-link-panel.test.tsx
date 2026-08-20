@@ -362,8 +362,13 @@ describe("ShareLinkPanel - Phase 5D Client messages entry point", () => {
 
   it("64. no dashboard/project-card changes -- this entry point only ever renders inside the existing Share panel, never elsewhere", () => {
     const source = readFileSync(join(__dirname, "share-link-panel.tsx"), "utf8");
+    // Comment-stripped: Phase 5F's own doc comments legitimately quote
+    // the literal button text while explaining its behavior, which must
+    // not itself fail this check (same code/executable distinction
+    // established throughout this feature's own test suites).
+    const executable = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     // The entry point button text only appears once, inside this file.
-    expect((source.match(/Client messages/g) ?? []).length).toBe(1);
+    expect((executable.match(/Client messages/g) ?? []).length).toBe(1);
   });
 });
 
@@ -551,5 +556,300 @@ describe("ShareLinkPanel - Phase 5D RUNTIME DEFECT regression: stale unread badg
     // Wait an extra tick to prove nothing keeps firing on its own.
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(getUrls.length).toBe(4);
+  });
+});
+
+describe("ShareLinkPanel - PHASE 5F REAL PREVIEW DEFECT regression: Client messages remains reachable after revoke", () => {
+  const REVOKED_LINK_ID = "22222222-2222-4222-8222-222222222222";
+  const MESSAGE_ID = "66666666-6666-4666-8666-666666666666";
+
+  function jsonResponse(body: unknown, status = 200) {
+    return Promise.resolve(
+      new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })
+    );
+  }
+
+  function messageRow(overrides: Record<string, unknown> = {}) {
+    return {
+      id: MESSAGE_ID,
+      shareLinkId: REVOKED_LINK_ID,
+      projectId: "11111111-1111-4111-8111-111111111111",
+      authorType: "client",
+      authorDisplayName: "Jane",
+      body: "Any update on this?",
+      parentId: null,
+      isVisibleToClient: true,
+      status: "new",
+      reviewedAt: null,
+      resolvedAt: null,
+      createdAt: "2026-08-19T00:00:00Z",
+      updatedAt: "2026-08-19T00:00:00Z",
+      ...overrides,
+    };
+  }
+
+  function noManagedLinkState(overrides: Partial<ShareLinkPanelState> = {}) {
+    return baseState({
+      data: { link: null, mappedTasks: [], mappedResources: [], currentUpdate: null },
+      ...overrides,
+    });
+  }
+
+  function mockRevokedFixture(fetchMock: ReturnType<typeof vi.fn>) {
+    fetchMock.mockImplementation((url: unknown, init?: RequestInit) => {
+      const u = String(url);
+      const method = init?.method ?? "GET";
+
+      if (u.includes("/history-link")) {
+        return jsonResponse({ ok: true, data: { linkId: REVOKED_LINK_ID, state: "revoked" } });
+      }
+      if (u.endsWith(`/api/share-links/${REVOKED_LINK_ID}/messages`) && method === "GET") {
+        return jsonResponse({ ok: true, data: { messages: [messageRow()], unreadCount: 1 } });
+      }
+      // Fail loudly (rather than silently succeeding) for any call this
+      // scenario should never make -- activate/enable/draft-create/
+      // delete -- so a regression here shows up as a real test failure.
+      if (
+        u.includes("/activate") ||
+        u.includes("/enable") ||
+        (u === "/api/share-links" && method === "POST") ||
+        method === "DELETE"
+      ) {
+        return jsonResponse({ ok: false, code: "INTERNAL_ERROR", error: "unexpected call" }, 500);
+      }
+      return jsonResponse({ ok: true, data: { messages: [], unreadCount: 0 } });
+    });
+  }
+
+  it("1-9. entry point remains reachable, resolves the revoked link id, and renders its retained history", async () => {
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    mockRevokedFixture(fetchMock);
+
+    const user = userEvent.setup();
+    // 3-5: simulates the state exactly as observed in the real Preview
+    // repro -- link revoked, panel reopened, no active/manageable link
+    // (state.data.link === null).
+    renderPanel(noManagedLinkState());
+
+    // 6: Client messages STILL exists even though no active share remains.
+    const entry = await screen.findByRole("button", { name: /client messages/i });
+    expect(entry).toBeInTheDocument();
+    expect(screen.getByText("From a previous share")).toBeInTheDocument();
+
+    // 7: click entry
+    await user.click(entry);
+
+    // 8: the owner history GET used the resolved REVOKED link id, not a
+    // fabricated/guessed one.
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        `/api/share-links/${REVOKED_LINK_ID}/messages`,
+        undefined
+      );
+    });
+
+    // 9: the historical message renders.
+    expect(await screen.findByText("Any update on this?")).toBeInTheDocument();
+
+    // The owner must not infer the revoked link still works.
+    expect(screen.getByText(/This share link has been revoked/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reply" })).not.toBeInTheDocument();
+  });
+
+  it("10. public-link controls (Copy/WhatsApp/Email) do not treat the revoked link as active -- the panel still offers the fresh share-creation flow, kept separate from history", async () => {
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    mockRevokedFixture(fetchMock);
+
+    renderPanel(noManagedLinkState());
+
+    await screen.findByRole("button", { name: /client messages/i });
+
+    expect(screen.queryByRole("button", { name: /copy client link/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /whatsapp/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^share update$/i })).toBeInTheDocument();
+  });
+
+  it("REAL-WORLD TRANSITION: reproduces the exact live sequence (active-link session, then a fresh reopen that loads through isLoading:true before settling on link:null) -- not just a pre-settled render", async () => {
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    mockRevokedFixture(fetchMock);
+
+    const { rerender } = renderPanel(baseState({ data: linkData("active") }));
+    // Before revoke: an active link exists, no historical fallback is
+    // fetched or needed.
+    await screen.findByRole("button", { name: /client messages/i });
+    expect(screen.queryByText("From a previous share")).not.toBeInTheDocument();
+
+    // Panel closes (owner navigates away / dashboard refresh tears the
+    // open session down).
+    rerender(<PanelHarness state={baseState({ isOpen: false })} />);
+
+    // Owner reopens -- openPanel()'s own real sequence: isLoading:true
+    // with data reset first...
+    rerender(
+      <PanelHarness
+        state={baseState({ isLoading: true, data: null, resourcesLoading: true })}
+      />
+    );
+    // ...then, once get_share_link_management_state resolves post-revoke,
+    // isLoading:false with data.link now null.
+    rerender(<PanelHarness state={noManagedLinkState({ isLoading: false })} />);
+
+    const entry = await screen.findByRole("button", { name: /client messages/i });
+    expect(entry).toBeInTheDocument();
+    expect(screen.getByText("From a previous share")).toBeInTheDocument();
+  });
+
+  it("11. no automatic re-enable/new-link creation occurs merely from opening the panel or the history view", async () => {
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    mockRevokedFixture(fetchMock);
+
+    const user = userEvent.setup();
+    renderPanel(noManagedLinkState());
+
+    const entry = await screen.findByRole("button", { name: /client messages/i });
+    await user.click(entry);
+    await screen.findByText("Any update on this?");
+
+    for (const [url, init] of fetchMock.mock.calls as [string, RequestInit | undefined][]) {
+      expect(url).not.toContain("/activate");
+      expect(url).not.toContain("/enable");
+      expect((init?.method ?? "GET")).not.toBe("DELETE");
+    }
+  });
+
+  it("does not resolve or render more than one historical link -- no multi-link selector was introduced", async () => {
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    mockRevokedFixture(fetchMock);
+
+    const user = userEvent.setup();
+    renderPanel(noManagedLinkState());
+
+    const entryButtons = await screen.findAllByRole("button", { name: /client messages/i });
+    expect(entryButtons).toHaveLength(1);
+
+    await user.click(entryButtons[0]);
+    await screen.findByText("Any update on this?");
+
+    // Exactly one history-link resolution call was made, requesting a
+    // single row (the client wrapper's own contract), never a list.
+    const historyCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes("/history-link"));
+    expect(historyCalls.length).toBe(1);
+  });
+
+  it("does not introduce polling -- the history resolution fetches exactly once, not on an interval", async () => {
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    mockRevokedFixture(fetchMock);
+
+    renderPanel(noManagedLinkState());
+    await screen.findByRole("button", { name: /client messages/i });
+
+    const countAfterMount = fetchMock.mock.calls.filter(([url]) => String(url).includes("/history-link")).length;
+    expect(countAfterMount).toBe(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    const countAfterWait = fetchMock.mock.calls.filter(([url]) => String(url).includes("/history-link")).length;
+    expect(countAfterWait).toBe(1);
+  });
+
+  it("when an active/manageable link exists, the historical fallback is never fetched at all", async () => {
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    fetchMock.mockImplementation((url: unknown) => {
+      if (String(url).includes("/history-link")) {
+        throw new Error("history-link must not be called when an active link exists");
+      }
+      return jsonResponse({ ok: true, data: { messages: [], unreadCount: 0 } });
+    });
+
+    renderPanel(baseState({ data: linkData("active") }));
+    await screen.findByRole("button", { name: /client messages/i });
+
+    expect(screen.queryByText("From a previous share")).not.toBeInTheDocument();
+  });
+
+  it("entry point appears once the history fetch resolves, and its absence WHILE loading is not permanent", async () => {
+    let resolveHistory: (value: Response) => void = () => {};
+    const pendingHistory = new Promise<Response>((resolve) => {
+      resolveHistory = resolve;
+    });
+
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    fetchMock.mockImplementation((url: unknown) => {
+      const u = String(url);
+      if (u.includes("/history-link")) {
+        return pendingHistory;
+      }
+      return jsonResponse({ ok: true, data: { messages: [], unreadCount: 0 } });
+    });
+
+    renderPanel(noManagedLinkState());
+
+    // While the history fetch is still in flight, there is genuinely no
+    // link id to operate against yet -- correctly absent, not a bug.
+    expect(screen.queryByRole("button", { name: /client messages/i })).not.toBeInTheDocument();
+
+    resolveHistory(await jsonResponse({ ok: true, data: { linkId: REVOKED_LINK_ID, state: "revoked" } }));
+
+    // Once resolved, the entry point must appear -- its earlier absence
+    // must not be permanent/sticky.
+    expect(await screen.findByRole("button", { name: /client messages/i })).toBeInTheDocument();
+  });
+
+  it("a stale (slower) history response arriving after a fresher one does not overwrite the resolved link with stale data", async () => {
+    let resolveFirst: (value: Response) => void = () => {};
+    const firstHistoryResponse = new Promise<Response>((resolve) => {
+      resolveFirst = resolve;
+    });
+    let historyCallCount = 0;
+    const STALE_LINK_ID = "77777777-7777-4777-8777-777777777777";
+
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    fetchMock.mockImplementation((url: unknown) => {
+      const u = String(url);
+      if (u.includes("/history-link")) {
+        historyCallCount += 1;
+        if (historyCallCount === 1) return firstHistoryResponse;
+        return jsonResponse({ ok: true, data: { linkId: REVOKED_LINK_ID, state: "revoked" } });
+      }
+      return jsonResponse({ ok: true, data: { messages: [], unreadCount: 0 } });
+    });
+
+    const { rerender } = renderPanel(noManagedLinkState());
+    // Force a second, fresher fetch by toggling the projectId (a
+    // realistic re-trigger), while the first (stale) call is still
+    // in flight.
+    rerender(<PanelHarness state={noManagedLinkState({ projectId: "88888888-8888-4888-8888-888888888888" })} />);
+
+    await screen.findByRole("button", { name: /client messages/i });
+
+    // Now let the STALE first response resolve, with a DIFFERENT linkId
+    // -- it must be discarded, not overwrite the fresher, already-
+    // rendered result.
+    resolveFirst(await jsonResponse({ ok: true, data: { linkId: STALE_LINK_ID, state: "revoked" } }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /client messages/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(`/api/share-links/${REVOKED_LINK_ID}/messages`, undefined);
+    });
+    expect(fetchMock).not.toHaveBeenCalledWith(`/api/share-links/${STALE_LINK_ID}/messages`, undefined);
+  });
+
+  it("no Project Timeline integration and no Phase 6 action was introduced by this fix (source-level check)", () => {
+    const files = [
+      "share-link-panel.tsx",
+      "use-share-link-history.ts",
+      "client-communication-history-modal.tsx",
+    ];
+    for (const file of files) {
+      const source = readFileSync(join(__dirname, file), "utf8");
+      const executable = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      expect(executable).not.toMatch(/project-update-history/i);
+      expect(executable).not.toContain("project_timeline_events");
+      expect(executable).not.toContain("share_message_conversions");
+      expect(executable.match(/\bconvert\b/gi) ?? []).toHaveLength(0);
+    }
   });
 });

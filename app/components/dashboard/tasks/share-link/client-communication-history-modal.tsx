@@ -45,11 +45,27 @@ const STATUS_LABELS: Record<OwnerShareMessageStatus, string> = {
 export type ClientCommunicationHistoryModalProps = {
   shareLinkId: string;
   onClose: () => void;
+  /** PHASE 5F -- true when `shareLinkId` is a historical (no longer
+   * active/manageable) link resolved as a fallback, not the project's
+   * current share link. Shows a subtle note so the owner cannot infer
+   * the underlying link still works -- see share-link-panel.tsx's own
+   * `isHistoricalMessagesLink` for how this is determined. */
+  isHistorical?: boolean;
+  /** PHASE 5F -- false suppresses the Reply affordance entirely.
+   * `send_share_message_reply` has no link-state check of its own (only
+   * ownership), so a reply on a revoked link would be silently accepted
+   * by the RPC yet could never reach the client (public access is
+   * already denied for a revoked link) -- an owner action that LOOKS
+   * successful but is actually meaningless. Defaults to `true`
+   * (unchanged behavior) for every caller that does not pass it. */
+  canReply?: boolean;
 };
 
 export function ClientCommunicationHistoryModal({
   shareLinkId,
   onClose,
+  isHistorical = false,
+  canReply = true,
 }: ClientCommunicationHistoryModalProps) {
   const { state, mutation, refetch, reply, updateStatus } = useOwnerShareMessages(
     shareLinkId,
@@ -64,7 +80,7 @@ export function ClientCommunicationHistoryModal({
   const unreadCount = state.status === "loaded" ? state.unreadCount : null;
 
   function startReply(messageId: string) {
-    if (busy) return;
+    if (busy || !canReply) return;
     setReplyingToId(messageId);
     setReplyBody("");
     setReplyError(null);
@@ -79,7 +95,7 @@ export function ClientCommunicationHistoryModal({
 
   async function handleReplySubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || !replyingToId) return;
+    if (busy || !replyingToId || !canReply) return;
 
     if (replyBody.trim().length === 0) {
       setReplyError("Enter a reply.");
@@ -112,6 +128,13 @@ export function ClientCommunicationHistoryModal({
         </DashboardButton>
       </header>
 
+      {isHistorical ? (
+        <p style={historicalNoticeStyle}>
+          This share link has been revoked. Clients can no longer send or receive messages
+          here, but the history below is preserved.
+        </p>
+      ) : null}
+
       <div style={toolbarStyle}>
         <span style={countTextStyle}>
           {state.status === "loading"
@@ -143,6 +166,7 @@ export function ClientCommunicationHistoryModal({
               <MessageCard
                 message={message}
                 busy={busy}
+                canReply={canReply}
                 isReplying={replyingToId === message.id}
                 replyBody={replyBody}
                 replyError={replyError}
@@ -169,6 +193,7 @@ export function ClientCommunicationHistoryModal({
 function MessageCard({
   message,
   busy,
+  canReply,
   isReplying,
   replyBody,
   replyError,
@@ -180,6 +205,7 @@ function MessageCard({
 }: {
   message: OwnerShareMessage;
   busy: boolean;
+  canReply: boolean;
   isReplying: boolean;
   replyBody: string;
   replyError: string | null;
@@ -233,7 +259,7 @@ function MessageCard({
             >
               Dismiss
             </button>
-            {!isReplying ? (
+            {!isReplying && canReply ? (
               <button type="button" onClick={onStartReply} disabled={busy} style={replyLinkStyle}>
                 Reply
               </button>
@@ -242,7 +268,7 @@ function MessageCard({
         </div>
       ) : null}
 
-      {isClient && isReplying ? (
+      {isClient && isReplying && canReply ? (
         <form onSubmit={onSubmitReply} style={replyFormStyle}>
           <label htmlFor={`reply-${message.id}`} style={replyLabelStyle}>
             Reply
@@ -323,6 +349,15 @@ const subtitleStyle: CSSProperties = {
   margin: 0,
   fontSize: dashboardTypography.size.sm,
   color: dashboardColors.text.muted,
+};
+
+const historicalNoticeStyle: CSSProperties = {
+  margin: 0,
+  padding: `${dashboardSpacing[2]}px ${dashboardSpacing[3]}px`,
+  borderRadius: dashboardRadii.md,
+  background: dashboardColors.status.amberSoft,
+  color: dashboardColors.status.amber,
+  fontSize: dashboardTypography.size.sm,
 };
 
 const toolbarStyle: CSSProperties = {

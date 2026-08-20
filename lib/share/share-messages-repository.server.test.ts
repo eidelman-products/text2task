@@ -8,6 +8,7 @@ const {
   setShareMessageStatus,
   getOwnerShareLinkMessages,
   verifyOwnedShareMessageBelongsToLink,
+  resolveMostRecentShareLink,
   SHARE_MESSAGE_PHASE5_STATUSES,
 } = await import("./share-messages-repository.server");
 
@@ -312,6 +313,7 @@ function buildTableQueueClient() {
     const builder: Record<string, unknown> = {
       eq: () => builder,
       order: () => builder,
+      limit: () => builder,
       maybeSingle: () => Promise.resolve(nextFor(table)),
       then: (
         resolve: (value: unknown) => unknown,
@@ -460,6 +462,107 @@ describe("verifyOwnedShareMessageBelongsToLink - Phase 5C cross-link mutation gu
     expect(eqCalls).toContainEqual(["id", VALID_MESSAGE_ID]);
     expect(eqCalls).toContainEqual(["share_link_id", VALID_LINK_ID]);
     expect(eqCalls).toContainEqual(["user_id", VALID_USER_ID]);
+  });
+});
+
+describe("resolveMostRecentShareLink - PHASE 5F revoked-link history fallback", () => {
+  it("returns the single most recent row (linkId + state)", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("project_share_links", { data: { id: VALID_LINK_ID, state: "revoked" }, error: null });
+
+    const result = await resolveMostRecentShareLink(client, {
+      projectId: VALID_PROJECT_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: true, data: { linkId: VALID_LINK_ID, state: "revoked" } });
+  });
+
+  it("returns null (not an error) when the project has no share link at all", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("project_share_links", { data: null, error: null });
+
+    const result = await resolveMostRecentShareLink(client, {
+      projectId: VALID_PROJECT_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: true, data: null });
+  });
+
+  it("fails closed (UNEXPECTED) on a query error", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("project_share_links", { data: null, error: { message: "boom" } });
+
+    const result = await resolveMostRecentShareLink(client, {
+      projectId: VALID_PROJECT_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+
+  it("fails closed (UNEXPECTED) on a malformed row shape", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("project_share_links", { data: { id: 123, state: null }, error: null });
+
+    const result = await resolveMostRecentShareLink(client, {
+      projectId: VALID_PROJECT_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+
+  it("scopes strictly by project_id AND user_id, orders deterministically, and limits to exactly one row", async () => {
+    const client = buildTableQueueClient();
+    const eqCalls: unknown[][] = [];
+    const orderCalls: unknown[][] = [];
+    let limitCallCount = 0;
+    const scopedBuilder: Record<string, unknown> = {
+      eq: (...args: unknown[]) => {
+        eqCalls.push(args);
+        return scopedBuilder;
+      },
+      order: (...args: unknown[]) => {
+        orderCalls.push(args);
+        return scopedBuilder;
+      },
+      limit: (count: number) => {
+        limitCallCount += 1;
+        expect(count).toBe(1);
+        return scopedBuilder;
+      },
+      maybeSingle: () => Promise.resolve({ data: { id: VALID_LINK_ID, state: "revoked" }, error: null }),
+    };
+    client.from = vi.fn(() => ({ select: () => scopedBuilder }));
+
+    await resolveMostRecentShareLink(client, { projectId: VALID_PROJECT_ID, userId: VALID_USER_ID });
+
+    expect(eqCalls).toContainEqual(["project_id", VALID_PROJECT_ID]);
+    expect(eqCalls).toContainEqual(["user_id", VALID_USER_ID]);
+    // The exact same deterministic tie-break order
+    // get_share_link_management_state/list_share_link_summaries already
+    // establish: most recently updated, then most recently created,
+    // then highest id -- never an arbitrary pick among candidates.
+    expect(orderCalls).toEqual([
+      ["updated_at", { ascending: false }],
+      ["created_at", { ascending: false }],
+      ["id", { ascending: false }],
+    ]);
+    expect(limitCallCount).toBe(1);
+  });
+
+  it("applies no state filter of its own -- this function is documented as a fallback-only helper, never a substitute for the RPC's own selection", async () => {
+    const source = await import("node:fs").then((fs) =>
+      fs.readFileSync(new URL("./share-messages-repository.server.ts", import.meta.url), "utf8")
+    );
+    const fnMatch = source.match(
+      /export async function resolveMostRecentShareLink[\s\S]*?\n}/
+    );
+    expect(fnMatch).not.toBeNull();
+    expect(fnMatch?.[0]).not.toContain("'revoked'");
+    expect(fnMatch?.[0]).not.toMatch(/state["'`]?\s*,\s*["'`]?(active|draft|disabled|expired)/);
   });
 });
 

@@ -79,8 +79,16 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function renderModal(onClose = vi.fn()) {
-  return { onClose, ...render(<ClientCommunicationHistoryModal shareLinkId={LINK_ID} onClose={onClose} />) };
+function renderModal(
+  onClose = vi.fn(),
+  overrides: Partial<{ isHistorical: boolean; canReply: boolean }> = {}
+) {
+  return {
+    onClose,
+    ...render(
+      <ClientCommunicationHistoryModal shareLinkId={LINK_ID} onClose={onClose} {...overrides} />
+    ),
+  };
 }
 
 describe("ClientCommunicationHistoryModal - open/close", () => {
@@ -474,5 +482,62 @@ describe("ClientCommunicationHistoryModal - privacy / boundary", () => {
     expect(source).not.toMatch(/turn into task/i);
     expect(source).not.toMatch(/apply update/i);
     expect(source.match(/\bconvert\b/gi) ?? []).toHaveLength(0);
+  });
+});
+
+describe("ClientCommunicationHistoryModal - PHASE 5F historical/revoked-link mode", () => {
+  it("default (no props) behaves exactly as before -- no historical notice, Reply available", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });
+    renderModal();
+    await screen.findByText("Any update on this?");
+
+    expect(screen.queryByText(/This share link has been revoked/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reply" })).toBeInTheDocument();
+  });
+
+  it("isHistorical=true shows a clear notice that the client can no longer send/receive here", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });
+    renderModal(vi.fn(), { isHistorical: true });
+    await screen.findByText("Any update on this?");
+
+    expect(screen.getByText(/This share link has been revoked/i)).toBeInTheDocument();
+  });
+
+  it("canReply=false hides the Reply trigger entirely, even though history still renders", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });
+    renderModal(vi.fn(), { canReply: false, isHistorical: true });
+    await screen.findByText("Any update on this?");
+
+    expect(screen.queryByRole("button", { name: "Reply" })).not.toBeInTheDocument();
+  });
+
+  it("canReply=false still allows explicit status actions (Mark reviewed/Resolve/Dismiss) -- only Reply is suppressed", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });
+    renderModal(vi.fn(), { canReply: false });
+    await screen.findByText("Any update on this?");
+
+    expect(screen.getByRole("button", { name: "Mark reviewed" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resolve" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
+  });
+
+  it("canReply=false never calls sendShareMessageReply even if somehow invoked programmatically (defensive no-op)", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });
+    renderModal(vi.fn(), { canReply: false });
+    await screen.findByText("Any update on this?");
+
+    // No Reply control exists to click at all -- proves there is no
+    // path left in the DOM that could trigger a reply.
+    expect(screen.queryByLabelText("Reply")).not.toBeInTheDocument();
+    expect(sendShareMessageReplyMock).not.toHaveBeenCalled();
+  });
+
+  it("owner GET still fires normally for a historical/revoked link -- read access is unaffected by canReply/isHistorical", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });
+    renderModal(vi.fn(), { isHistorical: true, canReply: false });
+
+    await waitFor(() => {
+      expect(getShareLinkMessagesMock).toHaveBeenCalledWith(LINK_ID);
+    });
   });
 });

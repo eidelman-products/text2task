@@ -150,6 +150,7 @@ type ShareMessagesQueryBuilder = {
   select: (columns: string, options?: { count?: "exact"; head?: boolean }) => ShareMessagesQueryBuilder;
   eq: (column: string, value: unknown) => ShareMessagesQueryBuilder;
   order: (column: string, options?: { ascending?: boolean }) => ShareMessagesQueryBuilder;
+  limit: (count: number) => ShareMessagesQueryBuilder;
   maybeSingle: () => Promise<ShareMessagesSingleQueryResolution>;
 } & PromiseLike<ShareMessagesQueryResolution>;
 
@@ -402,6 +403,73 @@ export async function verifyOwnedShareMessageBelongsToLink<Client>(
   }
 
   return { ok: true, data: { id: (data as { id: string }).id } };
+}
+
+export type MostRecentShareLink = Readonly<{
+  linkId: string;
+  state: string;
+}>;
+
+/**
+ * PHASE 5F REAL PREVIEW DEFECT FIX -- resolves the single most recent
+ * `project_share_links` row for a project, with NO state filter at all
+ * (unlike `get_share_link_management_state`/`list_share_link_summaries`,
+ * both of which deliberately exclude `state = 'revoked'` -- correct for
+ * their own purpose of picking a link to ACTIVATE/RECONFIGURE, but wrong
+ * for this one: after a revoke, the owner's Client Communication History
+ * must remain reachable even though there is no longer any "manageable"
+ * link).
+ *
+ * This function is deliberately a FALLBACK ONLY -- callers must invoke
+ * it only after `get_share_link_management_state` has already returned
+ * `link: null` for the same project. At that point the only rows this
+ * query can possibly find are `state = 'revoked'` (since every other
+ * state already satisfies that RPC's own `state <> 'revoked'` filter and
+ * would have been returned by it). This function does not re-implement
+ * or duplicate that RPC's own selection logic; it reuses the identical
+ * deterministic tie-break order both `get_share_link_management_state`
+ * and `list_share_link_summaries` already establish (most recently
+ * updated, then most recently created, then highest id), so the choice
+ * among multiple historical links is never arbitrary.
+ *
+ * A direct RLS-bound read (not an RPC) -- `project_share_links`'s own
+ * "Users can view own project share links" policy
+ * (`auth.uid() = user_id`, 202608030003) has no state restriction at
+ * all, so this needs no new grant, policy, or migration. Bounded to
+ * exactly `id, state` -- never a broader column select.
+ */
+export async function resolveMostRecentShareLink<Client>(
+  supabase: Client,
+  input: { projectId: string; userId: string }
+): Promise<ShareMessagesRepositoryResult<MostRecentShareLink | null>> {
+  const client = supabase as ShareMessagesSupabaseLikeClient;
+  const canonicalProjectId = canonicalizeUuid(input.projectId);
+  const canonicalUserId = canonicalizeUuid(input.userId);
+
+  const { data, error } = await client
+    .from("project_share_links")
+    .select("id, state")
+    .eq("project_id", canonicalProjectId)
+    .eq("user_id", canonicalUserId)
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+  if (!data) {
+    return { ok: true, data: null };
+  }
+
+  const row = data as { id?: unknown; state?: unknown };
+  if (typeof row.id !== "string" || typeof row.state !== "string") {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  return { ok: true, data: { linkId: row.id, state: row.state } };
 }
 
 // ---------------------------------------------------------------------

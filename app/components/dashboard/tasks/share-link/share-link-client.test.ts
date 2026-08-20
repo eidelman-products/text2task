@@ -7,6 +7,7 @@ import {
   clearSharePin,
   createShareLinkDraft,
   disableShareLink,
+  getMostRecentShareLink,
   getShareLinkManagementState,
   getShareLinkMessages,
   reenableShareLink,
@@ -502,5 +503,44 @@ describe("setShareMessageStatus", () => {
     await expect(
       setShareMessageStatus(VALID_UUID, VALID_MESSAGE_ID, "reviewed")
     ).rejects.toMatchObject({ code: "SHARE_MESSAGE_STATUS_INVALID" });
+  });
+});
+
+describe("getMostRecentShareLink - PHASE 5F revoked-link history fallback", () => {
+  it("GETs the history-link route and returns linkId + state", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockReturnValue(jsonResponse({ ok: true, data: { linkId: VALID_UUID, state: "revoked" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const data = await getMostRecentShareLink(VALID_UUID);
+
+    expect(data).toEqual({ linkId: VALID_UUID, state: "revoked" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/share-links/history-link?projectId=${VALID_UUID}`,
+      undefined
+    );
+  });
+
+  it("returns {linkId:null, state:null} when there is no historical link", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockReturnValue(jsonResponse({ ok: true, data: { linkId: null, state: null } }))
+    );
+
+    const data = await getMostRecentShareLink(VALID_UUID);
+
+    expect(data).toEqual({ linkId: null, state: null });
+  });
+
+  it("throws ShareLinkClientError on failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockReturnValue(jsonResponse({ ok: false, code: "UNAUTHENTICATED", error: "x" }, 401))
+    );
+
+    await expect(getMostRecentShareLink(VALID_UUID)).rejects.toMatchObject({
+      code: "UNAUTHENTICATED",
+    });
   });
 });
