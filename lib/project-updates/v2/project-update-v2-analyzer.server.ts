@@ -8,7 +8,6 @@ import type {
   ProjectTimelineEvent,
   ProjectUpdate,
   ProjectUpdateItem,
-  ProjectUpdateSourceType,
 } from "@/lib/project-updates/project-update-types";
 import { extractProjectUpdateFacts } from "@/lib/project-updates/v2/project-update-facts.server";
 import type {
@@ -103,7 +102,7 @@ export async function analyzeProjectUpdateV2(
     projectId: contextResult.context.project.id,
     clientId: contextResult.context.project.client_id,
     rawInput: factsResult.normalizedRawInput,
-    sourceType: sourceType as ProjectUpdateSourceType,
+    sourceType,
     status: "analyzed",
     aiSummary: {
       ...auditSummary,

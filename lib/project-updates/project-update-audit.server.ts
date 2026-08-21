@@ -28,7 +28,15 @@ type CreateProjectUpdateInput = {
   projectId: string;
   clientId?: string | null;
   rawInput: string;
-  sourceType?: ProjectUpdateSourceType;
+  /**
+   * Phase 6A: deliberately excludes 'client_share'. This insert has no
+   * source_share_message_id parameter or column wiring yet, so accepting
+   * 'client_share' here would let a type-valid call construct a row that
+   * violates project_updates_source_provenance_coupling_check at the
+   * database. Phase 6B widens this together with the paired id parameter
+   * and insert-time wiring -- see the Phase 6 Accepted Plan, correction G.
+   */
+  sourceType?: Exclude<ProjectUpdateSourceType, "client_share">;
   aiSummary?: JsonRecord | null;
   status?: ProjectUpdateStatus;
 };

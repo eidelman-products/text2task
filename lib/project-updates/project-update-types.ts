@@ -1,4 +1,18 @@
-export type ProjectUpdateSourceType = "text" | "image" | "email" | "manual";
+/**
+ * Phase 6A: 'client_share' is a passive, display-oriented value only --
+ * it describes a value a public.project_updates row can already hold
+ * (source_share_message_id is not null), never an input this app can
+ * yet construct. The analyzer's own actionable input type,
+ * ProjectUpdateV2SourceType ("text" | "image"), is deliberately not
+ * widened here -- see project-update-facts.types.ts and the Phase 6
+ * Accepted Plan (correction G).
+ */
+export type ProjectUpdateSourceType =
+  | "text"
+  | "image"
+  | "email"
+  | "manual"
+  | "client_share";
 
 export type ProjectUpdateStatus =
   | "draft"

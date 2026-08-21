@@ -1146,7 +1146,10 @@ export type AnalyzeProjectUpdateResponse =
 export type AnalyzeProjectUpdateServiceInput = {
   projectId: string;
   rawInput: string;
-  sourceType?: ProjectUpdateSourceType;
+  // Phase 6A: excludes 'client_share' -- this legacy V1 analyzer path has
+  // no source_share_message_id wiring, matching createProjectUpdateAuditRecord's
+  // own CreateProjectUpdateInput narrowing in project-update-audit.server.ts.
+  sourceType?: Exclude<ProjectUpdateSourceType, "client_share">;
 };
 
 export type AnalyzeProjectUpdateServiceResult = {
@@ -1533,7 +1536,7 @@ export async function analyzeProjectUpdate(
     projectId: contextResult.context.project.id,
     clientId: contextResult.context.project.client_id,
     rawInput,
-    sourceType: sourceType as ProjectUpdateSourceType,
+    sourceType,
     status: "analyzed",
     aiSummary: {
       ...aiParsed.summary,
