@@ -2,7 +2,7 @@
 ## Atomic Apply + Conversion Closure — Implementation Report
 ## 2026-08-23
 
-**Status: `RUNTIME_VERIFIED_READY_FOR_BUILD`.** Disposable-project runtime verification is now complete and passing: `PHASE_6C_CLOSURE_RUNTIME_PASS` (79/79, 0 failed — main closure suite, attempt #6) and `PHASE_6C_CAPABILITY_COMMIT_SCOPE_PASS` (real-COMMIT capability test) are both recorded — see §27. This is NOT `PHASE_6C_COMPLETE` — that status still requires the user's own full production build to pass, a final `git diff`/`git status` review, and a commit. None of those three have happened yet.
+**Status: `PHASE_6C_COMPLETE`** (see §28). Disposable-project runtime verification passed (`PHASE_6C_CLOSURE_RUNTIME_PASS`, 79/79, 0 failed — main closure suite, attempt #6; `PHASE_6C_CAPABILITY_COMMIT_SCOPE_PASS` — real-COMMIT capability test; §27), targeted regression (51 files / 1820 tests) and the full production build both passed, and the work is committed at `0958167`. Production itself remains untouched — no push, deploy, or Production SQL has been authorized or performed.
 
 **Starting checkpoint**: `main @ 0b10e61` ("Complete Client Share Phase 6B message analysis flow"). The working tree already carried one uncommitted, pre-existing file before this implementation turn began: `docs/TEXT2TASK_CLIENT_SHARE_LINK_PHASE_6C_AUDIT_AND_PLAN_2026-08-23.md` (the accepted plan, itself already corrected twice — once for a standalone-helper security blocker, once for source-provenance accuracy in its own drift-protection strategy — before this implementation turn was authorized).
 
@@ -435,3 +435,23 @@ status                      = PHASE_6C_CAPABILITY_COMMIT_SCOPE_PASS
 **Explicit confirmations**: no application code was modified. No Phase 6C migration was modified (hash-verified unchanged). No generator was modified. No Phase 6A/6B migration was modified. No grant, policy, or RLS rule was broadened. No trigger was disabled or bypassed. No SQL was run by Claude this turn — every result recorded above was run by the user and reported back. No full production build was run. No `git add`/commit/push/deploy occurred. Phase 6D has not started.
 
 **Status: `RUNTIME_VERIFIED_READY_FOR_BUILD`.** Not `PHASE_6C_COMPLETE` — that still requires the user's own full production build to pass, a final `git diff`/`git status` review, and a commit.
+
+---
+
+## 28. Full production build, targeted regression, and commit — Phase 6C now complete
+
+Subsequent to §27, the user performed the three remaining outstanding items entirely on their own (none of them run by Claude, consistent with every prior turn's own restrictions):
+
+- **Targeted regression**: 51 files / 1820 tests, reported PASS.
+- **TypeScript** (`npx tsc --noEmit` or equivalent): reported PASS.
+- **Full production build**: Next.js 16.1.6 / Turbopack, reported "Compiled successfully," TypeScript PASS, static generation 90/90, reported PASS overall.
+- **Final `git diff --check`**: reported clean.
+- **Commit**: Phase 6C committed at `0958167` ("Complete Client Share Phase 6C atomic conversion closure"), on top of `0b10e61` (Phase 6B). Working tree reported clean immediately after the commit.
+
+These results were reported by the user, not independently re-run by Claude this session — consistent with this whole engagement's discipline that the user alone performs the full build, staging, and commits. A later session (the Phase 6D audit turn) independently confirmed via `git log`/`git status`/`git rev-parse HEAD` that `HEAD` is genuinely `0958167` and the working tree is clean, corroborating the commit claim structurally, though the build/regression/TypeScript results themselves rely on the user's own report (they are not independently re-executed evidence).
+
+**All three items §20/§27 identified as outstanding for `PHASE_6C_COMPLETE` are now satisfied**: full production build PASS, final `git diff`/`git status` review clean, and the work is committed.
+
+**Status: `PHASE_6C_COMPLETE`.**
+
+Production is still untouched by the Phase 6C rollout — no push, deploy, or Production SQL has been authorized or performed. See `docs/TEXT2TASK_CLIENT_SHARE_LINK_PHASE_6D_AUDIT_AND_PLAN_2026-08-24.md` for the subsequent Phase 6D audit (mapping/audit only, no implementation) and the current recommendation on whether any further Phase 6D implementation slice is required before a Production rollout decision.
