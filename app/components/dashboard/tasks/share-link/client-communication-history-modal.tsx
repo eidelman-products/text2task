@@ -267,6 +267,16 @@ function MessageCard({
   // eligibility for retained history -- see this component's own
   // onAnalyzeMessage prop doc comment.
   const canAnalyzeAsClientUpdate = isClient && message.status !== "converted";
+  // PHASE 6C -- once a message is converted, its owner review lifecycle
+  // (Mark reviewed/Resolve/Dismiss) is terminal: set_share_message_status
+  // itself now rejects every one of these with SHARE_MESSAGE_STATUS_TERMINAL,
+  // so hiding them here is UX convenience, not the enforcement point.
+  // Locked product decision (Phase 6 Accepted Plan / Phase 6C plan section
+  // 11): Reply is deliberately NOT gated on converted -- "converted" is
+  // terminal for the processing/status lifecycle only, not a statement
+  // that communication with the client must stop.
+  const isConverted = message.status === "converted";
+  const canChangeLifecycleStatus = isClient && !isConverted;
 
   return (
     <article style={{ ...cardStyle, ...(isClient ? clientCardAccentStyle : ownerCardAccentStyle) }}>
@@ -285,30 +295,34 @@ function MessageCard({
         <div style={cardFooterStyle}>
           <span style={statusBadgeStyle}>{STATUS_LABELS[message.status]}</span>
           <div style={actionsRowStyle}>
-            <button
-              type="button"
-              onClick={() => onStatusChange("reviewed")}
-              disabled={busy}
-              style={actionButtonStyle}
-            >
-              Mark reviewed
-            </button>
-            <button
-              type="button"
-              onClick={() => onStatusChange("resolved")}
-              disabled={busy}
-              style={actionButtonStyle}
-            >
-              Resolve
-            </button>
-            <button
-              type="button"
-              onClick={() => onStatusChange("dismissed")}
-              disabled={busy}
-              style={actionButtonStyle}
-            >
-              Dismiss
-            </button>
+            {canChangeLifecycleStatus ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onStatusChange("reviewed")}
+                  disabled={busy}
+                  style={actionButtonStyle}
+                >
+                  Mark reviewed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onStatusChange("resolved")}
+                  disabled={busy}
+                  style={actionButtonStyle}
+                >
+                  Resolve
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onStatusChange("dismissed")}
+                  disabled={busy}
+                  style={actionButtonStyle}
+                >
+                  Dismiss
+                </button>
+              </>
+            ) : null}
             {!isReplying && canReply ? (
               <button type="button" onClick={onStartReply} disabled={busy} style={replyLinkStyle}>
                 Reply

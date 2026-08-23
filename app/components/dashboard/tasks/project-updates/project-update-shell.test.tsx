@@ -9,13 +9,12 @@ import type {
 } from "./project-update-types";
 
 /*
-  Phase 6B correction (blocker fix) -- proves the smallest additive,
-  source-aware canApply/read-only behavior in project-update-shell.tsx:
-  a client_share analysis result must never expose Apply ("Save N
-  changes") in this SAME existing review UI, while a normal text/image
-  result is completely unaffected. This is the UI half of the Apply
-  boundary; app/api/project-updates/apply/route.ts's own server-side
-  guard is the actual authority (see its own test file).
+  Phase 6C correction (Apply re-enable) -- the Phase 6B temporary
+  source-aware canApply exclusion (client_share could never show "Save N
+  changes") has been removed now that Phase 6C's atomic conversion
+  closure exists. client_share now behaves identically to text/image in
+  this SAME existing review UI -- no second review UI, no remaining
+  source-type special-casing in canApply at all.
 */
 
 function buildAnalysisResult(
@@ -105,29 +104,45 @@ function renderModal(sourceType: "text" | "image" | "client_share") {
   );
 }
 
-describe("ProjectUpdateModalV2 - Phase 6B Apply boundary (client_share cannot Apply)", () => {
-  it("a client_share result with a selected applyable item shows Close, never Save N changes", () => {
+describe("ProjectUpdateModalV2 - Phase 6C Apply re-enable (client_share can Apply, inverse of the retired Phase 6B guard)", () => {
+  it("a client_share result with a selected applyable item now DOES show Save N changes (inverse of the retired Phase 6B guard)", () => {
     renderModal("client_share");
 
-    expect(screen.queryByText(/^Save \d+ changes?$/)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Save 1 change/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
   });
 
-  it("a text result with the identical selected item DOES show Save N changes (unaffected)", () => {
+  it("a text result with the identical selected item still shows Save N changes (unaffected, direct regression)", () => {
     renderModal("text");
 
     expect(screen.getByRole("button", { name: /^Save 1 change/ })).toBeInTheDocument();
   });
 
-  it("an image result with the identical selected item DOES show Save N changes (unaffected)", () => {
+  it("an image result with the identical selected item still shows Save N changes (unaffected, direct regression)", () => {
     renderModal("image");
 
     expect(screen.getByRole("button", { name: /^Save 1 change/ })).toBeInTheDocument();
   });
 
-  it("the review card still renders (suggested items visible) for client_share -- review remains visible, only Apply is unavailable", () => {
-    renderModal("client_share");
+  it("the review card renders identically (suggested items visible) for client_share, text, and image alike", () => {
+    for (const sourceType of ["client_share", "text", "image"] as const) {
+      const { unmount } = renderModal(sourceType);
+      expect(screen.getByText("Add a footer to the homepage")).toBeInTheDocument();
+      unmount();
+    }
+  });
 
-    expect(screen.getByText("Add a footer to the homepage")).toBeInTheDocument();
+  it("no second review UI/modal/state machine exists -- the exact same ProjectUpdateModalV2 component renders client_share and text/image alike", () => {
+    const { unmount: unmountClientShare } = renderModal("client_share");
+    const clientShareDialog = screen.getByRole("dialog");
+    unmountClientShare();
+
+    const { unmount: unmountText } = renderModal("text");
+    const textDialog = screen.getByRole("dialog");
+    unmountText();
+
+    expect(clientShareDialog.getAttribute("aria-label")).toBe(
+      textDialog.getAttribute("aria-label")
+    );
   });
 });

@@ -223,6 +223,58 @@ describe("ClientCommunicationHistoryModal - status display", () => {
   });
 });
 
+describe("ClientCommunicationHistoryModal - Phase 6C converted terminality (lifecycle actions hidden, Reply preserved)", () => {
+  it("a converted message hides Analyze as client update", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({
+      messages: [clientMessage({ status: "converted" })],
+      unreadCount: 0,
+    });
+    renderModal();
+    await screen.findByText("Any update on this?");
+
+    expect(
+      screen.queryByRole("button", { name: /Analyze as client update/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("a converted message hides Mark reviewed, Resolve, and Dismiss", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({
+      messages: [clientMessage({ status: "converted" })],
+      unreadCount: 0,
+    });
+    renderModal();
+    await screen.findByText("Any update on this?");
+
+    expect(screen.queryByRole("button", { name: "Mark reviewed" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Resolve" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Dismiss" })).not.toBeInTheDocument();
+  });
+
+  it("a converted message still exposes Reply when the normal canReply conditions are true -- the locked product decision (converted does not stop communication)", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({
+      messages: [clientMessage({ status: "converted" })],
+      unreadCount: 0,
+    });
+    renderModal(vi.fn(), { canReply: true });
+    await screen.findByText("Any update on this?");
+
+    expect(screen.getByRole("button", { name: "Reply" })).toBeInTheDocument();
+  });
+
+  it("a non-converted message still shows Mark reviewed/Resolve/Dismiss (direct regression -- only converted hides them)", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({
+      messages: [clientMessage({ status: "new" })],
+      unreadCount: 1,
+    });
+    renderModal();
+    await screen.findByText("Any update on this?");
+
+    expect(screen.getByRole("button", { name: "Mark reviewed" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resolve" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
+  });
+});
+
 describe("ClientCommunicationHistoryModal - explicit status actions", () => {
   it("48. Mark reviewed calls PATCH with status=reviewed", async () => {
     getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });

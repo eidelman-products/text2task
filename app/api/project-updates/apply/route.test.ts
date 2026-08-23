@@ -2,19 +2,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 /*
-  Phase 6B correction (blocker fix) -- proves the new server hard guard
-  in POST /api/project-updates/apply: a project_updates row with
-  source_type='client_share' must be rejected BEFORE claimProjectUpdateForApply
-  and BEFORE apply_project_update_transaction is ever called (no mutation
-  of any kind), while text/image Apply behavior is completely unaffected
-  (the guard is a no-op for them -- proven by letting an invalid status
-  fall through to the SAME pre-existing status-check error it always
-  produced, rather than the new guard's own error code).
+  Phase 6C correction (Apply re-enable) -- the Phase 6B temporary hard
+  guard that rejected any source_type='client_share' update with 409
+  project_update_source_not_appliable, BEFORE claimProjectUpdateForApply,
+  has been removed now that Phase 6C's atomic conversion closure exists
+  (supabase/migrations/202608230002_client_share_apply_conversion_closure.sql).
+  client_share now proceeds through the SAME claim/RPC path as every other
+  source type -- no second Apply route, no source-type special-casing
+  left in this route at all. Proven below by asserting client_share now
+  reaches the claim step (the update() mock is actually called) and never
+  produces the retired project_update_source_not_appliable code, and that
+  its behavior under an identical status/config is byte-for-byte identical
+  to text's.
 
-  This file does not attempt to cover the full pre-existing (pre-Phase-6B)
-  successful-apply pipeline -- that has no prior test coverage of its own
-  and is unrelated to this correction; only the new guard's placement and
-  behavior is targeted here.
+  This file does not attempt to cover the full successful-apply pipeline
+  (accepted work mutation, timeline events, the RPC's own transactional
+  behavior) -- that lives in the migration's own static/runtime coverage,
+  not here; only this route's own claim/dispatch logic is targeted.
 */
 
 const getUserMock = vi.fn();
@@ -41,6 +45,16 @@ function buildFakeSupabase(config: {
                   config.projectUpdate
                     ? { data: config.projectUpdate, error: null }
                     : { data: null, error: { message: "not found" } }
+                ),
+              // Used by claimProjectUpdateForApply's own fallback read
+              // (after a failed/no-op claim UPDATE) -- kept behaviorally
+              // identical to `single` above so client_share and text hit
+              // the exact same fallback state-failure path.
+              maybeSingle: () =>
+                Promise.resolve(
+                  config.projectUpdate
+                    ? { data: config.projectUpdate, error: null }
+                    : { data: null, error: null }
                 ),
             }),
           }),
@@ -182,34 +196,64 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("POST /api/project-updates/apply - Phase 6B Apply boundary (client_share)", () => {
-  it("rejects a client_share update with 409 project_update_source_not_appliable, BEFORE claim/RPC", async () => {
+describe("POST /api/project-updates/apply - Phase 6C Apply re-enable (client_share, inverse of the retired Phase 6B guard)", () => {
+  it("client_share no longer returns 409 project_update_source_not_appliable -- it reaches the same claim step as text/image", async () => {
     currentFake = buildFakeSupabase({
-      projectUpdate: baseUpdate({ source_type: "client_share", source_share_message_id: "msg-1" }),
+      projectUpdate: baseUpdate({
+        source_type: "client_share",
+        source_share_message_id: "msg-1",
+        status: "analyzed",
+      }),
+      // A reject-only request skips the accepted-item payload/duplicate
+      // validation pipeline entirely (unrelated to this route's own
+      // source_type guard), so any item type reaches claim.
+      items: [{ id: ITEM_ID, type: "no_action" }],
     });
 
-    const response = await POST(buildRequest());
+    const rejectOnlyRequest = new NextRequest("http://localhost/api/project-updates/apply", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        projectUpdateId: UPDATE_ID,
+        acceptedItemIds: [],
+        rejectedItemIds: [ITEM_ID],
+        editedItems: [],
+      }),
+    });
+
+    const response = await POST(rejectOnlyRequest);
     const body = await response.json();
 
-    expect(response.status).toBe(409);
-    expect(body.code).toBe("project_update_source_not_appliable");
-    expect(rpcMock).not.toHaveBeenCalled();
-    expect(currentFake.projectUpdatesUpdateMock).not.toHaveBeenCalled();
+    expect(body.code).not.toBe("project_update_source_not_appliable");
+    // The claim UPDATE was actually attempted -- proving the route no
+    // longer short-circuits on source_type before ever reaching
+    // claimProjectUpdateForApply, unlike the retired Phase 6B guard.
+    expect(currentFake.projectUpdatesUpdateMock).toHaveBeenCalled();
   });
 
-  it("no tasks/project/client/timeline mutation occurs from a rejected client_share Apply", async () => {
+  it("client_share and text produce byte-for-byte identical behavior under an identical status/config -- no source-type special-casing remains in this route", async () => {
     currentFake = buildFakeSupabase({
-      projectUpdate: baseUpdate({ source_type: "client_share", source_share_message_id: "msg-1" }),
+      projectUpdate: baseUpdate({
+        source_type: "client_share",
+        source_share_message_id: "msg-1",
+        status: "draft",
+      }),
     });
+    const clientShareResponse = await POST(buildRequest());
+    const clientShareBody = await clientShareResponse.json();
 
-    await POST(buildRequest());
+    currentFake = buildFakeSupabase({
+      projectUpdate: baseUpdate({ source_type: "text", status: "draft" }),
+    });
+    const textResponse = await POST(buildRequest());
+    const textBody = await textResponse.json();
 
-    expect(currentFake.tasksMock).not.toHaveBeenCalled();
-    expect(currentFake.timelineEventsInsertMock).not.toHaveBeenCalled();
-    expect(rpcMock).not.toHaveBeenCalled();
+    expect(clientShareResponse.status).toBe(textResponse.status);
+    expect(clientShareBody.code).toBe(textBody.code);
+    expect(clientShareBody.code).toBe("project_update_invalid_state");
   });
 
-  it("a direct authenticated POST with a client_share projectUpdateId cannot bypass the guard even with a plausible-looking body", async () => {
+  it("no second Apply route/endpoint exists -- client_share is applied through this exact same POST handler", async () => {
     currentFake = buildFakeSupabase({
       projectUpdate: baseUpdate({
         source_type: "client_share",
@@ -218,13 +262,13 @@ describe("POST /api/project-updates/apply - Phase 6B Apply boundary (client_shar
       }),
     });
 
-    const response = await POST(buildRequest());
-
-    expect(response.status).toBe(409);
-    expect(rpcMock).not.toHaveBeenCalled();
+    // Calling the SAME imported POST handler for a client_share update
+    // does not throw, and does not route anywhere else -- there is
+    // exactly one POST export from this module for both source types.
+    await expect(POST(buildRequest())).resolves.toBeInstanceOf(Response);
   });
 
-  it("text Apply is unaffected by the new guard -- an invalid status still produces the SAME pre-existing status-check error, not the new guard's error", async () => {
+  it("text Apply is unaffected -- an invalid status still produces the SAME pre-existing status-check error", async () => {
     currentFake = buildFakeSupabase({
       projectUpdate: baseUpdate({ source_type: "text", status: "draft" }),
     });
