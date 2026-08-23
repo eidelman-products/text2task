@@ -56,6 +56,20 @@ export type ShareLinkPanelProps = {
   onShareUpdate: (submission: ShareUpdateSubmission) => void;
   onOpenPreview: () => void;
   onClosePreview: () => void;
+  /** PHASE 6B -- explicit, owner-initiated "Analyze as client update"
+   * hand-off. Implemented one level up (wherever this panel's own
+   * caller already holds the existing Client Update review
+   * orchestration -- see that implementation's own doc comment for why
+   * it cannot live inside this panel: opening the existing review modal
+   * requires a full TaskProjectGroup this panel never receives, only a
+   * project id). Called with the link id Client Messages is currently
+   * operating against (the same messagesLinkId this panel itself
+   * resolves -- active/manageable link when one exists, otherwise the
+   * resolved historical one) and the target message id. */
+  onAnalyzeMessage: (
+    shareLinkId: string,
+    messageId: string
+  ) => Promise<{ ok: true } | { ok: false; error: string }>;
 };
 
 type PanelView = "quick" | "result";
@@ -72,6 +86,7 @@ export function ShareLinkPanel({
   onShareUpdate,
   onOpenPreview,
   onClosePreview,
+  onAnalyzeMessage,
 }: ShareLinkPanelProps) {
   const headingId = useId();
   const [view, setView] = useState<PanelView>("quick");
@@ -257,6 +272,7 @@ export function ShareLinkPanel({
             shareLinkId={messagesLinkId}
             isHistorical={isHistoricalMessagesLink}
             canReply={!isRevokedMessagesLink}
+            onAnalyzeMessage={(messageId) => onAnalyzeMessage(messagesLinkId, messageId)}
             onClose={() => {
               setMessagesOpen(false);
               // Runtime defect fix: the badge hook and the modal's own

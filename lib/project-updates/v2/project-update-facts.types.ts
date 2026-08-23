@@ -14,7 +14,7 @@ import type {
  * image -> transcription -> facts -> judge -> suggested update plan
  */
 
-export type ProjectUpdateV2SourceType = "text" | "image";
+export type ProjectUpdateV2SourceType = "text" | "image" | "client_share";
 
 export type ProjectUpdateFactPriority = "Low" | "Medium" | "High";
 
@@ -218,11 +218,33 @@ export type ProjectUpdateV2JudgeResult = {
   decisions: ProjectUpdateJudgeDecision[];
 };
 
-export type ProjectUpdateV2AnalyzerInput = {
-  projectId: string;
-  rawInput: string;
-  sourceType: ProjectUpdateV2SourceType;
-};
+/**
+ * Phase 6B: discriminated on sourceType so a client_share analysis
+ * cannot be constructed without its required sourceShareMessageId, and
+ * a normal text/image analysis cannot accidentally carry one --
+ * sourceShareMessageId is typed `never` on that branch rather than
+ * simply omitted, closing the TypeScript excess-property-checking gap
+ * where an object literal's property is considered valid as long as SOME
+ * union member declares it. rawInput for the client_share branch must be
+ * the exact, unmodified share_messages.body the caller loaded
+ * server-side -- see analyzeProjectUpdateV2's own persistence step,
+ * which writes this value verbatim (never AI-normalized) to
+ * project_updates.raw_input, matching the Phase 6A database trigger's
+ * exact-equality requirement.
+ */
+export type ProjectUpdateV2AnalyzerInput =
+  | {
+      projectId: string;
+      rawInput: string;
+      sourceType: "text" | "image";
+      sourceShareMessageId?: never;
+    }
+  | {
+      projectId: string;
+      rawInput: string;
+      sourceType: "client_share";
+      sourceShareMessageId: string;
+    };
 
 export type ProjectUpdateV2AnalyzerResult =
   | {

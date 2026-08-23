@@ -558,6 +558,8 @@ export const shareLinkApiErrorCodeSchema = z.enum([
   "SHARE_MESSAGE_PARENT_NOT_FOUND",
   "SHARE_MESSAGE_PARENT_LINK_MISMATCH",
   "SHARE_MESSAGE_STATUS_INVALID",
+  // Phase 6B -- owner-initiated Client Update conversion error codes.
+  "SHARE_MESSAGE_NOT_CLIENT_AUTHORED",
   "INTERNAL_ERROR",
 ]);
 export type ShareLinkApiErrorCode = z.infer<typeof shareLinkApiErrorCodeSchema>;

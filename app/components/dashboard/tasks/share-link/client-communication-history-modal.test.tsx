@@ -81,12 +81,24 @@ afterEach(() => {
 
 function renderModal(
   onClose = vi.fn(),
-  overrides: Partial<{ isHistorical: boolean; canReply: boolean }> = {}
+  overrides: Partial<{
+    isHistorical: boolean;
+    canReply: boolean;
+    onAnalyzeMessage: (messageId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  }> = {}
 ) {
+  const onAnalyzeMessage = overrides.onAnalyzeMessage ?? vi.fn().mockResolvedValue({ ok: true });
+
   return {
     onClose,
+    onAnalyzeMessage,
     ...render(
-      <ClientCommunicationHistoryModal shareLinkId={LINK_ID} onClose={onClose} {...overrides} />
+      <ClientCommunicationHistoryModal
+        shareLinkId={LINK_ID}
+        onClose={onClose}
+        {...overrides}
+        onAnalyzeMessage={onAnalyzeMessage}
+      />
     ),
   };
 }
@@ -539,5 +551,130 @@ describe("ClientCommunicationHistoryModal - PHASE 5F historical/revoked-link mod
     await waitFor(() => {
       expect(getShareLinkMessagesMock).toHaveBeenCalledWith(LINK_ID);
     });
+  });
+});
+
+describe("ClientCommunicationHistoryModal - Phase 6B 'Analyze as client update' eligibility", () => {
+  it("67. renders the action for an eligible client-authored, non-converted message", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });
+    renderModal();
+    await screen.findByText("Any update on this?");
+
+    expect(screen.getByRole("button", { name: "Analyze as client update" })).toBeInTheDocument();
+  });
+
+  it("68. does NOT render the action for an owner-authored message", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [ownerMessage()], unreadCount: 0 });
+    renderModal();
+    await screen.findByText("On track for Friday!");
+
+    expect(screen.queryByRole("button", { name: "Analyze as client update" })).not.toBeInTheDocument();
+  });
+
+  it("69. does NOT render the action for an already-converted client message", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({
+      messages: [clientMessage({ status: "converted" })],
+      unreadCount: 0,
+    });
+    renderModal();
+    await screen.findByText("Any update on this?");
+
+    expect(screen.queryByRole("button", { name: "Analyze as client update" })).not.toBeInTheDocument();
+  });
+
+  it.each(["reviewed", "resolved", "dismissed"])(
+    "70. remains eligible for a client message with status=%s (locked product decision -- only 'converted' is excluded)",
+    async (status) => {
+      getShareLinkMessagesMock.mockResolvedValue({
+        messages: [clientMessage({ status })],
+        unreadCount: 0,
+      });
+      renderModal();
+      await screen.findByText("Any update on this?");
+
+      expect(screen.getByRole("button", { name: "Analyze as client update" })).toBeInTheDocument();
+    }
+  );
+
+  it("71. remains eligible on a historical/revoked link (isHistorical=true, canReply=false) -- link state does not gate this action", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });
+    renderModal(vi.fn(), { isHistorical: true, canReply: false });
+    await screen.findByText("Any update on this?");
+
+    expect(screen.getByRole("button", { name: "Analyze as client update" })).toBeInTheDocument();
+  });
+});
+
+describe("ClientCommunicationHistoryModal - Phase 6B 'Analyze as client update' click behavior", () => {
+  it("72. clicking the action calls onAnalyzeMessage with exactly this message's id", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });
+    const user = userEvent.setup();
+    const onAnalyzeMessage = vi.fn().mockResolvedValue({ ok: true });
+    renderModal(vi.fn(), { onAnalyzeMessage });
+    await screen.findByText("Any update on this?");
+
+    await user.click(screen.getByRole("button", { name: "Analyze as client update" }));
+
+    expect(onAnalyzeMessage).toHaveBeenCalledWith(CLIENT_MESSAGE_ID);
+  });
+
+  it("73. shows a busy/disabled state while the call is in flight, and prevents a second click from firing a second call", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });
+    const user = userEvent.setup();
+    let resolveAnalyze: (value: { ok: true }) => void = () => {};
+    const onAnalyzeMessage = vi.fn(
+      () => new Promise<{ ok: true }>((resolve) => { resolveAnalyze = resolve; })
+    );
+    renderModal(vi.fn(), { onAnalyzeMessage });
+    await screen.findByText("Any update on this?");
+
+    const button = screen.getByRole("button", { name: "Analyze as client update" });
+    await user.click(button);
+
+    expect(await screen.findByRole("button", { name: "Analyzing…" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Analyzing…" }));
+    expect(onAnalyzeMessage).toHaveBeenCalledTimes(1);
+
+    resolveAnalyze({ ok: true });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Analyze as client update" })).not.toBeDisabled();
+    });
+  });
+
+  it("74. shows an inline error message when onAnalyzeMessage resolves with ok:false, and clears it on the next successful attempt", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });
+    const user = userEvent.setup();
+    const onAnalyzeMessage = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, error: "This message is not eligible for conversion." })
+      .mockResolvedValueOnce({ ok: true });
+    renderModal(vi.fn(), { onAnalyzeMessage });
+    await screen.findByText("Any update on this?");
+
+    await user.click(screen.getByRole("button", { name: "Analyze as client update" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This message is not eligible for conversion."
+    );
+
+    await user.click(screen.getByRole("button", { name: "Analyze as client update" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+  });
+
+  it("75. UI click-gating is convenience only -- this modal never bypasses onAnalyzeMessage's own async result to synthesize success locally", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });
+    const user = userEvent.setup();
+    const onAnalyzeMessage = vi.fn().mockResolvedValue({ ok: false, error: "Rejected by the server." });
+    renderModal(vi.fn(), { onAnalyzeMessage });
+    await screen.findByText("Any update on this?");
+
+    await user.click(screen.getByRole("button", { name: "Analyze as client update" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Rejected by the server.");
+    // The action remains available for another attempt -- nothing about
+    // the message's own displayed status changed as a side effect of a
+    // failed attempt.
+    expect(screen.getByRole("button", { name: "Analyze as client update" })).toBeInTheDocument();
   });
 });

@@ -1050,6 +1050,33 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  /*
+    Phase 6B correction (blocker fix) -- the final acceptance audit found
+    that Apply had no awareness client_share project_updates rows exist
+    at all: this route's own status gate and the apply_project_update_transaction
+    RPC both operate on any project_updates row regardless of source_type,
+    so a client_share analysis could be applied today, producing real
+    task/project mutation with no share_message_conversions trace and no
+    share_messages.status='converted' -- exactly the Phase 6C-only
+    behavior this program is structured to prevent. This guard uses
+    source_type loaded from the authoritative DB row (loaded.update, from
+    loadProjectUpdateForApply's own SELECT) -- never anything the browser
+    could supply -- and runs BEFORE claimProjectUpdateForApply and before
+    apply_project_update_transaction is ever called. Applying a
+    client_share update remains Phase 6C's own future, separately
+    authorized work.
+  */
+  if (loaded.update.source_type === "client_share") {
+    return NextResponse.json<ApplyProjectUpdateResponse>(
+      {
+        ok: false,
+        code: "project_update_source_not_appliable",
+        error: "This update was created from a client message and cannot be applied yet.",
+      },
+      { status: 409, headers: dashboardTasksNoStoreHeaders }
+    );
+  }
+
   if (loaded.update.status !== "analyzed" && loaded.update.status !== "reviewed") {
     const stateFailure = getProjectUpdateStateFailure(loaded.update);
 

@@ -9,6 +9,7 @@ const {
   getOwnerShareLinkMessages,
   verifyOwnedShareMessageBelongsToLink,
   resolveMostRecentShareLink,
+  loadShareMessageForConversion,
   SHARE_MESSAGE_PHASE5_STATUSES,
 } = await import("./share-messages-repository.server");
 
@@ -462,6 +463,176 @@ describe("verifyOwnedShareMessageBelongsToLink - Phase 5C cross-link mutation gu
     expect(eqCalls).toContainEqual(["id", VALID_MESSAGE_ID]);
     expect(eqCalls).toContainEqual(["share_link_id", VALID_LINK_ID]);
     expect(eqCalls).toContainEqual(["user_id", VALID_USER_ID]);
+  });
+});
+
+describe("loadShareMessageForConversion - Phase 6B owner-initiated conversion source load", () => {
+  function messageRow(overrides: Record<string, unknown> = {}) {
+    return {
+      id: VALID_MESSAGE_ID,
+      project_id: VALID_PROJECT_ID,
+      author_type: "client",
+      body: "Please add a footer to the homepage.",
+      ...overrides,
+    };
+  }
+
+  it("succeeds for a valid client-authored message on an existing, owned, non-deleted project", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("share_messages", { data: messageRow(), error: null });
+    client.queueFor("projects", { data: { id: VALID_PROJECT_ID, deleted_at: null }, error: null });
+
+    const result = await loadShareMessageForConversion(client, {
+      messageId: VALID_MESSAGE_ID,
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      data: { messageId: VALID_MESSAGE_ID, projectId: VALID_PROJECT_ID, body: "Please add a footer to the homepage." },
+    });
+  });
+
+  it("returns SHARE_MESSAGE_NOT_FOUND when no row matches id/link/owner (nonexistent, wrong link, or wrong owner -- indistinguishable, matching verifyOwnedShareMessageBelongsToLink's own posture)", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("share_messages", { data: null, error: null });
+
+    const result = await loadShareMessageForConversion(client, {
+      messageId: VALID_MESSAGE_ID,
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "SHARE_MESSAGE_NOT_FOUND" } });
+  });
+
+  it("rejects an owner-authored message with SHARE_MESSAGE_NOT_CLIENT_AUTHORED, before ever querying the project (fail-fast, no AI call risked)", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("share_messages", { data: messageRow({ author_type: "owner" }), error: null });
+
+    const result = await loadShareMessageForConversion(client, {
+      messageId: VALID_MESSAGE_ID,
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "SHARE_MESSAGE_NOT_CLIENT_AUTHORED" } });
+    expect(client.from).not.toHaveBeenCalledWith("projects");
+  });
+
+  it("returns SHARE_MESSAGE_PROJECT_NOT_FOUND when the project row does not resolve (wrong owner or nonexistent)", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("share_messages", { data: messageRow(), error: null });
+    client.queueFor("projects", { data: null, error: null });
+
+    const result = await loadShareMessageForConversion(client, {
+      messageId: VALID_MESSAGE_ID,
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "SHARE_MESSAGE_PROJECT_NOT_FOUND" } });
+  });
+
+  it("returns SHARE_MESSAGE_PROJECT_NOT_FOUND when the project is soft-deleted", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("share_messages", { data: messageRow(), error: null });
+    client.queueFor("projects", { data: { id: VALID_PROJECT_ID, deleted_at: "2026-08-20T00:00:00Z" }, error: null });
+
+    const result = await loadShareMessageForConversion(client, {
+      messageId: VALID_MESSAGE_ID,
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "SHARE_MESSAGE_PROJECT_NOT_FOUND" } });
+  });
+
+  it("fails closed (UNEXPECTED) on a message-query error", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("share_messages", { data: null, error: { message: "boom" } });
+
+    const result = await loadShareMessageForConversion(client, {
+      messageId: VALID_MESSAGE_ID,
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+
+  it("fails closed (UNEXPECTED) on a project-query error", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("share_messages", { data: messageRow(), error: null });
+    client.queueFor("projects", { data: null, error: { message: "boom" } });
+
+    const result = await loadShareMessageForConversion(client, {
+      messageId: VALID_MESSAGE_ID,
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result).toEqual({ ok: false, error: { code: "UNEXPECTED" } });
+  });
+
+  it("scopes the message lookup by id AND share_link_id AND user_id, and the project lookup by id AND user_id", async () => {
+    const client = buildTableQueueClient();
+    const messageEqCalls: unknown[][] = [];
+    const projectEqCalls: unknown[][] = [];
+
+    client.from = vi.fn((table: string) => {
+      if (table === "share_messages") {
+        const builder: Record<string, unknown> = {
+          eq: (...args: unknown[]) => {
+            messageEqCalls.push(args);
+            return builder;
+          },
+          maybeSingle: () => Promise.resolve({ data: messageRow(), error: null }),
+        };
+        return { select: () => builder };
+      }
+      const builder: Record<string, unknown> = {
+        eq: (...args: unknown[]) => {
+          projectEqCalls.push(args);
+          return builder;
+        },
+        maybeSingle: () => Promise.resolve({ data: { id: VALID_PROJECT_ID, deleted_at: null }, error: null }),
+      };
+      return { select: () => builder };
+    });
+
+    await loadShareMessageForConversion(client, {
+      messageId: VALID_MESSAGE_ID,
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(messageEqCalls).toContainEqual(["id", VALID_MESSAGE_ID]);
+    expect(messageEqCalls).toContainEqual(["share_link_id", VALID_LINK_ID]);
+    expect(messageEqCalls).toContainEqual(["user_id", VALID_USER_ID]);
+    expect(projectEqCalls).toContainEqual(["id", VALID_PROJECT_ID]);
+    expect(projectEqCalls).toContainEqual(["user_id", VALID_USER_ID]);
+  });
+
+  it("never returns any column beyond messageId/projectId/body (no author_display_name, status, parent_id, or project title/client data)", async () => {
+    const client = buildTableQueueClient();
+    client.queueFor("share_messages", {
+      data: messageRow({ author_display_name: "Jane", status: "resolved", parent_id: null }),
+      error: null,
+    });
+    client.queueFor("projects", { data: { id: VALID_PROJECT_ID, deleted_at: null, title: "Secret Project" }, error: null });
+
+    const result = await loadShareMessageForConversion(client, {
+      messageId: VALID_MESSAGE_ID,
+      shareLinkId: VALID_LINK_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(Object.keys(result.data).sort()).toEqual(["body", "messageId", "projectId"]);
+    }
   });
 });
 

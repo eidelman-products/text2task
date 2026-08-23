@@ -23,6 +23,7 @@ import { useProjectUpdate } from "./tasks/project-updates/use-project-update";
 import { useProjectUpdateHistory } from "./tasks/project-updates/use-project-update-history";
 import { ShareLinkPanel } from "./tasks/share-link/share-link-panel";
 import { useShareLink } from "./tasks/share-link/use-share-link";
+import type { AnalyzeProjectUpdateResult } from "./tasks/project-updates/project-update-types";
 import type { CSSProperties, KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -452,6 +453,87 @@ export default function TasksView({
     shareLink.openPanel(project);
   }
 
+  /**
+   * PHASE 6B -- the additive review-orchestration hand-off for "Analyze
+   * as client update", called from ShareLinkPanel's own onAnalyzeMessage
+   * prop. Deliberately lives HERE, not inside ShareLinkPanel or
+   * ClientCommunicationHistoryModal: opening the existing Client Update
+   * review experience requires a full TaskProjectGroup (openModal's own
+   * signature), which those components never receive -- only this
+   * level already holds both `projectUpdateState` (the existing
+   * useProjectUpdate() instance -- the SAME modal/state machine every
+   * other "Client Update" entry point in this file already uses) and
+   * `shareLink.state.project` (the TaskProjectGroup for whichever
+   * project the Share Link panel currently has open).
+   *
+   * No second review modal, no duplicated review state, no duplicated
+   * Apply logic: this calls the new Phase 6B owner route, then hands the
+   * exact same result shape analyzeTextUpdate/analyzeImageUpdate already
+   * produce into the SAME openModal + setAnalysisResult actions those
+   * flows already use. The Share Link panel is closed first so the
+   * Client Update review modal is the sole focus (matching this
+   * codebase's own established one-top-level-dialog-at-a-time rule).
+   */
+  async function handleAnalyzeShareMessage(
+    shareLinkId: string,
+    messageId: string
+  ): Promise<{ ok: true } | { ok: false; error: string }> {
+    const project = shareLink.state.project;
+
+    if (!project) {
+      return { ok: false, error: "Text2Task could not find this project. Refresh and try again." };
+    }
+
+    try {
+      const response = await fetch(
+        `/api/share-links/${shareLinkId}/messages/${messageId}/analyze`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }
+      );
+
+      const payload = (await response.json().catch(() => null)) as
+        | ({ ok: true; state: "ready" } & AnalyzeProjectUpdateResult)
+        | { ok: true; state: "in_progress"; projectUpdateId: string }
+        | { ok: false; code?: string; error: string }
+        | null;
+
+      if (!response.ok || !payload?.ok) {
+        const message =
+          payload && !payload.ok
+            ? payload.error
+            : "Text2Task could not analyze this message. Please try again.";
+        return { ok: false, error: message };
+      }
+
+      if (payload.state === "in_progress") {
+        // Phase 6B correction (blocker fix) -- a concurrent request
+        // already owns this message's analysis reservation. Do not open
+        // the review modal with an empty/incomplete result, and do not
+        // treat this as a failure requiring another attempt -- surface
+        // it via the existing inline-error slot the modal already has.
+        return {
+          ok: false,
+          error: "This message is already being analyzed. Try again in a moment.",
+        };
+      }
+
+      shareLink.closePanel();
+      projectUpdateState.openModal(project);
+      projectUpdateState.setAnalysisResult({
+        update: payload.update,
+        items: payload.items,
+        timelineEvent: payload.timelineEvent,
+        analysis: payload.analysis,
+      });
+
+      return { ok: true };
+    } catch {
+      return {
+        ok: false,
+        error: "Text2Task could not analyze this message. Please try again.",
+      };
+    }
+  }
+
   function syncOpenProjectResourceCount(resources: TaskResource[]) {
     if (!resourcesProject) return;
 
@@ -755,6 +837,7 @@ export default function TasksView({
         onShareUpdate={(submission) => void shareLink.shareUpdate(submission)}
         onOpenPreview={() => void shareLink.openPreview()}
         onClosePreview={shareLink.closePreview}
+        onAnalyzeMessage={handleAnalyzeShareMessage}
       />
 
       <TaskDeleteModals

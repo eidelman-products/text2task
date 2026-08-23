@@ -59,6 +59,17 @@ export type ClientCommunicationHistoryModalProps = {
    * successful but is actually meaningless. Defaults to `true`
    * (unchanged behavior) for every caller that does not pass it. */
   canReply?: boolean;
+  /** PHASE 6B -- explicit, owner-initiated "Analyze as client update"
+   * action for one eligible client-authored message. Unlike `canReply`,
+   * this is NOT gated by link state: conversion eligibility depends only
+   * on the message/project relationship (loadShareMessageForConversion),
+   * never on whether the originating link is still active -- a revoked
+   * link's retained history remains fully convertible. The actual
+   * analyze-or-resume call and the hand-off into the existing Client
+   * Update review experience both live in this prop's implementation,
+   * one level up (share-link-panel.tsx's own caller) -- this component
+   * only tracks its own per-message busy/error state around the call. */
+  onAnalyzeMessage: (messageId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
 };
 
 export function ClientCommunicationHistoryModal({
@@ -66,6 +77,7 @@ export function ClientCommunicationHistoryModal({
   onClose,
   isHistorical = false,
   canReply = true,
+  onAnalyzeMessage,
 }: ClientCommunicationHistoryModalProps) {
   const { state, mutation, refetch, reply, updateStatus } = useOwnerShareMessages(
     shareLinkId,
@@ -74,10 +86,30 @@ export function ClientCommunicationHistoryModal({
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState("");
   const [replyError, setReplyError] = useState<string | null>(null);
+  const [analyzingMessageId, setAnalyzingMessageId] = useState<string | null>(null);
+  const [analyzeErrorByMessageId, setAnalyzeErrorByMessageId] = useState<Record<string, string>>({});
 
   const busy = mutation.status === "pending";
   const messages = state.status === "loaded" ? state.messages : [];
   const unreadCount = state.status === "loaded" ? state.unreadCount : null;
+
+  async function handleAnalyzeMessage(messageId: string) {
+    if (busy || analyzingMessageId) return;
+
+    setAnalyzingMessageId(messageId);
+    setAnalyzeErrorByMessageId((prev) => {
+      const next = { ...prev };
+      delete next[messageId];
+      return next;
+    });
+
+    const result = await onAnalyzeMessage(messageId);
+
+    setAnalyzingMessageId(null);
+    if (!result.ok) {
+      setAnalyzeErrorByMessageId((prev) => ({ ...prev, [messageId]: result.error }));
+    }
+  }
 
   function startReply(messageId: string) {
     if (busy || !canReply) return;
@@ -175,6 +207,9 @@ export function ClientCommunicationHistoryModal({
                 onReplyBodyChange={setReplyBody}
                 onSubmitReply={handleReplySubmit}
                 onStatusChange={(status) => handleStatusChange(message.id, status)}
+                isAnalyzing={analyzingMessageId === message.id}
+                analyzeError={analyzeErrorByMessageId[message.id] ?? null}
+                onAnalyzeMessage={() => void handleAnalyzeMessage(message.id)}
               />
             </li>
           ))}
@@ -202,6 +237,9 @@ function MessageCard({
   onReplyBodyChange,
   onSubmitReply,
   onStatusChange,
+  isAnalyzing,
+  analyzeError,
+  onAnalyzeMessage,
 }: {
   message: OwnerShareMessage;
   busy: boolean;
@@ -214,9 +252,21 @@ function MessageCard({
   onReplyBodyChange: (value: string) => void;
   onSubmitReply: (event: FormEvent<HTMLFormElement>) => void;
   onStatusChange: (status: OwnerShareMessageStatus) => void;
+  isAnalyzing: boolean;
+  analyzeError: string | null;
+  onAnalyzeMessage: () => void;
 }) {
   const isClient = message.authorType === "client";
   const authorLabel = isClient ? message.authorDisplayName?.trim() || "Client" : "You";
+  // PHASE 6B -- owner-authored replies are never convertible (locked
+  // product decision, already independently enforced at the database
+  // layer by enforce_share_message_conversion_integrity); an
+  // already-converted message is also never re-offered the action.
+  // Reviewed/resolved/dismissed client messages remain eligible, and
+  // link state (active/disabled/expired/revoked) does not affect
+  // eligibility for retained history -- see this component's own
+  // onAnalyzeMessage prop doc comment.
+  const canAnalyzeAsClientUpdate = isClient && message.status !== "converted";
 
   return (
     <article style={{ ...cardStyle, ...(isClient ? clientCardAccentStyle : ownerCardAccentStyle) }}>
@@ -264,7 +314,22 @@ function MessageCard({
                 Reply
               </button>
             ) : null}
+            {canAnalyzeAsClientUpdate ? (
+              <button
+                type="button"
+                onClick={onAnalyzeMessage}
+                disabled={busy || isAnalyzing}
+                style={actionButtonStyle}
+              >
+                {isAnalyzing ? "Analyzing…" : "Analyze as client update"}
+              </button>
+            ) : null}
           </div>
+          {analyzeError ? (
+            <p role="alert" style={replyErrorStyle}>
+              {analyzeError}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

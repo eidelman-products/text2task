@@ -68,12 +68,26 @@ export default function ProjectUpdateModalV2({
       ? Boolean(form.selectedImage)
       : Boolean(form.rawInput.trim()));
 
+  /*
+    Phase 6B correction (blocker fix) -- a client_share analysis (owner-
+    initiated Analyze from Client Communication History) must never
+    expose Apply in this same review UI until Phase 6C explicitly
+    implements atomic conversion closure. The server-side guard in
+    /api/project-updates/apply is the actual authority (this is
+    convenience/UX only), but the review UI must not even offer the
+    action. Uses source_type already present on the hydrated
+    analysisResult.update -- the same reuse this modal already relies on
+    for text/image, no second review UI.
+  */
+  const isClientShareResult = form.analysisResult?.update.source_type === "client_share";
+
   const canApply =
     !isBusy &&
     !form.isAnalyzing &&
     !form.isApplying &&
     !form.applySuccessMessage &&
     Boolean(form.analysisResult) &&
+    !isClientShareResult &&
     hasSelectedApplyableItems(form);
 
   const primaryButtonState = getPrimaryButtonState({

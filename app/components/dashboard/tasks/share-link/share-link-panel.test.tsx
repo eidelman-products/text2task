@@ -139,6 +139,7 @@ function PanelHarness({
       onShareUpdate={vi.fn()}
       onOpenPreview={vi.fn()}
       onClosePreview={vi.fn()}
+      onAnalyzeMessage={vi.fn().mockResolvedValue({ ok: true })}
       {...overrides}
     />
   );

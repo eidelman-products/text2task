@@ -98,17 +98,41 @@ export async function analyzeProjectUpdateV2(
     decisions: judgeResult.decisions,
   });
 
-  const updateResult = await createProjectUpdateAuditRecord({
-    projectId: contextResult.context.project.id,
-    clientId: contextResult.context.project.client_id,
-    rawInput: factsResult.normalizedRawInput,
-    sourceType,
-    status: "analyzed",
-    aiSummary: {
-      ...auditSummary,
-      extractedFacts: factsResult.facts,
-    },
-  });
+  // Phase 6B: a client_share row persists the EXACT server-loaded
+  // share_messages.body the caller supplied as rawInput -- never
+  // factsResult.normalizedRawInput (which trims/collapses whitespace for
+  // the AI prompt only). The Phase 6A database trigger requires
+  // raw_input to be byte-for-byte identical to the referenced message's
+  // body; persisting the AI-normalized value here would risk a false
+  // PROJECT_UPDATE_SOURCE_MESSAGE_BODY_MISMATCH rejection. Normal
+  // text/image behavior is unchanged -- both continue to persist the
+  // normalized value exactly as before this change.
+  const updateResult = await createProjectUpdateAuditRecord(
+    sourceType === "client_share"
+      ? {
+          projectId: contextResult.context.project.id,
+          clientId: contextResult.context.project.client_id,
+          rawInput,
+          sourceType: "client_share",
+          sourceShareMessageId: input.sourceShareMessageId,
+          status: "analyzed",
+          aiSummary: {
+            ...auditSummary,
+            extractedFacts: factsResult.facts,
+          },
+        }
+      : {
+          projectId: contextResult.context.project.id,
+          clientId: contextResult.context.project.client_id,
+          rawInput: factsResult.normalizedRawInput,
+          sourceType,
+          status: "analyzed",
+          aiSummary: {
+            ...auditSummary,
+            extractedFacts: factsResult.facts,
+          },
+        }
+  );
 
   if (!updateResult.ok) {
     return {
@@ -143,26 +167,36 @@ export async function analyzeProjectUpdateV2(
     decisions: judgeResult.decisions,
   });
 
-  const timelineResult = await createProjectTimelineEvent({
-    projectId: contextResult.context.project.id,
-    eventType: "ai_update_analyzed",
-    eventTitle:
-      sourceType === "image"
-        ? "Screenshot update analyzed"
-        : "Client update analyzed",
-    eventSummary: timelineSummary,
-    sourceUpdateId: updateResult.data.id,
-    metadata: {
-      engine: "project-update-v2",
-      sourceType,
-      suggestedItemCount: itemResult.data.length,
-      riskLevel: judgeResult.summary.riskLevel,
-      extractedFactCounts: {
-        requestedSubtasks: factsResult.facts.requestedSubtasks.length,
-        notes: factsResult.facts.notes.length,
-      },
-    },
-  });
+  // Phase 6B locked requirement: a client_share analysis must create NO
+  // professional Project Timeline event of any kind -- Client
+  // Communication History stays structurally separate from the Project
+  // Timeline until the owner explicitly reviews and successfully
+  // Applies (Phase 6C's own future responsibility, not this step).
+  // Normal text/image behavior is completely unchanged: both still
+  // create their existing ai_update_analyzed event exactly as before.
+  const timelineResult =
+    sourceType === "client_share"
+      ? ({ ok: true, data: null } as const)
+      : await createProjectTimelineEvent({
+          projectId: contextResult.context.project.id,
+          eventType: "ai_update_analyzed",
+          eventTitle:
+            sourceType === "image"
+              ? "Screenshot update analyzed"
+              : "Client update analyzed",
+          eventSummary: timelineSummary,
+          sourceUpdateId: updateResult.data.id,
+          metadata: {
+            engine: "project-update-v2",
+            sourceType,
+            suggestedItemCount: itemResult.data.length,
+            riskLevel: judgeResult.summary.riskLevel,
+            extractedFactCounts: {
+              requestedSubtasks: factsResult.facts.requestedSubtasks.length,
+              notes: factsResult.facts.notes.length,
+            },
+          },
+        });
 
   return {
     status: 200,

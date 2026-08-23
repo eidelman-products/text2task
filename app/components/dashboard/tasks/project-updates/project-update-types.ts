@@ -7,7 +7,11 @@ import type { TaskProjectGroup } from "../task-types";
 
 export type InputMethod = "text" | "image" | "email" | "manual";
 
-export type ProjectUpdateSourceType = "text" | "image" | "email" | "manual";
+/** Phase 6B: widened to include 'client_share' -- the source_type value
+ * a hydrated analysisResult.update can carry when it came from the
+ * owner-initiated "Analyze as client update" action, needed so the
+ * review UI can gate Apply for that source (see project-update-shell.tsx). */
+export type ProjectUpdateSourceType = "text" | "image" | "email" | "manual" | "client_share";
 
 export type ProjectUpdateItemType =
   | "new_subtask"

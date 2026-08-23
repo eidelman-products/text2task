@@ -80,6 +80,8 @@ export type ProjectUpdate = {
   client_id: string | null;
 
   source_type: ProjectUpdateSourceType;
+  /** Phase 6A/6B: non-null only when source_type = 'client_share'. */
+  source_share_message_id: string | null;
   raw_input: string;
 
   ai_summary: JsonRecord | null;

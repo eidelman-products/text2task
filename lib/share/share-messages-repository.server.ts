@@ -113,6 +113,9 @@ export type ShareMessagesRepositoryErrorCode =
   | "SHARE_MESSAGE_NOT_FOUND"
   | "SHARE_MESSAGE_PARENT_NOT_FOUND"
   | "SHARE_MESSAGE_PARENT_LINK_MISMATCH"
+  // Phase 6B -- owner-initiated Client Update conversion source load.
+  | "SHARE_MESSAGE_NOT_CLIENT_AUTHORED"
+  | "SHARE_MESSAGE_PROJECT_NOT_FOUND"
   | "INVALID_REQUEST"
   | "UNEXPECTED";
 
@@ -403,6 +406,96 @@ export async function verifyOwnedShareMessageBelongsToLink<Client>(
   }
 
   return { ok: true, data: { id: (data as { id: string }).id } };
+}
+
+export type ShareMessageConversionSource = Readonly<{
+  messageId: string;
+  projectId: string;
+  body: string;
+}>;
+
+/**
+ * Phase 6B -- the sole server-side source-of-truth load for converting
+ * one owned, client-authored share message into a Client Update. Proves,
+ * in order: the message exists, belongs to the given share link, and is
+ * owned by the caller (mirroring verifyOwnedShareMessageBelongsToLink's
+ * own triple exactly, so a same-owner cross-link messageId is rejected
+ * here too); that it is author_type='client' (an owner-authored reply
+ * can never be converted -- also independently enforced at the database
+ * layer by enforce_share_message_conversion_integrity, but rejected here
+ * first, fail-fast, before any AI call is ever made); and that the
+ * message's own project still exists, is owned by the caller, and is
+ * not soft-deleted. Deliberately does NOT check the share link's own
+ * state (active/disabled/expired/revoked) -- link lifecycle is
+ * irrelevant to conversion eligibility, exactly like Phase 5F's own
+ * revoked-history read access, since conversion is a message/project-
+ * scoped owner action, not a public-facing one. Returns ONLY the three
+ * fields the conversion route/service actually needs -- never any other
+ * message or project column (no author_display_name, no status, no
+ * parent_id, no project title/client data).
+ */
+export async function loadShareMessageForConversion<Client>(
+  supabase: Client,
+  input: { messageId: string; shareLinkId: string; userId: string }
+): Promise<ShareMessagesRepositoryResult<ShareMessageConversionSource>> {
+  const client = supabase as ShareMessagesSupabaseLikeClient;
+  const canonicalMessageId = canonicalizeUuid(input.messageId);
+  const canonicalLinkId = canonicalizeUuid(input.shareLinkId);
+  const canonicalUserId = canonicalizeUuid(input.userId);
+
+  const { data: messageData, error: messageError } = await client
+    .from("share_messages")
+    .select("id, project_id, author_type, body")
+    .eq("id", canonicalMessageId)
+    .eq("share_link_id", canonicalLinkId)
+    .eq("user_id", canonicalUserId)
+    .maybeSingle();
+
+  if (messageError) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+  if (!messageData) {
+    return { ok: false, error: { code: "SHARE_MESSAGE_NOT_FOUND" } };
+  }
+
+  const messageRow = messageData as {
+    id?: unknown;
+    project_id?: unknown;
+    author_type?: unknown;
+    body?: unknown;
+  };
+  if (
+    typeof messageRow.id !== "string" ||
+    typeof messageRow.project_id !== "string" ||
+    typeof messageRow.body !== "string"
+  ) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  if (messageRow.author_type !== "client") {
+    return { ok: false, error: { code: "SHARE_MESSAGE_NOT_CLIENT_AUTHORED" } };
+  }
+
+  const { data: projectData, error: projectError } = await client
+    .from("projects")
+    .select("id, deleted_at")
+    .eq("id", messageRow.project_id)
+    .eq("user_id", canonicalUserId)
+    .maybeSingle();
+
+  if (projectError) {
+    return { ok: false, error: { code: "UNEXPECTED" } };
+  }
+
+  const projectRow = projectData as { id?: unknown; deleted_at?: unknown } | null;
+  if (!projectRow || typeof projectRow.id !== "string" || projectRow.deleted_at) {
+    return { ok: false, error: { code: "SHARE_MESSAGE_PROJECT_NOT_FOUND" } };
+  }
+
+  return {
+    ok: true,
+    data: { messageId: messageRow.id, projectId: messageRow.project_id, body: messageRow.body },
+  };
 }
 
 export type MostRecentShareLink = Readonly<{

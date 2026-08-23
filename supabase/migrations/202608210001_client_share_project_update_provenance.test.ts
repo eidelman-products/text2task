@@ -384,22 +384,48 @@ describe("202608210001 - Phase 6A boundary: public generic analyze route untouch
   });
 });
 
-describe("202608210001 - Phase 6A boundary: analyzer's actionable input contract untouched", () => {
+describe("202608210001 - Phase 6A boundary: analyzer's actionable input contract untouched THROUGH Phase 6A", () => {
   const analyzerTypesSource = readNormalized(ANALYZER_V2_INPUT_TYPES_PATH);
 
-  it("ProjectUpdateV2SourceType is still exactly 'text' | 'image'", () => {
+  // Phase 6A itself deliberately left this contract at "text" | "image"
+  // only (correction G, Phase 6 Accepted Plan) -- Phase 6B is the
+  // slice explicitly authorized to widen it, as a properly discriminated
+  // union requiring sourceShareMessageId for 'client_share' (never an
+  // optional field plus an unsafe cast). This assertion now proves the
+  // Phase 6B end-state is exactly that discriminated shape, not that the
+  // contract never moved -- Phase 6A's own migration source (this
+  // file's own SQL, asserted elsewhere in this file) is what stayed
+  // fixed; this TS contract was always Phase 6B's to extend.
+  it("ProjectUpdateV2SourceType includes client_share (Phase 6B)", () => {
     expect(analyzerTypesSource).toContain(
-      'export type ProjectUpdateV2SourceType = "text" | "image";'
+      'export type ProjectUpdateV2SourceType = "text" | "image" | "client_share";'
+    );
+  });
+
+  it("ProjectUpdateV2AnalyzerInput is a discriminated union requiring sourceShareMessageId for client_share, and forbidding it (typed never) for text/image", () => {
+    expect(analyzerTypesSource).toMatch(
+      /sourceType:\s*"text"\s*\|\s*"image";\s*sourceShareMessageId\?:\s*never;/
+    );
+    expect(analyzerTypesSource).toMatch(
+      /sourceType:\s*"client_share";\s*sourceShareMessageId:\s*string;/
     );
   });
 });
 
-describe("202608210001 - Phase 6A boundary: persistence-layer input contract excludes client_share", () => {
+describe("202608210001 - Phase 6A boundary: persistence-layer input contract THROUGH Phase 6A excluded client_share", () => {
   const auditSource = readNormalized(PROJECT_UPDATE_AUDIT_PATH);
 
-  it("CreateProjectUpdateInput's sourceType excludes 'client_share'", () => {
-    expect(auditSource).toContain(
-      'sourceType?: Exclude<ProjectUpdateSourceType, "client_share">;'
+  // Phase 6B (correction G/§3, Phase 6 Accepted Plan) is the
+  // authorized slice that widens CreateProjectUpdateInput into a
+  // discriminated union requiring sourceShareMessageId for
+  // 'client_share' -- proven here as the current end-state, not
+  // asserted as unchanged.
+  it("CreateProjectUpdateInput is a discriminated union: client_share requires sourceShareMessageId; other sources forbid it (typed never)", () => {
+    expect(auditSource).toMatch(
+      /sourceType\?:\s*Exclude<ProjectUpdateSourceType,\s*"client_share">;\s*sourceShareMessageId\?:\s*never;/
+    );
+    expect(auditSource).toMatch(
+      /sourceType:\s*"client_share";\s*sourceShareMessageId:\s*string;/
     );
   });
 });

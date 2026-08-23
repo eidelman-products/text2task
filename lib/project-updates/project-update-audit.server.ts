@@ -24,22 +24,36 @@ type AuthenticatedSupabaseResult =
       error: string;
     };
 
-type CreateProjectUpdateInput = {
-  projectId: string;
-  clientId?: string | null;
-  rawInput: string;
-  /**
-   * Phase 6A: deliberately excludes 'client_share'. This insert has no
-   * source_share_message_id parameter or column wiring yet, so accepting
-   * 'client_share' here would let a type-valid call construct a row that
-   * violates project_updates_source_provenance_coupling_check at the
-   * database. Phase 6B widens this together with the paired id parameter
-   * and insert-time wiring -- see the Phase 6 Accepted Plan, correction G.
-   */
-  sourceType?: Exclude<ProjectUpdateSourceType, "client_share">;
-  aiSummary?: JsonRecord | null;
-  status?: ProjectUpdateStatus;
-};
+/**
+ * Phase 6B: discriminated the same way as ProjectUpdateV2AnalyzerInput
+ * (project-update-facts.types.ts) and for the identical reason -- a
+ * 'client_share' row REQUIRES sourceShareMessageId, and a normal row
+ * cannot carry one (typed `never`, not merely omitted, closing the
+ * union excess-property-checking gap). The initial INSERT below writes
+ * source_type, source_share_message_id and raw_input together, in the
+ * same statement -- never a row created first with provenance attached
+ * afterward -- so the Phase 6A database trigger's coupling/content
+ * checks are satisfied from the row's very first moment of existence.
+ */
+type CreateProjectUpdateInput =
+  | {
+      projectId: string;
+      clientId?: string | null;
+      rawInput: string;
+      sourceType?: Exclude<ProjectUpdateSourceType, "client_share">;
+      sourceShareMessageId?: never;
+      aiSummary?: JsonRecord | null;
+      status?: ProjectUpdateStatus;
+    }
+  | {
+      projectId: string;
+      clientId?: string | null;
+      rawInput: string;
+      sourceType: "client_share";
+      sourceShareMessageId: string;
+      aiSummary?: JsonRecord | null;
+      status?: ProjectUpdateStatus;
+    };
 
 type CreateProjectUpdateItemInput = {
   projectUpdateId: string;
@@ -88,6 +102,11 @@ type AuditWriteResult<T> =
       ok: false;
       status: number;
       error: string;
+      /** Raw PostgreSQL error code (e.g. '23505'), when available --
+       * lets a caller distinguish a specific constraint violation from
+       * every other failure without parsing the message string. Never
+       * set for non-DB failures (auth, validation). */
+      dbErrorCode?: string | null;
     };
 
 async function getAuthenticatedSupabase(): Promise<AuthenticatedSupabaseResult> {
@@ -162,7 +181,9 @@ export async function createProjectUpdateAuditRecord(
       client_id: input.clientId ?? null,
 
       source_type: input.sourceType ?? "text",
-      raw_input: input.rawInput.trim(),
+      source_share_message_id: input.sourceType === "client_share" ? input.sourceShareMessageId : null,
+      raw_input:
+        input.sourceType === "client_share" ? input.rawInput : input.rawInput.trim(),
 
       ai_summary: input.aiSummary ?? null,
       status: input.status ?? "draft",
@@ -178,6 +199,7 @@ export async function createProjectUpdateAuditRecord(
       ok: false,
       status: 500,
       error: error?.message ?? "Could not create project update audit record.",
+      dbErrorCode: error?.code ?? null,
     };
   }
 
@@ -295,6 +317,66 @@ export async function createProjectTimelineEvent(
   return {
     ok: true,
     data: data as ProjectTimelineEvent,
+  };
+}
+
+/**
+ * Phase 6B correction -- best-effort transition of a claimed
+ * client_share reservation (status='draft') into the existing 'failed'
+ * lifecycle state after a handled analysis failure, so a later explicit
+ * request can retry it via the normal failed-status claim path. Never
+ * invents a new status; only ever moves a row this app itself put into
+ * 'draft'. If the row is no longer 'draft' (e.g. it was already reset by
+ * another path), this UPDATE simply matches zero rows and callers treat
+ * that as a no-op, not an error.
+ */
+export async function markProjectUpdateAsFailed(
+  projectUpdateId: string
+): Promise<AuditWriteResult<ProjectUpdate>> {
+  if (!projectUpdateId) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Missing project update id.",
+    };
+  }
+
+  const auth = await getAuthenticatedSupabase();
+
+  if (!auth.ok) {
+    return auth;
+  }
+
+  const { data, error } = await auth.supabase
+    .from("project_updates")
+    .update({
+      status: "failed",
+    })
+    .eq("id", projectUpdateId)
+    .eq("user_id", auth.userId)
+    .eq("status", "draft")
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    return {
+      ok: false,
+      status: 500,
+      error: error.message ?? "Could not mark project update as failed.",
+    };
+  }
+
+  if (!data) {
+    return {
+      ok: false,
+      status: 409,
+      error: "Project update was not in a draft reservation state.",
+    };
+  }
+
+  return {
+    ok: true,
+    data: data as ProjectUpdate,
   };
 }
 
