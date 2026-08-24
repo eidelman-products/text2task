@@ -75,6 +75,23 @@ export type ShareLinkChannelsProps = {
   onRequestRotate: () => void;
   onCancelRotateConfirm: () => void;
   onOpenPreview: () => void;
+  // Phase 7C -- closes the owner-lifecycle UI gap the Phase 7 audit
+  // found: Disable/Re-enable/Revoke were part of the accepted Phase 2A
+  // product contract ("Active -> copy/reveal link, disable or revoke.
+  // Disabled -> re-enable or revoke.") but were never wired into this
+  // panel after a later UX simplification also (incidentally) switched
+  // Rotate off here. Disable/Re-enable are plain, un-confirmed actions
+  // (temporary, reversible with a single further click) -- Revoke uses
+  // the same ConfirmableActionButton pattern as Rotate, but with
+  // distinctly stronger, "permanent/cannot be undone" wording, since
+  // unlike Rotate (which keeps the SHARE usable under a new secret) or
+  // Disable (trivially reversible), Revoke ends this share link for
+  // good.
+  onDisable: () => void;
+  onReenable: () => void;
+  confirmingRevoke: boolean;
+  onRequestRevoke: () => void;
+  onCancelRevokeConfirm: () => void;
   // Objective B: ShareLinkPanel now renders this component in two
   // different secondary views -- the post-share "result" screen (Copy/
   // Native Share/WhatsApp/Email/Preview; no Rotate, which is a "Manage
@@ -85,10 +102,17 @@ export type ShareLinkChannelsProps = {
   // keeps the original, full-channel-set behavior unchanged.
   showChannelButtons?: boolean;
   showRotate?: boolean;
+  // Phase 7C -- defaults to true, matching showRotate's own default, so
+  // every pre-existing call site/test keeps its original behavior unless
+  // it explicitly opts in or out.
+  showLifecycleControls?: boolean;
 };
 
 const ROTATE_WARNING =
   "Rotating the link will immediately invalidate the previously shared client link. Anyone using the old link will lose access.";
+
+const REVOKE_WARNING =
+  "Revoking this link permanently ends this share and cannot be undone. Anyone using it will immediately lose access. You'll need to create a new link to share with this client again.";
 
 export function ShareLinkChannels({
   linkState,
@@ -103,11 +127,24 @@ export function ShareLinkChannels({
   onRequestRotate,
   onCancelRotateConfirm,
   onOpenPreview,
+  onDisable,
+  onReenable,
+  confirmingRevoke,
+  onRequestRevoke,
+  onCancelRevokeConfirm,
   showChannelButtons = true,
   showRotate = true,
+  showLifecycleControls = true,
 }: ShareLinkChannelsProps) {
   const canRevealForSharing = linkState === "active" && showChannelButtons;
   const canRotate = (linkState === "active" || linkState === "disabled") && showRotate;
+  // Phase 7C -- mirrors canRotate's own state gating exactly (disable_share_link
+  // only succeeds from 'active'; reenable_share_link only from 'disabled';
+  // revoke_share_link succeeds from 'active' or 'disabled' -- matching the
+  // real server contract, not merely hiding a button that would still 409).
+  const canDisable = linkState === "active" && showLifecycleControls;
+  const canReenable = linkState === "disabled" && showLifecycleControls;
+  const canRevoke = (linkState === "active" || linkState === "disabled") && showLifecycleControls;
   // Preview is a configuration-inspection capability, not a public-access
   // one -- it never calls reveal, so it is available for every state this
   // component ever renders for (draft/active/disabled/expired; revoked
@@ -234,6 +271,48 @@ export function ShareLinkChannels({
           onCancel={onCancelRotateConfirm}
           warning={ROTATE_WARNING}
         />
+      ) : null}
+
+      {canDisable || canReenable || canRevoke ? (
+        <div style={stack(2)}>
+          <SectionHeading title="Manage link" />
+
+          {canDisable ? (
+            <DashboardButton
+              variant="secondary"
+              onClick={onDisable}
+              loading={actionPending === "disable"}
+              disabled={disabled}
+            >
+              Disable link
+            </DashboardButton>
+          ) : null}
+
+          {canReenable ? (
+            <DashboardButton
+              variant="secondary"
+              onClick={onReenable}
+              loading={actionPending === "reenable"}
+              disabled={disabled}
+            >
+              Re-enable link
+            </DashboardButton>
+          ) : null}
+
+          {canRevoke ? (
+            <ConfirmableActionButton
+              label="Revoke link"
+              confirmLabel="Confirm revoke"
+              isConfirming={confirmingRevoke}
+              loading={actionPending === "revoke"}
+              disabled={disabled}
+              variant="danger"
+              onClick={onRequestRevoke}
+              onCancel={onCancelRevokeConfirm}
+              warning={REVOKE_WARNING}
+            />
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

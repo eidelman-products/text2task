@@ -38,6 +38,9 @@ const NO_STORE_HEADERS: Record<string, string> = {
   Pragma: "no-cache",
   "Referrer-Policy": "no-referrer",
   "X-Content-Type-Options": "nosniff",
+  "X-Robots-Tag": "noindex, nofollow, noarchive",
+  "Permissions-Policy":
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()",
 };
 
 type ProjectionErrorResponse = { ok: false; code: string; error: string };

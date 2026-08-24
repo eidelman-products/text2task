@@ -10,6 +10,10 @@ import {
   isValidRawShareBrowserSessionSecret,
 } from "@/lib/share/share-browser-session.server";
 import { checkShareRateLimit } from "@/lib/share/share-rate-limit.server";
+import {
+  createShareNetworkIdentityDigest,
+  isShareIdentityError,
+} from "@/lib/share/share-identity.server";
 import { isValidSharePublicId } from "@/lib/share/share-public-id.server";
 import {
   isSharePublicRequestError,
@@ -61,6 +65,9 @@ const NO_STORE_HEADERS: Record<string, string> = {
   Pragma: "no-cache",
   "Referrer-Policy": "no-referrer",
   "X-Content-Type-Options": "nosniff",
+  "X-Robots-Tag": "noindex, nofollow, noarchive",
+  "Permissions-Policy":
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()",
 };
 
 type MessageSubmissionErrorResponse = { ok: false; code: string; error: string };
@@ -140,6 +147,29 @@ type RouteContext = { params: Promise<{ publicId: string }> };
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
     assertClientShareEnabled();
+
+    // Phase 7B -- an EARLY, network_identity-scoped gate, before origin
+    // validation, the publicId check, or the cookie check. The existing
+    // comment_submission bucket below is browser_session-scoped, which
+    // requires an already-valid cookie to even compute -- so a caller
+    // with no cookie, an invalid cookie, a malformed publicId, or a bad
+    // Origin/Sec-Fetch-Site header could flood this route completely
+    // unmetered before reaching that bucket. This layered check (same
+    // action, a second scope, exactly like the session-exchange fix
+    // above) closes that gap without weakening any validation and
+    // without any new rate-limit vocabulary. A legitimate request simply
+    // consumes one unit from each of two generous buckets.
+    const networkIdentity = createShareNetworkIdentityDigest(request.headers);
+    const earlySubmitLimit = await checkShareRateLimit({
+      action: "comment_submission",
+      scope: "network_identity",
+      identityDigest: networkIdentity.digest,
+      identityDigestVersion: networkIdentity.version,
+    });
+
+    if (!earlySubmitLimit.allowed) {
+      return rateLimited(earlySubmitLimit.retryAfterSeconds);
+    }
 
     validateSharePublicRequestOrigin({ requestUrl: request.url, headers: request.headers });
 
@@ -258,6 +288,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
         case "invalid_request_body":
           return invalidRequest();
       }
+    }
+
+    if (isShareIdentityError(error)) {
+      return jsonResponse(
+        { ok: false, code: "TEMPORARILY_UNAVAILABLE", error: "Temporarily unavailable." } satisfies MessageSubmissionErrorResponse,
+        503
+      );
     }
 
     logShareRouteError("share.messages.submit", error);

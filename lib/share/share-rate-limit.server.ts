@@ -24,7 +24,8 @@ export type ShareRateLimitAction =
   | "pin_verification"
   | "projection_read"
   | "invalid_link_access"
-  | "comment_submission";
+  | "comment_submission"
+  | "file_access";
 
 export type ShareRateLimitScope = "browser_session" | "network_identity" | "share_link";
 
@@ -52,6 +53,21 @@ const RATE_LIMIT_POLICY: Record<
   // recommended starting policy for a human typing occasional messages,
   // not a per-page-load read.
   comment_submission: { limit: 10, windowSeconds: 300 },
+  // Phase 7B -- the dedicated `file_access` action the schema already
+  // reserved (202608030004's own action CHECK constraint) but no route
+  // used until now (the file-delivery route previously reused
+  // `projection_read`'s own bucket). A file fetch is materially more
+  // expensive to serve than a small JSON projection read, so it gets its
+  // own, tighter, `browser_session`-scoped budget rather than sharing
+  // `projection_read`'s 120/300s -- 60/300s still comfortably covers a
+  // legitimate visitor opening every attached file on a normal project
+  // once, while meaningfully throttling repeated single-file hammering.
+  // Combined with the pre-existing 10MB per-file upload cap
+  // (app/api/task-resources/upload-and-create/route.ts), this also bounds
+  // worst-case aggregate egress per identity per window to a calculable
+  // ceiling without a separate byte-counting subsystem -- see the Phase
+  // 7B documentation update for the full equivalent-control rationale.
+  file_access: { limit: 60, windowSeconds: 300 },
 };
 
 export type ShareRateLimitCheckInput = Readonly<{

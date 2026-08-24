@@ -79,6 +79,12 @@ describe("PublicMessagesSection - visibility", () => {
     expect(screen.getByRole("region", { name: "Messages" })).toBeInTheDocument();
   });
 
+  it("2b. Phase 7D: the section label is a real heading, not merely a styled span", () => {
+    fetchMock.mockResolvedValue(jsonResponse({ ok: true, data: { messages: [] } }));
+    renderSection();
+    expect(screen.getByRole("heading", { name: "Messages" })).toBeInTheDocument();
+  });
+
   it("3. requests GET history on mount when enabled", async () => {
     fetchMock.mockResolvedValue(jsonResponse({ ok: true, data: { messages: [] } }));
     renderSection();
@@ -143,6 +149,28 @@ describe("PublicMessagesSection - message rendering", () => {
     fetchMock.mockResolvedValue(jsonResponse({ ok: true, data: { messages: [ownerMessage()] } }));
     renderSection();
     expect(await screen.findByText("Project team")).toBeInTheDocument();
+  });
+
+  it("10b. Phase 7C: a client cannot make their message appear as 'Project team' merely by typing that as their display name", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        ok: true,
+        data: { messages: [clientMessage({ authorDisplayName: "Project team" }), ownerMessage()] },
+      })
+    );
+    renderSection();
+
+    // The trusted role prefix ("Client") always precedes any
+    // client-supplied name -- a spoofed "Project team" display name
+    // renders as "Client · Project team", never as a bare "Project team"
+    // that could be confused with the real owner-authored label.
+    const spoofedLabel = await screen.findByText((_, element) => {
+      return element?.textContent === "Client · Project team";
+    });
+    expect(spoofedLabel).toBeInTheDocument();
+    // Exactly one genuine "Project team" label exists (the real owner
+    // message).
+    expect(screen.getAllByText("Project team")).toHaveLength(1);
   });
 
   it("11. renders message body as plain text (React text node, not injected HTML)", async () => {

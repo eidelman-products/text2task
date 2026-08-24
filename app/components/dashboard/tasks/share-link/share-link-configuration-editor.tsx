@@ -540,7 +540,9 @@ export function ShareLinkConfigurationEditor({
         <p style={emptyTextStyle}>Loading resources...</p>
       ) : resourcesError ? (
         <div style={stack(2)}>
-          <p style={errorTextStyle}>{resourcesError}</p>
+          <p role="alert" style={errorTextStyle}>
+            {resourcesError}
+          </p>
           <DashboardButton variant="secondary" size="sm" onClick={onRetryResources}>
             Try again
           </DashboardButton>
@@ -675,7 +677,9 @@ function TaskRow({
     <div style={itemRowStyle}>
       <label style={{ ...row(2), cursor: disabled ? "not-allowed" : "pointer" }}>
         <input type="checkbox" checked={selected} disabled={disabled} onChange={onToggle} />
-        <span style={itemTitleStyle}>{title}</span>
+        <span dir="auto" style={itemTitleStyle}>
+          {title}
+        </span>
       </label>
       {selected ? (
         <div style={{ ...stack(2), paddingLeft: 26 }}>
@@ -729,7 +733,9 @@ function ResourceRow({
     <div style={itemRowStyle}>
       <label style={{ ...row(2), cursor: disabled ? "not-allowed" : "pointer" }}>
         <input type="checkbox" checked={selected} disabled={disabled} onChange={onToggle} />
-        <span style={itemTitleStyle}>{resource.title?.trim() || "Untitled resource"}</span>
+        <span dir="auto" style={itemTitleStyle}>
+          {resource.title?.trim() || "Untitled resource"}
+        </span>
       </label>
       {selected ? (
         <div style={{ ...stack(2), paddingLeft: 26 }}>
@@ -786,6 +792,9 @@ const itemRowStyle: CSSProperties = {
 };
 
 const itemTitleStyle: CSSProperties = {
+  minWidth: 0,
+  overflowWrap: "anywhere",
+  wordBreak: "break-word",
   fontSize: dashboardTypography.size.md,
   fontWeight: dashboardTypography.weight.medium,
   color: dashboardColors.text.primary,

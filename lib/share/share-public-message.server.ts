@@ -139,6 +139,48 @@ export function validateShareMessageBody(rawBody: string): ShareMessageBodyValid
   return { ok: true, body: sanitized };
 }
 
+/**
+ * Phase 7C -- Unicode bidi FORMATTING control characters only, never a
+ * normal RTL letter. Hebrew/Arabic (and any other RTL script) text is
+ * untouched by this pattern -- it targets exactly the nine codepoints
+ * that exist solely to override/embed/isolate directional runs
+ * (U+202A-U+202E, U+2066-U+2069), which have no legitimate purpose in a
+ * short display name and can otherwise be used to visually reorder or
+ * disguise it (e.g. an RTL override making a name read backwards, or
+ * embedding to make one name masquerade as a different one). Scoped to
+ * the name only -- message body semantics are deliberately unchanged.
+ */
+const BIDI_FORMATTING_CHARACTER_PATTERN = new RegExp(
+  "[" +
+    String.fromCharCode(0x202a) +
+    "-" +
+    String.fromCharCode(0x202e) +
+    String.fromCharCode(0x2066) +
+    "-" +
+    String.fromCharCode(0x2069) +
+    "]",
+  "g"
+);
+
+/**
+ * Phase 7C -- name-specific hardening on top of the shared
+ * sanitizeMessageText: a display name is meant to be a single short
+ * visual label, unlike a message body, so embedded newlines/tabs are
+ * collapsed to a single space (not merely preserved, as the body
+ * intentionally does) rather than allowed to fake a multi-line/
+ * multi-message appearance, bidi formatting controls are removed
+ * outright, and the result is NFC-normalized so visually-identical
+ * strings using different combining-character sequences store
+ * identically. Never touches ordinary Unicode letters of any script.
+ */
+function sanitizeDisplayNameText(raw: string): string {
+  return sanitizeMessageText(raw)
+    .replace(/[\n\t]/g, " ")
+    .replace(BIDI_FORMATTING_CHARACTER_PATTERN, "")
+    .replace(/ {2,}/g, " ")
+    .normalize("NFC");
+}
+
 function validateAuthorDisplayName(
   rawName: string | undefined
 ): string | null | "SHARE_MESSAGE_AUTHOR_NAME_TOO_LONG" {
@@ -146,7 +188,7 @@ function validateAuthorDisplayName(
     return null;
   }
 
-  const trimmed = sanitizeMessageText(rawName).trim();
+  const trimmed = sanitizeDisplayNameText(rawName).trim();
 
   if (countCodepoints(trimmed) < 1) {
     return null;

@@ -429,4 +429,43 @@ describe("ClientProjectView - mobile-safe semantic structure", () => {
       expect(screen.getByRole("region", { name })).toBeInTheDocument();
     }
   });
+
+  it("Phase 7D: each section label is a real heading, not merely a styled span", () => {
+    const projection = minimalProjection({
+      progress: { completed: 1, total: 2, percent: 50 },
+      latestUpdate: { body: "Update body", publishedAt: "2026-08-01T00:00:00Z" },
+      tasks: [{ title: "Task one", publicGroup: "completed", waitingForClientFeedback: false }],
+      resources: [{ kind: "link", label: "Link one", url: "https://example.com" }],
+    });
+
+    render(<ClientProjectView projection={projection} />);
+
+    for (const name of ["Progress", "Latest update", "Tasks", "Attachments"]) {
+      expect(screen.getByRole("heading", { name })).toBeInTheDocument();
+    }
+  });
+
+  it("Phase 7D: task titles and resource labels carry dir=\"auto\" for per-item bidi-safe rendering", () => {
+    const projection = minimalProjection({
+      tasks: [{ title: "עיצוב דף הבית", publicGroup: "in_progress", waitingForClientFeedback: false }],
+      resources: [{ kind: "link", label: "מסמך תכנון", url: "https://example.com" }],
+    });
+
+    render(<ClientProjectView projection={projection} />);
+
+    expect(screen.getByText("עיצוב דף הבית")).toHaveAttribute("dir", "auto");
+    expect(screen.getByText("מסמך תכנון")).toHaveAttribute("dir", "auto");
+  });
+
+  it("Phase 7D: a long unbroken task title does not force horizontal overflow (overflowWrap guard)", () => {
+    const longTitle = "a".repeat(200);
+    const projection = minimalProjection({
+      tasks: [{ title: longTitle, publicGroup: "in_progress", waitingForClientFeedback: false }],
+    });
+
+    render(<ClientProjectView projection={projection} />);
+
+    const titleEl = screen.getByText(longTitle);
+    expect(titleEl.style.overflowWrap).toBe("anywhere");
+  });
 });

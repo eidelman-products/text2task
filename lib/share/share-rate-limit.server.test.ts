@@ -70,6 +70,8 @@ describe("checkShareRateLimit - locked V1 policy, exact limits and windows", () 
     ["pin_verification", 5, 300],
     ["projection_read", 120, 300],
     ["invalid_link_access", 20, 300],
+    ["comment_submission", 10, 300],
+    ["file_access", 60, 300],
   ] as const)("%s: limit=%d window=%ds", async (action, limit, windowSeconds) => {
     rpcMock.mockResolvedValue(rpcSuccess(limit, windowSeconds));
 

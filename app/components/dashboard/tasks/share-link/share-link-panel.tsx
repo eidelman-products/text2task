@@ -4,44 +4,77 @@ import { useId, useState, type CSSProperties, type RefObject } from "react";
 
 import { DashboardButton } from "../../ui/button";
 import { ResponsiveDialog } from "../../ui/responsive-dialog";
-import { stack } from "../../ui/styles";
+import { row, stack } from "../../ui/styles";
 import {
   dashboardColors,
   dashboardRadii,
   dashboardSpacing,
   dashboardTypography,
 } from "../../ui/tokens";
-import type { ClientProjectProjection } from "@/lib/share/client-share-projection-contracts";
+import type {
+  ClientProjectProjection,
+} from "@/lib/share/client-share-projection-contracts";
+import type { SaveShareConfigurationRequest } from "@/lib/share/share-contracts";
 import { ClientCommunicationHistoryModal } from "./client-communication-history-modal";
 import { ClientProjectView } from "./client-project-view";
+import { ShareLinkAccessControls } from "./share-link-access-controls";
 import { ShareLinkChannels } from "./share-link-channels";
+import { ShareLinkConfigurationEditor } from "./share-link-configuration-editor";
 import { ShareLinkQuickShare, type ShareUpdateSubmission } from "./share-link-quick-share";
 import { useOwnerShareMessages } from "./use-owner-share-messages";
 import { useShareLinkHistory } from "./use-share-link-history";
 import type { ShareLinkActionKind, ShareLinkPanelState } from "./use-share-link";
 
 /*
-  Final owner-UX simplification (real browser defect #3 turn): this
-  panel now has exactly two states -- the short "Share project update"
+  Owner-UX simplification (real browser defect #3 turn), Phase 7C
+  lifecycle-closure correction, and Phase 7D owner-configuration closure:
+  this panel has two top-level views -- the short "Share project update"
   quick-share view (ShareLinkQuickShare: draft creation, safe default
   configuration, automatic task grouping, optional PIN/attachments/
   update, save and activation all orchestrated by one call,
   onShareUpdate, behind one primary button) and the post-share "Project
-  shared" result view (Copy/Native Share/WhatsApp/Email/Preview via
-  ShareLinkChannels, showRotate=false). There is no other entry point
-  inside this panel -- no "Edit what client sees", no "Manage link", no
-  advanced/settings/kebab-menu escape hatch of any kind. Sharing a
-  project update is meant to feel like sending a message, not
-  configuring a system.
+  shared" result view. The result view itself now has three sub-views,
+  tracked by `manageView`, all still reached from the SAME "Project
+  shared" screen (no separate route/modal-within-a-modal):
 
-  This does NOT delete any backend capability: activate/disable/
-  re-enable/revoke/rotate/PIN/expiry/manual task-and-Resource mapping
-  all remain fully implemented in useShareLink and in
-  share-link-configuration-editor.tsx/share-link-access-controls.tsx --
-  they are simply not wired into this panel's props anymore, since
-  nothing here calls them. Opening the panel itself still never calls
-  any mutating endpoint (only the read-only management-state/resources
-  loads it always performed).
+    - "channels" (default) -- Copy/Native Share/WhatsApp/Email/Preview,
+      Rotate/Disable/Re-enable/Revoke lifecycle management (via
+      ShareLinkChannels, unchanged from Phase 7C), plus two entry
+      buttons into the other two sub-views below.
+    - "config" -- ShareLinkConfigurationEditor: title/status/target-date
+      visibility, client-facing subtitle, text direction, exact task and
+      Resource selection/grouping, and publishing a new update. This
+      component was already fully built and tested in Phase 2B but was
+      never reachable from any rendered parent -- confirmed by a
+      Phase 7D repo-wide grep before wiring it in, not assumed.
+    - "access" -- ShareLinkAccessControls: PIN set/change/remove and
+      expiry set/change/remove. Also already fully built and tested
+      (Phase 2C) but likewise never reachable.
+
+  Phase 7D reconstructed the intended contract from the cached historical
+  master handoff before restoring this: "Optional PIN and optional
+  expiry are included in V1, not deferred to hardening" (locked product
+  decision) and "Project-level publication controls... titleVisible,
+  statusVisible and targetDateVisible... Task mappings... Resource
+  mappings support publicLabel, canDownload and display order" were
+  BOTH marked COMPLETE at the historical Phase 2B/2C checkpoints. Since
+  the live repo genuinely lacked any reachable UI for them (the same
+  later "no advanced/settings/kebab-menu escape hatch" simplification
+  that dropped Rotate/Disable/Revoke in Phase 7C also silently dropped
+  these), this is a real, evidenced V1 gap, not a still-open product
+  question -- closed here by wiring the EXISTING, already-tested
+  components and hook actions in, not by building a second
+  configuration subsystem or a new RPC.
+
+  Rotate/Disable/Re-enable/Revoke are reachable here per Phase 7C's own
+  reasoning (the accepted Phase 2A contract: "Active -> copy/reveal
+  link, disable or revoke. Disabled -> re-enable or revoke.").
+
+  Sharing a project update from the quick-share view is still meant to
+  feel like sending a message, not configuring a system -- "config"/
+  "access" are reached only by an explicit, secondary action from the
+  post-share result view, never from the quick-share view itself, and
+  opening the panel still never calls any mutating endpoint on its own.
 */
 
 export type ShareLinkPanelProps = {
@@ -56,6 +89,34 @@ export type ShareLinkPanelProps = {
   onShareUpdate: (submission: ShareUpdateSubmission) => void;
   onOpenPreview: () => void;
   onClosePreview: () => void;
+  // Phase 7C -- owner lifecycle closure (Disable/Re-enable/Revoke) and
+  // Rotate (previously built and tested but switched off here entirely
+  // -- showRotate={false} below -- by the same later UX simplification
+  // that also dropped Disable/Revoke; re-enabled together with them,
+  // since the Phase 7 audit's own "Rotate vs Disable vs Revoke clarity"
+  // requirement presupposes all three exist side by side). Each of these
+  // is the bare mutation only -- this panel owns the confirm-step UI
+  // state for Rotate/Revoke itself (see confirmingRotate/confirmingRevoke
+  // below) and calls these only once the owner has actually confirmed.
+  onRotate: () => void;
+  onDisable: () => void;
+  onReenable: () => void;
+  onRevoke: () => void;
+  // Phase 7D -- owner-configuration closure. Bare mutations only, exactly
+  // like onRotate/onDisable/onReenable/onRevoke above; this panel owns
+  // the confirm-step UI state for clearing an existing PIN (see
+  // confirmingClearPin below) and calls onClearPin only once the owner
+  // has actually confirmed. onSaveConfiguration/onSetExpiry/onClearExpiry
+  // need no confirm step of their own (matching
+  // ShareLinkAccessControls/ShareLinkConfigurationEditor's own existing,
+  // already-tested design -- clearing a PIN is the only one-click
+  // destructive action either component exposes).
+  onSaveConfiguration: (request: SaveShareConfigurationRequest) => void;
+  onSetPin: (pin: string) => void;
+  onClearPin: () => void;
+  onSetExpiry: (expiresAtIso: string) => void;
+  onClearExpiry: () => void;
+  onRetryResources: () => void;
   /** PHASE 6B -- explicit, owner-initiated "Analyze as client update"
    * hand-off. Implemented one level up (wherever this panel's own
    * caller already holds the existing Client Update review
@@ -86,14 +147,57 @@ export function ShareLinkPanel({
   onShareUpdate,
   onOpenPreview,
   onClosePreview,
+  onRotate,
+  onDisable,
+  onReenable,
+  onRevoke,
+  onSaveConfiguration,
+  onSetPin,
+  onClearPin,
+  onSetExpiry,
+  onClearExpiry,
+  onRetryResources,
   onAnalyzeMessage,
 }: ShareLinkPanelProps) {
   const headingId = useId();
   const [view, setView] = useState<PanelView>("quick");
   const [messagesOpen, setMessagesOpen] = useState(false);
+  // Phase 7C -- two-step confirm UI state for Rotate/Revoke, owned here
+  // (not in useShareLink) since it is pure presentation state, never
+  // durable/authoritative. Reset on any panel (re)open/project-switch
+  // below, and after the corresponding action finishes (success or
+  // failure) -- see the actionPending-transition block further down.
+  const [confirmingRotate, setConfirmingRotate] = useState(false);
+  const [confirmingRevoke, setConfirmingRevoke] = useState(false);
+  // Phase 7D -- same pattern, for clearing an existing PIN from the
+  // "access" sub-view.
+  const [confirmingClearPin, setConfirmingClearPin] = useState(false);
+  // Phase 7D -- which sub-view of the "Project shared" result screen is
+  // showing. Only meaningful while view === "result"; reset to
+  // "channels" on close/reopen exactly like confirmingRotate/
+  // confirmingRevoke above.
+  const [manageView, setManageView] = useState<"channels" | "config" | "access">("channels");
 
   const link = state.data?.link ?? null;
   const linkId = link?.id ?? null;
+
+  // Phase 7C -- after a successful Revoke, the authoritative re-fetch
+  // that useShareLink always performs comes back with `link: null`
+  // (revoked rows are structurally excluded from management reads). The
+  // body already correctly falls through to the quick-share entry screen
+  // once `link` is null (see the `view === "result" && link` render
+  // condition below), but `view` itself never reset on its own -- left
+  // uncorrected, a LATER successful Share update would then skip the
+  // normal shareUpdate-completion transition's own effect (it only fires
+  // on a genuine pending->not-pending edge) and could land back on an
+  // already-"result" view with no live link driving it. Adjusted during
+  // render, same pattern/rationale as the other reset blocks in this
+  // component: once management state has genuinely loaded
+  // (`state.data !== null`, not merely still-loading) and confirms no
+  // link exists while `view` still says "result", fall back to "quick".
+  if (view === "result" && link === null && state.data !== null) {
+    setView("quick");
+  }
 
   // PHASE 5F REAL PREVIEW DEFECT FIX -- get_share_link_management_state
   // (the RPC behind state.data.link) deliberately excludes revoked links
@@ -169,6 +273,10 @@ export function ShareLinkPanel({
     if (!state.isOpen) {
       setView("quick");
       setMessagesOpen(false);
+      setConfirmingRotate(false);
+      setConfirmingRevoke(false);
+      setConfirmingClearPin(false);
+      setManageView("channels");
     }
   }
 
@@ -186,9 +294,30 @@ export function ShareLinkPanel({
 
   if (previousActionPending !== state.actionPending) {
     const wasSharing = previousActionPending === "shareUpdate";
+    const wasRotating = previousActionPending === "rotate";
+    const wasRevoking = previousActionPending === "revoke";
+    const wasClearingPin = previousActionPending === "clearPin";
     setPreviousActionPending(state.actionPending);
     if (wasSharing && state.actionPending === null && !state.actionError) {
       setView("result");
+    }
+    // Phase 7C -- once the rotate/revoke action itself has actually
+    // finished (success or failure), the two-step confirm UI reverts to
+    // its plain, un-confirmed state. On success the button's own
+    // underlying gate (canRotate/canRevoke, driven by the freshly
+    // reloaded link state) already decides whether it renders again at
+    // all; on failure the owner sees the panel's existing generic
+    // actionError message and can click the plain button to retry.
+    if (wasRotating && state.actionPending === null) {
+      setConfirmingRotate(false);
+    }
+    if (wasRevoking && state.actionPending === null) {
+      setConfirmingRevoke(false);
+    }
+    // Phase 7D -- same pattern for clearing an existing PIN from the
+    // "access" sub-view.
+    if (wasClearingPin && state.actionPending === null) {
+      setConfirmingClearPin(false);
     }
   }
 
@@ -202,6 +331,42 @@ export function ShareLinkPanel({
   function handleRequestClose() {
     if (busy) return;
     onClose();
+  }
+
+  // Phase 7C -- ConfirmableActionButton reuses one onClick for both the
+  // initial click (reveal the confirm/cancel pair) and the confirm click
+  // itself (actually run the action) -- exactly the pattern Rotate's own
+  // (previously unwired) design already established. `busy` guards
+  // against a confirm-click firing while a different action is already
+  // in flight (the button is also visually `disabled` in that case, but
+  // this is the same synchronous belt-and-suspenders discipline
+  // useShareLink's own actionInFlightRef already applies one layer
+  // down).
+  function handleRotateClick() {
+    if (busy) return;
+    if (!confirmingRotate) {
+      setConfirmingRotate(true);
+      return;
+    }
+    onRotate();
+  }
+
+  function handleRevokeClick() {
+    if (busy) return;
+    if (!confirmingRevoke) {
+      setConfirmingRevoke(true);
+      return;
+    }
+    onRevoke();
+  }
+
+  function handleClearPinClick() {
+    if (busy) return;
+    if (!confirmingClearPin) {
+      setConfirmingClearPin(true);
+      return;
+    }
+    onClearPin();
   }
 
   return (
@@ -225,7 +390,13 @@ export function ShareLinkPanel({
 
         <div style={stack(1)}>
           <h2 id={headingId} style={headingStyle}>
-            {view === "result" ? "Project shared" : "Share with client"}
+            {/* Phase 7C fix: matches the body's own actual render
+                condition (view === "result" && link) exactly, not view
+                alone -- previously, after Revoke made `link` null, `view`
+                itself never reset, so this heading kept saying "Project
+                shared" even though the body had already correctly fallen
+                back to the quick-share form below. */}
+            {view === "result" && link ? "Project shared" : "Share with client"}
           </h2>
           <p style={subheadingStyle}>{projectTitle}</p>
         </div>
@@ -291,22 +462,79 @@ export function ShareLinkPanel({
               void badgeMessages.refetch();
             }}
           />
+        ) : view === "result" && link && manageView === "config" && state.project ? (
+          <div style={stack(3)}>
+            <BackToShareOptionsButton onClick={() => setManageView("channels")} disabled={busy} />
+            <ShareLinkConfigurationEditor
+              link={link}
+              mappedTasks={state.data?.mappedTasks ?? []}
+              mappedResources={state.data?.mappedResources ?? []}
+              currentUpdate={state.data?.currentUpdate ?? null}
+              project={state.project}
+              resources={state.resources}
+              resourcesLoading={state.resourcesLoading}
+              resourcesError={state.resourcesError}
+              onRetryResources={onRetryResources}
+              pending={state.actionPending === "saveConfiguration"}
+              disabled={busy}
+              onSave={onSaveConfiguration}
+            />
+          </div>
+        ) : view === "result" && link && manageView === "access" ? (
+          <div style={stack(3)}>
+            <BackToShareOptionsButton onClick={() => setManageView("channels")} disabled={busy} />
+            <ShareLinkAccessControls
+              link={link}
+              disabled={busy}
+              actionPending={state.actionPending}
+              confirmingClearPin={confirmingClearPin}
+              onSetPin={onSetPin}
+              onRequestClearPin={handleClearPinClick}
+              onCancelClearPinConfirm={() => setConfirmingClearPin(false)}
+              onSetExpiry={onSetExpiry}
+              onClearExpiry={onClearExpiry}
+            />
+          </div>
         ) : view === "result" && link ? (
-          <ShareLinkChannels
-            linkState={link.state}
-            actionPending={state.actionPending}
-            disabled={busy}
-            copyStatus={state.copyStatus}
-            confirmingRotate={false}
-            onCopyLink={onCopyLink}
-            onNativeShare={onNativeShare}
-            onWhatsApp={onWhatsApp}
-            onEmail={onEmail}
-            onRequestRotate={() => {}}
-            onCancelRotateConfirm={() => {}}
-            onOpenPreview={onOpenPreview}
-            showRotate={false}
-          />
+          <div style={stack(4)}>
+            <ShareLinkChannels
+              linkState={link.state}
+              actionPending={state.actionPending}
+              disabled={busy}
+              copyStatus={state.copyStatus}
+              confirmingRotate={confirmingRotate}
+              onCopyLink={onCopyLink}
+              onNativeShare={onNativeShare}
+              onWhatsApp={onWhatsApp}
+              onEmail={onEmail}
+              onRequestRotate={handleRotateClick}
+              onCancelRotateConfirm={() => setConfirmingRotate(false)}
+              onOpenPreview={onOpenPreview}
+              onDisable={onDisable}
+              onReenable={onReenable}
+              confirmingRevoke={confirmingRevoke}
+              onRequestRevoke={handleRevokeClick}
+              onCancelRevokeConfirm={() => setConfirmingRevoke(false)}
+            />
+            <div style={row(2)}>
+              <DashboardButton
+                variant="secondary"
+                size="sm"
+                onClick={() => setManageView("config")}
+                disabled={busy}
+              >
+                Edit what client sees
+              </DashboardButton>
+              <DashboardButton
+                variant="secondary"
+                size="sm"
+                onClick={() => setManageView("access")}
+                disabled={busy}
+              >
+                Manage access
+              </DashboardButton>
+            </div>
+          </div>
         ) : state.project ? (
           <ShareLinkQuickShare
             link={link}
@@ -328,6 +556,24 @@ export function ShareLinkPanel({
         ) : null}
       </div>
     </ResponsiveDialog>
+  );
+}
+
+// Phase 7D -- the sole navigation affordance out of "config"/"access"
+// back to the "Project shared" result screen's default sub-view.
+// Disabled while an action is in flight, matching every other control's
+// existing `busy` convention.
+function BackToShareOptionsButton({
+  onClick,
+  disabled,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <DashboardButton variant="ghost" size="sm" onClick={onClick} disabled={disabled}>
+      Back to share options
+    </DashboardButton>
   );
 }
 

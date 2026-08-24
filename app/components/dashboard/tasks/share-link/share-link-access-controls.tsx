@@ -234,7 +234,11 @@ export function ShareLinkAccessControls({
               style={inputBase}
               aria-label="Expiry date and time"
             />
-            {expiryError ? <p style={errorTextStyle}>{expiryError}</p> : null}
+            {expiryError ? (
+              <p role="alert" style={errorTextStyle}>
+                {expiryError}
+              </p>
+            ) : null}
             <div style={row(2)}>
               <DashboardButton
                 variant="primary"
@@ -309,7 +313,11 @@ function PinForm({
         style={inputBase}
         aria-label="New PIN"
       />
-      {error ? <p style={errorTextStyle}>{error}</p> : null}
+      {error ? (
+        <p role="alert" style={errorTextStyle}>
+          {error}
+        </p>
+      ) : null}
       <div style={row(2)}>
         <DashboardButton variant="primary" size="sm" onClick={onSubmit} loading={loading} disabled={disabled}>
           Save PIN

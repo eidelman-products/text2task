@@ -184,6 +184,41 @@ describe("validateShareMessageSubmission - authorDisplayName", () => {
   });
 });
 
+describe("validateShareMessageSubmission - authorDisplayName Phase 7C hardening", () => {
+  it("strips Unicode bidi formatting control characters (RLO/LRO/embeddings/isolates), never a normal RTL letter", () => {
+    const rlo = String.fromCharCode(0x202e);
+    const pdf = String.fromCharCode(0x202c);
+    const result = validateShareMessageSubmission(request("hi", `John${rlo}Owner${pdf}`));
+    expect(result).toEqual({ ok: true, data: { body: "hi", authorDisplayName: "JohnOwner" } });
+  });
+
+  it("preserves genuine Hebrew and Arabic names completely untouched", () => {
+    const hebrew = validateShareMessageSubmission(request("hi", "משה"));
+    expect(hebrew).toEqual({ ok: true, data: { body: "hi", authorDisplayName: "משה" } });
+
+    const arabic = validateShareMessageSubmission(request("hi", "محمد"));
+    expect(arabic).toEqual({ ok: true, data: { body: "hi", authorDisplayName: "محمد" } });
+  });
+
+  it("collapses an embedded newline/tab in a name to a single space, rather than preserving a multi-line label", () => {
+    const result = validateShareMessageSubmission(request("hi", "John\nOwner"));
+    expect(result).toEqual({ ok: true, data: { body: "hi", authorDisplayName: "John Owner" } });
+
+    const withTab = validateShareMessageSubmission(request("hi", "John\tOwner"));
+    expect(withTab).toEqual({ ok: true, data: { body: "hi", authorDisplayName: "John Owner" } });
+  });
+
+  it("does not collapse ordinary internal whitespace in a normal multi-word name", () => {
+    const result = validateShareMessageSubmission(request("hi", "Jane Client"));
+    expect(result).toEqual({ ok: true, data: { body: "hi", authorDisplayName: "Jane Client" } });
+  });
+
+  it("does not damage or reject a name that is entirely emoji/astral-plane content", () => {
+    const result = validateShareMessageSubmission(request("hi", "🙂🎉"));
+    expect(result).toEqual({ ok: true, data: { body: "hi", authorDisplayName: "🙂🎉" } });
+  });
+});
+
 describe("insertPublicShareMessage - trusted server-side write", () => {
   const INPUT = {
     shareLinkId: "11111111-1111-4111-8111-111111111111",

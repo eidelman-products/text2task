@@ -28,6 +28,7 @@ import {
   resolveShareLinkByPublicId,
 } from "@/lib/share/share-session-grant.server";
 import { getShareBrowserSessionCookiePolicy } from "@/lib/share/share-browser-session.server";
+import { maybeScheduleShareStateCleanup } from "@/lib/share/share-state-cleanup.server";
 
 /*
   Phase 3 -- POST /api/share/session. The fragment-secret bearer exchange
@@ -50,6 +51,9 @@ const NO_STORE_HEADERS: Record<string, string> = {
   Pragma: "no-cache",
   "Referrer-Policy": "no-referrer",
   "X-Content-Type-Options": "nosniff",
+  "X-Robots-Tag": "noindex, nofollow, noarchive",
+  "Permissions-Policy":
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()",
 };
 
 const requestBodySchema = z
@@ -113,6 +117,40 @@ export async function POST(request: NextRequest) {
   try {
     assertClientShareEnabled();
 
+    // Phase 7B -- rate limit session_exchange FIRST, before origin
+    // validation, body parsing, or any format/schema check. Previously
+    // every malformed-input rejection below (bad origin, invalid JSON,
+    // wrong content type, oversized body, schema-invalid publicId/
+    // secret/pin) returned before this bucket was ever touched, so an
+    // attacker could flood the route with garbage requests as a free,
+    // unmetered path. This digest only needs request.headers, so nothing
+    // about the (possibly malformed) body needs to be read first.
+    const networkIdentity = createShareNetworkIdentityDigest(request.headers);
+    const exchangeLimit = await checkShareRateLimit({
+      action: "session_exchange",
+      scope: "network_identity",
+      identityDigest: networkIdentity.digest,
+      identityDigestVersion: networkIdentity.version,
+    });
+
+    if (!exchangeLimit.allowed) {
+      return rateLimited(exchangeLimit.retryAfterSeconds);
+    }
+
+    // Phase 7B -- lazy, bounded, best-effort cleanup of naturally-expired
+    // session/grant/rate-limit-bucket rows, probabilistically scheduled
+    // to run after this response is sent (next/server after(), the same
+    // pattern already used elsewhere in this repository). The module
+    // itself already guards its own scheduling internally, but this
+    // request's own success must never depend on that guarantee holding
+    // -- wrapped again here so a failure at this call site can never
+    // fail the request itself.
+    try {
+      maybeScheduleShareStateCleanup();
+    } catch (cleanupError) {
+      logShareRouteError("share.session.cleanup_schedule", cleanupError);
+    }
+
     validateSharePublicRequestOrigin({ requestUrl: request.url, headers: request.headers });
 
     const bodyJson = await readSharePublicRequestJson(request);
@@ -130,21 +168,6 @@ export async function POST(request: NextRequest) {
 
     if (pin !== undefined && !isValidSharePin(pin)) {
       return jsonResponse({ ok: false, code: "INVALID_REQUEST", error: "Invalid request." }, 400);
-    }
-
-    // Rate limit session_exchange FIRST, before any secret/PIN
-    // verification work -- every attempt consumes this bucket regardless
-    // of outcome.
-    const networkIdentity = createShareNetworkIdentityDigest(request.headers);
-    const exchangeLimit = await checkShareRateLimit({
-      action: "session_exchange",
-      scope: "network_identity",
-      identityDigest: networkIdentity.digest,
-      identityDigestVersion: networkIdentity.version,
-    });
-
-    if (!exchangeLimit.allowed) {
-      return rateLimited(exchangeLimit.retryAfterSeconds);
     }
 
     async function failInvalidLink(): Promise<NextResponse> {
@@ -174,6 +197,37 @@ export async function POST(request: NextRequest) {
 
     if (!link.secretDigest || link.secretDigestVersion !== 1) {
       return failInvalidLink();
+    }
+
+    // Phase 7B -- a SECOND, layered, share_link-scoped budget on top of
+    // the network_identity-scoped one above, mirroring the exact pattern
+    // already established for PIN verification below. The
+    // network_identity bucket alone lets an attacker rotate network
+    // identity/browser to keep guessing this ONE link's secret
+    // indefinitely; this bucket is keyed by the link itself
+    // (createShareLinkRateLimitIdentityDigest -- a plain, non-secret,
+    // deterministic hash of the link id, not a secrecy boundary, exactly
+    // like its own existing PIN use below), so repeated attempts against
+    // this specific link are caught regardless of identity rotation.
+    // Reuses the existing `session_exchange` action (no new action value,
+    // no migration) -- this is simply a second scope of the same action,
+    // exactly as the schema's own scope/action design already permits.
+    // Checked here, before the comparison, so it fires uniformly whether
+    // the guess turns out right or wrong -- the response for either
+    // outcome is unaffected by this bucket's own state, so its presence
+    // reveals nothing about link existence beyond what failInvalidLink()
+    // already reveals today.
+    const linkGuessIdentity = createShareLinkRateLimitIdentityDigest(link.id);
+    const linkGuessLimit = await checkShareRateLimit({
+      action: "session_exchange",
+      scope: "share_link",
+      identityDigest: linkGuessIdentity.digest,
+      identityDigestVersion: linkGuessIdentity.version,
+      shareLinkId: link.id,
+    });
+
+    if (!linkGuessLimit.allowed) {
+      return rateLimited(linkGuessLimit.retryAfterSeconds);
     }
 
     let suppliedDigest: string;

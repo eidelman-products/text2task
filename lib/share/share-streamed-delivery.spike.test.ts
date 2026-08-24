@@ -123,6 +123,6 @@ describe("buildStreamedFileResponse -- local streaming-integrity proof", () => {
     expect(response.headers.get("Content-Length")).toBe("1024");
     expect(response.headers.get("Content-Disposition")).toBe("inline");
     expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
-    expect(response.headers.get("Content-Security-Policy")).toBe("sandbox");
+    expect(response.headers.get("Content-Security-Policy")).toBe("sandbox; frame-ancestors 'none'");
   });
 });

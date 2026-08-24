@@ -837,6 +837,16 @@ export default function TasksView({
         onShareUpdate={(submission) => void shareLink.shareUpdate(submission)}
         onOpenPreview={() => void shareLink.openPreview()}
         onClosePreview={shareLink.closePreview}
+        onRotate={() => void shareLink.rotate()}
+        onDisable={() => void shareLink.disable()}
+        onReenable={() => void shareLink.reenable()}
+        onRevoke={() => void shareLink.revoke()}
+        onSaveConfiguration={(request) => void shareLink.saveConfiguration(request)}
+        onSetPin={(pin) => void shareLink.setPin(pin)}
+        onClearPin={() => void shareLink.clearPin()}
+        onSetExpiry={(expiresAt) => void shareLink.setExpiry(expiresAt)}
+        onClearExpiry={() => void shareLink.clearExpiry()}
+        onRetryResources={() => shareLink.retryResources()}
         onAnalyzeMessage={handleAnalyzeShareMessage}
       />
 

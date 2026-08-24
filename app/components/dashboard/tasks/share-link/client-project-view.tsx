@@ -104,7 +104,7 @@ export function ClientProjectView({ projection, publicId }: ClientProjectViewPro
         {projection.progress ? (
           <section style={sectionStyle} aria-label="Progress">
             <div style={progressHeaderStyle}>
-              <span style={sectionLabelStyle}>Progress</span>
+              <h2 style={sectionLabelStyle}>Progress</h2>
               <span style={progressCountStyle}>
                 {projection.progress.completed} of {projection.progress.total} complete
               </span>
@@ -122,14 +122,14 @@ export function ClientProjectView({ projection, publicId }: ClientProjectViewPro
 
         {projection.latestUpdate ? (
           <section style={sectionStyle} aria-label="Latest update">
-            <span style={sectionLabelStyle}>Latest update</span>
+            <h2 style={sectionLabelStyle}>Latest update</h2>
             <p style={updateBodyStyle}>{projection.latestUpdate.body}</p>
           </section>
         ) : null}
 
         {projection.tasks.length > 0 ? (
           <section style={sectionStyle} aria-label="Tasks">
-            <span style={sectionLabelStyle}>Tasks</span>
+            <h2 style={sectionLabelStyle}>Tasks</h2>
             <div style={{ display: "grid", gap: dashboardSpacing[4] }}>
               {TASK_GROUP_ORDER.filter((group) => groupedTasks[group].length > 0).map((group) => (
                 <div key={group} style={{ display: "grid", gap: dashboardSpacing[2] }}>
@@ -137,7 +137,9 @@ export function ClientProjectView({ projection, publicId }: ClientProjectViewPro
                   <ul style={taskListStyle}>
                     {groupedTasks[group].map((task, index) => (
                       <li key={`${group}-${index}`} style={taskItemStyle}>
-                        <span>{task.title}</span>
+                        <span dir="auto" style={taskTitleStyle}>
+                          {task.title}
+                        </span>
                         {task.waitingForClientFeedback ? (
                           <span style={feedbackBadgeStyle}>Feedback needed</span>
                         ) : null}
@@ -152,7 +154,7 @@ export function ClientProjectView({ projection, publicId }: ClientProjectViewPro
 
         {projection.resources.length > 0 ? (
           <section style={sectionStyle} aria-label="Attachments">
-            <span style={sectionLabelStyle}>Attachments</span>
+            <h2 style={sectionLabelStyle}>Attachments</h2>
             <ul style={resourceListStyle}>
               {projection.resources.map((resource, index) => {
                 if (resource.kind === "link") {
@@ -162,6 +164,7 @@ export function ClientProjectView({ projection, publicId }: ClientProjectViewPro
                         href={resource.url}
                         target="_blank"
                         rel="noopener noreferrer nofollow"
+                        dir="auto"
                         style={resourceLinkStyle}
                       >
                         {resource.label}
@@ -197,7 +200,9 @@ export function ClientProjectView({ projection, publicId }: ClientProjectViewPro
                 return (
                   <li key={index} style={resourceItemStyle}>
                     <div style={resourceFileRowStyle}>
-                      <span style={resourceFileStyle}>{resource.label}</span>
+                      <span dir="auto" style={resourceFileStyle}>
+                        {resource.label}
+                      </span>
                       {fileUrl ? (
                         <a
                           href={fileUrl}
@@ -311,7 +316,13 @@ const sectionStyle: CSSProperties = {
   gap: dashboardSpacing[3],
 };
 
+// Phase 7D -- promoted from a styled <span> to a real <h2> (see the
+// accessibility audit's "section labels use non-heading elements"
+// finding); `margin: 0` keeps the exact same visual spacing a heading
+// element would otherwise add on top of this section's own `gap`-based
+// layout.
 const sectionLabelStyle: CSSProperties = {
+  margin: 0,
   fontSize: dashboardTypography.size.xs,
   fontWeight: dashboardTypography.weight.black,
   letterSpacing: "0.08em",
@@ -370,12 +381,23 @@ const taskItemStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
+  flexWrap: "wrap",
   gap: dashboardSpacing[2],
   padding: "8px 10px",
   borderRadius: dashboardRadii.lg,
   background: dashboardColors.background.surfaceMuted,
   fontSize: dashboardTypography.size.md,
   color: dashboardColors.text.primary,
+};
+
+// Phase 7D mobile hardening -- a long, unbroken task title (previously
+// unguarded, unlike message bodies) could overflow taskItemStyle's fixed
+// container at narrow widths; `minWidth: 0` lets this flex child actually
+// shrink instead of forcing the row wider than its parent.
+const taskTitleStyle: CSSProperties = {
+  minWidth: 0,
+  overflowWrap: "anywhere",
+  wordBreak: "break-word",
 };
 
 const feedbackBadgeStyle: CSSProperties = {
@@ -403,21 +425,31 @@ const resourceLinkStyle: CSSProperties = {
   color: dashboardColors.primary[700],
   fontWeight: dashboardTypography.weight.medium,
   textDecoration: "underline",
+  overflowWrap: "anywhere",
+  wordBreak: "break-word",
 };
 
 const resourceFileStyle: CSSProperties = {
+  minWidth: 0,
   color: dashboardColors.text.primary,
   fontWeight: dashboardTypography.weight.medium,
+  overflowWrap: "anywhere",
+  wordBreak: "break-word",
 };
 
 const resourceFileRowStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
+  flexWrap: "wrap",
   gap: dashboardSpacing[3],
 };
 
+// Phase 7D mobile hardening -- flexShrink: 0 keeps the Open/Download
+// action from being squeezed illegibly narrow when resourceFileStyle's
+// label wraps onto multiple lines at narrow widths.
 const resourceFileActionStyle: CSSProperties = {
+  flexShrink: 0,
   color: dashboardColors.primary[700],
   fontWeight: dashboardTypography.weight.semibold,
   textDecoration: "underline",

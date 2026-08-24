@@ -168,7 +168,7 @@ export function ClientCommunicationHistoryModal({
       ) : null}
 
       <div style={toolbarStyle}>
-        <span style={countTextStyle}>
+        <span style={countTextStyle} role="status" aria-live="polite">
           {state.status === "loading"
             ? "Loading client messages..."
             : unreadCount !== null
@@ -186,9 +186,9 @@ export function ClientCommunicationHistoryModal({
       </div>
 
       {state.status === "loading" || state.status === "idle" ? (
-        <StatePanel text="Loading client messages..." />
+        <StatePanel text="Loading client messages..." liveRole="status" />
       ) : state.status === "error" ? (
-        <StatePanel text={state.error} />
+        <StatePanel text={state.error} liveRole="alert" />
       ) : messages.length === 0 ? (
         <StatePanel text="No client messages yet." />
       ) : (
@@ -257,7 +257,17 @@ function MessageCard({
   onAnalyzeMessage: () => void;
 }) {
   const isClient = message.authorType === "client";
-  const authorLabel = isClient ? message.authorDisplayName?.trim() || "Client" : "You";
+  // Phase 7C -- anti-impersonation: authorType is server-controlled and
+  // authoritative, but authorDisplayName is free client input with no
+  // identity verification behind it -- a client could type "Owner",
+  // "Support", the real owner's name, etc. The trusted role ("Client")
+  // is always rendered as a fixed prefix the client can never remove or
+  // spoof, with any client-supplied name appended only as a secondary,
+  // visually subordinate label -- never as the identity itself. Owner
+  // messages remain "You", unaffected (author_type='owner' has no
+  // client-controlled display name at all).
+  const clientDisplayName = isClient ? message.authorDisplayName?.trim() || null : null;
+  const authorLabel = isClient ? "Client" : "You";
   // PHASE 6B -- owner-authored replies are never convertible (locked
   // product decision, already independently enforced at the database
   // layer by enforce_share_message_conversion_integrity); an
@@ -281,7 +291,15 @@ function MessageCard({
   return (
     <article style={{ ...cardStyle, ...(isClient ? clientCardAccentStyle : ownerCardAccentStyle) }}>
       <div style={cardMetaStyle}>
-        <span style={cardAuthorStyle}>{authorLabel}</span>
+        <span style={cardAuthorStyle}>
+          {authorLabel}
+          {clientDisplayName ? (
+            <span dir="auto" style={cardAuthorNameStyle}>
+              {" · "}
+              {clientDisplayName}
+            </span>
+          ) : null}
+        </span>
         <time style={cardTimeStyle} dateTime={message.createdAt}>
           {formatDateTime(message.createdAt)}
         </time>
@@ -380,9 +398,19 @@ function MessageCard({
   );
 }
 
-function StatePanel({ text }: { text: string }) {
+function StatePanel({
+  text,
+  liveRole,
+}: {
+  text: string;
+  liveRole?: "status" | "alert";
+}) {
   return (
-    <div style={statePanelStyle}>
+    <div
+      style={statePanelStyle}
+      role={liveRole}
+      aria-live={liveRole ? (liveRole === "alert" ? "assertive" : "polite") : undefined}
+    >
       <p style={statePanelTextStyle}>{text}</p>
     </div>
   );
@@ -452,8 +480,20 @@ const countTextStyle: CSSProperties = {
   fontWeight: dashboardTypography.weight.medium,
 };
 
+// Phase 7D touch-target closure -- the audit flagged this file's
+// hand-rolled compact buttons (~20-22px effective height, well under the
+// ~44px guideline every DashboardButton already meets). `minHeight: 36`
+// is the practical middle ground the task brief itself calls for: a real
+// improvement toward 44px without visually bloating a row that packs
+// several of these side by side (Mark reviewed/Resolve/Dismiss/Reply/
+// Analyze) -- the visible padding/font stay compact, only the actual
+// clickable/tappable box grows.
 const refreshButtonStyle: CSSProperties = {
-  padding: "4px 10px",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 36,
+  padding: "4px 12px",
   borderRadius: dashboardRadii.md,
   border: `1px solid ${dashboardColors.border.subtle}`,
   background: dashboardColors.background.surface,
@@ -519,6 +559,15 @@ const cardAuthorStyle: CSSProperties = {
   color: dashboardColors.text.primary,
 };
 
+// Phase 7C -- visually subordinate to the trusted "Client"/"You" role
+// label it always follows: lighter weight, muted color, never bold or
+// primary-colored, so a client-supplied name can never be styled to
+// look like the trusted role text itself.
+const cardAuthorNameStyle: CSSProperties = {
+  fontWeight: dashboardTypography.weight.regular,
+  color: dashboardColors.text.muted,
+};
+
 const cardTimeStyle: CSSProperties = {
   fontSize: dashboardTypography.size.xs,
   color: dashboardColors.text.muted,
@@ -557,7 +606,11 @@ const actionsRowStyle: CSSProperties = {
 };
 
 const actionButtonStyle: CSSProperties = {
-  padding: "4px 8px",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 36,
+  padding: "4px 10px",
   borderRadius: dashboardRadii.md,
   border: `1px solid ${dashboardColors.border.subtle}`,
   background: dashboardColors.background.surface,
@@ -567,7 +620,11 @@ const actionButtonStyle: CSSProperties = {
 };
 
 const replyLinkStyle: CSSProperties = {
-  padding: "4px 8px",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 36,
+  padding: "4px 10px",
   borderRadius: dashboardRadii.md,
   border: "none",
   background: "transparent",
@@ -612,6 +669,10 @@ const replyActionsStyle: CSSProperties = {
 };
 
 const submitReplyButtonStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 40,
   padding: "6px 14px",
   borderRadius: dashboardRadii.md,
   border: "none",
@@ -623,6 +684,10 @@ const submitReplyButtonStyle: CSSProperties = {
 };
 
 const cancelReplyButtonStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 40,
   padding: "6px 14px",
   borderRadius: dashboardRadii.md,
   border: `1px solid ${dashboardColors.border.subtle}`,

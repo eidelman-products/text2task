@@ -77,6 +77,11 @@ vi.mock("@/lib/share/share-browser-session.server", () => ({
   }),
 }));
 
+const maybeScheduleCleanupMock = vi.fn();
+vi.mock("@/lib/share/share-state-cleanup.server", () => ({
+  maybeScheduleShareStateCleanup: () => maybeScheduleCleanupMock(),
+}));
+
 const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
 const { POST } = await import("./route");
@@ -175,7 +180,7 @@ describe("POST /api/share/session - feature gate", () => {
 });
 
 describe("POST /api/share/session - request security", () => {
-  it("rejects an invalid origin before any rate limit / DB work", async () => {
+  it("rejects an invalid origin before any DB work, but AFTER the session_exchange rate-limit gate (Phase 7B)", async () => {
     validateOriginMock.mockImplementation(() => {
       throw new FakeSharePublicRequestError("invalid_request_origin");
     });
@@ -185,7 +190,27 @@ describe("POST /api/share/session - request security", () => {
 
     expect(response.status).toBe(403);
     expect(body.code).toBe("INVALID_ORIGIN");
-    expect(checkRateLimitMock).not.toHaveBeenCalled();
+    // Phase 7B: the network_identity session_exchange bucket is consumed
+    // FIRST, before origin validation -- otherwise an attacker could
+    // flood this route with invalid-origin requests as a free, unmetered
+    // path. No DB work (link resolution) has happened, though.
+    expect(checkRateLimitMock).toHaveBeenCalledTimes(1);
+    expect(checkRateLimitMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "session_exchange", scope: "network_identity" })
+    );
+    expect(resolveShareLinkByPublicIdMock).not.toHaveBeenCalled();
+  });
+
+  it("still fails closed via the rate limiter even when the origin is also invalid", async () => {
+    validateOriginMock.mockImplementation(() => {
+      throw new FakeSharePublicRequestError("invalid_request_origin");
+    });
+    checkRateLimitMock.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 5 });
+
+    const response = await POST(buildRequest({ publicId: VALID_PUBLIC_ID, secret: VALID_SECRET }));
+
+    expect(response.status).toBe(429);
+    expect(validateOriginMock).not.toHaveBeenCalled();
   });
 
   it("rejects a malformed body", async () => {
@@ -203,6 +228,31 @@ describe("POST /api/share/session - request security", () => {
 
     const response = await POST(buildRequest({}));
     expect(response.status).toBe(400);
+  });
+});
+
+describe("POST /api/share/session - Phase 7B lazy cleanup scheduling", () => {
+  it("schedules a cleanup pass on every invocation that reaches the rate-limit gate", async () => {
+    readJsonMock.mockResolvedValue({ publicId: VALID_PUBLIC_ID, secret: VALID_SECRET });
+    resolveShareLinkByPublicIdMock.mockResolvedValue(noPinLink());
+
+    await POST(buildRequest({}));
+
+    expect(maybeScheduleCleanupMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("never affects the response even if scheduling itself throws", async () => {
+    readJsonMock.mockResolvedValue({ publicId: VALID_PUBLIC_ID, secret: VALID_SECRET });
+    resolveShareLinkByPublicIdMock.mockResolvedValue(noPinLink());
+    maybeScheduleCleanupMock.mockImplementationOnce(() => {
+      throw new Error("cleanup scheduling boom");
+    });
+
+    const response = await POST(buildRequest({}));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ ok: true, status: "authorized" });
   });
 });
 
@@ -271,6 +321,71 @@ describe("POST /api/share/session - unknown/invalid link is generic and consumes
 
     expect(response.status).toBe(429);
     expect(body.code).toBe("RATE_LIMITED");
+  });
+});
+
+describe("POST /api/share/session - Phase 7B per-link secret-guessing bucket", () => {
+  it("consumes a share_link-scoped session_exchange bucket, keyed by this link's own id, before comparing the secret", async () => {
+    readJsonMock.mockResolvedValue({ publicId: VALID_PUBLIC_ID, secret: VALID_SECRET });
+    resolveShareLinkByPublicIdMock.mockResolvedValue(noPinLink());
+
+    const response = await POST(buildRequest({}));
+
+    expect(response.status).toBe(200);
+    expect(createLinkIdentityMock).toHaveBeenCalledWith(VALID_LINK_ID);
+    expect(checkRateLimitMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "session_exchange",
+        scope: "share_link",
+        shareLinkId: VALID_LINK_ID,
+      })
+    );
+  });
+
+  it("returns 429 when the per-link bucket is exhausted, even though the network-identity bucket still has room -- and never reaches the secret comparison", async () => {
+    readJsonMock.mockResolvedValue({ publicId: VALID_PUBLIC_ID, secret: VALID_SECRET });
+    resolveShareLinkByPublicIdMock.mockResolvedValue(noPinLink());
+    checkRateLimitMock.mockImplementation((input: { action: string; scope: string }) =>
+      Promise.resolve(
+        input.action === "session_exchange" && input.scope === "share_link" ? deny(30) : allow()
+      )
+    );
+
+    const response = await POST(buildRequest({}));
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(body.code).toBe("RATE_LIMITED");
+    expect(response.headers.get("Retry-After")).toBe("30");
+    expect(createShareSecretDigestMock).not.toHaveBeenCalled();
+    expect(ensureCurrentGrantMock).not.toHaveBeenCalled();
+  });
+
+  it("a correct guess still consumes the per-link bucket (fires uniformly regardless of outcome -- no enumeration signal)", async () => {
+    readJsonMock.mockResolvedValue({ publicId: VALID_PUBLIC_ID, secret: VALID_SECRET });
+    resolveShareLinkByPublicIdMock.mockResolvedValue(noPinLink());
+
+    await POST(buildRequest({}));
+
+    const shareLinkScopedCalls = checkRateLimitMock.mock.calls.filter((call: unknown[]) => {
+      const input = call[0] as { action: string; scope: string };
+      return input.action === "session_exchange" && input.scope === "share_link";
+    });
+    expect(shareLinkScopedCalls).toHaveLength(1);
+  });
+
+  it("uses a distinct per-link identity for a different link (not incorrectly coupled)", async () => {
+    const otherLinkId = "44444444-4444-4444-8444-444444444444";
+    readJsonMock.mockResolvedValue({ publicId: VALID_PUBLIC_ID, secret: VALID_SECRET });
+    resolveShareLinkByPublicIdMock.mockResolvedValue(noPinLink({ id: otherLinkId }));
+
+    await POST(buildRequest({}));
+
+    expect(createLinkIdentityMock).toHaveBeenCalledWith(otherLinkId);
+    expect(createLinkIdentityMock).not.toHaveBeenCalledWith(VALID_LINK_ID);
+    expect(checkRateLimitMock).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "share_link", shareLinkId: otherLinkId })
+    );
   });
 });
 
@@ -396,5 +511,41 @@ describe("POST /api/share/session - no-store headers on every branch", () => {
 
     const response = await POST(buildRequest({}));
     expect(response.headers.get("Cache-Control")).toContain("no-store");
+  });
+});
+
+describe("POST /api/share/session - Phase 7 hardening headers on every branch", () => {
+  it("success response carries X-Robots-Tag and Permissions-Policy", async () => {
+    readJsonMock.mockResolvedValue({ publicId: VALID_PUBLIC_ID, secret: VALID_SECRET });
+    resolveShareLinkByPublicIdMock.mockResolvedValue(noPinLink());
+
+    const response = await POST(buildRequest({}));
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive");
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+    );
+  });
+
+  it("error response carries X-Robots-Tag and Permissions-Policy", async () => {
+    readJsonMock.mockResolvedValue({ publicId: VALID_PUBLIC_ID, secret: VALID_SECRET });
+    resolveShareLinkByPublicIdMock.mockResolvedValue(null);
+
+    const response = await POST(buildRequest({}));
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive");
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+    );
+  });
+
+  it("rate-limited response also carries the hardening headers", async () => {
+    checkRateLimitMock.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 12 });
+    readJsonMock.mockResolvedValue({ publicId: VALID_PUBLIC_ID, secret: VALID_SECRET });
+
+    const response = await POST(buildRequest({}));
+    expect(response.status).toBe(429);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive");
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+    );
   });
 });

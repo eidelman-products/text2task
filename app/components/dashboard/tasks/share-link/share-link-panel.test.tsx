@@ -139,6 +139,16 @@ function PanelHarness({
       onShareUpdate={vi.fn()}
       onOpenPreview={vi.fn()}
       onClosePreview={vi.fn()}
+      onRotate={vi.fn()}
+      onDisable={vi.fn()}
+      onReenable={vi.fn()}
+      onRevoke={vi.fn()}
+      onSaveConfiguration={vi.fn()}
+      onSetPin={vi.fn()}
+      onClearPin={vi.fn()}
+      onSetExpiry={vi.fn()}
+      onClearExpiry={vi.fn()}
+      onRetryResources={vi.fn()}
       onAnalyzeMessage={vi.fn().mockResolvedValue({ ok: true })}
       {...overrides}
     />
@@ -245,7 +255,7 @@ describe("ShareLinkPanel - final simplified normal panel content (real browser d
 });
 
 describe("ShareLinkPanel - result view after a successful Share update", () => {
-  it("shows the result view (Copy/WhatsApp/Email/Preview, no Rotate, no Manage link) once a Share update completes successfully", () => {
+  it("shows the result view (Copy/WhatsApp/Email/Preview, plus Phase 7C's Rotate/Disable/Revoke lifecycle controls) once a Share update completes successfully", () => {
     const { rerender } = renderPanel(baseState({ data: linkData("draft"), actionPending: "shareUpdate" }));
 
     rerender(
@@ -257,10 +267,296 @@ describe("ShareLinkPanel - result view after a successful Share update", () => {
     expect(screen.getByRole("button", { name: /whatsapp/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^email$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /preview/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /rotate link/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^manage link$/i })).not.toBeInTheDocument();
+    // Phase 7C: Rotate/Disable/Revoke are reachable here now (an active
+    // link can be rotated, disabled, or revoked -- Re-enable does not
+    // apply to an active link).
+    expect(screen.getByRole("button", { name: /^rotate link$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^disable link$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^revoke link$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^re-enable link$/i })).not.toBeInTheDocument();
   });
 
+});
+
+describe("ShareLinkPanel - Phase 7C owner lifecycle closure (Disable/Re-enable/Revoke)", () => {
+  // The panel only reaches its "result" view (where ShareLinkChannels,
+  // and therefore all lifecycle controls, render) via the real
+  // shareUpdate-completion transition -- see the describe block above.
+  // This helper reproduces that same two-render sequence for an
+  // already-existing link at a given state, then applies any further
+  // overrides/rerender the caller needs.
+  function renderResultView(
+    linkState: "active" | "disabled",
+    overrides: Partial<Parameters<typeof ShareLinkPanel>[0]> = {}
+  ) {
+    const rendered = renderPanel(baseState({ data: linkData("draft"), actionPending: "shareUpdate" }), overrides);
+    rendered.rerender(
+      <PanelHarness
+        state={baseState({ data: linkData(linkState), actionPending: null, actionError: null })}
+        overrides={overrides}
+      />
+    );
+    return rendered;
+  }
+
+  it("active link: Disable and Revoke are offered, Re-enable is not", () => {
+    renderResultView("active");
+
+    expect(screen.getByRole("button", { name: /^disable link$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^revoke link$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^re-enable link$/i })).not.toBeInTheDocument();
+  });
+
+  it("disabled link: Re-enable and Revoke are offered, Disable is not, and sharing-channel buttons are hidden", () => {
+    renderResultView("disabled");
+
+    expect(screen.getByRole("button", { name: /^re-enable link$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^revoke link$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^disable link$/i })).not.toBeInTheDocument();
+    // Copy/WhatsApp/Email require an active link to reveal -- unaffected
+    // by this change, already-existing gating.
+    expect(screen.queryByRole("button", { name: /copy client link/i })).not.toBeInTheDocument();
+  });
+
+  it("clicking Disable calls onDisable immediately -- no confirmation step, matching its temporary/reversible semantics", async () => {
+    const onDisable = vi.fn();
+    renderResultView("active", { onDisable });
+
+    await userEvent.click(screen.getByRole("button", { name: /^disable link$/i }));
+
+    expect(onDisable).toHaveBeenCalledTimes(1);
+  });
+
+  it("clicking Re-enable calls onReenable immediately -- no confirmation step", async () => {
+    const onReenable = vi.fn();
+    renderResultView("disabled", { onReenable });
+
+    await userEvent.click(screen.getByRole("button", { name: /^re-enable link$/i }));
+
+    expect(onReenable).toHaveBeenCalledTimes(1);
+  });
+
+  it("Revoke requires two clicks (explicit confirmation) -- the first click reveals a warning and Confirm/Cancel, never calling onRevoke yet", async () => {
+    const onRevoke = vi.fn();
+    renderResultView("active", { onRevoke });
+
+    await userEvent.click(screen.getByRole("button", { name: /^revoke link$/i }));
+
+    expect(onRevoke).not.toHaveBeenCalled();
+    expect(screen.getByText(/permanently ends this share/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^confirm revoke$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^cancel$/i })).toBeInTheDocument();
+  });
+
+  it("Revoke: the second click (Confirm revoke) actually calls onRevoke", async () => {
+    const onRevoke = vi.fn();
+    renderResultView("active", { onRevoke });
+
+    await userEvent.click(screen.getByRole("button", { name: /^revoke link$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^confirm revoke$/i }));
+
+    expect(onRevoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("Revoke: clicking Cancel returns to the plain, un-confirmed button without ever calling onRevoke", async () => {
+    const onRevoke = vi.fn();
+    renderResultView("active", { onRevoke });
+
+    await userEvent.click(screen.getByRole("button", { name: /^revoke link$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    expect(onRevoke).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /^revoke link$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^confirm revoke$/i })).not.toBeInTheDocument();
+  });
+
+  it("Revoke's confirm warning wording is distinct from Rotate's -- 'permanent'/'cannot be undone', not merely 'invalidate'", async () => {
+    renderResultView("active");
+
+    await userEvent.click(screen.getByRole("button", { name: /^rotate link$/i }));
+    expect(screen.getByText(/invalidate the previously shared client link/i)).toBeInTheDocument();
+    expect(screen.queryByText(/permanently ends this share/i)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    await userEvent.click(screen.getByRole("button", { name: /^revoke link$/i }));
+    expect(screen.getByText(/permanently ends this share.*cannot be undone/i)).toBeInTheDocument();
+  });
+
+  it("a second Revoke click while the action is already pending does not call onRevoke twice (UI-level double-submit protection, on top of the hook's own reentrancy guard)", async () => {
+    const onRevoke = vi.fn();
+    const { rerender } = renderResultView("active", { onRevoke });
+
+    await userEvent.click(screen.getByRole("button", { name: /^revoke link$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^confirm revoke$/i }));
+    expect(onRevoke).toHaveBeenCalledTimes(1);
+
+    // Simulate the action now being in flight (as the real hook would
+    // report via actionPending) -- the confirm button becomes disabled/
+    // loading, so a rapid second click cannot fire a second call.
+    rerender(
+      <PanelHarness
+        state={baseState({ data: linkData("active"), actionPending: "revoke" })}
+        overrides={{ onRevoke }}
+      />
+    );
+    const confirmButton = screen.getByRole("button", { name: /^confirm revoke$/i });
+    await userEvent.click(confirmButton);
+
+    expect(onRevoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("after a successful Revoke, the authoritative refresh naturally drops the link (revoked rows are excluded from management reads) -- the panel falls back to the quick-share entry screen, not a stale active-link view", () => {
+    const { rerender } = renderResultView("active");
+
+    // The real useShareLink hook always re-fetches management state after
+    // any action completes; a revoked link reads back as `link: null`.
+    rerender(
+      <PanelHarness
+        state={baseState({
+          data: { link: null, mappedTasks: [], mappedResources: [], currentUpdate: null },
+          actionPending: null,
+        })}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: /^revoke link$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /project shared/i })).not.toBeInTheDocument();
+  });
+
+  it("Rotate remains distinct from Disable/Revoke -- clicking Rotate never calls onDisable or onRevoke", async () => {
+    const onDisable = vi.fn();
+    const onRevoke = vi.fn();
+    const onRotate = vi.fn();
+    renderResultView("active", { onDisable, onRevoke, onRotate });
+
+    await userEvent.click(screen.getByRole("button", { name: /^rotate link$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^confirm rotate$/i }));
+
+    expect(onRotate).toHaveBeenCalledTimes(1);
+    expect(onDisable).not.toHaveBeenCalled();
+    expect(onRevoke).not.toHaveBeenCalled();
+  });
+});
+
+describe("ShareLinkPanel - Phase 7D owner-configuration closure (PIN/Expiry/task-and-resource mapping/visibility)", () => {
+  // Same two-render sequence as the Phase 7C describe block above,
+  // redefined locally rather than shared across describe blocks.
+  function renderResultView(
+    linkState: "active" | "disabled",
+    overrides: Partial<Parameters<typeof ShareLinkPanel>[0]> = {},
+    linkOverrides: Record<string, unknown> = {}
+  ) {
+    const rendered = renderPanel(baseState({ data: linkData("draft"), actionPending: "shareUpdate" }), overrides);
+    rendered.rerender(
+      <PanelHarness
+        state={baseState({ data: linkData(linkState, linkOverrides), actionPending: null, actionError: null })}
+        overrides={overrides}
+      />
+    );
+    return rendered;
+  }
+
+  it("the result view offers 'Edit what client sees' and 'Manage access' entry points, previously unreachable", () => {
+    renderResultView("active");
+
+    expect(screen.getByRole("button", { name: /edit what client sees/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /manage access/i })).toBeInTheDocument();
+  });
+
+  it("clicking 'Edit what client sees' shows the configuration editor (title/status/target-date visibility, tasks, resources), with a way back", async () => {
+    renderResultView("active");
+
+    await userEvent.click(screen.getByRole("button", { name: /edit what client sees/i }));
+
+    expect(screen.getByText(/show project title/i)).toBeInTheDocument();
+    expect(screen.getByText(/show project status/i)).toBeInTheDocument();
+    expect(screen.getByText(/show target date/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save configuration/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /project shared/i })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /back to share options/i }));
+    expect(screen.getByRole("button", { name: /^rotate link$/i })).toBeInTheDocument();
+  });
+
+  it("saving the configuration editor calls onSaveConfiguration with a request built from the current draft", async () => {
+    const onSaveConfiguration = vi.fn();
+    renderResultView("active", { onSaveConfiguration });
+
+    await userEvent.click(screen.getByRole("button", { name: /edit what client sees/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save configuration/i }));
+
+    expect(onSaveConfiguration).toHaveBeenCalledTimes(1);
+    expect(onSaveConfiguration.mock.calls[0][0]).toMatchObject({
+      settings: expect.objectContaining({ titleVisible: expect.any(Boolean) }),
+    });
+  });
+
+  it("clicking 'Manage access' shows the access controls (PIN/expiry), with a way back", async () => {
+    renderResultView("active");
+
+    await userEvent.click(screen.getByRole("button", { name: /manage access/i }));
+
+    expect(screen.getByRole("button", { name: /^add pin$/i })).toBeInTheDocument();
+    expect(screen.getByText(/no expiry set/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /back to share options/i }));
+    expect(screen.getByRole("button", { name: /^rotate link$/i })).toBeInTheDocument();
+  });
+
+  it("setting a new PIN from the access controls calls onSetPin with the typed value", async () => {
+    const onSetPin = vi.fn();
+    renderResultView("active", { onSetPin });
+
+    await userEvent.click(screen.getByRole("button", { name: /manage access/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^add pin$/i }));
+    await userEvent.type(screen.getByLabelText(/new pin/i), "4321");
+    await userEvent.click(screen.getByRole("button", { name: /^save pin$/i }));
+
+    expect(onSetPin).toHaveBeenCalledWith("4321");
+  });
+
+  it("removing an existing PIN requires two clicks (confirm) before calling onClearPin", async () => {
+    const onClearPin = vi.fn();
+    renderResultView("active", { onClearPin }, { hasPin: true });
+
+    await userEvent.click(screen.getByRole("button", { name: /manage access/i }));
+    expect(screen.getByText(/pin protected/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /^remove pin$/i }));
+    expect(onClearPin).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /^confirm remove$/i })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /^confirm remove$/i }));
+    expect(onClearPin).toHaveBeenCalledTimes(1);
+  });
+
+  it("setting an expiry from the access controls calls onSetExpiry with a future ISO timestamp", async () => {
+    const onSetExpiry = vi.fn();
+    renderResultView("active", { onSetExpiry });
+
+    await userEvent.click(screen.getByRole("button", { name: /manage access/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^set expiry$/i }));
+
+    const input = screen.getByLabelText(/expiry date and time/i);
+    await userEvent.type(input, "2099-01-01T10:00");
+    await userEvent.click(screen.getByRole("button", { name: /^save expiry$/i }));
+
+    expect(onSetExpiry).toHaveBeenCalledTimes(1);
+    expect(typeof onSetExpiry.mock.calls[0][0]).toBe("string");
+  });
+
+  it("'Edit what client sees' and 'Manage access' are disabled while an action is in flight (double-submit protection)", () => {
+    const { rerender } = renderResultView("active");
+    rerender(
+      <PanelHarness state={baseState({ data: linkData("active"), actionPending: "setPin" })} />
+    );
+
+    expect(screen.getByRole("button", { name: /edit what client sees/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /manage access/i })).toBeDisabled();
+  });
+});
+
+describe("ShareLinkPanel - result view failure handling", () => {
   it("does NOT show the result view when Share update fails, and never reports false success", () => {
     const { rerender } = renderPanel(baseState({ data: linkData("draft"), actionPending: "shareUpdate" }));
 

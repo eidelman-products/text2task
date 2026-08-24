@@ -200,13 +200,19 @@ export function resolveContentDisposition(input: {
  * something executable (e.g. HTML) based on sniffed content, and the
  * sandbox CSP is free defense-in-depth against any active content a
  * browser's own inline viewer (e.g. a PDF reader) might otherwise be
- * able to reach the parent origin from. */
+ * able to reach the parent origin from. `frame-ancestors 'none'` closes
+ * the one gap `sandbox` alone leaves open -- `sandbox` restricts what a
+ * loaded document can *do*, not whether another origin may *iframe* it
+ * -- mirroring the public page's own CSP (proxy.ts) exactly. */
 export const SHARE_FILE_RESPONSE_SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
-  "Content-Security-Policy": "sandbox",
+  "Content-Security-Policy": "sandbox; frame-ancestors 'none'",
   "Cache-Control": "private, no-store",
   Pragma: "no-cache",
   "Referrer-Policy": "no-referrer",
+  "X-Robots-Tag": "noindex, nofollow, noarchive",
+  "Permissions-Policy":
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()",
 };
 
 /**

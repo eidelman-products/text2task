@@ -29,6 +29,18 @@ vi.mock("@/lib/share/share-rate-limit.server", () => ({
   checkShareRateLimit: (input: unknown) => checkRateLimitMock(input),
 }));
 
+const createNetworkIdentityMock = vi.fn();
+class FakeShareIdentityError extends Error {
+  constructor() {
+    super("identity error");
+    this.name = "ShareIdentityError";
+  }
+}
+vi.mock("@/lib/share/share-identity.server", () => ({
+  createShareNetworkIdentityDigest: () => createNetworkIdentityMock(),
+  isShareIdentityError: (error: unknown) => error instanceof FakeShareIdentityError,
+}));
+
 const isValidSharePublicIdMock = vi.fn();
 vi.mock("@/lib/share/share-public-id.server", () => ({
   isValidSharePublicId: (value: unknown) => isValidSharePublicIdMock(value),
@@ -166,6 +178,7 @@ beforeEach(() => {
   hashSecretMock.mockReset().mockReturnValue("a".repeat(64));
   isValidRawSecretMock.mockReset().mockReturnValue(true);
   checkRateLimitMock.mockReset().mockResolvedValue(allow());
+  createNetworkIdentityMock.mockReset().mockReturnValue({ digest: "f".repeat(64), version: 1 });
   isValidSharePublicIdMock.mockReset().mockReturnValue(true);
   validateOriginMock.mockReset();
   isRejectableCrossSiteRequestMock.mockReset().mockReturnValue(false);
@@ -212,21 +225,43 @@ describe("POST /api/share/[publicId]/messages - request security / origin", () =
     expect(isValidSharePublicIdMock).not.toHaveBeenCalled();
   });
 
-  it("checks origin before reading publicId/cookie/rate-limit at all", async () => {
+  it("checks origin before reading publicId/cookie at all, but AFTER the Phase 7B early network-identity gate", async () => {
     validateOriginMock.mockImplementation(() => {
       throw new FakeSharePublicRequestError("invalid_request_origin");
     });
 
     await POST(buildRequest(), buildContext(VALID_PUBLIC_ID));
 
-    expect(checkRateLimitMock).not.toHaveBeenCalled();
+    // Phase 7B: a network_identity-scoped comment_submission check now
+    // runs FIRST, before origin validation -- otherwise a flood of
+    // invalid-origin requests would never consume any bucket. Everything
+    // after origin validation (publicId, cookie, authorization, insert)
+    // is still untouched.
+    expect(checkRateLimitMock).toHaveBeenCalledTimes(1);
+    expect(checkRateLimitMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "comment_submission", scope: "network_identity" })
+    );
+    expect(isValidSharePublicIdMock).not.toHaveBeenCalled();
     expect(verifyAuthorizationMock).not.toHaveBeenCalled();
     expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it("fails closed via the early network-identity gate even when the origin is also invalid", async () => {
+    validateOriginMock.mockImplementation(() => {
+      throw new FakeSharePublicRequestError("invalid_request_origin");
+    });
+    checkRateLimitMock.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 8 });
+
+    const response = await POST(buildRequest(), buildContext(VALID_PUBLIC_ID));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("8");
+    expect(validateOriginMock).not.toHaveBeenCalled();
   });
 });
 
 describe("POST /api/share/[publicId]/messages - publicId / cookie preconditions", () => {
-  it("generic-unavailable for a malformed publicId, before touching the cookie", async () => {
+  it("generic-unavailable for a malformed publicId, before touching the cookie (still consumes the Phase 7B early gate)", async () => {
     isValidSharePublicIdMock.mockReturnValue(false);
 
     const response = await POST(buildRequest(), buildContext("not valid"));
@@ -234,16 +269,26 @@ describe("POST /api/share/[publicId]/messages - publicId / cookie preconditions"
 
     expect(response.status).toBe(401);
     expect(body.code).toBe("UNAVAILABLE");
-    expect(checkRateLimitMock).not.toHaveBeenCalled();
+    // Exactly one call: the Phase 7B early network-identity gate. The
+    // later browser_session-scoped comment_submission check is never
+    // reached, since it requires a resolved cookie this request never
+    // gets to.
+    expect(checkRateLimitMock).toHaveBeenCalledTimes(1);
+    expect(checkRateLimitMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "comment_submission", scope: "network_identity" })
+    );
   });
 
-  it("generic-unavailable when no session cookie is present", async () => {
+  it("generic-unavailable when no session cookie is present (still consumes the Phase 7B early gate)", async () => {
     const response = await POST(buildRequest({ cookieValue: null }), buildContext(VALID_PUBLIC_ID));
     const body = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.code).toBe("UNAVAILABLE");
-    expect(checkRateLimitMock).not.toHaveBeenCalled();
+    expect(checkRateLimitMock).toHaveBeenCalledTimes(1);
+    expect(checkRateLimitMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "comment_submission", scope: "network_identity" })
+    );
   });
 
   it("generic-unavailable for a malformed cookie value, without hashing it", async () => {
@@ -374,6 +419,49 @@ describe("POST /api/share/[publicId]/messages - body reading uses the message-sp
 
     expect(response.status).toBe(400);
     expect(body.code).toBe("INVALID_REQUEST");
+  });
+
+  it("Phase 7B: a malformed-JSON/body-read failure still consumes the early network-identity bucket, not just the browser_session one", async () => {
+    readJsonMock.mockRejectedValue(new FakeSharePublicRequestError("invalid_request_body"));
+
+    await POST(buildRequest({ cookieValue: VALID_RAW_SESSION_SECRET }), buildContext(VALID_PUBLIC_ID));
+
+    const networkIdentityCalls = checkRateLimitMock.mock.calls.filter((call: unknown[]) => {
+      const input = call[0] as { action: string; scope: string };
+      return input.action === "comment_submission" && input.scope === "network_identity";
+    });
+    expect(networkIdentityCalls).toHaveLength(1);
+  });
+
+  it("Phase 7B: repeated malformed bodies exhaust the early gate and fail closed with 429, before the body is ever read", async () => {
+    checkRateLimitMock.mockImplementation((input: { action: string; scope: string }) =>
+      Promise.resolve(
+        input.action === "comment_submission" && input.scope === "network_identity"
+          ? { allowed: false, retryAfterSeconds: 15 }
+          : allow()
+      )
+    );
+
+    const response = await POST(
+      buildRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(body.code).toBe("RATE_LIMITED");
+    expect(response.headers.get("Retry-After")).toBe("15");
+    expect(readJsonMock).not.toHaveBeenCalled();
+  });
+
+  it("a well-formed request still succeeds normally alongside the new early gate", async () => {
+    const response = await POST(
+      buildRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+
+    expect(response.status).toBe(200);
+    expect(insertMock).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -676,6 +764,34 @@ describe("POST /api/share/[publicId]/messages - no-store privacy headers on ever
   });
 });
 
+describe("POST /api/share/[publicId]/messages - Phase 7 hardening headers on every branch", () => {
+  it("success response carries X-Robots-Tag and Permissions-Policy", async () => {
+    const response = await POST(
+      buildRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive");
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+    );
+  });
+
+  it("authorization-failure response carries X-Robots-Tag and Permissions-Policy", async () => {
+    verifyAuthorizationMock.mockResolvedValue(null);
+
+    const response = await POST(
+      buildRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive");
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+    );
+  });
+});
+
 describe("POST /api/share/[publicId]/messages - unexpected errors never leak details", () => {
   it("an unexpected thrown error from verifyShareProjectionAuthorization maps to a generic 500", async () => {
     verifyAuthorizationMock.mockRejectedValue(new Error("relation share_messages does not exist"));
@@ -691,6 +807,21 @@ describe("POST /api/share/[publicId]/messages - unexpected errors never leak det
     expect(body.code).toBe("INTERNAL_ERROR");
     expect(text).not.toContain("relation");
     expect(text).not.toContain("share_messages");
+  });
+
+  it("Phase 7B: an identity-digest configuration failure maps to 503 TEMPORARILY_UNAVAILABLE, not a generic 500", async () => {
+    createNetworkIdentityMock.mockImplementation(() => {
+      throw new FakeShareIdentityError();
+    });
+
+    const response = await POST(
+      buildRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.code).toBe("TEMPORARILY_UNAVAILABLE");
   });
 });
 
@@ -933,5 +1064,31 @@ describe("GET /api/share/[publicId]/messages - response shape / privacy", () => 
     );
 
     expect(response.headers.get("Cache-Control")).toContain("no-store");
+  });
+
+  it("Phase 7 hardening headers on success", async () => {
+    const response = await GET(
+      buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive");
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+    );
+  });
+
+  it("Phase 7 hardening headers on an authorization failure", async () => {
+    verifyAuthorizationMock.mockResolvedValue(null);
+
+    const response = await GET(
+      buildGetRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive");
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+    );
   });
 });

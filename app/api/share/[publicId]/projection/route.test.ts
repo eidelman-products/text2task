@@ -340,3 +340,36 @@ describe("GET /api/share/[publicId]/projection - no-store headers on every branc
     expect(response.headers.get("Cache-Control")).toContain("no-store");
   });
 });
+
+describe("GET /api/share/[publicId]/projection - Phase 7 hardening headers on every branch", () => {
+  it("success response carries X-Robots-Tag and Permissions-Policy", async () => {
+    verifyAuthorizationMock.mockResolvedValue({
+      shareLinkId: "link-1",
+      projectId: "project-1",
+      userId: "user-1",
+    });
+    buildPublicClientShareProjectionMock.mockResolvedValue({ ok: true, data: fakeProjection() });
+
+    const response = await GET(
+      buildRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive");
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+    );
+  });
+
+  it("error response carries X-Robots-Tag and Permissions-Policy", async () => {
+    verifyAuthorizationMock.mockResolvedValue(null);
+
+    const response = await GET(
+      buildRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID)
+    );
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive");
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+    );
+  });
+});

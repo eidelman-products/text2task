@@ -166,14 +166,61 @@ describe("ClientCommunicationHistoryModal - loading / empty / list", () => {
     });
     renderModal();
 
-    await screen.findByText("Jane");
+    await screen.findByText("Jane", { exact: false });
     expect(screen.getByText("You")).toBeInTheDocument();
+  });
+
+  it("40b. Phase 7C: renders the trusted role as a fixed prefix, not the client-supplied name alone -- a client cannot make a message appear as the trusted role text itself", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({
+      messages: [clientMessage({ authorDisplayName: "Owner" }), ownerMessage()],
+      unreadCount: 1,
+    });
+    renderModal();
+
+    // The client-supplied name is rendered ONLY as "Client · <name>" --
+    // never as a bare "Owner" that could be confused with a genuine
+    // owner-authored message (which always renders as the fixed "You").
+    const clientCard = await screen.findByText((_, element) => {
+      return element?.textContent === "Client · Owner";
+    });
+    expect(clientCard).toBeInTheDocument();
+    // Exactly one "You" exists (the real owner message) -- the client's
+    // spoofed "Owner" display name never produces a second one.
+    expect(screen.getAllByText("You")).toHaveLength(1);
+    expect(screen.queryByText("Owner", { exact: true })).not.toBeInTheDocument();
   });
 
   it("41. displays the unread count", async () => {
     getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 4 });
     renderModal();
     expect(await screen.findByText("4 unread")).toBeInTheDocument();
+  });
+
+  it("41b. Phase 7D: the loading state is announced via a polite live region", () => {
+    getShareLinkMessagesMock.mockReturnValue(new Promise(() => {}));
+    renderModal();
+    const statuses = screen.getAllByRole("status");
+    expect(statuses.some((el) => /loading client messages/i.test(el.textContent ?? ""))).toBe(true);
+  });
+
+  it("41c. Phase 7D: a load failure is announced via an assertive live region", async () => {
+    getShareLinkMessagesMock.mockRejectedValue(new Error("network down"));
+    renderModal();
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+});
+
+describe("ClientCommunicationHistoryModal - Phase 7D touch-target closure", () => {
+  it("compact per-message action buttons (Mark reviewed/Resolve/Dismiss/Reply) meet a practical ~36px minimum touch target", async () => {
+    getShareLinkMessagesMock.mockResolvedValue({ messages: [clientMessage()], unreadCount: 1 });
+    renderModal();
+
+    await screen.findByText("Any update on this?");
+
+    for (const name of [/mark reviewed/i, /^resolve$/i, /^dismiss$/i, /^reply$/i]) {
+      const button = screen.getByRole("button", { name });
+      expect(button.style.minHeight).toBe("36px");
+    }
   });
 });
 
@@ -373,7 +420,7 @@ describe("ClientCommunicationHistoryModal - reply UX", () => {
       unreadCount: 1,
     });
     renderModal();
-    await screen.findByText("Jane");
+    await screen.findByText("Jane", { exact: false });
 
     expect(screen.getAllByRole("button", { name: "Reply" })).toHaveLength(1);
   });

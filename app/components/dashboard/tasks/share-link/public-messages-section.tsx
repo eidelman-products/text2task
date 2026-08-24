@@ -96,7 +96,7 @@ export function PublicMessagesSection({
 
   return (
     <section dir={contentDirection} style={sectionStyle} aria-label="Messages">
-      <span style={sectionLabelStyle}>Messages</span>
+      <h2 style={sectionLabelStyle}>Messages</h2>
 
       <MessageHistory history={history} />
 
@@ -194,15 +194,31 @@ function MessageHistory({
 }
 
 function MessageBubble({ message }: { message: PublicShareMessage }) {
-  const authorLabel =
-    message.authorType === "client"
-      ? message.authorDisplayName?.trim() || "Client"
-      : "Project team";
+  // Phase 7C -- same anti-impersonation treatment as the owner-side
+  // history: authorType is server-controlled and authoritative;
+  // authorDisplayName is unverified client input. The trusted role
+  // ("Client"/"Project team") is always the fixed, client-supplied-name-
+  // never-affects-it label; any client-supplied name is appended only as
+  // a secondary, visually subordinate detail -- so a client cannot type
+  // "Project team", the real owner's name, "Support", etc. and have it
+  // read as the trusted role itself. This matters more here than
+  // owner-side, since multiple people may view the same public page.
+  const isClient = message.authorType === "client";
+  const clientDisplayName = isClient ? message.authorDisplayName?.trim() || null : null;
+  const authorLabel = isClient ? "Client" : "Project team";
 
   return (
     <div style={messageBubbleStyle}>
       <div style={messageMetaStyle}>
-        <span style={messageAuthorStyle}>{authorLabel}</span>
+        <span style={messageAuthorStyle}>
+          {authorLabel}
+          {clientDisplayName ? (
+            <span dir="auto" style={messageAuthorNameStyle}>
+              {" · "}
+              {clientDisplayName}
+            </span>
+          ) : null}
+        </span>
         <time style={messageTimeStyle} dateTime={message.createdAt}>
           {formatMessageTime(message.createdAt)}
         </time>
@@ -236,7 +252,10 @@ const sectionStyle: CSSProperties = {
   margin: "0 auto",
 };
 
+// Phase 7D -- promoted from a styled <span> to a real <h2>; margin: 0
+// preserves the section's existing gap-based spacing.
 const sectionLabelStyle: CSSProperties = {
+  margin: 0,
   fontSize: dashboardTypography.size.xs,
   fontWeight: dashboardTypography.weight.black,
   letterSpacing: "0.08em",
@@ -285,6 +304,13 @@ const messageAuthorStyle: CSSProperties = {
   fontSize: dashboardTypography.size.sm,
   fontWeight: dashboardTypography.weight.semibold,
   color: dashboardColors.text.primary,
+};
+
+// Phase 7C -- visually subordinate to the trusted role label it always
+// follows -- see this file's own MessageBubble comment.
+const messageAuthorNameStyle: CSSProperties = {
+  fontWeight: dashboardTypography.weight.regular,
+  color: dashboardColors.text.muted,
 };
 
 const messageTimeStyle: CSSProperties = {

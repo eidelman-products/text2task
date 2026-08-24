@@ -20,15 +20,16 @@ const HOMEPAGE_DEMO_REVIEW_PAGE_HEADERS = [
  * baseline. Mirrors the /homepage-demo/review precedent above exactly
  * (page routes get proxy-level headers here; the sibling public API
  * routes under /api/share/** set their own no-store/Referrer-Policy/
- * nosniff headers directly in each route handler instead, matching how
- * /api/homepage-demo/review passes through untouched below). The CSP is
+ * nosniff/X-Robots-Tag/Permissions-Policy headers directly in each route
+ * handler instead, matching how /api/homepage-demo/review passes through
+ * untouched below). The CSP is
  * deliberately minimal -- only frame-ancestors/object-src/base-uri -- and
  * does not lock down script-src/style-src, which would require a
  * nonce-based rewrite of Next.js's own script injection; that is
  * explicitly the later, already-planned full hardening phase's work, not
  * this one's.
  */
-const SHARE_PUBLIC_PAGE_HEADERS = [
+export const SHARE_PUBLIC_PAGE_HEADERS = [
   ["Cache-Control", "private, no-store"],
   ["Pragma", "no-cache"],
   ["Referrer-Policy", "no-referrer"],
@@ -38,6 +39,10 @@ const SHARE_PUBLIC_PAGE_HEADERS = [
     "Content-Security-Policy",
     "frame-ancestors 'none'; object-src 'none'; base-uri 'none'",
   ],
+  [
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()",
+  ],
 ] as const;
 
 function cleanPathname(pathname: string) {
@@ -45,6 +50,20 @@ function cleanPathname(pathname: string) {
     .replace(/%5C/gi, "")
     .replace(/\\/g, "")
     .replace(/\/{2,}/g, "/");
+}
+
+/**
+ * Phase 7D proxy.ts test-closure -- pure, framework-free predicate
+ * extracted from the inline branch condition below (no behavior change,
+ * confirmed by keeping this the SAME condition the branch already used).
+ * Exported so proxy.test.ts can assert path-matching directly, without
+ * constructing a NextRequest or touching Supabase -- matches this task's
+ * own "prove a representative non-share route does NOT receive Client
+ * Share-specific policy" requirement for paths that never reach the
+ * Supabase-dependent tail of `proxy()` below.
+ */
+export function isClientSharePagePath(pathname: string): boolean {
+  return pathname === "/share" || pathname.startsWith("/share/");
 }
 
 export async function proxy(request: NextRequest) {
@@ -62,10 +81,7 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  if (
-    request.nextUrl.pathname === "/share" ||
-    request.nextUrl.pathname.startsWith("/share/")
-  ) {
+  if (isClientSharePagePath(request.nextUrl.pathname)) {
     const response = NextResponse.next();
 
     for (const [name, value] of SHARE_PUBLIC_PAGE_HEADERS) {

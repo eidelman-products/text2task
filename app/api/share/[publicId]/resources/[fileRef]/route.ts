@@ -59,6 +59,9 @@ const NO_STORE_HEADERS: Record<string, string> = {
   Pragma: "no-cache",
   "Referrer-Policy": "no-referrer",
   "X-Content-Type-Options": "nosniff",
+  "X-Robots-Tag": "noindex, nofollow, noarchive",
+  "Permissions-Policy":
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()",
 };
 
 type FileRouteErrorResponse = { ok: false; code: string; error: string };
@@ -184,13 +187,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return genericUnavailable("session_digest_failed");
     }
 
-    // Reuses the existing `projection_read` rate-limit action/scope --
-    // this endpoint is, from a rate-limit perspective, another read of
-    // this share link's own already-authorized data, not a new category
-    // of action. See the Phase 4 plan's own §6/§16 for why introducing a
-    // dedicated action was deliberately deferred rather than done here.
+    // Phase 7B -- uses the dedicated `file_access` rate-limit action the
+    // schema always reserved (202608030004) but no route wired until now.
+    // A file fetch is materially more expensive to serve than a small
+    // JSON projection read, so it gets its own, tighter budget rather
+    // than sharing `projection_read`'s bucket -- see
+    // lib/share/share-rate-limit.server.ts's own policy comment for the
+    // full rationale, including the equivalent-control argument against a
+    // separate aggregate-byte quota.
     const readLimit = await checkShareRateLimit({
-      action: "projection_read",
+      action: "file_access",
       scope: "browser_session",
       identityDigest: sessionDigest,
       identityDigestVersion: 1,

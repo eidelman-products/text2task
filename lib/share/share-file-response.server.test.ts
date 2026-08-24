@@ -181,9 +181,20 @@ describe("resolveContentDisposition", () => {
 });
 
 describe("SHARE_FILE_RESPONSE_SECURITY_HEADERS", () => {
-  it("always includes nosniff, a sandboxed CSP, and no-store caching", () => {
+  it("always includes nosniff, a sandboxed+frame-ancestors CSP, and no-store caching", () => {
     expect(SHARE_FILE_RESPONSE_SECURITY_HEADERS["X-Content-Type-Options"]).toBe("nosniff");
-    expect(SHARE_FILE_RESPONSE_SECURITY_HEADERS["Content-Security-Policy"]).toBe("sandbox");
+    expect(SHARE_FILE_RESPONSE_SECURITY_HEADERS["Content-Security-Policy"]).toBe(
+      "sandbox; frame-ancestors 'none'"
+    );
     expect(SHARE_FILE_RESPONSE_SECURITY_HEADERS["Cache-Control"]).toContain("no-store");
+  });
+
+  it("Phase 7 hardening: includes X-Robots-Tag and a conservative Permissions-Policy", () => {
+    expect(SHARE_FILE_RESPONSE_SECURITY_HEADERS["X-Robots-Tag"]).toBe(
+      "noindex, nofollow, noarchive"
+    );
+    expect(SHARE_FILE_RESPONSE_SECURITY_HEADERS["Permissions-Policy"]).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+    );
   });
 });

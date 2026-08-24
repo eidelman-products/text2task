@@ -337,7 +337,7 @@ describe("GET .../resources/[fileRef] - publicId / fileRef / cookie precondition
   });
 });
 
-describe("GET .../resources/[fileRef] - rate limit (reuses projection_read)", () => {
+describe("GET .../resources/[fileRef] - rate limit (dedicated file_access bucket, Phase 7B)", () => {
   it("returns 429 before authorization is checked", async () => {
     checkRateLimitMock.mockResolvedValue(deny(9));
 
@@ -351,13 +351,13 @@ describe("GET .../resources/[fileRef] - rate limit (reuses projection_read)", ()
     expect(verifyAuthorizationMock).not.toHaveBeenCalled();
   });
 
-  it("uses the existing projection_read action/browser_session scope -- no new rate-limit vocabulary", async () => {
+  it("uses the dedicated file_access action/browser_session scope -- no longer shares projection_read's bucket", async () => {
     verifyAuthorizationMock.mockResolvedValue(null);
 
     await GET(buildRequest({ cookieValue: VALID_RAW_SESSION_SECRET }), buildContext(VALID_PUBLIC_ID, VALID_FILE_REF));
 
     expect(checkRateLimitMock).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "projection_read", scope: "browser_session" })
+      expect.objectContaining({ action: "file_access", scope: "browser_session" })
     );
   });
 });
@@ -375,8 +375,12 @@ describe("GET .../resources/[fileRef] - AUTHORIZED", () => {
     expect(response.headers.get("Content-Type")).toBe("image/png");
     expect(response.headers.get("Content-Disposition")).toBe("inline");
     expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
-    expect(response.headers.get("Content-Security-Policy")).toBe("sandbox");
+    expect(response.headers.get("Content-Security-Policy")).toBe("sandbox; frame-ancestors 'none'");
     expect(response.headers.get("Cache-Control")).toContain("no-store");
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive");
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+    );
 
     const text = await response.text();
     expect(text).toBe("hello world");
@@ -572,6 +576,38 @@ describe("GET .../resources/[fileRef] - PRIVACY", () => {
 
     expect(response.headers.get("Cache-Control")).toContain("no-store");
     expect(response.headers.get("Referrer-Policy")).toBe("no-referrer");
+  });
+});
+
+describe("GET .../resources/[fileRef] - Phase 7 hardening headers", () => {
+  it("streamed success response carries frame-ancestors, X-Robots-Tag, and Permissions-Policy", async () => {
+    authorizeSuccessfully();
+
+    const response = await GET(
+      buildRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID, VALID_FILE_REF)
+    );
+
+    expect(response.headers.get("Content-Security-Policy")).toBe("sandbox; frame-ancestors 'none'");
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive");
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+    );
+  });
+
+  it("a generic denial (JSON) response also carries X-Robots-Tag and Permissions-Policy", async () => {
+    verifyAuthorizationMock.mockResolvedValue(null);
+
+    const response = await GET(
+      buildRequest({ cookieValue: VALID_RAW_SESSION_SECRET }),
+      buildContext(VALID_PUBLIC_ID, VALID_FILE_REF)
+    );
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive");
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+    );
   });
 });
 

@@ -16,6 +16,10 @@ function renderChannels(overrides: Partial<ShareLinkChannelsProps> = {}) {
   const onRequestRotate = vi.fn();
   const onCancelRotateConfirm = vi.fn();
   const onOpenPreview = vi.fn();
+  const onDisable = vi.fn();
+  const onReenable = vi.fn();
+  const onRequestRevoke = vi.fn();
+  const onCancelRevokeConfirm = vi.fn();
 
   const defaultProps: ShareLinkChannelsProps = {
     linkState: "active",
@@ -30,11 +34,28 @@ function renderChannels(overrides: Partial<ShareLinkChannelsProps> = {}) {
     onRequestRotate,
     onCancelRotateConfirm,
     onOpenPreview,
+    onDisable,
+    onReenable,
+    confirmingRevoke: false,
+    onRequestRevoke,
+    onCancelRevokeConfirm,
     ...overrides,
   };
 
   const view = render(<ShareLinkChannels {...defaultProps} />);
-  return { onCopyLink, onNativeShare, onWhatsApp, onEmail, onRequestRotate, onCancelRotateConfirm, ...view };
+  return {
+    onCopyLink,
+    onNativeShare,
+    onWhatsApp,
+    onEmail,
+    onRequestRotate,
+    onCancelRotateConfirm,
+    onDisable,
+    onReenable,
+    onRequestRevoke,
+    onCancelRevokeConfirm,
+    ...view,
+  };
 }
 
 afterEach(() => {
@@ -144,6 +165,11 @@ describe("ShareLinkChannels - Native Share hydration safety", () => {
     onRequestRotate: vi.fn(),
     onCancelRotateConfirm: vi.fn(),
     onOpenPreview: vi.fn(),
+    onDisable: vi.fn(),
+    onReenable: vi.fn(),
+    confirmingRevoke: false,
+    onRequestRevoke: vi.fn(),
+    onCancelRevokeConfirm: vi.fn(),
   };
 
   it("server-rendered markup always shows the unsupported fallback -- Node has no Web Share API, and the render body never reads navigator.share to decide otherwise", () => {
