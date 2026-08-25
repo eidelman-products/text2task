@@ -109,6 +109,9 @@ function noPinLink(overrides: Record<string, unknown> = {}) {
     secretDigest: "a".repeat(64),
     secretDigestVersion: 1,
     configurationVersion: 1,
+    // Phase 8 corrective change (202608250001).
+    accessEpoch: 1,
+    pinEpoch: 1,
     pinMaterial: null,
     ...overrides,
   };
@@ -406,6 +409,17 @@ describe("POST /api/share/session - Case 1: valid secret, no PIN required", () =
     const setCookie = response.headers.get("set-cookie") ?? "";
     expect(setCookie).toContain(COOKIE_NAME);
     expect(setCookie.toLowerCase()).toContain("httponly");
+  });
+
+  it("Phase 8 corrective change (202608250001): threads the link's live accessEpoch/pinEpoch into ensureCurrentGrant, NOT configurationVersion", async () => {
+    readJsonMock.mockResolvedValue({ publicId: VALID_PUBLIC_ID, secret: VALID_SECRET });
+    resolveShareLinkByPublicIdMock.mockResolvedValue(noPinLink({ accessEpoch: 4, pinEpoch: 7, configurationVersion: 99 }));
+
+    await POST(buildRequest({}));
+
+    expect(ensureCurrentGrantMock).toHaveBeenCalledWith(
+      expect.objectContaining({ linkAccessEpoch: 4, linkPinEpoch: 7 })
+    );
   });
 
   it("never echoes the secret or PIN anywhere in the response body", async () => {

@@ -287,7 +287,8 @@ export async function POST(request: NextRequest) {
       browserSessionExpiresAt: session.expiresAt,
       shareLinkId: link.id,
       linkConfigurationVersion: link.configurationVersion,
-      linkExpiresAt: link.expiresAt,
+      linkAccessEpoch: link.accessEpoch,
+      linkPinEpoch: link.pinEpoch,
       pinVerifiedNow: linkRequiresPin,
     });
 

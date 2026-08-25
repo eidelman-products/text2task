@@ -1,0 +1,199 @@
+# Client Share Link — Phase 8 Access Epoch Runtime Verification Package
+
+## What this package proves
+
+The Phase 8 corrective change (`supabase/migrations/202608250001_client_share_access_epoch.sql`)
+was implemented and unit-tested locally (see
+`docs/TEXT2TASK_CLIENT_SHARE_LINK_ACCESS_EPOCH_IMPLEMENTATION_REPORT_2026-08-25.md`).
+Unit tests mock the database entirely. This package proves the same
+corrective change against a **real PostgreSQL engine**, running inside a
+**disposable, non-Production Supabase project** — genuine `INSERT`/
+`UPDATE`/`DELETE` statements, real triggers, real constraints, real RPCs,
+real RLS/grant checks.
+
+Specifically, this package proves:
+
+- **Migration/backfill safety** (Section A) — using REAL, pre-existing
+  `project_share_links`/`share_session_grants` rows seeded *before* the
+  migration under test ever runs, including the exact historical
+  Production precondition (a grant issued at a configuration_version the
+  link later moved past).
+- **The exact Production regression is fixed** (Section B) — Disable →
+  same browser denied → Re-enable → the SAME browser/session/grant is
+  authorized again, with no new exchange.
+- **Ordinary settings changes never strand an authorized browser**
+  (Section C) — nine sub-scenarios (comments, subtitle, direction, three
+  visibility flags, task mapping, resource mapping, publish/update).
+- **Secret rotation invalidates old grants and cannot be bypassed by a
+  PIN** (Section D) — the single most security-critical scenario.
+- **PIN semantics**, including a genuine no-secret recovery path that
+  cannot cross a rotation (Section E).
+- **Expiry staleness is closed**: shortening/lengthening/clearing a
+  link's expiry behaves correctly, independent of browser-session TTL
+  (Section F).
+- **Revoke is unconditionally terminal**, un-repairable by any recovery
+  mechanism (Section G).
+- **No privilege was broadened**, RLS intact, epochs are never
+  client-controllable (Section H).
+- **Atomicity**: a single rotation/PIN-change increments its own epoch by
+  exactly one, in the same statement as `configuration_version` (Section
+  I — see its own scoping note on what single-session evidence can and
+  cannot prove about true concurrency).
+- **The installed, live database functions genuinely contain the new
+  logic** (Section J), complementing the file-level SHA-256 identity
+  proof below.
+
+## What this package deliberately does NOT prove (scoping, not a gap)
+
+- **PIN cryptography.** `lib/share/share-pin.server.ts`'s scrypt hashing
+  and comparison is pure JavaScript with zero database dependency, and is
+  already covered by its own extensive unit tests. This package's PIN-
+  recovery emulation takes a `p_pin_correct` boolean **input** standing in
+  for what a real comparison would have returned, and proves everything
+  downstream of that comparison at the real database layer instead.
+- **True multi-connection concurrency.** This package runs as one
+  sequential SQL session. Section I proves what a single session honestly
+  can (atomicity of a single UPDATE, the existence of the unique index a
+  real race depends on) and says so explicitly — it does not claim to
+  have exercised a genuine two-connection race. That is already covered,
+  mocked, by `lib/share/share-session-grant.server.test.ts`'s own
+  dedicated `23505`-race unit tests.
+
+## Package files
+
+| File | Purpose |
+|---|---|
+| `00_READ_ME_FIRST.md` | This file. |
+| `01_PREPARE_RUNTIME_FIXTURES.sql` | Sentinel + minimal base-table stand-ins (`projects`/`tasks`/`clients`/`task_resources`, which predate this repo's migration history) + one fixture owner + the two cross-file tracking tables. |
+| `01B_GRANT_AUTHENTICATED_MUTATION_PRIVILEGES.sql` | Grants `authenticated` INSERT/UPDATE(/DELETE where evidenced) on `projects`/`tasks`/`task_resources`, matching REAL Production's own evidenced privilege surface (traced from application source, not from Supabase's own error-hint) — required before Section B onward's owner-RPC calls, which lock the owning project row `FOR UPDATE`. |
+| `02_APPLY_OR_VERIFY_PREREQUISITES.sql` | **Generated.** The full 17-migration prerequisite chain, verbatim, bringing the project to the exact pre-202608250001 schema shape. |
+| `02B_SEED_PRE_MIGRATION_PRODUCT_FIXTURES.sql` | Seeds REAL, committed `project_share_links`/`share_session_grants` rows — no PIN, with PIN, with expiry, active, disabled — plus two unrelated control rows, all **before** the migration under test ever runs. |
+| `02C_APPLY_ACCESS_EPOCH_MIGRATION.sql` | **Generated.** The one migration under test, verbatim, with a SHA-256 header. |
+| `03_RUN_ACCESS_EPOCH_RUNTIME_TESTS.sql` | The main runtime test suite (Sections A–K). |
+| `04_CAPTURE_RESULTS.md` | Template for recording your actual run's results. |
+| `MANIFEST.md` | **Generated.** SHA-256 of every file in this package, including the migration under test. |
+
+`02` and `02C` are mechanically generated by
+`scripts/client-share/build-phase8-access-epoch-runtime-package.ps1` —
+never hand-edit them; edit the source migrations and re-run the
+generator (`powershell -File scripts/client-share/build-phase8-access-epoch-runtime-package.ps1`).
+
+## Item J — verifying byte-for-byte identity before you run anything
+
+Before pasting `02C_APPLY_ACCESS_EPOCH_MIGRATION.sql` into any disposable
+project, independently confirm its embedded SHA-256 matches the real
+repository file right now:
+
+```powershell
+Get-FileHash -Algorithm SHA256 supabase\migrations\202608250001_client_share_access_epoch.sql
+```
+
+(Normalize to LF line endings first if your local checkout uses CRLF —
+the generator hashes the LF-normalized content, matching every prior
+Client Share runtime package's own convention.) Compare against the
+`MIGRATION_UNDER_TEST_SHA256` value the generator printed, and against
+the header comment at the top of `02C_APPLY_ACCESS_EPOCH_MIGRATION.sql`
+itself, and against `MANIFEST.md`'s own "migration under test" table. All
+three must agree. This is the file-level identity proof; Section J of
+`03_RUN_ACCESS_EPOCH_RUNTIME_TESTS.sql` complements it with a catalog-
+level proof that the *installed* function bodies genuinely contain the
+new logic.
+
+## L — exact run order
+
+Run each step manually in the Supabase SQL Editor of a **brand-new,
+empty, disposable** Supabase project created solely for this
+verification. **Never run any of this against the real Text2Task
+Production project.**
+
+1. **Create a brand-new, empty Supabase project** (or reuse an existing
+   disposable project ONLY if it has never had any Client Share or
+   Project Update Engine schema applied — every file's own safety
+   preamble will refuse to run otherwise).
+2. **Paste and run `01_PREPARE_RUNTIME_FIXTURES.sql`** in the SQL Editor.
+   Confirm the final `select` reports
+   `FILE_01_PREPARE_RUNTIME_FIXTURES_COMPLETE`.
+3. **Paste and run `01B_GRANT_AUTHENTICATED_MUTATION_PRIVILEGES.sql`.**
+   Confirm the final `select` reports
+   `PHASE_8_MUTATION_PRIVILEGES_READY`. (Order relative to 02/02B/02C
+   does not matter — this file only touches the base-table stand-ins
+   File 01 just created.)
+4. **Paste and run `02_APPLY_OR_VERIFY_PREREQUISITES.sql`.** Confirm the
+   final structural-check `select` shows `found = true` for every row.
+5. **Paste and run `02B_SEED_PRE_MIGRATION_PRODUCT_FIXTURES.sql`.**
+   Confirm the final `select` reports
+   `FILE_02B_SEED_PRE_MIGRATION_PRODUCT_FIXTURES_COMPLETE`.
+6. **Before running the next file**: independently verify the SHA-256 in
+   `02C_APPLY_ACCESS_EPOCH_MIGRATION.sql`'s own header comment against
+   the real repository file (see the Item J section above).
+7. **Paste and run `02C_APPLY_ACCESS_EPOCH_MIGRATION.sql`.** This is the
+   migration under test — applied for real, against the real rows step 5
+   seeded. Confirm the final structural-check `select` shows `found =
+   true` for every row.
+8. **Paste and run `03_RUN_ACCESS_EPOCH_RUNTIME_TESTS.sql`.** This is the
+   main event. Scroll to the bottom of the output:
+   - The second-to-last result set lists ONLY `FAIL` rows (empty if
+     everything passed).
+   - The FINAL result set is one row: `total_tests`, `passed_tests`,
+     `failed_tests`, `status`. Look for exactly:
+     ```
+     PHASE_8_ACCESS_EPOCH_RUNTIME_PASS
+     ```
+     If `status` instead reads `PHASE_8_ACCESS_EPOCH_RUNTIME_FAIL`, the
+     row immediately above (the FAIL-only table) tells you exactly which
+     named sub-test(s) failed and their own `detail` text.
+9. **Record your results** in `04_CAPTURE_RESULTS.md` (or a copy of it) —
+   paste the final summary row and the FAIL-only table (if any).
+10. This file's own trailing `rollback;` means file 03's own fixtures
+    (Sections B onward) never persist — you may re-run **file 03 alone**
+    as many times as you like against the same project without re-running
+    01/01B/02/02B/02C. To re-run the WHOLE package from scratch, provision
+    a fresh disposable project (simplest) rather than trying to hand-clean
+    the old one.
+11. **When you are done evaluating this project, discard it.** It is
+    disposable by design and holds no real Production data of any kind.
+
+### Resuming a project that already hit the Step 7 `permission denied for
+table projects` error
+
+If your disposable project already completed the old Steps 2–6 (File 01
+through 02C) successfully and only failed at File 03 with `42501:
+permission denied for table projects`, you do **not** need to start over:
+
+1. Paste and run `01B_GRANT_AUTHENTICATED_MUTATION_PRIVILEGES.sql` now
+   (it only requires File 01's own sentinel + base tables, both already
+   present). Confirm `PHASE_8_MUTATION_PRIVILEGES_READY`.
+2. Optionally run the read-only check below first to confirm File 03's
+   earlier failed attempt left nothing behind (its own explicit
+   `begin;`/`rollback;` — see this document's own transaction-behavior
+   note in the accompanying report — guarantees this, but verifying costs
+   nothing):
+   ```sql
+   select count(*) from public.projects;
+   -- expected: 0 (File 03 never commits its own fixture project rows)
+   ```
+3. Retry `03_RUN_ACCESS_EPOCH_RUNTIME_TESTS.sql` directly — no need to
+   re-run 01, 02, 02B, or 02C.
+
+Do not run any step against Production. Do not run `02C` (or `02`)
+against the real Text2Task Supabase project under any circumstances —
+every file's own safety preamble is a defense-in-depth guard, not a
+substitute for pointing the SQL Editor at the right project.
+
+## If something fails
+
+Per the task's own explicit instruction, this package does **not** mask
+failures with exception handling that would let the final summary falsely
+report PASS — the ONE deliberate exception handler in the whole suite
+(Section G's G5b sub-test) exists specifically to *prove* the database
+correctly REJECTED an operation, and is itself asserted on (a script bug
+that accidentally swallowed a real failure there would show up as the
+G5b test recording a wrong result, not as a silent skip). If the final
+status reads `PHASE_8_ACCESS_EPOCH_RUNTIME_FAIL`, treat it as a genuine
+finding: do not proceed toward Production rollout, and bring the FAIL-only
+table's exact contents back for investigation. Per the standing
+instruction for this whole corrective-fix effort, the implementation
+should not be redesigned in response to a runtime failure unless the
+failure demonstrates a real defect — a script bug in this test package
+itself is also a possible explanation and should be ruled out first by
+reading the specific failing assertion's own SQL.

@@ -2,6 +2,31 @@
 ## Final Audit / Production Rollout Planning — Mapping / Audit Only
 ## 2026-08-24
 
+---
+
+## ⚠ ROLLOUT STATUS UPDATE — 2026-08-26 ⚠
+
+```
+ROLLOUT_STATUS: CORRECTIVE FIX VERIFIED / READY FOR PRODUCTION ROLLOUT
+```
+
+**This rollout was PAUSED 2026-08-25, and is now UN-PAUSED for the local-verification portion of the corrective fix — Production application itself has not yet occurred.** After this document's own §22 smoke-test checklist was actually run (below, as originally written: "Disable — verify the public link stops working" / "Re-enable — verify it works again"), the Re-enable step **failed**: an already-authorized browser, holding the same unchanged URL, remained permanently denied after Disable → Re-enable, with no recovery path short of a brand-new browser/incognito session. Root cause (full detail in the implementation report linked below): `project_share_links.configuration_version` was, since Phase 1B, overloaded as **both** a presentation/owner-editor freshness signal **and** the sole security-grant staleness predicate `share_session_grants` was checked against at public read time. A mechanical, broader audit (not just this one bug) proved the same defect family also affects `clear_share_link_pin`, `set_share_link_expiry`, `clear_share_link_expiry`, and `save_share_configuration`'s settings sub-block — every one of them bumps `configuration_version` for legitimate presentation reasons, and every one of them was therefore silently, permanently stranding already-authorized browsers.
+
+**Corrective fix implemented and now runtime-verified against a real, disposable, non-Production PostgreSQL engine — not yet applied to Production.** A new forward-only migration, `supabase/migrations/202608250001_client_share_access_epoch.sql`, introduces two dedicated security-generation counters — `access_epoch` (bumped only by `rotate_share_link_secret`) and `pin_epoch` (bumped only by `set_share_link_pin`) — fully separating security-grant invalidation from `configuration_version`, which is left completely unchanged and continues to serve presentation freshness exactly as before. A companion expiry-staleness defect (grant expiry frozen at grant-creation time, unable to reflect a later-lengthened or cleared link expiry) was closed in the same change.
+
+**Runtime disposition (2026-08-26):** a disposable Supabase runtime-verification package (`docs/client-share-phase8-access-epoch-runtime/`) was built and executed against a real disposable Postgres instance. The final scripted run reported **138/139 PASS**; the sole failure was a harness-only privilege-assertion bug (not a migration/trigger/RPC defect), independently confirmed correct at the database level by a direct read-only PostgreSQL catalog query and since corrected in the harness. Zero implementation or migration defects were found. The exact original Production regression (same-browser Disable → Re-enable) is runtime-proven fixed. Full evidence: `docs/client-share-phase8-access-epoch-runtime/04_CAPTURE_RESULTS.md`. Implementation rationale and full test evidence: **`docs/TEXT2TASK_CLIENT_SHARE_LINK_ACCESS_EPOCH_IMPLEMENTATION_REPORT_2026-08-25.md`**.
+
+**This rollout plan (§1–27 below) is otherwise still accurate** for everything it covers (migration chain, risk matrix, env inventory, security audits of every OTHER capability, rollback strategy, etc.) — it was previously superseded only on the one point the smoke test disproved: §25's "No BLOCKER exists" conclusion and the §22 smoke-test checklist's Disable/Re-enable rows. That defect is now RESOLVED and runtime-verified (disposable Postgres); the remaining gap before rollout may fully resume is the **Production** re-verification itself, per the checklist below.
+
+**Before this rollout may resume in Production**:
+1. The corrective migration (`202608250001`) must be added to the chain in §4/§5/§20 as chain position 18 (Client Share migration count becomes 15, total required count becomes 18) — applied strictly after chain position 17 (`202608230002`).
+2. The full corrective change has been re-tested per the implementation report's own test evidence (2904/2904 Client Share-suite tests passing, TypeScript clean, production build clean) **and** runtime-verified against a disposable, non-Production Postgres engine (138/139 scripted PASS, sole failure independently confirmed harness-only — see above). The **Production** smoke test itself, including the exact Phase 8 regression scenario (Disable → same browser blocked → Re-enable → same browser recovers), must still be run against Production and must PASS before §21 (flag enablement) may proceed — disposable-instance verification does not substitute for this step, it only de-risks it.
+3. §25's blocker table has been amended to add this defect (RESOLVED, disposable-runtime-verified, pending Production re-verification) — see the implementation report for the full corrected classification.
+
+**No code, migration, or fix has been applied to Production at any point in this effort.** The feature flag remains untouched. Runtime verification occurred exclusively against a disposable, non-Production Postgres instance. This status update is documentation only.
+
+---
+
 **This document is mapping/audit/rollout-plan design only.** No application code, test, migration, generator, or SQL was written or executed to produce it. No Production system was accessed or modified. No full build was run. No stage/commit/push/deploy occurred. The feature flag was not touched. Production rollout is **not authorized** by this document.
 
 ---
@@ -717,7 +742,10 @@ Not executed this turn.
 - [ ] Copy link / reveal link
 - [ ] Rotate — verify the old URL now fails, the new one works
 - [ ] Disable — verify the public link stops working
-- [ ] Re-enable — verify it works again
+- [x] Re-enable — verify it works again — **FAILED 2026-08-25 in the exact form below; see the ROLLOUT STATUS UPDATE banner at the top of this document and §25's amended row. Fix implemented in `202608250001_client_share_access_epoch.sql` and RUNTIME-VERIFIED 2026-08-26 against a disposable, non-Production Postgres engine (Runtime Requirement B — PASS, no FAIL rows; see `docs/client-share-phase8-access-epoch-runtime/04_CAPTURE_RESULTS.md`). The sub-items below are the PRODUCTION re-run and remain unchecked until actually run against Production — disposable-instance verification does not check these boxes:**
+  - [ ] Active link → open in a fresh browser → loads
+  - [ ] Disable → refresh the SAME browser/tab → correctly unavailable
+  - [ ] Re-enable → refresh the SAME browser/tab, SAME URL, no re-copy, no new incognito, no raw secret → **must load again**
 - [ ] Revoke — verify it is terminal, Communication History remains reachable afterward
 
 **CLIENT:**
@@ -786,8 +814,11 @@ Not executed this turn.
 
 ## 25. Final blocker classification
 
+**AMENDED 2026-08-25, updated 2026-08-26 — see the ROLLOUT STATUS UPDATE banner at the top of this document.** The row immediately below was added after this document's original conclusion of "No BLOCKER exists" was disproven by actually running this document's own §22 smoke test, and was updated again once disposable-Postgres runtime verification completed. It is the only row in this table added or changed since 2026-08-24 — every other row's PASS/PRE_ROLLOUT_CHECK/ROLLOUT_STEP classification is unchanged and still accurate for the capability it covers.
+
 | Finding | Classification | Notes |
 |---|---|---|
+| Same-browser Disable→Re-enable recovery (§22 smoke test) | **RESOLVED, disposable-runtime-verified — pending Production re-verification** | Found 2026-08-25 by actually running this document's own §22 smoke-test checklist: Disable → same browser correctly denied → Re-enable → same browser, same URL, still denied — no recovery without a brand-new browser. Root cause: `configuration_version` was overloaded as both presentation-freshness signal and the sole security-grant staleness predicate; every operation that bumps it for a legitimate presentation reason (disable, re-enable, clear PIN, set/clear expiry, `save_share_configuration` settings) was silently invalidating already-authorized browsers. Corrective fix: new migration `202608250001_client_share_access_epoch.sql` (dedicated `access_epoch`/`pin_epoch` security counters, `configuration_version` left untouched) — full detail in `docs/TEXT2TASK_CLIENT_SHARE_LINK_ACCESS_EPOCH_IMPLEMENTATION_REPORT_2026-08-25.md`. Locally verified (2904/2904 Client Share suite passing, TypeScript clean, production build clean) **and runtime-verified 2026-08-26 against a disposable, non-Production Postgres engine** — final scripted run 138/139 PASS, sole failure independently confirmed a harness-only bug via a direct read-only catalog query, zero implementation/migration defects found (`docs/client-share-phase8-access-epoch-runtime/04_CAPTURE_RESULTS.md`). **Not yet applied to or re-tested against Production** — this is what keeps §21 (flag enablement) gated until the Production re-run of this exact scenario passes. |
 | Migration chain completeness (§4) | PASS | Fully reconstructed and mechanically recounted this turn: 3 prerequisite + 14 Client Share = **17 total** (corrects a prior chat-only "16" arithmetic slip — the document itself was never wrong, see §4.0). |
 | Migration dependency verification (§6.1) | PASS | `MIGRATION_CHAIN_VERIFIED` — every one of the 17 migrations' references resolves to an earlier chain position; no forward reference found. |
 | Prerequisite-chain Production presence (§4.3, §9.2) | **PRE_ROLLOUT_CHECK** | Near-certainly already true; must be confirmed, not assumed, before applying the 14 Client Share migrations. |

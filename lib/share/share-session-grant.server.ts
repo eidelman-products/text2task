@@ -64,6 +64,15 @@ export type ResolvedShareLink = Readonly<{
   secretDigest: string | null;
   secretDigestVersion: number | null;
   configurationVersion: number;
+  // Phase 8 corrective change (202608250001) -- see
+  // verifyShareProjectionAuthorization's own doc comment for the full
+  // access_epoch/pin_epoch design. accessEpoch is bumped ONLY by secret
+  // rotation; pinEpoch is bumped ONLY by set_share_link_pin. Neither is
+  // touched by disable/re-enable/clear-PIN/expiry/settings changes --
+  // configurationVersion above remains the presentation-freshness signal
+  // for those, unchanged.
+  accessEpoch: number;
+  pinEpoch: number;
   pinMaterial: StoredSharePinMaterial | null;
 }>;
 
@@ -84,10 +93,12 @@ type ShareLinkRow = {
   pin_scrypt_p: number | null;
   pin_key_length: number | null;
   configuration_version: number;
+  access_epoch: number;
+  pin_epoch: number;
 };
 
 const SHARE_LINK_COLUMNS =
-  "id, project_id, user_id, public_id, state, expires_at, secret_digest, secret_digest_version, pin_hash, pin_salt, pin_hash_version, pin_scrypt_n, pin_scrypt_r, pin_scrypt_p, pin_key_length, configuration_version";
+  "id, project_id, user_id, public_id, state, expires_at, secret_digest, secret_digest_version, pin_hash, pin_salt, pin_hash_version, pin_scrypt_n, pin_scrypt_r, pin_scrypt_p, pin_key_length, configuration_version, access_epoch, pin_epoch";
 
 function toResolvedShareLink(row: ShareLinkRow): ResolvedShareLink {
   const hasPinMaterial =
@@ -109,6 +120,8 @@ function toResolvedShareLink(row: ShareLinkRow): ResolvedShareLink {
     secretDigest: row.secret_digest,
     secretDigestVersion: row.secret_digest_version,
     configurationVersion: row.configuration_version,
+    accessEpoch: row.access_epoch,
+    pinEpoch: row.pin_epoch,
     pinMaterial: hasPinMaterial
       ? {
           pinHash: row.pin_hash as string,
@@ -362,6 +375,8 @@ export async function resolveOrCreateBrowserSession(
 type GrantRow = {
   id: string;
   granted_configuration_version: number;
+  granted_access_epoch: number;
+  granted_pin_epoch: number;
   pin_verified_at: string | null;
   expires_at: string;
   revoked_at: string | null;
@@ -369,7 +384,7 @@ type GrantRow = {
 
 /**
  * Ensures the (browserSessionId, shareLinkId) pair has a CURRENT, valid
- * grant matching the link's live configuration_version and PIN-
+ * grant matching the link's live access_epoch, pin_epoch and PIN-
  * verification requirement. Mirrors 202608030004's own documented
  * exchange contract exactly: "lock the existing current grant ... mark
  * it revoked/superseded when it is stale ... insert the replacement
@@ -379,18 +394,32 @@ type GrantRow = {
  * re-supplied on a later call) -- the integrity trigger makes
  * pin_verified_at immutable after insert, so this module never attempts
  * to set it on an UPDATE.
+ *
+ * Phase 8 corrective change (202608250001) -- staleness/reuse is now
+ * judged by accessEpoch/pinEpoch, NOT linkConfigurationVersion.
+ * linkConfigurationVersion is still accepted and still written into the
+ * new row's own granted_configuration_version column (the DB's own
+ * insert-time integrity check still requires it to exactly match the
+ * link's live value, and the column remains a harmless, non-security
+ * historical snapshot) -- but it is no longer read back to decide
+ * whether an existing grant should be reused or superseded. See
+ * verifyShareProjectionAuthorization's own doc comment for the full
+ * access_epoch/pin_epoch design and why they are two separate fields.
  */
 export async function ensureCurrentGrant(input: {
   browserSessionId: string;
   browserSessionExpiresAt: string;
   shareLinkId: string;
   linkConfigurationVersion: number;
-  linkExpiresAt: string | null;
+  linkAccessEpoch: number;
+  linkPinEpoch: number;
   pinVerifiedNow: boolean;
 }): Promise<boolean> {
   const { data: existingRows, error: existingError } = await supabaseAdmin
     .from("share_session_grants")
-    .select("id, granted_configuration_version, pin_verified_at, expires_at, revoked_at")
+    .select(
+      "id, granted_configuration_version, granted_access_epoch, granted_pin_epoch, pin_verified_at, expires_at, revoked_at"
+    )
     .eq("browser_session_id", input.browserSessionId)
     .eq("share_link_id", input.shareLinkId)
     .is("revoked_at", null);
@@ -404,8 +433,8 @@ export async function ensureCurrentGrant(input: {
 
   if (existing) {
     const stillValid =
-      existing.granted_configuration_version === input.linkConfigurationVersion &&
-      new Date(existing.expires_at).getTime() > Date.now();
+      existing.granted_access_epoch === input.linkAccessEpoch &&
+      existing.granted_pin_epoch === input.linkPinEpoch;
 
     if (stillValid) {
       return true;
@@ -423,10 +452,10 @@ export async function ensureCurrentGrant(input: {
     }
   }
 
-  const grantExpiresAt = computeGrantExpiresAt(
-    input.browserSessionExpiresAt,
-    input.linkExpiresAt
-  );
+  // Phase 8 corrective change (202608250001) -- grant expiry is now
+  // derived purely from the browser session's own TTL, never from the
+  // link's own expires_at. See computeGrantExpiresAt's own doc comment.
+  const grantExpiresAt = computeGrantExpiresAt(input.browserSessionExpiresAt);
 
   // Real browser defect #4 fix: share_session_grants_lifecycle_check
   // requires `pin_verified_at is null or pin_verified_at >= created_at`.
@@ -449,6 +478,8 @@ export async function ensureCurrentGrant(input: {
     browser_session_id: input.browserSessionId,
     share_link_id: input.shareLinkId,
     granted_configuration_version: input.linkConfigurationVersion,
+    granted_access_epoch: input.linkAccessEpoch,
+    granted_pin_epoch: input.linkPinEpoch,
     created_at: insertedAt,
     pin_verified_at: input.pinVerifiedNow ? insertedAt : null,
     expires_at: grantExpiresAt,
@@ -465,17 +496,17 @@ export async function ensureCurrentGrant(input: {
   // failure -- the other request's grant is equally valid.
   const { data: raceRows } = await supabaseAdmin
     .from("share_session_grants")
-    .select("granted_configuration_version, expires_at")
+    .select("granted_access_epoch, granted_pin_epoch")
     .eq("browser_session_id", input.browserSessionId)
     .eq("share_link_id", input.shareLinkId)
     .is("revoked_at", null);
 
-  const raceGrant = ((raceRows as Pick<GrantRow, "granted_configuration_version" | "expires_at">[] | null) ?? [])[0];
+  const raceGrant = ((raceRows as Pick<GrantRow, "granted_access_epoch" | "granted_pin_epoch"> [] | null) ?? [])[0];
 
   const raceGrantValid =
     raceGrant !== undefined &&
-    raceGrant.granted_configuration_version === input.linkConfigurationVersion &&
-    new Date(raceGrant.expires_at).getTime() > Date.now();
+    raceGrant.granted_access_epoch === input.linkAccessEpoch &&
+    raceGrant.granted_pin_epoch === input.linkPinEpoch;
 
   if (!raceGrantValid) {
     // Not a concurrent-insert race after all (no matching row was found
@@ -488,19 +519,28 @@ export async function ensureCurrentGrant(input: {
   return raceGrantValid;
 }
 
-function computeGrantExpiresAt(
-  browserSessionExpiresAt: string,
-  linkExpiresAt: string | null
-): string {
-  const sessionExpiryMs = new Date(browserSessionExpiresAt).getTime();
-
-  if (linkExpiresAt === null) {
-    return new Date(sessionExpiryMs).toISOString();
-  }
-
-  const linkExpiryMs = new Date(linkExpiresAt).getTime();
-
-  return new Date(Math.min(sessionExpiryMs, linkExpiryMs)).toISOString();
+/**
+ * Phase 8 corrective change (202608250001) -- deliberately session-TTL
+ * ONLY, never the link's own expires_at. Previously this computed
+ * `min(browserSessionExpiresAt, linkExpiresAt)`, baking a SNAPSHOT of the
+ * link's expiry into an otherwise-immutable grant row (expires_at can
+ * never be changed after insert -- enforce_share_session_grant_integrity's
+ * own SHARE_GRANT_EXPIRY_IMMUTABLE rule). If an owner later lengthened or
+ * cleared the link's expiry, an already-issued grant's frozen ceiling
+ * could never be extended, permanently stranding an otherwise-valid
+ * browser with no raw secret to recover with. The link's own expiry is
+ * ALREADY independently, live-re-checked on every read
+ * (isShareLinkCurrentlyPubliclyActive, against the link's own current
+ * expires_at) -- it needs no grant-level snapshot to be enforced
+ * correctly, and shortening a link's expiry already takes effect
+ * immediately through that live check regardless of this value. Browser-
+ * session TTL (share_browser_sessions.expires_at,
+ * SHARE_BROWSER_SESSION_TTL_SECONDS) remains fully, independently
+ * enforced by resolveBrowserSessionFromCookie and is now the sole input
+ * here.
+ */
+function computeGrantExpiresAt(browserSessionExpiresAt: string): string {
+  return new Date(browserSessionExpiresAt).toISOString();
 }
 
 // ---------------------------------------------------------------------
@@ -545,8 +585,8 @@ type ShareProjectionAuthStage =
   | "link_not_active"
   | "grant_query_failed"
   | "grant_not_found"
-  | "grant_expired"
-  | "config_version_mismatch"
+  | "access_epoch_mismatch"
+  | "pin_epoch_mismatch"
   | "pin_not_verified"
   | "authorization_ok";
 
@@ -574,11 +614,62 @@ function logShareProjectionAuthStage(stage: ShareProjectionAuthStage): void {
  * both routes call this exact function with the exact same two
  * arguments). Never trusts the cookie or the publicId alone -- every
  * dimension (session live+unrevoked, link active+unexpired+project-not-
- * deleted, grant same-session+same-link+unexpired+unrevoked+exact-
- * configuration-version-match+PIN-requirement-satisfied) is re-checked
+ * deleted, grant same-session+same-link+unrevoked+exact-access-epoch-
+ * match+exact-pin-epoch-match+PIN-requirement-satisfied) is re-checked
  * against the database on every call. Returns null for ANY failure --
  * callers must respond with the same generic unavailable posture
- * regardless of which check failed (AGENTS.md rule 10).
+ * regardless of which check failed (AGENTS.md rule 10) -- the
+ * access-epoch-vs-pin-epoch distinction below exists purely for internal,
+ * server-only diagnostics (logShareProjectionAuthStage) and for the
+ * separate, narrowly-scoped POST /api/share/[publicId]/pin recovery route
+ * to make its own decision; it is never surfaced in this function's own
+ * return value or in any response this function's callers build.
+ *
+ * Phase 8 corrective change (202608250001) -- access_epoch/pin_epoch
+ * design, replacing configuration_version as the security-grant
+ * invalidation predicate:
+ *
+ * configuration_version conflated two unrelated concerns: owner-editor/
+ * multi-tab presentation freshness (bumped by disable, re-enable, clear
+ * PIN, set/clear expiry, and ordinary settings changes -- none of which
+ * are access-control decisions) and security-credential invalidation
+ * (rotation, PIN changes). Because EVERY bump permanently stranded any
+ * already-authorized browser with no raw-secret recovery path, an owner
+ * merely disabling-then-re-enabling a link, or toggling a visibility
+ * setting, permanently locked out every already-open client tab -- a
+ * real Production defect. configuration_version itself is UNCHANGED by
+ * this fix (every existing bump site remains exactly as it was) -- it
+ * continues to serve owner-editor freshness exactly as before. The
+ * security-relevant subset is now tracked by two NEW, independent
+ * fields:
+ *
+ *   - accessEpoch: bumped ONLY by secret rotation. A mismatch here can
+ *     NEVER be recovered without a fresh secret-based exchange (POST
+ *     /api/share/session) -- by design, no other route may repair it.
+ *   - pinEpoch: bumped ONLY by set_share_link_pin (covers both first-add
+ *     and value-change). A mismatch here CAN be recovered via PIN
+ *     re-verification alone (POST /api/share/[publicId]/pin, no raw
+ *     secret needed) -- but that route itself independently requires
+ *     accessEpoch to still match first (see its own doc comment for why:
+ *     if rotation and PIN changes shared one counter, a PIN-only
+ *     recovery path would also silently un-invalidate a post-rotation
+ *     grant, defeating rotation's entire purpose).
+ *
+ * Disable, re-enable, clear PIN, set/clear expiry, revoke (already
+ * independently, permanently terminal via `state`) and
+ * save_share_configuration's settings sub-block never touch either
+ * field -- none of them needed to, and closing this bug required
+ * removing nothing from them; the fix lives entirely in what THIS
+ * function checks.
+ *
+ * grant.expires_at is deliberately no longer read here at all -- see
+ * computeGrantExpiresAt's own doc comment for the full argument (link
+ * expiry is independently, live-enforced by isShareLinkCurrentlyPubliclyActive
+ * just above; browser-session TTL is independently, live-enforced by
+ * resolveBrowserSessionFromCookie just above; the grant's own frozen
+ * snapshot added no protection beyond those two and was the one field
+ * that could never be un-stuck for an already-issued grant once an owner
+ * lengthened or cleared a link's expiry).
  */
 export async function verifyShareProjectionAuthorization(input: {
   cookieValue: string | null;
@@ -606,7 +697,7 @@ export async function verifyShareProjectionAuthorization(input: {
 
   const { data: grantRows, error: grantError } = await supabaseAdmin
     .from("share_session_grants")
-    .select("granted_configuration_version, pin_verified_at, expires_at, revoked_at")
+    .select("granted_access_epoch, granted_pin_epoch, pin_verified_at, revoked_at")
     .eq("browser_session_id", session.id)
     .eq("share_link_id", link.id)
     .is("revoked_at", null);
@@ -624,13 +715,13 @@ export async function verifyShareProjectionAuthorization(input: {
     return null;
   }
 
-  if (new Date(grant.expires_at).getTime() <= Date.now()) {
-    logShareProjectionAuthStage("grant_expired");
+  if (grant.granted_access_epoch !== link.accessEpoch) {
+    logShareProjectionAuthStage("access_epoch_mismatch");
     return null;
   }
 
-  if (grant.granted_configuration_version !== link.configurationVersion) {
-    logShareProjectionAuthStage("config_version_mismatch");
+  if (grant.granted_pin_epoch !== link.pinEpoch) {
+    logShareProjectionAuthStage("pin_epoch_mismatch");
     return null;
   }
 
@@ -643,4 +734,36 @@ export async function verifyShareProjectionAuthorization(input: {
 
   logShareProjectionAuthStage("authorization_ok");
   return { shareLinkId: link.id, projectId: link.projectId, userId: link.userId };
+}
+
+/**
+ * Phase 8 corrective change (202608250001) -- narrow, read-only helper
+ * for POST /api/share/[publicId]/pin. Returns the existing (any status --
+ * revoked or not, any epoch) grant row for this exact (session, link)
+ * pair, or null if none has ever existed. Its mere existence is the
+ * proof this browser once completed a genuine secret-based exchange for
+ * THIS link (a grant row can only ever be created by ensureCurrentGrant,
+ * itself only ever called after secret verification succeeded) --
+ * independent of, and a stronger guarantee than, merely holding a valid
+ * browser-session cookie (which is link-agnostic and could have been
+ * minted for a different project's link entirely).
+ */
+export async function findAnyGrantForSession(
+  browserSessionId: string,
+  shareLinkId: string
+): Promise<Readonly<{ grantedAccessEpoch: number }> | null> {
+  const { data, error } = await supabaseAdmin
+    .from("share_session_grants")
+    .select("granted_access_epoch")
+    .eq("browser_session_id", browserSessionId)
+    .eq("share_link_id", shareLinkId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return { grantedAccessEpoch: (data as { granted_access_epoch: number }).granted_access_epoch };
 }

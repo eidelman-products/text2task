@@ -53,6 +53,8 @@ function makeChain(table: string) {
     neq: () => chain,
     is: () => chain,
     in: () => chain,
+    order: () => chain,
+    limit: () => chain,
     maybeSingle: () => Promise.resolve(nextFor(table)),
     single: () => Promise.resolve(nextFor(table)),
     then: (
@@ -76,6 +78,7 @@ const {
   createBrowserSession,
   ensureCurrentGrant,
   verifyShareProjectionAuthorization,
+  findAnyGrantForSession,
 } = await import("./share-session-grant.server");
 
 const { generateShareBrowserSessionSecret, hashShareBrowserSessionSecret } = await import(
@@ -111,6 +114,9 @@ function validLinkRow(overrides: Record<string, unknown> = {}) {
     pin_scrypt_p: null,
     pin_key_length: null,
     configuration_version: 1,
+    // Phase 8 corrective change (202608250001).
+    access_epoch: 1,
+    pin_epoch: 1,
     ...overrides,
   };
 }
@@ -187,6 +193,16 @@ describe("resolveShareLinkByPublicId", () => {
     const result = await resolveShareLinkByPublicId(VALID_PUBLIC_ID);
     expect(result?.pinMaterial).not.toBeNull();
     expect(result?.pinMaterial?.pinHashVersion).toBe(1);
+  });
+
+  it("Phase 8 corrective change (202608250001): maps access_epoch and pin_epoch from the row", async () => {
+    queueResponse("project_share_links", {
+      data: validLinkRow({ access_epoch: 3, pin_epoch: 5 }),
+      error: null,
+    });
+    const result = await resolveShareLinkByPublicId(VALID_PUBLIC_ID);
+    expect(result?.accessEpoch).toBe(3);
+    expect(result?.pinEpoch).toBe(5);
   });
 });
 
@@ -348,14 +364,32 @@ describe("createBrowserSession", () => {
 });
 
 describe("ensureCurrentGrant - the atomic-upsert-equivalent exchange contract", () => {
+  // Phase 8 corrective change (202608250001): linkExpiresAt no longer
+  // exists as an input -- grant expiry is session-TTL-only
+  // (computeGrantExpiresAt). Staleness/reuse is judged by
+  // linkAccessEpoch/linkPinEpoch, not linkConfigurationVersion.
   const baseInput = {
     browserSessionId: VALID_SESSION_ID,
     browserSessionExpiresAt: FUTURE_TIMESTAMP,
     shareLinkId: VALID_LINK_ID,
     linkConfigurationVersion: 1,
-    linkExpiresAt: null as string | null,
+    linkAccessEpoch: 1,
+    linkPinEpoch: 1,
     pinVerifiedNow: false,
   };
+
+  function existingGrantRow(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "grant-1",
+      granted_configuration_version: 1,
+      granted_access_epoch: 1,
+      granted_pin_epoch: 1,
+      pin_verified_at: null,
+      expires_at: FUTURE_TIMESTAMP,
+      revoked_at: null,
+      ...overrides,
+    };
+  }
 
   it("inserts a fresh grant when none exists", async () => {
     queueResponse("share_session_grants", { data: [], error: null }); // select existing -> none
@@ -365,19 +399,8 @@ describe("ensureCurrentGrant - the atomic-upsert-equivalent exchange contract", 
     expect(ok).toBe(true);
   });
 
-  it("leaves an already-valid current grant untouched (no revoke, no re-insert)", async () => {
-    queueResponse("share_session_grants", {
-      data: [
-        {
-          id: "grant-1",
-          granted_configuration_version: 1,
-          pin_verified_at: null,
-          expires_at: FUTURE_TIMESTAMP,
-          revoked_at: null,
-        },
-      ],
-      error: null,
-    });
+  it("leaves an already-valid current grant untouched (no revoke, no re-insert) when both epochs match", async () => {
+    queueResponse("share_session_grants", { data: [existingGrantRow()], error: null });
 
     const ok = await ensureCurrentGrant(baseInput);
     expect(ok).toBe(true);
@@ -389,43 +412,32 @@ describe("ensureCurrentGrant - the atomic-upsert-equivalent exchange contract", 
     expect(queues.get("share_session_grants")?.length ?? 0).toBe(0);
   });
 
-  it("revokes a stale (wrong configuration_version) current grant, then inserts its replacement", async () => {
-    queueResponse("share_session_grants", {
-      data: [
-        {
-          id: "grant-1",
-          granted_configuration_version: 1,
-          pin_verified_at: null,
-          expires_at: FUTURE_TIMESTAMP,
-          revoked_at: null,
-        },
-      ],
-      error: null,
-    }); // select existing -> stale (v1, but link is now v2)
+  it("Phase 8 lifecycle regression C/D/E/F/G: an existing grant remains valid even when linkConfigurationVersion has changed, provided BOTH epochs still match -- proves ordinary settings/presentation changes (comments, subtitle, direction, title/status/target-date visibility, task mapping, resource mapping) never strand an already-authorized browser", async () => {
+    queueResponse("share_session_grants", { data: [existingGrantRow()], error: null });
+
+    // linkConfigurationVersion moved from 1 to 7 (simulating several
+    // ordinary settings/mapping saves) -- linkAccessEpoch/linkPinEpoch
+    // are unaffected by any of those operations and remain 1.
+    const ok = await ensureCurrentGrant({ ...baseInput, linkConfigurationVersion: 7 });
+    expect(ok).toBe(true);
+    expect(queues.get("share_session_grants")?.length ?? 0).toBe(0);
+  });
+
+  it("revokes a stale (access_epoch mismatch -- simulating secret rotation) current grant, then inserts its replacement", async () => {
+    queueResponse("share_session_grants", { data: [existingGrantRow({ granted_access_epoch: 1 })], error: null });
     queueResponse("share_session_grants", { data: null, error: null }); // revoke update -> success
     queueResponse("share_session_grants", { data: null, error: null }); // insert replacement -> success
 
-    const ok = await ensureCurrentGrant({ ...baseInput, linkConfigurationVersion: 2 });
+    const ok = await ensureCurrentGrant({ ...baseInput, linkAccessEpoch: 2 });
     expect(ok).toBe(true);
   });
 
-  it("revokes an expired current grant, then inserts its replacement", async () => {
-    queueResponse("share_session_grants", {
-      data: [
-        {
-          id: "grant-1",
-          granted_configuration_version: 1,
-          pin_verified_at: null,
-          expires_at: PAST_TIMESTAMP,
-          revoked_at: null,
-        },
-      ],
-      error: null,
-    });
+  it("revokes a stale (pin_epoch mismatch -- simulating a PIN change) current grant, then inserts its replacement", async () => {
+    queueResponse("share_session_grants", { data: [existingGrantRow({ granted_pin_epoch: 1 })], error: null });
     queueResponse("share_session_grants", { data: null, error: null }); // revoke
     queueResponse("share_session_grants", { data: null, error: null }); // insert
 
-    const ok = await ensureCurrentGrant(baseInput);
+    const ok = await ensureCurrentGrant({ ...baseInput, linkPinEpoch: 2, pinVerifiedNow: true });
     expect(ok).toBe(true);
   });
 
@@ -480,22 +492,36 @@ describe("ensureCurrentGrant - the atomic-upsert-equivalent exchange contract", 
     expect(insertPayload.pin_verified_at).toBeNull();
   });
 
-  it("clamps grant expiry to the link's own expires_at when it is sooner than the session's", async () => {
-    const linkExpiresSoon = new Date(Date.now() + 10_000).toISOString();
+  it("Phase 8 corrective change (202608250001): grant expires_at is derived purely from browserSessionExpiresAt, never clamped by any link expiry (there is no linkExpiresAt input any more)", async () => {
     queueResponse("share_session_grants", { data: [], error: null });
     queueResponse("share_session_grants", { data: null, error: null });
 
-    const ok = await ensureCurrentGrant({
-      ...baseInput,
-      browserSessionExpiresAt: FUTURE_TIMESTAMP,
-      linkExpiresAt: linkExpiresSoon,
-    });
+    const ok = await ensureCurrentGrant(baseInput);
     expect(ok).toBe(true);
-    // The exact clamped value is an internal implementation detail not
-    // observable through this function's boolean return -- the docs/
-    // client-share-phase3-runtime/ disposable package's own grant-expiry
-    // assertions are the authoritative runtime proof of the exact stored
-    // value.
+
+    const [insertPayload] = insertPayloadsFor("share_session_grants") as Array<{
+      expires_at?: unknown;
+    }>;
+    expect(insertPayload.expires_at).toBe(new Date(FUTURE_TIMESTAMP).toISOString());
+  });
+
+  it("Phase 8 corrective change (202608250001): the insert payload carries both granted_access_epoch and granted_pin_epoch matching the input", async () => {
+    queueResponse("share_session_grants", { data: [], error: null });
+    queueResponse("share_session_grants", { data: null, error: null });
+
+    await ensureCurrentGrant({ ...baseInput, linkAccessEpoch: 4, linkPinEpoch: 9 });
+
+    const [insertPayload] = insertPayloadsFor("share_session_grants") as Array<{
+      granted_access_epoch?: unknown;
+      granted_pin_epoch?: unknown;
+      granted_configuration_version?: unknown;
+    }>;
+    expect(insertPayload.granted_access_epoch).toBe(4);
+    expect(insertPayload.granted_pin_epoch).toBe(9);
+    // granted_configuration_version is still written (harmless historical
+    // snapshot, still required by the DB's own insert-time integrity
+    // check) even though it is no longer read back for staleness.
+    expect(insertPayload.granted_configuration_version).toBe(1);
   });
 
   it("returns false when the existing-grant select itself errors", async () => {
@@ -504,33 +530,17 @@ describe("ensureCurrentGrant - the atomic-upsert-equivalent exchange contract", 
   });
 
   it("returns false when the revoke update fails", async () => {
-    queueResponse("share_session_grants", {
-      data: [
-        {
-          id: "grant-1",
-          granted_configuration_version: 1,
-          pin_verified_at: null,
-          expires_at: PAST_TIMESTAMP,
-          revoked_at: null,
-        },
-      ],
-      error: null,
-    });
+    queueResponse("share_session_grants", { data: [existingGrantRow({ granted_access_epoch: 1 })], error: null });
     queueResponse("share_session_grants", { data: null, error: { message: "boom" } }); // revoke fails
 
-    expect(await ensureCurrentGrant(baseInput)).toBe(false);
+    expect(await ensureCurrentGrant({ ...baseInput, linkAccessEpoch: 2 })).toBe(false);
   });
 
   it("on an insert failure (simulated race/unique_violation), re-checks and returns true if a valid current grant now exists", async () => {
     queueResponse("share_session_grants", { data: [], error: null }); // select -> none
     queueResponse("share_session_grants", { data: null, error: { code: "23505", message: "duplicate" } }); // insert -> race
     queueResponse("share_session_grants", {
-      data: [
-        {
-          granted_configuration_version: 1,
-          expires_at: FUTURE_TIMESTAMP,
-        },
-      ],
+      data: [{ granted_access_epoch: 1, granted_pin_epoch: 1 }],
       error: null,
     }); // re-check -> the other request's grant is valid
 
@@ -552,7 +562,8 @@ describe("ensureCurrentGrant/createBrowserSession - real browser defect #4 safe 
     browserSessionExpiresAt: FUTURE_TIMESTAMP,
     shareLinkId: VALID_LINK_ID,
     linkConfigurationVersion: 1,
-    linkExpiresAt: null as string | null,
+    linkAccessEpoch: 1,
+    linkPinEpoch: 1,
     pinVerifiedNow: false,
   };
 
@@ -608,7 +619,7 @@ describe("ensureCurrentGrant/createBrowserSession - real browser defect #4 safe 
     queueResponse("share_session_grants", { data: [], error: null });
     queueResponse("share_session_grants", { data: null, error: { code: "23505", message: "duplicate" } });
     queueResponse("share_session_grants", {
-      data: [{ granted_configuration_version: 1, expires_at: FUTURE_TIMESTAMP }],
+      data: [{ granted_access_epoch: 1, granted_pin_epoch: 1 }],
       error: null,
     });
 
@@ -630,8 +641,10 @@ describe("ensureCurrentGrant/createBrowserSession - real browser defect #4 safe 
 
 describe("verifyShareProjectionAuthorization - never trusts any single dimension alone", () => {
   function queueHappyPath(overrides: {
-    grantConfigVersion?: number;
-    linkConfigVersion?: number;
+    grantAccessEpoch?: number;
+    linkAccessEpoch?: number;
+    grantPinEpoch?: number;
+    linkPinEpoch?: number;
     pinVerifiedAt?: string | null;
     linkHasPin?: boolean;
   } = {}) {
@@ -641,7 +654,8 @@ describe("verifyShareProjectionAuthorization - never trusts any single dimension
     });
     queueResponse("project_share_links", {
       data: validLinkRow({
-        configuration_version: overrides.linkConfigVersion ?? 1,
+        access_epoch: overrides.linkAccessEpoch ?? 1,
+        pin_epoch: overrides.linkPinEpoch ?? 1,
         ...(overrides.linkHasPin
           ? {
               pin_hash: "b".repeat(43),
@@ -660,9 +674,9 @@ describe("verifyShareProjectionAuthorization - never trusts any single dimension
     queueResponse("share_session_grants", {
       data: [
         {
-          granted_configuration_version: overrides.grantConfigVersion ?? 1,
+          granted_access_epoch: overrides.grantAccessEpoch ?? 1,
+          granted_pin_epoch: overrides.grantPinEpoch ?? 1,
           pin_verified_at: overrides.pinVerifiedAt ?? null,
-          expires_at: FUTURE_TIMESTAMP,
           revoked_at: null,
         },
       ],
@@ -737,8 +751,8 @@ describe("verifyShareProjectionAuthorization - never trusts any single dimension
     expect(result).toBeNull();
   });
 
-  it("fails closed when the grant's configuration_version is stale relative to the link's live version", async () => {
-    queueHappyPath({ grantConfigVersion: 1, linkConfigVersion: 2 });
+  it("Phase 8 lifecycle regression N: fails closed when the grant's access_epoch is stale relative to the link's live access_epoch (simulating secret rotation)", async () => {
+    queueHappyPath({ grantAccessEpoch: 1, linkAccessEpoch: 2 });
     const raw = generateShareBrowserSessionSecret();
 
     const result = await verifyShareProjectionAuthorization({
@@ -748,22 +762,29 @@ describe("verifyShareProjectionAuthorization - never trusts any single dimension
     expect(result).toBeNull();
   });
 
-  it("fails closed when the grant is expired", async () => {
+  it("Phase 8 lifecycle regression M: fails closed when the grant's pin_epoch is stale relative to the link's live pin_epoch (simulating a PIN change)", async () => {
+    queueHappyPath({ grantPinEpoch: 1, linkPinEpoch: 2, linkHasPin: true, pinVerifiedAt: FUTURE_TIMESTAMP });
+    const raw = generateShareBrowserSessionSecret();
+
+    const result = await verifyShareProjectionAuthorization({
+      cookieValue: raw,
+      publicId: VALID_PUBLIC_ID,
+    });
+    expect(result).toBeNull();
+  });
+
+  it("Phase 8 lifecycle regression C/D/E/F/G: authorizes even though configuration_version has changed, provided both epochs still match -- ordinary settings/mapping changes never strand an already-authorized grant", async () => {
     queueResponse("share_browser_sessions", {
       data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
       error: null,
     });
-    queueResponse("project_share_links", { data: validLinkRow(), error: null });
+    queueResponse("project_share_links", {
+      data: validLinkRow({ configuration_version: 9, access_epoch: 1, pin_epoch: 1 }),
+      error: null,
+    });
     queueResponse("projects", { data: { id: VALID_PROJECT_ID, deleted_at: null }, error: null });
     queueResponse("share_session_grants", {
-      data: [
-        {
-          granted_configuration_version: 1,
-          pin_verified_at: null,
-          expires_at: PAST_TIMESTAMP,
-          revoked_at: null,
-        },
-      ],
+      data: [{ granted_access_epoch: 1, granted_pin_epoch: 1, pin_verified_at: null, revoked_at: null }],
       error: null,
     });
     const raw = generateShareBrowserSessionSecret();
@@ -772,7 +793,27 @@ describe("verifyShareProjectionAuthorization - never trusts any single dimension
       cookieValue: raw,
       publicId: VALID_PUBLIC_ID,
     });
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
+  });
+
+  it("Phase 8 corrective change (202608250001): no longer reads grant.expires_at at all -- a grant whose OWN (session-TTL-derived) expires_at happens to be in the past is still authorized as long as both epochs match (session-level expiry is independently enforced by resolveBrowserSessionFromCookie)", async () => {
+    queueResponse("share_browser_sessions", {
+      data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
+      error: null,
+    });
+    queueResponse("project_share_links", { data: validLinkRow(), error: null });
+    queueResponse("projects", { data: { id: VALID_PROJECT_ID, deleted_at: null }, error: null });
+    queueResponse("share_session_grants", {
+      data: [{ granted_access_epoch: 1, granted_pin_epoch: 1, pin_verified_at: null, revoked_at: null }],
+      error: null,
+    });
+    const raw = generateShareBrowserSessionSecret();
+
+    const result = await verifyShareProjectionAuthorization({
+      cookieValue: raw,
+      publicId: VALID_PUBLIC_ID,
+    });
+    expect(result).not.toBeNull();
   });
 
   it("fails closed when the link currently requires a PIN but the grant has no pin_verified_at", async () => {
@@ -834,8 +875,10 @@ describe("verifyShareProjectionAuthorization - PHASE 4B DEFECT #2 sub-stage diag
   }
 
   function queueHappyPath(overrides: {
-    grantConfigVersion?: number;
-    linkConfigVersion?: number;
+    grantAccessEpoch?: number;
+    linkAccessEpoch?: number;
+    grantPinEpoch?: number;
+    linkPinEpoch?: number;
     pinVerifiedAt?: string | null;
     linkHasPin?: boolean;
   } = {}) {
@@ -845,7 +888,8 @@ describe("verifyShareProjectionAuthorization - PHASE 4B DEFECT #2 sub-stage diag
     });
     queueResponse("project_share_links", {
       data: validLinkRow({
-        configuration_version: overrides.linkConfigVersion ?? 1,
+        access_epoch: overrides.linkAccessEpoch ?? 1,
+        pin_epoch: overrides.linkPinEpoch ?? 1,
         ...(overrides.linkHasPin
           ? {
               pin_hash: "b".repeat(43),
@@ -864,9 +908,9 @@ describe("verifyShareProjectionAuthorization - PHASE 4B DEFECT #2 sub-stage diag
     queueResponse("share_session_grants", {
       data: [
         {
-          granted_configuration_version: overrides.grantConfigVersion ?? 1,
+          granted_access_epoch: overrides.grantAccessEpoch ?? 1,
+          granted_pin_epoch: overrides.grantPinEpoch ?? 1,
           pin_verified_at: overrides.pinVerifiedAt ?? null,
-          expires_at: FUTURE_TIMESTAMP,
           revoked_at: null,
         },
       ],
@@ -953,40 +997,22 @@ describe("verifyShareProjectionAuthorization - PHASE 4B DEFECT #2 sub-stage diag
     expect(stageCalls().at(-1)).toEqual(["share_projection_auth_stage", { stage: "grant_not_found" }]);
   });
 
-  it("tags grant_expired when the grant's own expires_at has passed", async () => {
-    queueResponse("share_browser_sessions", {
-      data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
-      error: null,
-    });
-    queueResponse("project_share_links", { data: validLinkRow(), error: null });
-    queueResponse("projects", { data: { id: VALID_PROJECT_ID, deleted_at: null }, error: null });
-    queueResponse("share_session_grants", {
-      data: [{ granted_configuration_version: 1, pin_verified_at: null, expires_at: PAST_TIMESTAMP, revoked_at: null }],
-      error: null,
-    });
+  it("Phase 8 corrective change: tags access_epoch_mismatch when the grant is stale relative to the link's live access_epoch (was config_version_mismatch before 202608250001)", async () => {
+    queueHappyPath({ grantAccessEpoch: 1, linkAccessEpoch: 2 });
     await verifyShareProjectionAuthorization({
       cookieValue: generateShareBrowserSessionSecret(),
       publicId: VALID_PUBLIC_ID,
     });
-    expect(stageCalls().at(-1)).toEqual(["share_projection_auth_stage", { stage: "grant_expired" }]);
+    expect(stageCalls().at(-1)).toEqual(["share_projection_auth_stage", { stage: "access_epoch_mismatch" }]);
   });
 
-  it("tags config_version_mismatch when the grant is stale relative to the link's live configuration_version", async () => {
-    queueResponse("share_browser_sessions", {
-      data: { id: VALID_SESSION_ID, expires_at: FUTURE_TIMESTAMP, revoked_at: null },
-      error: null,
-    });
-    queueResponse("project_share_links", { data: validLinkRow({ configuration_version: 2 }), error: null });
-    queueResponse("projects", { data: { id: VALID_PROJECT_ID, deleted_at: null }, error: null });
-    queueResponse("share_session_grants", {
-      data: [{ granted_configuration_version: 1, pin_verified_at: null, expires_at: FUTURE_TIMESTAMP, revoked_at: null }],
-      error: null,
-    });
+  it("Phase 8 corrective change: tags pin_epoch_mismatch when the grant is stale relative to the link's live pin_epoch, distinct from access_epoch_mismatch", async () => {
+    queueHappyPath({ grantPinEpoch: 1, linkPinEpoch: 2, linkHasPin: true, pinVerifiedAt: FUTURE_TIMESTAMP });
     await verifyShareProjectionAuthorization({
       cookieValue: generateShareBrowserSessionSecret(),
       publicId: VALID_PUBLIC_ID,
     });
-    expect(stageCalls().at(-1)).toEqual(["share_projection_auth_stage", { stage: "config_version_mismatch" }]);
+    expect(stageCalls().at(-1)).toEqual(["share_projection_auth_stage", { stage: "pin_epoch_mismatch" }]);
   });
 
   it("tags pin_not_verified when the link requires a PIN the grant hasn't verified", async () => {
@@ -1034,14 +1060,7 @@ describe("PHASE 4B DEFECT #2 -- both routes call verifyShareProjectionAuthorizat
    * (simulating a projection request immediately followed by a file-route
    * request against the same session/link state), returns the identical
    * successful authorization both times -- there is no code-level
-   * asymmetry between the two routes' authorization calls. If a real
-   * Preview retest still shows the file route failing while the
-   * projection route succeeds under otherwise-identical conditions, the
-   * cause is therefore external to this function and to both routes'
-   * call sites (e.g. genuinely different request/cookie context, or the
-   * underlying session/link/grant state actually changing between the
-   * two real requests) -- not a routing or parameter bug, which this test
-   * would have caught.
+   * asymmetry between the two routes' authorization calls.
    */
   it("returns the identical successful authorization for two calls with the same cookie/publicId against unchanged DB state", async () => {
     queueHappyPath();
@@ -1062,8 +1081,8 @@ describe("PHASE 4B DEFECT #2 -- both routes call verifyShareProjectionAuthorizat
   });
 
   function queueHappyPath(overrides: {
-    grantConfigVersion?: number;
-    linkConfigVersion?: number;
+    grantAccessEpoch?: number;
+    linkAccessEpoch?: number;
     pinVerifiedAt?: string | null;
     linkHasPin?: boolean;
   } = {}) {
@@ -1072,16 +1091,16 @@ describe("PHASE 4B DEFECT #2 -- both routes call verifyShareProjectionAuthorizat
       error: null,
     });
     queueResponse("project_share_links", {
-      data: validLinkRow({ configuration_version: overrides.linkConfigVersion ?? 1 }),
+      data: validLinkRow({ access_epoch: overrides.linkAccessEpoch ?? 1 }),
       error: null,
     });
     queueResponse("projects", { data: { id: VALID_PROJECT_ID, deleted_at: null }, error: null });
     queueResponse("share_session_grants", {
       data: [
         {
-          granted_configuration_version: overrides.grantConfigVersion ?? 1,
+          granted_access_epoch: overrides.grantAccessEpoch ?? 1,
+          granted_pin_epoch: 1,
           pin_verified_at: overrides.pinVerifiedAt ?? null,
-          expires_at: FUTURE_TIMESTAMP,
           revoked_at: null,
         },
       ],
@@ -1138,5 +1157,26 @@ describe("PHASE 4B DEFECT #2 -- both routes call verifyShareProjectionAuthorizat
       publicId: PUBLIC_ID_B,
     });
     expect(resultForLinkB).toBeNull();
+  });
+});
+
+describe("findAnyGrantForSession - Phase 8 corrective change (202608250001), the PIN-recovery route's own proof-of-prior-access helper", () => {
+  it("returns null when no grant has ever existed for this (session, link) pair", async () => {
+    queueResponse("share_session_grants", { data: null, error: null });
+    expect(await findAnyGrantForSession(VALID_SESSION_ID, VALID_LINK_ID)).toBeNull();
+  });
+
+  it("returns null on a query error, never throwing", async () => {
+    queueResponse("share_session_grants", { data: null, error: { message: "boom" } });
+    expect(await findAnyGrantForSession(VALID_SESSION_ID, VALID_LINK_ID)).toBeNull();
+  });
+
+  it("returns the grantedAccessEpoch of the most recent grant, REGARDLESS of its revoked_at status -- a revoked-but-once-real grant is still valid proof of prior secret possession", async () => {
+    queueResponse("share_session_grants", {
+      data: { granted_access_epoch: 3 },
+      error: null,
+    });
+    const result = await findAnyGrantForSession(VALID_SESSION_ID, VALID_LINK_ID);
+    expect(result).toEqual({ grantedAccessEpoch: 3 });
   });
 });
