@@ -1,8 +1,8 @@
 # Text2Task Client Share — Access Epoch Corrective Change
-## Implementation Report — Local Implementation Only, Not Deployed
-## 2026-08-25
+## Implementation Report — Originally Local-Only 2026-08-25; PRODUCTION DEPLOYED AND VERIFIED 2026-08-26 (§14)
+## 2026-08-25 (Production rollout addendum: 2026-08-26)
 
-**This document reports on a corrective change implemented locally only.** No SQL was executed against Production. No migration was applied to Production. No code was staged, committed, pushed, or deployed. The feature flag (`TEXT2TASK_CLIENT_SHARE_ENABLED`) was not touched. Production rollout of this change is **not authorized** by this document — see §9 for what must happen before it is.
+**§1–13 below report on this corrective change as originally implemented locally only, on 2026-08-25** — at that time, no SQL had been executed against Production, no migration had been applied to Production, no code had been staged, committed, pushed, or deployed, and the feature flag (`TEXT2TASK_CLIENT_SHARE_ENABLED`) was untouched. **That has since changed: §14 (new, 2026-08-26) records that this change has been committed (`fa86c99`), pushed to `origin/main`, deployed to Production via Vercel, the migration applied to Production, and the exact original regression re-verified live in Production — PASS.** Read §1–13 as the historical implementation record and §14 as the current, superseding rollout status.
 
 ---
 
@@ -332,16 +332,105 @@ SECURITY_REVIEW: See §11 — every previously-required security invariant
   re-verified intact; one new invariant added (PIN-only recovery cannot
   bypass rotation, verified by a dedicated test).
 
-PRODUCTION_ROLLOUT_STEPS: See §12. Not executed. Disposable-runtime
-  verification (step 4) is now DONE — RUNTIME VERIFICATION ACCEPTED.
-  Remaining: adding this migration as chain position 18 in the existing
-  Phase 8 plan, applying it, deploying the paired application-layer
-  changes, and a Production re-run of the exact Disable→Re-enable
-  regression scenario as the acceptance criterion for un-pausing rollout.
+PRODUCTION_ROLLOUT_STEPS: See §12 and §14 (new, 2026-08-26). COMPLETE —
+  disposable-runtime verification (step 4) done, migration applied to
+  Production (step 3), paired application-layer changes deployed (step 5,
+  commit fa86c99), and the exact Disable→Re-enable regression re-run
+  against Production and PASSED (steps 6-8's acceptance criterion). See
+  §14 for the full Production rollout record.
 
-GIT_STATUS: All changes are local, unstaged/untracked working-tree
-  modifications. Nothing committed, staged, pushed, or deployed. Feature
-  flag untouched.
+GIT_STATUS: as of this document's original 2026-08-25 writing, all
+  changes were local, unstaged/untracked working-tree modifications.
+  **Superseded 2026-08-26 (§14, new): commit fa86c99 ("Fix Client Share
+  access epoch recovery") has since been pushed to origin/main and
+  deployed to Production via Vercel.**
 ```
+
+---
+
+## 14. Production rollout and verification (2026-08-26)
+
+**This section is an addendum, added after this report's original 2026-08-25 writing, recording a Production rollout and verification that has already occurred.** Everything above this section (§1–13) describes the state as of local implementation, before any commit, push, deploy, or Production migration — that historical record is left otherwise unchanged.
+
+### 14.1 Disposable-runtime verification (preceded Production rollout)
+
+Before Production application, the disposable Supabase runtime-verification package (`docs/client-share-phase8-access-epoch-runtime/`) was built and executed against a real, disposable, non-Production Postgres instance. The final SCRIPTED run reported `total_tests=139, passed_tests=138, failed_tests=1, status=PHASE_8_ACCESS_EPOCH_RUNTIME_FAIL`. The sole failure (`H9`, a Section H privilege-surface assertion) was classified a harness expectation bug and independently confirmed correct at the database level by a direct, read-only PostgreSQL catalog query against the same disposable project — not a defect in the migration, trigger, or RPC. `H9`'s own assertion was subsequently corrected in the harness. Static test coverage later reached 139/139 — that is the STATIC test suite result, distinct from and not a substitute for the 138/139 runtime-scripted result above. Zero implementation or migration defects were found. Full detail: `docs/client-share-phase8-access-epoch-runtime/04_CAPTURE_RESULTS.md`.
+
+### 14.2 Git push and deployment
+
+- Commit `fa86c99` ("Fix Client Share access epoch recovery") pushed successfully to `origin/main`; `main` and `origin/main` synchronized.
+- Vercel Production deployment: commit `fa86c99`, branch `main`, environment Production, status **Ready**, deployment title "Fix Client Share access epoch recovery".
+
+### 14.3 Production migration execution
+
+Migration under test: `supabase/migrations/202608250001_client_share_access_epoch.sql`. SHA-256 independently verified before execution: `dbc8af2f6581abb8c4dcbe74d8a94ddce46a26854491d24d579d9e6302a2be4e` — identical to every prior verification point in this report and in the disposable-runtime package's own `MANIFEST.md`.
+
+**Production preflight (before migration):**
+
+```
+share_link_count = 1
+grant_count = 2
+live_grants_with_config_version_mismatch = 1
+
+access_epoch_absent = true
+pin_epoch_absent = true
+granted_access_epoch_absent = true
+granted_pin_epoch_absent = true
+
+grant_integrity_function_present = true
+rotate_secret_function_present = true
+set_pin_function_present = true
+```
+
+**Migration execution:** SUCCESS — "Success. No rows returned."
+
+**Production post-migration verification:**
+
+```
+share_link_count = 1
+grant_count = 2
+links_access_epoch_not_1 = 0
+links_pin_epoch_not_1 = 0
+grants_access_epoch_not_1 = 0
+grants_pin_epoch_not_1 = 0
+epoch_mismatch_count = 0
+legacy_config_mismatch_count = 1
+
+rotate_bumps_access_epoch = true
+set_pin_bumps_pin_epoch = true
+grant_checks_access_epoch = true
+grant_checks_pin_epoch = true
+old_expiry_rejection_removed = true
+```
+
+`legacy_config_mismatch_count = 1` is **expected**, not a regression: it is the single stale grant the original bug produced (the one live grant whose `granted_configuration_version` no longer matched its link's `configuration_version` at preflight time, per `live_grants_with_config_version_mismatch = 1` above). The new authorization code no longer reads `configuration_version` as the public authorization predicate at all (§3), so this legacy mismatch has no security or availability effect going forward — it is inert historical residue from before the fix, not a live defect.
+
+### 14.4 Production smoke test — the exact original regression, re-run live
+
+The exact scenario that originally failed in Production before this corrective fix (§1) was re-run against Production, live:
+
+1. A fresh Incognito browser opened the existing Client Share link. **Loaded successfully.**
+2. **Same** browser/session, same URL: initial load — **PASS**.
+3. Owner clicked Disable. Same Incognito tab refreshed. Result: "This shared project view is not available." — **PASS**, disable still blocks the already-authorized session.
+4. Owner clicked Re-enable. **No** new browser, **no** new Incognito session, **no** new copied URL, **no** fresh secret exchange — the same exact Incognito tab and URL refreshed. Result: the shared project loaded successfully again. — **PASS**, same-browser access recovered after Re-enable.
+
+This is precisely the sequence that failed at step 3 (Re-enable) in the original 2026-08-25 Production discovery (§1) — it now passes.
+
+**Note on scope:** this smoke test re-verifies only the exact same-browser Disable→Re-enable regression. It does not itself constitute a manual re-verification of the remainder of the Phase 8 rollout plan's own §22 smoke-test checklist (rotate, PIN set/change/clear, expiry set/clear/lengthen, settings changes, revoke, client-side behaviors) — those remain as previously left in that document.
+
+### 14.5 Final verdict
+
+```
+PHASE 8 CORRECTIVE FIX: PRODUCTION VERIFIED
+DB MIGRATION: PASS
+DEPLOYMENT fa86c99: PASS
+DISABLE BLOCKS EXISTING SESSION: PASS
+RE-ENABLE RESTORES SAME SESSION: PASS
+ORIGINAL PRODUCTION REGRESSION: FIXED
+```
+
+The original Phase 8 same-browser Disable→Re-enable regression discovered in Production (§1) is now fixed in live Production, not merely locally implemented or disposable-runtime-verified. See `docs/TEXT2TASK_CLIENT_SHARE_LINK_PHASE_8_AUDIT_AND_ROLLOUT_PLAN_2026-08-24.md`'s own updated `ROLLOUT_STATUS` banner and §25 blocker-table row for the corresponding rollout-plan-level record.
+
+---
 
 **STOP.** No further action was taken beyond what is reported above. The next action is the user's own decision.

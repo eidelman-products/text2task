@@ -1,9 +1,14 @@
 # Client Share Link — Phase 8 Access Epoch Runtime Results
 
-**Status: RUNTIME VERIFICATION ACCEPTED.** This package was executed
-against a disposable, non-Production Supabase project across a sequence
-of runs, each fixing a harness-only defect found by the previous run's
-own evidence. The final SCRIPTED run reported:
+**Status: RUNTIME VERIFICATION ACCEPTED (disposable Postgres), and the
+corrective fix has since been PRODUCTION-DEPLOYED AND PRODUCTION-VERIFIED
+(2026-08-26) — see the "Production verification addendum" at the bottom
+of this document.** This package was executed against a disposable,
+non-Production Supabase project across a sequence of runs, each fixing a
+harness-only defect found by the previous run's own evidence. The final
+SCRIPTED run against the disposable project reported — this is the
+historical runtime-script record and is preserved exactly as it
+occurred, not restated as a clean pass:
 
 ```
 total_tests = 139
@@ -123,3 +128,26 @@ this cannot silently regress back to the mutation-only shape.
 - This disposition authorizes proceeding to the Production rollout steps
   documented in the implementation report and rollout plan — it does not
   itself perform a commit, push, or deploy.
+
+## Production verification addendum (2026-08-26)
+
+**The disposable-runtime record above (138/139 scripted, `H9` harness bug,
+independent direct-query confirmation) is preserved exactly as it
+occurred and is not restated here as a clean pass.** Separately, and
+subsequently, the corrective migration this package verifies
+(`202608250001_client_share_access_epoch.sql`, SHA-256
+`dbc8af2f6581abb8c4dcbe74d8a94ddce46a26854491d24d579d9e6302a2be4e`) was
+committed (`fa86c99`), pushed to `origin/main`, deployed to Production via
+Vercel, and applied to the real Production database. The exact original
+Production regression this whole engagement exists to fix — same-browser
+Disable → Re-enable — was then re-run live in Production: fresh Incognito
+load (PASS) → Disable denies the same session (PASS) → Re-enable, same
+tab, same URL, no new browser or secret exchange, restores access (PASS).
+
+This is a genuinely separate verification event from the disposable-
+Postgres runtime package this document otherwise records — it is real
+Production, not a disposable instance, and it exercises the live HTTP/UI
+path end-to-end rather than this package's own SQL-level RPC calls. Full
+detail: `docs/TEXT2TASK_CLIENT_SHARE_LINK_ACCESS_EPOCH_IMPLEMENTATION_REPORT_2026-08-25.md`
+§14 and `docs/TEXT2TASK_CLIENT_SHARE_LINK_PHASE_8_AUDIT_AND_ROLLOUT_PLAN_2026-08-24.md`'s
+own `ROLLOUT_STATUS` banner and §25 blocker-table row.
