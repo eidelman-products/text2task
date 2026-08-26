@@ -1,8 +1,12 @@
 import { Fragment } from "react";
-import JsonLd from "@/app/components/JsonLd";
+import JsonLd, { type JsonLdObject } from "@/app/components/JsonLd";
 import LandingFooter from "@/app/components/landing/landing-footer";
 import LandingHeader from "@/app/components/landing/landing-header";
-import { buildBreadcrumbListJsonLd } from "@/app/lib/schema";
+import {
+  SITE_SCHEMA_ENTITY_IDS,
+  buildBreadcrumbListJsonLd,
+  buildWebPageEntityId,
+} from "@/app/lib/schema";
 import type { UseCase, UseCaseSectionKey } from "@/app/lib/use-cases";
 import { getRelatedUseCases } from "@/app/lib/use-cases";
 import { absoluteUrl } from "@/app/lib/site-config";
@@ -58,24 +62,41 @@ export default function UseCaseDetailPage({ useCase }: UseCaseDetailPageProps) {
       }
     : null;
 
+  // 2026-08-26 structured-data fix -- this WebPage previously embedded a
+  // full, duplicated, incomplete `SoftwareApplication` object under
+  // `about` (name/applicationCategory/operatingSystem only -- no
+  // `offers`, no `aggregateRating`/`review`). Every one of the 12 Use
+  // Case pages shares this exact template, so that one incomplete object
+  // was independently re-declared 12 times, each one individually
+  // invalid per Google/SEMrush's SoftwareApplication requirements. A Use
+  // Case page is a content/landing page ABOUT the one Text2Task product
+  // for a specific audience -- it is not itself a distinct software
+  // listing and must not assert a `SoftwareApplication` type of its own.
+  // `isPartOf`/`publisher` now reference the SAME site-wide Organization/
+  // WebSite entities (declared once, on the homepage) via `@id`, matching
+  // the established convention already used by
+  // app/solutions/freelancer-project-management-software/page.tsx and
+  // every app/features/*/page.tsx file -- not a duplicated inline object.
+  // Deliberately no `mainEntity`/`about` pointing at the software product
+  // entity: asserting "this landing page's main entity/subject is the
+  // software application" is exactly the kind of accidental inheritance
+  // that produced the original 12 invalid items, so it is intentionally
+  // left out rather than replaced with a differently-shaped claim.
   const webPageJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebPage",
+    "@id": buildWebPageEntityId(canonicalUrl),
     name: useCase.seo.title,
     description: useCase.seo.description,
     url: canonicalUrl,
+    inLanguage: "en-US",
     isPartOf: {
-      "@type": "WebSite",
-      name: "Text2Task",
-      url: absoluteUrl("/"),
+      "@id": SITE_SCHEMA_ENTITY_IDS.website,
     },
-    about: {
-      "@type": "SoftwareApplication",
-      name: "Text2Task",
-      applicationCategory: "ProductivityApplication",
-      operatingSystem: "Web",
+    publisher: {
+      "@id": SITE_SCHEMA_ENTITY_IDS.organization,
     },
-  };
+  } satisfies JsonLdObject;
 
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd({
     currentCanonicalUrl: canonicalUrl,

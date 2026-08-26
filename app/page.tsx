@@ -55,7 +55,13 @@ export const metadata: Metadata = {
   },
 };
 
-const organizationJsonLd = {
+// Exported for direct, non-rendering structured-data regression tests
+// (app/page.test.tsx) -- HomePage's own tree includes async Server
+// Components and env-dependent config, so asserting on these plain JSON-LD
+// objects directly is the smallest-surface way to test them, rather than
+// rendering the full page. No behavioral effect: these are the exact same
+// module-level consts this file already builds and passes to <JsonLd>.
+export const organizationJsonLd = {
   "@type": "Organization",
   "@id": SITE_SCHEMA_ENTITY_IDS.organization,
   name: "Text2Task",
@@ -64,7 +70,7 @@ const organizationJsonLd = {
   sameAs: SITE_ORGANIZATION_SAME_AS,
 } satisfies JsonLdObject;
 
-const websiteJsonLd = {
+export const websiteJsonLd = {
   "@type": "WebSite",
   "@id": SITE_SCHEMA_ENTITY_IDS.website,
   url: absoluteUrl("/"),
@@ -77,40 +83,38 @@ const websiteJsonLd = {
   inLanguage: "en-US",
 } satisfies JsonLdObject;
 
-const softwareApplicationJsonLd = {
-  "@type": "SoftwareApplication",
-  "@id": SITE_SCHEMA_ENTITY_IDS.softwareApplication,
-  name: "Text2Task",
-  applicationCategory: "BusinessApplication",
-  applicationSubCategory: "Productivity Software",
-  operatingSystem: "Web",
-  url: absoluteUrl("/"),
-  isPartOf: {
-    "@id": SITE_SCHEMA_ENTITY_IDS.website,
-  },
-  description:
-    "Text2Task is an AI task CRM for freelancers and service teams. It turns messy client messages into organized work with tasks, budgets, deadlines, and client details.",
-  featureList: [
-    "Project deadline calendar",
-    "Manual calendar events",
-    "Project and client scheduling",
-  ],
-  offers: {
-    "@type": "Offer",
-    price: "12.90",
-    priceCurrency: "USD",
-    availability: "https://schema.org/InStock",
-    url: absoluteUrl("/signup"),
-  },
-  creator: {
-    "@id": SITE_SCHEMA_ENTITY_IDS.organization,
-  },
-  publisher: {
-    "@id": SITE_SCHEMA_ENTITY_IDS.organization,
-  },
-} satisfies JsonLdObject;
+// 2026-08-26 structured-data fix -- this SoftwareApplication object was
+// previously emitted here with NO `aggregateRating` and NO `review`,
+// which Google/SEMrush's SoftwareApplication ("Software App") rich-result
+// requirements make mandatory -- flagged as the homepage's own invalid
+// item (1 of the 13 total). Text2Task does not currently have legitimate,
+// PUBLICLY VISIBLE rating/review data to truthfully populate either
+// field: customer story submissions do collect an optional 1-5 `rating`
+// (app/api/customer-stories/submit/route.ts), but the public read path
+// (lib/customer-stories/public-customer-stories.server.ts's own
+// PublicCustomerStory type/SELECT) deliberately excludes it -- no rating
+// is ever rendered anywhere on the site today. Fabricating an
+// aggregateRating from data that is never shown to visitors would violate
+// Google's own structured-data guidelines (markup must reflect visible
+// page content) as well as this fix's own "no fabricated ratings/reviews"
+// requirement, so the homepage intentionally stops asserting
+// `SoftwareApplication` entirely rather than emitting an incomplete or
+// invented one. Organization/WebSite/WebPage (all independently valid,
+// not dependent on rating data) are preserved unchanged below.
+// 2026-08-26 follow-up -- the several other pages (solutions/features/
+// about) that held a dangling `{"@id": SITE_SCHEMA_ENTITY_IDS.softwareApplication}`
+// reference (in their own WebPage's `mainEntity`, or AboutPage's `about`)
+// to this now-undeclared entity have had those references removed
+// (WebPage/AboutPage do not require mainEntity/about -- no replacement
+// schema was added merely to fill the field). The
+// SITE_SCHEMA_ENTITY_IDS.softwareApplication constant itself has been
+// removed from app/lib/schema.ts, since nothing in the codebase
+// references it any more. If Text2Task later launches genuine,
+// publicly-displayed customer ratings, a truthful SoftwareApplication
+// entity (with real aggregateRating/review) can be reintroduced, including
+// a fresh `SITE_SCHEMA_ENTITY_IDS.softwareApplication` id at that time.
 
-const homepageWebPageJsonLd = {
+export const homepageWebPageJsonLd = {
   "@type": "WebPage",
   "@id": buildWebPageEntityId(absoluteUrl("/")),
   url: absoluteUrl("/"),
@@ -120,9 +124,6 @@ const homepageWebPageJsonLd = {
   isPartOf: {
     "@id": SITE_SCHEMA_ENTITY_IDS.website,
   },
-  mainEntity: {
-    "@id": SITE_SCHEMA_ENTITY_IDS.softwareApplication,
-  },
   publisher: {
     "@id": SITE_SCHEMA_ENTITY_IDS.organization,
   },
@@ -131,11 +132,10 @@ const homepageWebPageJsonLd = {
 const homepageEntityGraph: readonly JsonLdObject[] = [
   organizationJsonLd,
   websiteJsonLd,
-  softwareApplicationJsonLd,
   homepageWebPageJsonLd,
 ];
 
-const structuredData = {
+export const structuredData = {
   "@context": "https://schema.org",
   "@graph": homepageEntityGraph,
 } satisfies JsonLdObject;

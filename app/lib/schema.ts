@@ -3,7 +3,14 @@ import { absoluteUrl } from "@/app/lib/site-config";
 export const SITE_SCHEMA_ENTITY_IDS = {
   organization: absoluteUrl("/#organization"),
   website: absoluteUrl("/#website"),
-  softwareApplication: absoluteUrl("/#softwareapplication"),
+  // 2026-08-26 -- softwareApplication removed. No page declares a
+  // SoftwareApplication @type any more (removed from app/page.tsx for
+  // lacking legitimate, publicly-visible aggregateRating/review data),
+  // and the last remaining dangling @id references to this id (in
+  // solutions/features/about) have been removed too -- this constant had
+  // zero remaining references anywhere in the codebase. If Text2Task
+  // later launches genuine, publicly-displayed customer ratings, re-add
+  // a fresh id here alongside a truthful SoftwareApplication entity.
 } as const;
 
 export function buildWebPageEntityId(canonicalUrl: string): string {

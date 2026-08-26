@@ -124,27 +124,32 @@ const trustPoints = [
   },
 ] as const;
 
-export default function AboutPage() {
-  const aboutUrl = absoluteUrl("/about");
-  const aboutJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "AboutPage",
-    "@id": buildWebPageEntityId(aboutUrl),
-    name: pageTitle,
-    description: pageDescription,
-    url: aboutUrl,
-    inLanguage: "en-US",
-    isPartOf: {
-      "@id": SITE_SCHEMA_ENTITY_IDS.website,
-    },
-    about: {
-      "@id": SITE_SCHEMA_ENTITY_IDS.softwareApplication,
-    },
-    publisher: {
-      "@id": SITE_SCHEMA_ENTITY_IDS.organization,
-    },
-  };
+const aboutUrl = absoluteUrl("/about");
 
+// Exported for direct, non-rendering structured-data regression tests.
+export const aboutJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  "@id": buildWebPageEntityId(aboutUrl),
+  name: pageTitle,
+  description: pageDescription,
+  url: aboutUrl,
+  inLanguage: "en-US",
+  isPartOf: {
+    "@id": SITE_SCHEMA_ENTITY_IDS.website,
+  },
+  // 2026-08-26 structured-data follow-up fix -- about used to
+  // reference SITE_SCHEMA_ENTITY_IDS.softwareApplication, a SoftwareApplication
+  // entity that no page declares any more (removed from app/page.tsx for
+  // lacking legitimate aggregateRating/review data). A dangling @id
+  // reference to an undeclared entity is not replaced with a different
+  // schema merely to fill the field -- AboutPage does not require about.
+  publisher: {
+    "@id": SITE_SCHEMA_ENTITY_IDS.organization,
+  },
+};
+
+export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white text-slate-950">
       <LandingHeader />

@@ -159,7 +159,8 @@ const faqs = [
   },
 ] as const;
 
-const webPageJsonLd = {
+// Exported for direct, non-rendering structured-data regression tests.
+export const webPageJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebPage",
   "@id": buildWebPageEntityId(pageUrl),
@@ -170,9 +171,12 @@ const webPageJsonLd = {
   isPartOf: {
     "@id": SITE_SCHEMA_ENTITY_IDS.website,
   },
-  mainEntity: {
-    "@id": SITE_SCHEMA_ENTITY_IDS.softwareApplication,
-  },
+  // 2026-08-26 structured-data follow-up fix -- mainEntity used to
+  // reference SITE_SCHEMA_ENTITY_IDS.softwareApplication, a SoftwareApplication
+  // entity that no page declares any more (removed from app/page.tsx for
+  // lacking legitimate aggregateRating/review data). A dangling @id
+  // reference to an undeclared entity is not replaced with a different
+  // schema merely to fill the field -- WebPage does not require mainEntity.
   publisher: {
     "@id": SITE_SCHEMA_ENTITY_IDS.organization,
   },
