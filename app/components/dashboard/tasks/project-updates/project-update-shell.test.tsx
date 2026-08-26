@@ -146,3 +146,108 @@ describe("ProjectUpdateModalV2 - Phase 6C Apply re-enable (client_share can Appl
     );
   });
 });
+
+describe("ProjectUpdateModalV2 - 2026-08-26 defect fix: client_share shows the original message instead of a blank editable textarea", () => {
+  /*
+    Reproduces the EXACT real Production bug shape: openModal() resets
+    form.rawInput to "" and setAnalysisResult() never populates it (see
+    use-project-update.ts) -- so form.rawInput is "" here, deliberately
+    NOT set to analysisResult.update.raw_input the way this file's own
+    buildForm() helper (above) does for its own, unrelated Apply-gating
+    tests. Only analysisResult.update.raw_input carries the real message.
+  */
+  function buildRealBugShapeForm(
+    sourceType: "text" | "image" | "client_share",
+    rawInput: string
+  ): ProjectUpdateFormState {
+    return {
+      rawInput: "",
+      inputMethod: "text",
+      selectedImage: null,
+      imageError: null,
+      isAnalyzing: false,
+      isApplying: false,
+      analysisError: null,
+      applyError: null,
+      applyDuplicate: null,
+      applySuccessMessage: null,
+      analysisResult: {
+        update: {
+          id: "update-1",
+          project_id: "project-1",
+          client_id: null,
+          source_type: sourceType,
+          raw_input: rawInput,
+          ai_summary: null,
+          status: "analyzed",
+          created_at: "2026-08-26T00:00:00Z",
+          analyzed_at: "2026-08-26T00:00:00Z",
+        },
+        items: [],
+        timelineEvent: null,
+        analysis: {
+          headline: "Everything is already handled.",
+          reasoning: "",
+          riskLevel: "low",
+          detectedChanges: [],
+        },
+      },
+      selectedItemIds: [],
+      editedItemValues: {},
+      applyPlaceholderMessage: null,
+    };
+  }
+
+  it("with form.rawInput === '' (the real bug's exact shape), the client_share review modal shows the actual client message, not a blank textarea", () => {
+    const rawInput =
+      "Hi, this is a production smoke test message from the client share view.";
+
+    render(
+      <ProjectUpdateModalV2
+        isOpen
+        project={null}
+        form={buildRealBugShapeForm("client_share", rawInput)}
+        isBusy={false}
+        onClose={vi.fn()}
+        onAnalyzeUpdate={vi.fn()}
+        onApplySelectedChanges={vi.fn()}
+        onRawInputChange={vi.fn()}
+        onInputMethodChange={vi.fn()}
+        onImageSelected={vi.fn()}
+        onRemoveImage={vi.fn()}
+        onImageError={vi.fn()}
+        onToggleSuggestedItem={vi.fn()}
+        onUpdateSuggestedItemValue={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("Original client message")).toBeInTheDocument();
+    expect(screen.getByText(rawInput)).toBeInTheDocument();
+    expect(document.querySelector("textarea")).not.toBeInTheDocument();
+  });
+
+  it("the same real-bug-shaped form for a text (not client_share) source still shows an empty editable textarea -- unaffected regression, matching the fix's own narrow scope", () => {
+    render(
+      <ProjectUpdateModalV2
+        isOpen
+        project={null}
+        form={buildRealBugShapeForm("text", "irrelevant for this source")}
+        isBusy={false}
+        onClose={vi.fn()}
+        onAnalyzeUpdate={vi.fn()}
+        onApplySelectedChanges={vi.fn()}
+        onRawInputChange={vi.fn()}
+        onInputMethodChange={vi.fn()}
+        onImageSelected={vi.fn()}
+        onRemoveImage={vi.fn()}
+        onImageError={vi.fn()}
+        onToggleSuggestedItem={vi.fn()}
+        onUpdateSuggestedItemValue={vi.fn()}
+      />
+    );
+
+    const textarea = screen.getByLabelText("Message") as HTMLTextAreaElement;
+    expect(textarea.value).toBe("");
+    expect(screen.queryByText("Original client message")).not.toBeInTheDocument();
+  });
+});

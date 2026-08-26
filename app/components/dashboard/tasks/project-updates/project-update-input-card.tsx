@@ -23,6 +23,37 @@ export default function ProjectUpdateInputCard({
   const selectedImage = form.selectedImage;
   const canEdit = !isBusy && !form.isApplying;
 
+  // 2026-08-26 defect fix -- client_share's authoritative source is the
+  // stored share_messages.body (already loaded server-side, persisted as
+  // project_updates.raw_input, and returned as
+  // analysisResult.update.raw_input -- see convertShareMessageToClientUpdate,
+  // lib/share/share-message-conversion.server.ts). form.rawInput is
+  // deliberately left at its openModal()-reset "" for this source (the
+  // owner never typed anything into this modal), so it must NEVER be used
+  // to decide what to display here -- reading it would just reproduce the
+  // exact blank-textarea defect this branch exists to fix. This card also
+  // never writes analysisResult.update.raw_input into form.rawInput
+  // (no onRawInputChange call anywhere below) -- the two remain
+  // deliberately separate values for this source, matching the read-only,
+  // browser-must-never-supply-trusted-source-text architecture rule.
+  const isClientShareSource = form.analysisResult?.update.source_type === "client_share";
+
+  if (isClientShareSource) {
+    return (
+      <section className={ui.responsiveClassNames.inputCard} style={ui.card}>
+        <div style={ui.cardHeader}>
+          <div style={ui.cardIcon}>✉</div>
+
+          <div style={{ minWidth: 0 }}>
+            <h3 style={ui.cardTitle}>Update source</h3>
+          </div>
+        </div>
+
+        <ClientShareMessageSource rawInput={form.analysisResult?.update.raw_input ?? ""} />
+      </section>
+    );
+  }
+
   function handleFile(file: File | null) {
     if (!file) return;
 
@@ -156,6 +187,48 @@ function SourceTab({
       <span>{icon}</span>
       <span>{label}</span>
     </button>
+  );
+}
+
+/**
+ * 2026-08-26 defect fix -- the dedicated, READ-ONLY display for a
+ * client_share-sourced analysis. Deliberately NOT a <textarea>: no
+ * onChange, no character counter, no owner ability to modify the
+ * authoritative client message in any way. `rawInput` here is always
+ * `analysisResult.update.raw_input` -- the exact value the server loaded
+ * from `share_messages.body` and persisted to `project_updates.raw_input`
+ * at analysis time (see convertShareMessageToClientUpdate) -- never
+ * `form.rawInput`, which stays at its own separate, unrelated "" for this
+ * source. Rendering this never writes back to either value: this
+ * component takes no callback prop of any kind.
+ */
+function ClientShareMessageSource({ rawInput }: { rawInput: string }) {
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      <div style={ui.field}>
+        <span style={ui.label}>Original client message</span>
+
+        <div
+          role="group"
+          aria-label="Original client message"
+          style={{
+            ...ui.textarea,
+            minHeight: 152,
+            whiteSpace: "pre-wrap",
+            overflowWrap: "anywhere",
+            overflowY: "auto",
+            cursor: "default",
+            userSelect: "text",
+          }}
+        >
+          {rawInput}
+        </div>
+      </div>
+
+      <div style={ui.helperRow}>
+        <span>Sent by the client through the shared project view — read-only.</span>
+      </div>
+    </div>
   );
 }
 
