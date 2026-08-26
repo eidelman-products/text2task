@@ -280,6 +280,277 @@ describe("ShareView - unavailable posture", () => {
   });
 });
 
+describe("ShareView - returning-session PIN recovery (2026-08-26)", () => {
+  const PROJECTION_URL = `/api/share/${VALID_PUBLIC_ID}/projection`;
+  const PIN_RECOVERY_URL = `/api/share/${VALID_PUBLIC_ID}/pin`;
+
+  async function findAndClickRecoveryButton() {
+    const button = await screen.findByRole("button", { name: /have a pin\?/i });
+    await userEvent.click(button);
+    return screen.getByLabelText("PIN");
+  }
+
+  it("case A -- PIN newly added to a previously PIN-less link: cookie-only load fails generically, the neutral recovery action is offered (secretRef.current is null -- no fragment was ever present), and choosing it + a correct PIN authorizes via POST /pin only", async () => {
+    setLocation(`/share/${VALID_PUBLIC_ID}`, "");
+    let pinCalled = false;
+    fetchMock.mockImplementation((url: string) => {
+      if (url === PROJECTION_URL) {
+        return pinCalled
+          ? jsonResponse({ ok: true, data: fakeProjection() })
+          : jsonResponse({ ok: false, code: "UNAVAILABLE", error: "not available" }, 401);
+      }
+      if (url === PIN_RECOVERY_URL) {
+        pinCalled = true;
+        return jsonResponse({ ok: true, status: "authorized" });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    render(<ShareView publicId={VALID_PUBLIC_ID} />);
+
+    const pinInput = await findAndClickRecoveryButton();
+    await userEvent.type(pinInput, "4321");
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    await screen.findByText("Website launch");
+
+    const pinCall = fetchMock.mock.calls.find(([url]) => url === PIN_RECOVERY_URL);
+    expect(pinCall).toBeDefined();
+    expect(JSON.parse((pinCall![1] as RequestInit).body as string)).toEqual({ pin: "4321" });
+    expect(fetchMock.mock.calls.some(([url]) => url === "/api/share/session")).toBe(false);
+  });
+
+  it("case B -- PIN changed on an already-PIN-protected link: the exact same recovery path works with the new PIN", async () => {
+    setLocation(`/share/${VALID_PUBLIC_ID}`, "");
+    let pinCalled = false;
+    fetchMock.mockImplementation((url: string) => {
+      if (url === PROJECTION_URL) {
+        return pinCalled
+          ? jsonResponse({ ok: true, data: fakeProjection() })
+          : jsonResponse({ ok: false, code: "UNAVAILABLE", error: "not available" }, 401);
+      }
+      if (url === PIN_RECOVERY_URL) {
+        pinCalled = true;
+        return jsonResponse({ ok: true, status: "authorized" });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    render(<ShareView publicId={VALID_PUBLIC_ID} />);
+
+    const pinInput = await findAndClickRecoveryButton();
+    await userEvent.type(pinInput, "9999");
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    await screen.findByText("Website launch");
+    expect(fetchMock.mock.calls.some(([url]) => url === "/api/share/session")).toBe(false);
+  });
+
+  it("wrong PIN: POST /pin returns PIN_INCORRECT, the project stays inaccessible, the form remains retryable, and no secret exchange or successful grant refresh occurs", async () => {
+    setLocation(`/share/${VALID_PUBLIC_ID}`, "");
+    fetchMock.mockImplementation((url: string) => {
+      if (url === PROJECTION_URL) {
+        return jsonResponse({ ok: false, code: "UNAVAILABLE", error: "not available" }, 401);
+      }
+      if (url === PIN_RECOVERY_URL) {
+        return jsonResponse({ ok: false, code: "PIN_INCORRECT", error: "Incorrect PIN." }, 401);
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    render(<ShareView publicId={VALID_PUBLIC_ID} />);
+
+    const pinInput = await findAndClickRecoveryButton();
+    await userEvent.type(pinInput, "0000");
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    await screen.findByText(/incorrect pin/i);
+    expect(screen.getByLabelText("PIN")).toBeInTheDocument();
+    expect(screen.queryByText("Website launch")).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => url === "/api/share/session")).toBe(false);
+    // Only the one initial projection call plus the one PIN attempt --
+    // no follow-up projection re-fetch, since success was never reported.
+    expect(fetchMock.mock.calls.filter(([url]) => url === PROJECTION_URL)).toHaveLength(1);
+  });
+
+  it("access_epoch stale (secret rotated): a PIN recovery attempt cannot restore access -- generic unavailable remains, no projection is ever exposed", async () => {
+    setLocation(`/share/${VALID_PUBLIC_ID}`, "");
+    fetchMock.mockImplementation((url: string) => {
+      if (url === PROJECTION_URL) {
+        return jsonResponse({ ok: false, code: "UNAVAILABLE", error: "not available" }, 401);
+      }
+      if (url === PIN_RECOVERY_URL) {
+        // The real route's own access_epoch guard fails this generically,
+        // exactly like disabled/revoked/no-prior-grant -- the client must
+        // not distinguish it either.
+        return jsonResponse({ ok: false, code: "UNAVAILABLE", error: "not available" }, 404);
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    render(<ShareView publicId={VALID_PUBLIC_ID} />);
+
+    const pinInput = await findAndClickRecoveryButton();
+    await userEvent.type(pinInput, "1234");
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    await screen.findByText("This shared project view is not available.");
+    expect(screen.queryByText("Website launch")).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => url === "/api/share/session")).toBe(false);
+  });
+
+  it("disabled link: PIN recovery cannot restore access", async () => {
+    setLocation(`/share/${VALID_PUBLIC_ID}`, "");
+    fetchMock.mockImplementation((url: string) => {
+      if (url === PROJECTION_URL) {
+        return jsonResponse({ ok: false, code: "UNAVAILABLE", error: "not available" }, 401);
+      }
+      if (url === PIN_RECOVERY_URL) {
+        return jsonResponse({ ok: false, code: "UNAVAILABLE", error: "not available" }, 404);
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    render(<ShareView publicId={VALID_PUBLIC_ID} />);
+
+    const pinInput = await findAndClickRecoveryButton();
+    await userEvent.type(pinInput, "1234");
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    await screen.findByText("This shared project view is not available.");
+    expect(screen.queryByText("Website launch")).not.toBeInTheDocument();
+  });
+
+  it("revoked link: PIN recovery cannot restore access", async () => {
+    setLocation(`/share/${VALID_PUBLIC_ID}`, "");
+    fetchMock.mockImplementation((url: string) => {
+      if (url === PROJECTION_URL) {
+        return jsonResponse({ ok: false, code: "UNAVAILABLE", error: "not available" }, 401);
+      }
+      if (url === PIN_RECOVERY_URL) {
+        return jsonResponse({ ok: false, code: "UNAVAILABLE", error: "not available" }, 404);
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    render(<ShareView publicId={VALID_PUBLIC_ID} />);
+
+    const pinInput = await findAndClickRecoveryButton();
+    await userEvent.type(pinInput, "1234");
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    await screen.findByText("This shared project view is not available.");
+    expect(screen.queryByText("Website launch")).not.toBeInTheDocument();
+  });
+
+  it("the first-time fragment+PIN flow is unaffected: POST /api/share/session still handles it, and POST /pin is never called for it", async () => {
+    setLocation(`/share/${VALID_PUBLIC_ID}`, `#${VALID_SECRET}`);
+    let call = 0;
+    fetchMock.mockImplementation((url: string) => {
+      if (url === "/api/share/session") {
+        call += 1;
+        return call === 1
+          ? jsonResponse({ ok: true, status: "pin_required" })
+          : jsonResponse({ ok: true, status: "authorized" });
+      }
+      if (url === PROJECTION_URL) return jsonResponse({ ok: true, data: fakeProjection() });
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    render(<ShareView publicId={VALID_PUBLIC_ID} />);
+    await screen.findByText(/pin protected/i);
+
+    await userEvent.type(screen.getByLabelText("PIN"), "1234");
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    await screen.findByText("Website launch");
+    expect(fetchMock.mock.calls.some(([url]) => url === PIN_RECOVERY_URL)).toBe(false);
+  });
+
+  it("the neutral recovery action is NOT offered after a raw-secret-bearing exchange fails (keeps the two flows distinct) -- only the cookie-only path offers it", async () => {
+    setLocation(`/share/${VALID_PUBLIC_ID}`, `#${VALID_SECRET}`);
+    fetchMock.mockImplementation(() =>
+      jsonResponse({ ok: false, code: "UNAVAILABLE", error: "not available" }, 404)
+    );
+
+    render(<ShareView publicId={VALID_PUBLIC_ID} />);
+
+    await screen.findByText("This shared project view is not available.");
+    expect(screen.queryByRole("button", { name: /have a pin\?/i })).not.toBeInTheDocument();
+  });
+
+  it("the recovery heading never asserts the link definitely has a PIN (neutral wording, distinct from the first-time flow's confirmed heading)", async () => {
+    setLocation(`/share/${VALID_PUBLIC_ID}`, "");
+    fetchMock.mockImplementation((url: string) => {
+      if (url === PROJECTION_URL) {
+        return jsonResponse({ ok: false, code: "UNAVAILABLE", error: "not available" }, 401);
+      }
+      return jsonResponse({ ok: true, status: "authorized" });
+    });
+
+    render(<ShareView publicId={VALID_PUBLIC_ID} />);
+    const button = await screen.findByRole("button", { name: /have a pin\?/i });
+    await userEvent.click(button);
+
+    expect(screen.queryByText(/this project is pin protected/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading")).toHaveTextContent(/enter pin/i);
+  });
+
+  it("background/focus revalidation failure offers the same neutral recovery state, never an automatic PIN prompt", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+
+    try {
+      setLocation(`/share/${VALID_PUBLIC_ID}`, "");
+      let shouldFail = false;
+      fetchMock.mockImplementation((url: string) => {
+        if (url === PROJECTION_URL) {
+          return shouldFail
+            ? jsonResponse({ ok: false, code: "UNAVAILABLE", error: "not available" }, 401)
+            : jsonResponse({ ok: true, data: fakeProjection() });
+        }
+        return jsonResponse({ ok: true, data: fakeProjection() });
+      });
+
+      render(<ShareView publicId={VALID_PUBLIC_ID} />);
+      await screen.findByText("Website launch");
+
+      shouldFail = true;
+      await vi.advanceTimersByTimeAsync(REVALIDATION_INTERVAL_MS);
+
+      // Reached the generic unavailable state with the recovery action --
+      // NOT a direct jump to a PIN form (no automatic disclosure).
+      await vi.waitFor(() => {
+        expect(screen.getByText("This shared project view is not available.")).toBeInTheDocument();
+      });
+      expect(screen.queryByLabelText("PIN")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /have a pin\?/i })).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("rate-limited POST /pin shows the same rate-limited state as every other rate-limited path", async () => {
+    setLocation(`/share/${VALID_PUBLIC_ID}`, "");
+    fetchMock.mockImplementation((url: string) => {
+      if (url === PROJECTION_URL) {
+        return jsonResponse({ ok: false, code: "UNAVAILABLE", error: "not available" }, 401);
+      }
+      if (url === PIN_RECOVERY_URL) {
+        return jsonResponse({ ok: false, code: "RATE_LIMITED" }, 429);
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    render(<ShareView publicId={VALID_PUBLIC_ID} />);
+    const pinInput = await findAndClickRecoveryButton();
+    await userEvent.type(pinInput, "1234");
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    await screen.findByText(/wait a moment/i);
+  });
+});
+
 describe("ShareView - Phase 5D Messages section wiring", () => {
   function mockEndpoints(commentsEnabled: boolean) {
     fetchMock.mockImplementation((url: string) => {

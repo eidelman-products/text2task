@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 import { rawShareSecretSchema } from "@/lib/share/share-contracts";
 import type { ClientProjectProjection } from "@/lib/share/client-share-projection-contracts";
@@ -68,6 +68,48 @@ import { PublicMessagesSection } from "@/app/components/dashboard/tasks/share-li
       -- this is what "avoid overlapping fetches" and "no stale earlier
       response overwriting a newer one" reduce to here: there is
       structurally never more than one request in flight to race against.
+
+  2026-08-26 -- RETURNING-SESSION PIN RECOVERY, closing a real Production
+  gap: an already-authorized browser (valid cookie, no raw secret in
+  hand) whose grant went `pin_epoch`-stale because the owner added or
+  changed the link's PIN had no recovery path at all -- every cookie-only
+  failure (initial load, refresh, or a background revalidation per PHASE
+  7C above) fell straight to the terminal "unavailable" state with no way
+  back, permanently stranding the browser exactly like the disable/
+  re-enable defect the access_epoch/pin_epoch corrective change (Phase 8,
+  202608250001) otherwise closed. `POST /api/share/[publicId]/pin`
+  already existed server-side for exactly this case but was never called
+  from here. Fixed with a SECOND, DELIBERATELY SEPARATE PIN flow:
+
+    - FIRST-TIME flow (unchanged): a raw secret is in hand (`secretRef`
+      set from the URL fragment) -> `POST /api/share/session` -> may
+      return `pin_required` -> `"pin_required"` state -> `submitPin` ->
+      `exchange(secret, pin)`.
+    - RETURNING-SESSION recovery flow (new): NO raw secret is ever
+      required or read. Any cookie-only authorization failure
+      (`fetchProjection`'s failure branch, reached from initial load,
+      plain refresh, or `revalidateProjection`'s own fallback) sets
+      `{status: "unavailable", canAttemptPinRecovery: true}` -- this
+      NEVER asserts a PIN is actually required (the projection endpoint's
+      response deliberately stays fully generic; a stale PIN is only one
+      of several indistinguishable causes), it only offers a neutral,
+      user-initiated "Have a PIN? Enter PIN" action. Choosing it
+      (`beginPinRecovery`) enters `"pin_recovery"` -- a state distinct
+      from `"pin_required"` even though both render the same visual
+      `SharePinForm`, with deliberately different, non-asserting heading
+      text. Submitting (`submitPinRecovery` -> `recoverWithPin`) POSTs
+      only `{ pin }` to `POST /api/share/[publicId]/pin` -- never
+      `/api/share/session`, never a secret. On success, re-fetches the
+      projection exactly like every other successful path. A wrong PIN
+      keeps the form open, retryable, with no grant mutation (the server
+      route itself only ever refreshes the grant after the PIN verifies).
+      Any other failure (rotation/`access_epoch` mismatch, disabled,
+      revoked, no prior grant for this session, etc.) falls back to the
+      SAME generic `"unavailable"` state, recovery option still offered,
+      with the underlying cause never revealed -- `access_epoch` staleness
+      from a rotated secret remains permanently non-recoverable through
+      this path, by the server route's own independent enforcement, not
+      by anything this component checks.
 */
 
 // Chosen against the real projection_read policy (120/300s) -- see the
@@ -78,11 +120,25 @@ export const REVALIDATION_INTERVAL_MS = 60_000;
 
 type PublicShareState =
   | { status: "loading" }
+  // FIRST-TIME fragment/secret exchange flow only (POST /api/share/session).
+  // Reached only when a raw secret is in hand (secretRef.current is set).
   | { status: "pin_required"; error: string | null }
   | { status: "authorizing" }
   | { status: "ready"; projection: ClientProjectProjection }
   | { status: "rate_limited" }
-  | { status: "unavailable" };
+  // canAttemptPinRecovery is true only when this state was reached via a
+  // cookie-only path (no raw secret ever in hand for this attempt) --
+  // never asserts a PIN is actually required, only that the neutral
+  // recovery action below may be offered. See "Returning-session PIN
+  // recovery flow" section below for the full rationale.
+  | { status: "unavailable"; canAttemptPinRecovery: boolean }
+  // RETURNING-SESSION PIN recovery flow only (POST /api/share/[publicId]/pin).
+  // Reached only from the user explicitly choosing the neutral "Enter PIN"
+  // action off an "unavailable" state with canAttemptPinRecovery -- never
+  // asserted automatically from a 401 alone. Deliberately a SEPARATE status
+  // from "pin_required" even though it reuses the same SharePinForm visual
+  // component -- see this file's own header comment.
+  | { status: "pin_recovery"; error: string | null };
 
 type ExchangeSuccessBody =
   | { ok: true; status: "authorized" }
@@ -92,6 +148,13 @@ type ExchangeErrorBody = { ok: false; code: string; error: string };
 
 type ProjectionSuccessBody = { ok: true; data: ClientProjectProjection };
 type ProjectionErrorBody = { ok: false; code: string; error: string };
+
+// Mirrors app/api/share/[publicId]/pin/route.ts's own PinRecoverySuccess/
+// PinRecoveryError response types exactly -- kept as a separate local type
+// (not imported) matching this file's own existing convention for the
+// session-exchange body types above.
+type PinRecoverySuccessBody = { ok: true; status: "authorized" };
+type PinRecoveryErrorBody = { ok: false; code: string; error: string };
 
 export function ShareView({ publicId }: { publicId: string }) {
   const [state, setState] = useState<PublicShareState>({ status: "loading" });
@@ -126,9 +189,14 @@ export function ShareView({ publicId }: { publicId: string }) {
         return;
       }
 
-      if (isMountedRef.current) setState({ status: "unavailable" });
+      // Cookie-only path (this function never carries a raw secret) --
+      // the neutral PIN-recovery action may be offered. This is the exact
+      // fix for the returning-session PIN-staleness defect: previously
+      // this branch offered no path back for a browser whose grant went
+      // stale only because the owner added/changed the link's PIN.
+      if (isMountedRef.current) setState({ status: "unavailable", canAttemptPinRecovery: true });
     } catch {
-      if (isMountedRef.current) setState({ status: "unavailable" });
+      if (isMountedRef.current) setState({ status: "unavailable", canAttemptPinRecovery: true });
     }
   }, [publicId]);
 
@@ -181,11 +249,17 @@ export function ShareView({ publicId }: { publicId: string }) {
           return;
         }
 
+        // This failure originated from a raw-secret-bearing exchange
+        // attempt, not a cookie-only load -- the returning-session PIN
+        // recovery action is deliberately NOT offered here, keeping the
+        // two flows distinct (a fresh, still-unproven secret exchange
+        // failing tells us nothing about whether a stale PIN grant even
+        // exists for this browser).
         clearSecret();
-        if (isMountedRef.current) setState({ status: "unavailable" });
+        if (isMountedRef.current) setState({ status: "unavailable", canAttemptPinRecovery: false });
       } catch {
         clearSecret();
-        if (isMountedRef.current) setState({ status: "unavailable" });
+        if (isMountedRef.current) setState({ status: "unavailable", canAttemptPinRecovery: false });
       }
     },
     [publicId, fetchProjection, clearSecret]
@@ -211,7 +285,12 @@ export function ShareView({ publicId }: { publicId: string }) {
       const parsed = rawShareSecretSchema.safeParse(candidate);
 
       if (!parsed.success) {
-        setState({ status: "unavailable" });
+        // secretRef was never set on this branch (parse failed before
+        // the assignment below) -- this is, from the recovery flow's own
+        // perspective, a cookie-only situation, so the neutral recovery
+        // action may still be offered for a returning visitor whose
+        // fragment happened to be malformed/stale.
+        setState({ status: "unavailable", canAttemptPinRecovery: true });
         return;
       }
 
@@ -238,12 +317,98 @@ export function ShareView({ publicId }: { publicId: string }) {
     (pin: string) => {
       const secret = secretRef.current;
       if (!secret) {
-        setState({ status: "unavailable" });
+        setState({ status: "unavailable", canAttemptPinRecovery: false });
         return;
       }
       void exchange(secret, pin);
     },
     [exchange]
+  );
+
+  // ---------------------------------------------------------------------
+  // RETURNING-SESSION PIN recovery flow (POST /api/share/[publicId]/pin).
+  // Deliberately separate from `exchange`/`submitPin` above: never reads
+  // or requires `secretRef.current`, never calls POST /api/share/session,
+  // and is reachable ONLY via the user's own explicit choice off a
+  // generic "unavailable" state's neutral recovery action -- never
+  // triggered automatically from a 401 alone (see this file's own header
+  // comment and PublicShareState's own doc comments for the full
+  // rationale: the projection endpoint's generic denial must remain
+  // uninformative, so this flow is offered speculatively rather than
+  // asserted as necessary).
+  // ---------------------------------------------------------------------
+
+  const beginPinRecovery = useCallback(() => {
+    if (isMountedRef.current) setState({ status: "pin_recovery", error: null });
+  }, []);
+
+  const recoverWithPin = useCallback(
+    async (pin: string) => {
+      try {
+        const response = await fetch(`/api/share/${encodeURIComponent(publicId)}/pin`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8", Accept: "application/json" },
+          credentials: "same-origin",
+          cache: "no-store",
+          body: JSON.stringify({ pin }),
+        });
+
+        if (response.status === 429) {
+          if (isMountedRef.current) setState({ status: "rate_limited" });
+          return;
+        }
+
+        const body = (await safeJson(response)) as
+          | PinRecoverySuccessBody
+          | PinRecoveryErrorBody
+          | null;
+
+        if (response.ok && body && body.ok && body.status === "authorized") {
+          // No raw secret was ever involved -- re-fetch the same cookie-
+          // authorized projection every other successful path uses. If
+          // this somehow still fails (defense in depth only -- the /pin
+          // route only reports success after genuinely refreshing the
+          // grant), fetchProjection's own failure branch already falls
+          // back to the correct generic-plus-recovery state.
+          await fetchProjection();
+          return;
+        }
+
+        if (response.status === 401 && body && !body.ok && body.code === "PIN_INCORRECT") {
+          // Wrong PIN: stay in the recovery form, retryable -- no grant
+          // mutation ever occurs on this path (the server route only
+          // calls ensureCurrentGrant after the PIN verifies correctly).
+          if (isMountedRef.current) {
+            setState({ status: "pin_recovery", error: "Incorrect PIN. Please try again." });
+          }
+          return;
+        }
+
+        // Every other outcome (rotation/access_epoch mismatch, disabled,
+        // revoked, no prior grant for this session, malformed request,
+        // etc.) collapses into the SAME generic unavailable state the
+        // projection endpoint itself would produce -- this route's own
+        // response never reveals which. The recovery action is still
+        // offered again (showing/hiding it here would itself leak
+        // information the whole design otherwise withholds).
+        if (isMountedRef.current) setState({ status: "unavailable", canAttemptPinRecovery: true });
+      } catch {
+        if (isMountedRef.current) setState({ status: "unavailable", canAttemptPinRecovery: true });
+      }
+    },
+    [publicId, fetchProjection]
+  );
+
+  const submitPinRecovery = useCallback(
+    (pin: string) => {
+      if (isMountedRef.current) {
+        setState((current) =>
+          current.status === "pin_recovery" ? { status: "authorizing" } : current
+        );
+      }
+      void recoverWithPin(pin);
+    },
+    [recoverWithPin]
   );
 
   // Phase 7C -- serializes every background revalidation attempt (see
@@ -294,19 +459,22 @@ export function ShareView({ publicId }: { publicId: string }) {
 
       // Access is no longer valid (revoked/disabled/expired/PIN-changed/
       // rotated/stale-configuration-version -- the projection route
-      // itself does not, and by design must not, distinguish which).
-      // The raw secret is intentionally never retained past its first
-      // use (see exchange() above, and this file's own header comment)
-      // -- so a background revalidation structurally cannot re-exchange
-      // with a PIN even if one is now required, and must not invent a
-      // way to. The only safe, already-existing recourse is exactly the
-      // same plain, cookie-only fetchProjection() a returning visitor's
-      // own page load already uses: one more attempt, no loop, no
-      // secret involved. If that also fails, fetchProjection() itself
-      // already fails closed to "unavailable", which drops the stale
-      // projection and unmounts PublicMessagesSection along with it (see
-      // the render switch below) -- exactly the fail-closed behavior
-      // this slice requires, achieved with zero new mechanism.
+      // itself does not, and by design must not, distinguish which). The
+      // raw secret is intentionally never retained past its first use
+      // (see exchange() above, and this file's own header comment) -- so
+      // a background revalidation structurally cannot silently re-exchange
+      // with a PIN even if one is now required. The only safe,
+      // already-existing recourse is exactly the same plain, cookie-only
+      // fetchProjection() a returning visitor's own page load already
+      // uses: one more attempt, no loop, no secret involved. If that also
+      // fails, fetchProjection() itself falls back to the generic
+      // "unavailable" state -- which now ALSO offers the same neutral,
+      // user-initiated PIN-recovery action a page refresh would (see
+      // "Returning-session PIN recovery flow" below) -- dropping the
+      // stale projection and unmounting PublicMessagesSection (see the
+      // render switch below) exactly as before. Still no automatic
+      // PIN-required disclosure and no unattended grant mutation of any
+      // kind -- recovery here always requires the user's own action.
       await fetchProjection();
     } catch {
       // Network hiccup during a background poll -- do not disrupt the
@@ -348,7 +516,15 @@ export function ShareView({ publicId }: { publicId: string }) {
     };
   }, [state.status, revalidateProjection]);
 
-  return <ShareViewBody state={state} onSubmitPin={submitPin} publicId={publicId} />;
+  return (
+    <ShareViewBody
+      state={state}
+      onSubmitPin={submitPin}
+      onBeginPinRecovery={beginPinRecovery}
+      onSubmitPinRecovery={submitPinRecovery}
+      publicId={publicId}
+    />
+  );
 }
 
 async function safeJson(response: Response): Promise<unknown> {
@@ -362,10 +538,14 @@ async function safeJson(response: Response): Promise<unknown> {
 function ShareViewBody({
   state,
   onSubmitPin,
+  onBeginPinRecovery,
+  onSubmitPinRecovery,
   publicId,
 }: {
   state: PublicShareState;
   onSubmitPin: (pin: string) => void;
+  onBeginPinRecovery: () => void;
+  onSubmitPinRecovery: (pin: string) => void;
   publicId: string;
 }) {
   switch (state.status) {
@@ -374,7 +554,26 @@ function ShareViewBody({
     case "authorizing":
       return <ShareViewMessage title="Checking PIN…" liveRole="status" />;
     case "pin_required":
-      return <SharePinForm error={state.error} onSubmit={onSubmitPin} />;
+      return (
+        <SharePinForm
+          heading="This project is PIN protected."
+          error={state.error}
+          onSubmit={onSubmitPin}
+        />
+      );
+    case "pin_recovery":
+      // Deliberately NEUTRAL heading -- unlike "pin_required" above, this
+      // state was never confirmed by the server as PIN-required; the user
+      // chose this action themselves off a generic denial (see this
+      // file's own header comment). Must not assert the link definitely
+      // has a PIN.
+      return (
+        <SharePinForm
+          heading="Enter PIN to continue."
+          error={state.error}
+          onSubmit={onSubmitPinRecovery}
+        />
+      );
     case "ready":
       return (
         <div style={readyPageStyle}>
@@ -394,7 +593,13 @@ function ShareViewBody({
       );
     case "unavailable":
       return (
-        <ShareViewMessage title="This shared project view is not available." liveRole="alert" />
+        <ShareViewMessage title="This shared project view is not available." liveRole="alert">
+          {state.canAttemptPinRecovery ? (
+            <button type="button" onClick={onBeginPinRecovery} style={pinRecoveryLinkStyle}>
+              Have a PIN? Enter PIN
+            </button>
+          ) : null}
+        </ShareViewMessage>
       );
   }
 }
@@ -414,9 +619,11 @@ function ShareViewBody({
 function ShareViewMessage({
   title,
   liveRole,
+  children,
 }: {
   title: string;
   liveRole?: "status" | "alert";
+  children?: ReactNode;
 }) {
   return (
     <div
@@ -425,15 +632,20 @@ function ShareViewMessage({
       role={liveRole}
       aria-live={liveRole ? (liveRole === "alert" ? "assertive" : "polite") : undefined}
     >
-      <h1 style={messageStyle}>{title}</h1>
+      <div style={{ display: "grid", gap: 16, justifyItems: "center" }}>
+        <h1 style={messageStyle}>{title}</h1>
+        {children}
+      </div>
     </div>
   );
 }
 
 function SharePinForm({
+  heading,
   error,
   onSubmit,
 }: {
+  heading: string;
   error: string | null;
   onSubmit: (pin: string) => void;
 }) {
@@ -442,7 +654,7 @@ function SharePinForm({
   return (
     <div style={containerStyle} dir="auto">
       <div style={pinCardStyle}>
-        <h1 style={messageStyle}>This project is PIN protected.</h1>
+        <h1 style={messageStyle}>{heading}</h1>
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -532,4 +744,15 @@ const continueButtonStyle: CSSProperties = {
   color: "#ffffff",
   fontWeight: 600,
   cursor: "pointer",
+};
+
+const pinRecoveryLinkStyle: CSSProperties = {
+  padding: "8px 4px",
+  border: "none",
+  background: "none",
+  color: "#1e40af",
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: "pointer",
+  textDecoration: "underline",
 };
