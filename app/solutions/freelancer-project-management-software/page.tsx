@@ -179,7 +179,16 @@ const notReplacements = [
   "Payment collection",
   "Time tracking",
   "Native inbox synchronization",
-  "A shared client portal",
+  // 2026-08-27 -- "A shared client portal" was removed here: Text2Task's
+  // Client Share feature now provides exactly that (an owner-controlled,
+  // optionally PIN-protected external link showing selected project
+  // status/tasks/resources/updates to a client), so the old bullet was a
+  // factually inaccurate public claim once that feature shipped.
+  // Replaced with a still-genuinely-true limitation: Client Share is
+  // link-based and anonymous (no client user account or login is ever
+  // created -- see share_browser_sessions/share_session_grants), so
+  // Text2Task still does not provide persistent client login accounts.
+  "A full client account system",
 ] as const;
 
 const useCaseLinks = [
