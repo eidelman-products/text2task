@@ -423,10 +423,10 @@ export default function FreelancerProjectManagementSoftwarePage() {
             <h2>Project management gets messy before the project even starts.</h2>
             <p>
               A client request might arrive through an email, a message, a note,
-              a brief, or a screenshot. The useful project details are often
-              spread across paragraphs and follow-up messages, leaving the
-              freelancer to manually rebuild the work before anything can move
-              forward.
+              a brief, or a screenshot. Without a simple project request
+              management process, the useful details are often spread across
+              paragraphs and follow-up messages, leaving the freelancer to
+              manually rebuild the work before anything can move forward.
             </p>
           </div>
 
@@ -501,9 +501,9 @@ export default function FreelancerProjectManagementSoftwarePage() {
               A focused task and client management workspace for freelancers.
             </h2>
             <p>
-              Text2Task is a project management app for freelancers who need to
-              keep client requests, tasks, and follow-ups organized after the
-              first message is reviewed.
+              Text2Task is client project management software for freelancers
+              who need to keep client requests, tasks, and follow-ups organized
+              after the first message is reviewed.
             </p>
           </div>
 
