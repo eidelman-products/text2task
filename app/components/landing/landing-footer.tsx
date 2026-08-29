@@ -20,6 +20,10 @@ const productLinks = [
     label: "Client feedback to tasks",
     href: "/features/client-feedback-to-tasks",
   },
+  {
+    label: "Client project tracker",
+    href: "/features/client-project-tracker",
+  },
 ];
 
 const useCaseLinks = [

@@ -273,23 +273,22 @@ Only commit hashes directly confirmed via `git log` are listed above. No hash is
 
 ## 10. Current Stop Point / Next Phase
 
-**Status update (2026-08-29, later same day):** the P1 pre-implementation mapping/audit this section previously called for is now **COMPLETE** — see **Section 11**. The route `/features/client-project-tracker` has **NOT** been created. No production code was changed during the mapping phase; only this document was updated.
+**Status update (2026-08-29, P1C visual integration pass):** P1A **COMPLETE**. P1C **COMPLETE**. The route `/features/client-project-tracker` exists in the repository, is live in the production build's static output, is fully tested, includes both approved Client Share marketing visuals, and is included in the sitemap. Full implementation records: **§11.17** (P1A), **§11.18** (post-P1A copy refinement), **§11.19** (P1C visual integration). Nothing was staged, committed, pushed, or deployed as part of any of these phases — the working tree changes are ready for review.
 
-> **NEXT PLANNED IMPLEMENTATION PHASE: P1A — Client Project Tracker Feature Page (core build)**
-> - **Candidate route:** `/features/client-project-tracker`
-> - **Primary keyword:** client project tracker
-> - **Page type:** Feature (matches the existing 5-Feature-page pattern)
-> - **Full spec:** Section 11 (this document)
+> **NEXT PLANNED PHASE: P1B — Client Project Tracker internal linking / discovery**
+> - **Candidate scope:** Freelancer Solution reciprocal link, homepage capability card, the deferred Use Case per-page copy audit and any resulting links, optional Email/Messages cross-links
+> - **Full spec:** §11.14 (phasing) and §11.9 (internal linking plan) of this document
+> - **Status:** NOT started. P1B has not been marked complete and must not be assumed complete.
 
-**Before implementation, the next session must:**
+**Before starting P1B, the next session must:**
 
-1. Re-read Section 11 in full — chosen architecture reference, verified Client Share capability matrix, exact content blueprint, portal-language rules, schema/sitemap/test plans, and file map are all already decided.
-2. Implement exactly the P1A file set listed in §11.13 — no more, no less, unless a new audit finding requires otherwise.
-3. Follow the portal-language SAFE / CONDITIONAL / AVOID rules in §11.6 verbatim; do not introduce new marketing language not covered there without flagging it first.
-4. Run the full verification ritual established throughout this project: `npx tsc --noEmit`, `npm run build`, targeted ESLint, `git diff --check`.
-5. Stop after P1A and report for review before proceeding to P1B (broader internal linking) or P1C (visual enhancement) — see §11.14.
+1. Re-read §11.17 (P1A), §11.18 (copy refinement), and §11.19 (P1C visuals) to confirm exactly what already shipped, then §11.9/§11.14 for the remaining P1B scope.
+2. Perform the per-page copy audit of the project-managers, small-agencies, and virtual-assistants Use Cases that §11.9/§11.15 explicitly deferred, before adding any link from them.
+3. Get explicit approval before editing `app/solutions/freelancer-project-management-software/page.tsx` — this file has now been edited under narrow, explicitly-scoped instructions on 4 separate occasions this project; treat each future edit the same way.
+4. Keep P1B's own diff as small and single-purpose as P1A's and P1C's were.
+5. Run the same full verification ritual used for every phase so far: `npx tsc --noEmit`, `npm run build`, targeted tests, `git diff --check`.
 
-**The next Claude session should begin exactly here — Section 10 — after first re-reading Section 11 in full, and Sections 4, 5, and 6 for the underlying product-truth and cannibalization context.**
+**The next Claude session should begin exactly here — Section 10 — after first re-reading §11.17–§11.19 for what already shipped, then §11.9 and §11.14 for the remaining P1B scope.**
 
 ---
 
@@ -470,4 +469,143 @@ Outbound links FROM Client Project Tracker: Freelancer Solution (up), Client Fee
 
 ### 11.16 Exact next action
 
-> **Next action:** Implement P1A exactly as specified in §11.5, §11.6, §11.7, §11.8, §11.12, and §11.13 — pending explicit user approval to begin implementation. No file has been created or modified as part of this mapping phase.
+> **Next action (superseded — see §11.17):** This action item ("implement P1A") was completed on 2026-08-29. §11.1 through §11.16 above are preserved unchanged as decision history — the plan they describe is exactly what was built. §11.17 records the implementation result.
+
+### 11.17 P1A implementation status (2026-08-29) — COMPLETE
+
+P1A shipped exactly as scoped in §11.1–§11.13, with the deviations disclosed below. Nothing was staged, committed, pushed, or deployed — this record describes a reviewed, verified, uncommitted working-tree change set.
+
+**Route created:** `/features/client-project-tracker` — confirmed present in the production build's static output (○ prerendered).
+
+| File | Action | Result |
+|---|---|---|
+| `app/features/client-project-tracker/page.tsx` | CREATE | New Feature page — hero, preview comparison, problem, how-it-works, capability checklist, privacy trust section, opt-in comments section, audience note, related links, FAQ, final CTA. |
+| `app/features/client-project-tracker/page.module.css` | CREATE | Local styles for the private-workspace vs. shared-view preview comparison. |
+| `app/features/client-project-tracker/page.test.tsx` | CREATE | 13 tests: metadata/canonical, H1 intent, forbidden-claims boundary, required internal link, FAQ/schema parity, WebPage/Breadcrumb/FAQPage schema correctness, no SoftwareApplication/aggregateRating. |
+| `app/sitemap.ts` | MODIFY | One new `featureRoutes` entry, values identical to all 5 sibling Feature routes (priority 0.84, monthly). |
+| `app/lib/schema-dangling-entity-references.test.ts` | MODIFY | New page's `webPageJsonLd` added to the existing `describe.each` list. |
+| `app/features/client-feedback-to-tasks/page.tsx` | MODIFY | One new relatedLinks entry, direction-explicit ("Share selected project status and progress back with your client") — satisfies Cannibalization Rule 4. |
+| `app/components/landing/landing-footer.tsx` | MODIFY | One new `productLinks` entry — matches the 4-of-5 baseline convention identified in §11.10. |
+
+No other file was touched. `app/solutions/freelancer-project-management-software/page.tsx`, `homepage-post-extraction-section.tsx`, `landing-header.tsx`, `app/lib/schema.ts`, `app/components/JsonLd.tsx`, all 12 Use Case pages, and every Client Share dashboard/migration file remain exactly as specified **UNCHANGED** in §11.13.
+
+**Metadata implemented:**
+- Title: "Client Project Tracker: Share Project Progress With Clients" — matches §11.5 exactly.
+- Description: matches §11.5 exactly.
+- Canonical: `/features/client-project-tracker`.
+- H1: "Share project status and progress with your client." — matches §11.5 exactly.
+- OpenGraph/Twitter: title/description implemented; image intentionally omitted (see Deviations below).
+
+**Schema implemented:**
+- WebPage (`@id` via `buildWebPageEntityId`, `isPartOf`/`publisher` as `@id` references, no `mainEntity`) — matches §11.7 exactly.
+- BreadcrumbList — 2-level, Home → Client Project Tracker — matches §11.7 exactly.
+- FAQPage — 6 questions, JSON-LD count verified equal to visible FAQ count by an automated test.
+- No SoftwareApplication, no aggregateRating/review, no dangling `@id` references — verified by both the extended shared test suite and the new page's own test file.
+
+**Client Share claims used (verified against §11.2 capability matrix):**
+- "No Text2Task account is required" for the client — matches the audited "Client account/login: NO, confirmed absent" row (wording refined 2026-08-29, see §11.18 — the original "no account, login, or sign-in required" phrasing risked implying a PIN-protected link needs no access step at all).
+- "Choose exactly what's visible... status, target date, selected tasks, resources, and updates" — matches the audited opt-in-visibility rows.
+- "Add a PIN" / "expire automatically" / "disable, re-enable, revoke, or generate a new link" — matches the audited PIN, expiration, and lifecycle-action rows ("rotate" was rendered in plain language as "generate a new link" for a public audience).
+- "Internal notes, priority, budget, other projects, and your raw files stay private" — matches the audited privacy-boundary row exactly.
+- "Your client can leave a comment... nothing is added to the project automatically" — matches the audited opt-in-comments row, including the explicit-owner-action requirement before anything reaches the project.
+- No sentence on the page claims anything broader than a row in §11.2 — each was checked individually before finalizing copy, per this phase's explicit verification requirement.
+
+**Tests and verification results:**
+- Targeted tests (new + modified files): 134 tests passed across 5 test files.
+- Full project test suite: 5,048 tests passed across 182 test files — zero regressions from the footer/relatedLinks/sitemap/schema-test edits.
+- `npx tsc --noEmit`: clean, zero errors.
+- `npm run build`: succeeded; `/features/client-project-tracker` confirmed present in the route output as a statically prerendered page.
+- `git diff --check`: clean (only harmless LF/CRLF line-ending notices, no whitespace errors).
+- Full diff reviewed line by line — confirmed to touch only the 4 modified files' intended single insertions, plus the 3 new files.
+
+**Deviations from the original §11.1–§11.13 mapping, and why:**
+- OpenGraph/Twitter image omitted (not specified either way in §11.5). Reusing an existing sibling page's screenshot would misrepresent this specific feature, and no new screenshot was permitted in P1A (§11.11). The root layout has no site-wide default image either, so this degrades gracefully rather than showing a broken or misleading image. Revisit in P1C once an authentic Client Share screenshot exists.
+- "Who this helps" implemented as a single prose paragraph with one inline link to the Freelancer Solution, rather than the multi-card audienceGrid pattern every sibling page uses. This is a deliberate, disclosed deviation: an audienceGrid on this page would need Use Case links, and §11.9/§11.15 explicitly deferred that audit to P1B ("DO NOT LINK FROM THESE PAGES YET") — a one-card grid would look visually broken, so a short paragraph was used instead, per this phase's explicit instruction not to force identical section counts.
+- Two-column preview comparison (private workspace vs. what the client sees) instead of client-feedback-to-tasks' three-column layout — matches ai-task-extractor/screenshot-to-tasks' simpler before/after pattern, appropriate to Tracker's simpler one-step comparison.
+- No other deviations. Route, primary keyword, terminology split (Client Project Tracker as SEO framing, Client Share named explicitly in body copy), portal-language rules, schema graph, sitemap values, and the two P1A-required internal links all match §11.1–§11.13 exactly.
+
+**Remaining P1B work (not started):**
+- Freelancer Solution reciprocal link — needs its own explicit approval (this file has now been edited 4 times this project under narrow scope each time).
+- Homepage capability-card entry in `homepage-post-extraction-section.tsx`.
+- Per-page copy audit of project-managers, small-agencies, and virtual-assistants Use Cases, and any resulting links.
+- Optional Email to Tasks / Messages Resource cross-links.
+
+**Remaining P1C work (not started):**
+- A real Client Share screenshot (ShareLinkConfigurationEditor and/or the public share view) captured from a safe demo/seed dataset — no real customer or tenant data.
+- An OpenGraph/Twitter image for the page once that screenshot exists.
+
+### 11.18 Post-P1A copy refinement (2026-08-29, same day)
+
+Six narrow, product-truth-motivated copy edits were made to the shipped page after initial review. No layout, metadata, H1, route, schema, sitemap, or link was touched.
+
+| Location | Old | New | Reason |
+|---|---|---|---|
+| How-it-works step 1 | "Generate a private link for one project directly from Text2Task." | "Generate a project share link directly from Text2Task." | Plainer phrasing. |
+| How-it-works step 4 | "Your client opens it directly. No account or sign-in is required." | "Your client opens it directly. No Text2Task account is required." | Precision — avoids implying a PIN-protected link needs no access step. |
+| Capability checklist | "Selected tasks, grouped as in progress, waiting on feedback, or completed" | "Selected tasks and their shared status" | The specific 3-way grouping is not a guaranteed implementation contract; do not assert it publicly. |
+| Never-shared checklist | Two items: raw files/folders; client account/login | One item: "Resources you haven't chosen to share" | The no-account point doesn't belong in a list of private workspace data; it's covered elsewhere. |
+| FAQ — account question | "No. Your client opens the link directly. There's no account, login, or sign-in required." | "No. Your client opens the link directly without a Text2Task account. If you protect the link with a PIN, they'll enter that PIN before viewing it." | Same PIN-access-step precision fix, applied to the FAQ answer. |
+| Problem section closing line | "...That's why Text2Task includes a simple client project tracker built into every project." | "...That's why Text2Task gives you a simple client-facing project view you can share directly from a project." | Keeps "Client Project Tracker" as SEO/category framing rather than an implied official feature name (§11.4); removes the unnecessary absolute "every project" claim. |
+
+- `app/features/client-project-tracker/page.test.tsx`: one assertion updated to match the new safe phrasing (the old regex checked for "login"/"sign-in" wording that no longer exists in the copy) — the underlying invariant (no Text2Task account required) is unchanged.
+- Verification re-run after this pass: targeted tests (69 passed, 2 files), `npx tsc --noEmit` clean, `npm run build` succeeded with `/features/client-project-tracker` still statically prerendered, `git diff --check` clean.
+
+### 11.19 P1C — Client Project Tracker Visual Integration (2026-08-29) — COMPLETE
+
+Two real Client Share marketing visuals were relocated to the correct asset directory and integrated into the P1A page. No SEO copy, H1, metadata title/description, schema, sitemap entry, or P1A internal link was changed beyond what P1C itself required (the OG/Twitter image re-evaluation).
+
+**Asset discovery and relocation:**
+- Two newly added PNGs were found misplaced under `app/features/project-deadline-calendar/`'s sibling asset folder, both untracked in git (never previously referenced by any code — confirmed by a repo-wide search before moving).
+- Original filenames/location: `public/landing/features/project-deadline-calendar/"Client project tracker showing how project progress is shared with a client.png"` (1672×941) and `.../"Text2Task Client Share controls for managing a shared project link.png"` (1448×1086).
+- Confirmed distinct from, and did not disturb, the existing legitimate tracked asset in that folder: `text2task-project-deadline-calendar.png`.
+- Moved (not copied, not re-encoded — byte sizes and pixel dimensions confirmed identical before/after) into the new directory `public/landing/features/client-project-tracker/`, renamed to:
+  - `client-project-tracker-share-progress-with-clients.png` (primary, wide, 1672×941)
+  - `client-share-project-link-management.png` (secondary, 1448×1086)
+- Verified afterward: the old `project-deadline-calendar` folder contains only its own legitimate asset; the new folder contains exactly the two relocated files.
+
+**Visual integration:**
+- Primary image (the 3-step "Configure sharing → Manage link & access → Client sees a clean overview" workflow graphic) placed immediately after the Hero, **replacing** the CSS-generated "Your workspace (private) / What your client sees" comparison section.
+- Reason for replacing rather than keeping both: the new image tells a more complete and credible product story (it also shows PIN/expiry/rotate/revoke controls the CSS mockup didn't), and keeping both would have been a redundant demonstration of the same idea immediately after the Hero.
+- All CSS selectors that became unused as a result (`previewSection`, `previewGrid`, `previewColumn`, `previewPrivatePanel`, `previewSharedPanel`, `previewArrow`, `previewResultRow`, `previewTaskList`, `previewNotShared`, `previewNote`, and their one media-query block) were removed from `page.module.css`. No other selector or shared stylesheet was touched.
+- Secondary image (the more editorial, annotated "You control what's shared" collage) placed after the "What you control" capability checklist and before "Keep the rest private" — it visually reinforces exactly that checklist's PIN/expiry/disable/revoke/rotate items, and sits with a full section of separation from the primary image on both sides, avoiding placing the two images too close together.
+- Both images use next/image with the `fill` strategy inside an aspect-ratio-locked container (`aspect-ratio: 1672/941` and `1448/1086` respectively) plus a `sizes` attribute — matching the established sibling convention (screenshot-to-tasks, project-deadline-calendar). A restrained card treatment (subtle border, border-radius, soft shadow, near-white background) was added around each frame, since — unlike the raw UI screenshots those siblings use — these two images already carry their own marketing typography and did not need additional decoration, only a clean frame.
+- No essential product-truth or SEO copy was moved into either image — every claim the images illustrate is already present as real HTML text elsewhere on the page (per this phase's explicit accessibility requirement).
+
+**Alt text (exact, as required):**
+- Primary: "Client project tracker showing how project progress is shared with a client"
+- Secondary: "Text2Task Client Share controls for managing a shared project link"
+
+**Loading / priority decision:** Neither image uses `priority`. Reasoning: real mobile viewport QA (390×844) showed the Hero content alone (eyebrow, H1, lead paragraph, two stacked CTA buttons, note) nearly fills the initial viewport, so the primary image is not reliably above the fold on the most important breakpoint for this phase. Using `priority` on an image that may render below the fold would preload roughly 1.1 MB ahead of genuinely critical resources without a guaranteed LCP benefit — this follows the explicit instruction not to blindly apply priority. Both images use normal lazy loading, matching screenshot-to-tasks' sibling precedent (which also omits `priority` on its hero-adjacent image).
+
+**OpenGraph / Twitter metadata — re-evaluated:**
+- P1A intentionally omitted a social-preview image because no accurate visual existed yet (§11.17). Now that the primary asset exists, `openGraph.images` and `twitter.images` were both added, using the primary wide asset only — no new image was created.
+- `openGraph.images`: the primary asset with explicit width 1672 / height 941 and the primary alt text, matching the exact pattern already used by `email-to-tasks/page.tsx` for its own OG image.
+- `twitter.card` was upgraded from `"summary"` (P1A, no image) to `"summary_large_image"` (matching every other Feature page's convention now that a real image backs it), with the same primary asset.
+- The focused metadata test was updated accordingly (see Tests below).
+
+**Desktop visual QA (1440×900, real headless-browser rendering):**
+- Rendered via a real Chromium browser (Playwright, installed in an isolated scratchpad location — not added to the project's own dependencies) against the local dev server, not merely inspected as static code.
+- Both images render crisp and undistorted at their card widths (1180px primary, 760px secondary); the restrained frame (border/radius/shadow) reads as an intentional design choice consistent with the rest of the site, not a raw pasted screenshot.
+- Section rhythm, spacing, Hero-to-primary-image transition, How it works, What you control, secondary image, privacy section, comments section, related links, FAQ, final CTA, and footer (showing the new "Client project tracker" link) all inspected directly — no visual compromise found.
+
+**Mobile visual QA (~390px, real headless-browser rendering):**
+- Confirmed no horizontal overflow: `document.documentElement.scrollWidth === clientWidth === 390` at the 390×844 viewport.
+- Both images render full-width and responsively with their natural aspect ratio preserved — no cropping, matching the explicit instruction not to crop away UI when the image becomes small on mobile.
+- The Hero is not overwhelmed by the primary image (it doesn't appear until after a full scroll past the Hero), and the secondary image does not create an oversized dead zone — its height scales naturally with the section's normal rhythm.
+- Section spacing, FAQ, and final CTA are unaffected.
+- **Honest finding:** the small in-image UI-mockup text (checkbox labels, button captions) inside both graphics is genuinely hard to read at 390px width — this is an inherent characteristic of rendering these particular wide, detail-rich marketing graphics responsively without cropping, which this phase explicitly required rather than inventing a separate mobile asset. Every claim those images illustrate remains available as legible real HTML text elsewhere on the page, so no essential information is lost — only supplementary visual detail is harder to make out at a glance on the smallest breakpoint.
+
+**Exact production files changed:**
+- `app/features/client-project-tracker/page.tsx` — image imports/constants added, metadata OG/Twitter images added, CSS-mockup section replaced with the primary image, secondary image section inserted.
+- `app/features/client-project-tracker/page.module.css` — obsolete preview-comparison selectors removed; new `primaryShowcase*`/`secondaryDetail*` selectors added.
+- `app/features/client-project-tracker/page.test.tsx` — new "P1C visuals" describe block (5 tests: primary image path+alt, secondary image path+alt, no accidental duplicate of either image, OpenGraph image, Twitter card/image).
+- `public/landing/features/client-project-tracker/` (new directory) — the two relocated, renamed image assets.
+- No other file was touched. P1A's four modified files (`sitemap.ts`, `schema-dangling-entity-references.test.ts`, `client-feedback-to-tasks/page.tsx`, `landing-footer.tsx`) are unchanged by this phase.
+
+**Tests and verification results:**
+- `app/features/client-project-tracker/page.test.tsx`: 17 tests passed (13 from P1A/P1A-refinement, 5 new for P1C).
+- Full project test suite: 5,053 tests passed across 182 test files — zero regressions.
+- `npx tsc --noEmit`: clean, zero errors.
+- `npm run build`: succeeded; `/features/client-project-tracker` confirmed present in the route output as a statically prerendered page.
+- `git diff --check`: clean (only harmless LF/CRLF line-ending notices).
+- Full diff reviewed line by line — confirmed to touch only the intended files; the four P1A files show no unexpected changes.

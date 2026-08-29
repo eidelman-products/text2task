@@ -170,6 +170,11 @@ const relatedLinks = [
     title: "Manage client revisions faster",
     text: "A focused workflow for organizing repeated client revision requests.",
   },
+  {
+    href: "/features/client-project-tracker",
+    title: "Client Project Tracker",
+    text: "Share selected project status and progress back with your client.",
+  },
 ] as const;
 
 const faqs = [

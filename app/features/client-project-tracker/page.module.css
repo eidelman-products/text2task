@@ -1,0 +1,50 @@
+/* Primary product showcase -- placed immediately after the Hero. The
+   image already contains its own heading, subheading, and step labels, so
+   the surrounding treatment stays restrained: a card frame, not another
+   layer of copy. */
+.primaryShowcaseSection {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 20px 0 8px;
+}
+
+.primaryShowcaseFrame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1672 / 941;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #fbfcfe;
+  box-shadow: 0 18px 40px -24px rgba(15, 23, 42, 0.22);
+}
+
+.primaryShowcaseImage {
+  object-fit: contain;
+}
+
+/* Secondary product detail -- placed after the "What you control"
+   capability checklist, narrower than the primary showcase since it is
+   supporting detail, not the lead visual. */
+.secondaryDetailFrame {
+  position: relative;
+  width: min(760px, 100%);
+  margin: 0 auto;
+  aspect-ratio: 1448 / 1086;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fbfcfe;
+  box-shadow: 0 14px 32px -22px rgba(15, 23, 42, 0.2);
+}
+
+.secondaryDetailImage {
+  object-fit: contain;
+}
+
+@media (max-width: 640px) {
+  .primaryShowcaseFrame,
+  .secondaryDetailFrame {
+    border-radius: 14px;
+  }
+}

@@ -7,6 +7,7 @@ import { webPageJsonLd as screenshotToTasksWebPageJsonLd } from "@/app/features/
 import { webPageJsonLd as projectDeadlineCalendarWebPageJsonLd } from "@/app/features/project-deadline-calendar/page";
 import { webPageJsonLd as emailToTasksWebPageJsonLd } from "@/app/features/email-to-tasks/page";
 import { webPageJsonLd as clientFeedbackToTasksWebPageJsonLd } from "@/app/features/client-feedback-to-tasks/page";
+import { webPageJsonLd as clientProjectTrackerWebPageJsonLd } from "@/app/features/client-project-tracker/page";
 import { aboutJsonLd } from "@/app/about/page";
 
 /*
@@ -22,6 +23,12 @@ import { aboutJsonLd } from "@/app/about/page";
   field -- WebPage/AboutPage do not require either), and the underlying
   SITE_SCHEMA_ENTITY_IDS.softwareApplication constant itself is confirmed
   gone, so no future page can accidentally reintroduce a reference to it.
+
+  2026-08-29 P1A -- features/client-project-tracker is a brand-new page
+  (never had the original bug) added to this same list because it must
+  follow the identical, now-standard WebPage shape as every page above --
+  reusing this suite's assertions is cheaper and more consistent than a
+  duplicate one-off test file for the same checks.
 */
 
 const fixedPageWebPageJsonLds: ReadonlyArray<
@@ -33,6 +40,7 @@ const fixedPageWebPageJsonLds: ReadonlyArray<
   ["features/project-deadline-calendar", projectDeadlineCalendarWebPageJsonLd],
   ["features/email-to-tasks", emailToTasksWebPageJsonLd],
   ["features/client-feedback-to-tasks", clientFeedbackToTasksWebPageJsonLd],
+  ["features/client-project-tracker", clientProjectTrackerWebPageJsonLd],
 ];
 
 describe("SITE_SCHEMA_ENTITY_IDS - softwareApplication is fully removed", () => {
