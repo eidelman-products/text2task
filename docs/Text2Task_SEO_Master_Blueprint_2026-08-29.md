@@ -273,22 +273,21 @@ Only commit hashes directly confirmed via `git log` are listed above. No hash is
 
 ## 10. Current Stop Point / Next Phase
 
-**Status update (2026-08-29, P1C visual integration pass):** P1A **COMPLETE**. P1C **COMPLETE**. The route `/features/client-project-tracker` exists in the repository, is live in the production build's static output, is fully tested, includes both approved Client Share marketing visuals, and is included in the sitemap. Full implementation records: **§11.17** (P1A), **§11.18** (post-P1A copy refinement), **§11.19** (P1C visual integration). Nothing was staged, committed, pushed, or deployed as part of any of these phases — the working tree changes are ready for review.
+**Status update (2026-08-30, P1B internal-linking pass):** P1A **COMPLETE**. P1B **COMPLETE**. P1C **COMPLETE**. The Client Project Tracker Feature page is fully built, visually integrated, discoverable from the Homepage and the Freelancer Solution page, and included in the sitemap and footer. Full implementation records: **§11.17** (P1A), **§11.18** (post-P1A copy refinement), **§11.19** (P1C visual integration), **§11.20** (P1B internal linking). Nothing was staged, committed, pushed, or deployed as part of any of these phases — the working tree changes are ready for review.
 
-> **NEXT PLANNED PHASE: P1B — Client Project Tracker internal linking / discovery**
-> - **Candidate scope:** Freelancer Solution reciprocal link, homepage capability card, the deferred Use Case per-page copy audit and any resulting links, optional Email/Messages cross-links
-> - **Full spec:** §11.14 (phasing) and §11.9 (internal linking plan) of this document
-> - **Status:** NOT started. P1B has not been marked complete and must not be assumed complete.
+> **NEXT PLANNED PHASE: Email Feature H1 commercial-framing differentiation**
+> - **Source:** §8 (P1/P2 tier) and §3A's Email — Commercial cluster row, whose own recorded Next Action is "tighten H1 toward commercial framing."
+> - **Why this item next:** Client Project Tracker's P1A/P1B/P1C work is now fully complete; per §8's existing priority order (not reordered), this is the next unstarted item in the P1/P2 tier. The other P1/P2 item, "general internal-linking improvements (§6.1)," is now substantially addressed by the combined P1A+P1B work.
+> - **Status:** NOT started. Requires its own audit/mapping turn before implementation, per this project's established discipline.
 
-**Before starting P1B, the next session must:**
+**Before starting the next phase, the next session must:**
 
-1. Re-read §11.17 (P1A), §11.18 (copy refinement), and §11.19 (P1C visuals) to confirm exactly what already shipped, then §11.9/§11.14 for the remaining P1B scope.
-2. Perform the per-page copy audit of the project-managers, small-agencies, and virtual-assistants Use Cases that §11.9/§11.15 explicitly deferred, before adding any link from them.
-3. Get explicit approval before editing `app/solutions/freelancer-project-management-software/page.tsx` — this file has now been edited under narrow, explicitly-scoped instructions on 4 separate occasions this project; treat each future edit the same way.
-4. Keep P1B's own diff as small and single-purpose as P1A's and P1C's were.
-5. Run the same full verification ritual used for every phase so far: `npx tsc --noEmit`, `npm run build`, targeted tests, `git diff --check`.
+1. Re-read §11.17 (P1A), §11.18 (copy refinement), §11.19 (P1C visuals), and §11.20 (P1B linking) to confirm exactly what already shipped for Client Project Tracker — that work is finished and should not be revisited without new evidence.
+2. Re-read §3A's Email — Commercial row and §2 for the full Email to Tasks context before proposing new H1 wording.
+3. Follow this project's established discipline: audit first, propose, wait for approval, then implement in a narrow, single-purpose diff.
+4. Run the same full verification ritual used for every phase so far: `npx tsc --noEmit`, `npm run build`, targeted tests, `git diff --check`.
 
-**The next Claude session should begin exactly here — Section 10 — after first re-reading §11.17–§11.19 for what already shipped, then §11.9 and §11.14 for the remaining P1B scope.**
+**The next Claude session should begin exactly here — Section 10 — after first re-reading §11.17–§11.20 to confirm Client Project Tracker is fully finished, then §3A and §8 before starting Email Feature H1 work.**
 
 ---
 
@@ -609,3 +608,69 @@ Two real Client Share marketing visuals were relocated to the correct asset dire
 - `npm run build`: succeeded; `/features/client-project-tracker` confirmed present in the route output as a statically prerendered page.
 - `git diff --check`: clean (only harmless LF/CRLF line-ending notices).
 - Full diff reviewed line by line — confirmed to touch only the intended files; the four P1A files show no unexpected changes.
+
+### 11.20 P1B — Client Project Tracker Internal Linking / Discovery (2026-08-30) — COMPLETE
+
+Every candidate page named in §11.9 was re-inspected by reading its actual current content before any edit — the deferred Use Case and Email/Messages decisions were not assumed from the P1 mapping, they were independently re-verified against live copy. Two links were implemented; all other candidates were left untouched with a recorded reason. Direction discipline was maintained throughout: Client Project Tracker (owner → client, outbound) was never blurred with Client Feedback to Tasks (client → owner, inbound).
+
+**Candidate audit table:**
+
+| Candidate | Decision | Reason |
+|---|---|---|
+| Homepage (homepage-post-extraction-section.tsx) | LINK | The "Everything you need after the first request" capability list already had a matching entry for outbound calendar sharing (project-deadline-calendar); it was missing the closing-the-loop capability entirely. |
+| Freelancer Solution (reciprocal) | LINK | The existing "Explore Text2Task features" link grid already lists all other Feature pages by the same card pattern; Tracker was the one sibling Feature missing from it. |
+| Use Case — project-managers | DO NOT LINK | Its clientUpdates section is entirely inbound (comparing a new stakeholder message against the saved project); no sentence anywhere on the page discusses sharing status back out. |
+| Use Case — small-agencies | DO NOT LINK | Same inbound-only pattern; "client" in this page's copy means the agency's own end client being coordinated internally, not a recipient of an outbound share link. |
+| Use Case — virtual-assistants | DO NOT LINK | Page is about a VA organizing their principal's admin requests; the VA is not the one who would share project status externally, and no outbound-sharing language exists on the page. |
+| Email to Tasks Feature | DO NOT LINK | Its "Continue organizing client work" related-links section and every FAQ stop at saving the draft; no post-intake/progress-sharing moment exists in the current copy to hook a link onto. |
+| Email Resource (how-to-turn-emails-into-tasks) | DO NOT LINK | Article scope ends at "review before saving"; its own Related guides already reach Freelancer Solution, one hop from Tracker. |
+| Messages Resource (turn-client-messages-into-tasks) | DO NOT LINK | Same — article scope ends at saving the task; forcing a link would distort its intake-focused intent. |
+
+**Exact links implemented:**
+- Homepage → Tracker: new capability list entry in `app/components/landing/homepage-post-extraction-section.tsx`. Title "Share progress with your client"; description "Share selected status, tasks, and updates through a private link — nothing else in your workspace is shown."; link label "Explore Client Project Tracker" → `/features/client-project-tracker`.
+- Freelancer Solution → Tracker: new card in the existing "Explore Text2Task features" link grid (`featureLinks` array) in `app/solutions/freelancer-project-management-software/page.tsx`. Title "Client Project Tracker"; description "Share selected project progress with your client through a private link." → `/features/client-project-tracker`.
+
+**Navigation / footer:**
+- NO CHANGE. Tracker was already added to the footer in P1A (§11.10/§11.13); this phase did not duplicate it.
+- Header nav: no individual Feature links exist for ANY Feature page (Features nav item points to the homepage `#features` anchor); no change made or needed.
+- No dedicated Feature-directory route exists anywhere in the codebase; none was created.
+
+**Tracker outbound links:**
+- NO CHANGE TO THE TRACKER PAGE ITSELF. Its existing outbound set (Client Feedback to Tasks, Email to Tasks, Freelancer Solution — all shipped in P1A) was reviewed and judged already sufficient; the already-approved Feature page was not reopened.
+
+**Anchor language used:**
+- Both new links use natural, non-repetitive concepts ("share progress with your client" / "share selected project progress with your client through a private link") rather than the bare exact-match phrase "client project tracker" repeated across pages — matching the anchor-text rules in this phase's own instructions.
+- The literal phrase "client project tracker" appears exactly once in each modified page's own main content (verified by an automated test on the Freelancer Solution page; the site-wide footer's separate P1A occurrence is excluded from that count).
+
+**Exact production files changed:**
+- `app/components/landing/homepage-post-extraction-section.tsx` — one new `capabilities` array entry.
+- `app/solutions/freelancer-project-management-software/page.tsx` — one new `featureLinks` array entry.
+- `app/components/landing/homepage-post-extraction-section.test.tsx` — NEW. First test file for this component; 2 tests (new Tracker link present; existing Work Calendar link untouched).
+- `app/solutions/freelancer-project-management-software/page.test.tsx` — NEW. First test file for this page; 4 tests (new Tracker link present; canonical/title identity unchanged; H1 still leads with the locked primary keyword; no keyword-stuffing of "client project tracker" within the page's own main content).
+- No other file was touched. The Tracker page itself, all Use Case pages, all Email/Messages pages, navigation, and the footer are unchanged by this phase.
+
+**Cannibalization / SEO QA:**
+
+| Check | Result |
+|---|---|
+| H1 changed on any modified page? | NO |
+| Metadata (title/description/canonical) changed on any modified page? | NO |
+| Primary keyword ownership changed? | NO — verified by an automated test that the Freelancer Solution H1 still leads with "freelancer project management software" |
+| "client project tracker" unnecessarily repeated? | NO — appears once per modified page's own content, in natural non-exact-match anchor contexts elsewhere |
+| Freelancer Solution still clearly owns broad freelancer/client project management? | YES — untouched hero/positioning/FAQ; only one link card added to an existing grid |
+| Tracker still clearly owns the narrow outbound client-visibility capability? | YES — Tracker page itself was not modified in this phase |
+| Any Use Case started targeting a Feature keyword? | NO — all three Use Cases were left unmodified |
+| Email/Message pages retained their original intent? | YES — all three were left unmodified |
+
+**Tests and verification results:**
+- Targeted tests: 71 passed across 4 files (2 new files + `schema-dangling-entity-references.test.ts` + `app/page.test.ts`, re-run as a sanity check since the homepage tree was touched).
+- Full project test suite: 5,059 tests passed across 184 test files — zero regressions.
+- `npx tsc --noEmit`: clean, zero errors.
+- `npm run build`: succeeded; both `/features/client-project-tracker` and `/solutions/freelancer-project-management-software` confirmed present in the route output as statically prerendered pages.
+- `git diff --check`: clean (one harmless LF/CRLF line-ending notice).
+- Full diff reviewed line by line — exactly two production files changed, one array entry each; no unrelated code touched.
+
+**Remaining work after P1B:**
+- P1A, P1B, and P1C are all now COMPLETE for Client Project Tracker. No further Tracker-specific linking work is planned or recommended — the deferred Use Case and Email/Messages candidates were evaluated on their merits and genuinely do not warrant a link with the content as it exists today; revisit only if/when those pages' own copy changes to include an outbound-sharing narrative.
+- Note for roadmap accuracy (§8): the P2 item "Client Project Tracker ↔ Client Feedback to Tasks direction-explicit cross-links" was already satisfied by P1A's relatedLinks addition on `client-feedback-to-tasks/page.tsx` — it does not require separate P1B/future work.
+- Per §8's existing priority order, the next unstarted item in the P1/P2 tier is: Email Feature H1 commercial-framing differentiation (§3, Email — Commercial cluster's own recorded next action: "tighten H1 toward commercial framing"). General internal-linking improvements (§6.1) are now substantially addressed by the combined P1A+P1B work; any further items there would need their own fresh audit, not an assumption of remaining scope.

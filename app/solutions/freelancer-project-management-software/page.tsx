@@ -268,6 +268,11 @@ const featureLinks = [
     title: "Client Feedback to Tasks",
     text: "Compare follow-up client feedback with an existing saved project.",
   },
+  {
+    href: "/features/client-project-tracker",
+    title: "Client Project Tracker",
+    text: "Share selected project progress with your client through a private link.",
+  },
 ] as const;
 
 const faqs = [

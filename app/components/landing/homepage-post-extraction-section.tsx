@@ -28,6 +28,13 @@ const capabilities = [
     linkHref: "/features/project-deadline-calendar",
     linkLabel: "Explore the Work Calendar",
   },
+  {
+    title: "Share progress with your client",
+    description:
+      "Share selected status, tasks, and updates through a private link — nothing else in your workspace is shown.",
+    linkHref: "/features/client-project-tracker",
+    linkLabel: "Explore Client Project Tracker",
+  },
 ] as const;
 
 export default function HomepagePostExtractionSection() {
