@@ -263,7 +263,7 @@ export default function EmailToTasksPage() {
           <div className={styles.heroInner}>
             <div className={styles.heroCopy}>
               <p className={styles.eyebrow}>Email to Tasks</p>
-              <h1>Turn emails into organized projects and tasks.</h1>
+              <h1>Paste an email. Get an organized project and tasks.</h1>
               <p className={styles.heroLead}>
                 Paste email text into Text2Task and turn it into a reviewable
                 project with organized tasks, deadlines, priorities, budget

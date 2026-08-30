@@ -109,7 +109,7 @@ The anchor Solution page and its two core commercial/informational supporting cl
 | Cluster | Primary Keyword | Secondary | Search Evidence | Intent | Current Owner | Type | Confidence | Cannib. Risk | Status | Next Action |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Email — Informational | turn emails into tasks | convert email to task; create task from email; create a task from an email | Semrush: vol. 30, KD 18%, CPC $9.50. GSC currently ranks this page for this exact phrase. | Informational / how-to | `/resources/how-to-turn-emails-into-tasks` | Resource | High | None | Validated / stable | Keep as-is |
-| Email — Commercial | email to task | email task management; email to task app | Keyword Planner: ~50/mo, Low competition, meaningful commercial bid range. | Commercial, tool-specific | `/features/email-to-tasks` | Feature | High | Low (H1 phrasing softly echoes the Resource's phrase — cosmetic only) | Validated / stable | P1/P2: tighten H1 toward commercial framing |
+| Email — Commercial | email to task | email task management; email to task app | Keyword Planner: ~50/mo, Low competition, meaningful commercial bid range. | Commercial, tool-specific | `/features/email-to-tasks` | Feature | High | None (H1 differentiation completed 2026-08-30 — §12) | Validated / stable / H1 differentiated | Complete — see §12 |
 | Freelancer Project Management | freelancer project management software | — | Established primary page identity; not independently re-quantified this round. | Commercial, category/end-to-end | `/solutions/freelancer-project-management-software` | Solution | High | None (this is the anchor page) | Validated / stable / reinforced | Keep as primary; do not reposition |
 | Client Project Management (secondary) | client project management software | client project management tool; client and project management software; best client project management software; customer project management software | Keyword Planner: ~500/mo, Low competition (idx 8). Do NOT sum the 3 close-500 variants as 1,500 — they share substantial overlap. | Commercial, broad category | `/solutions/freelancer-project-management-software` (secondary) | Solution (secondary) | Medium-High | High if forked into a new page | Reinforced 2026-08-29 (commit 0c67460) | No new page. Monitor. |
 | Project Request Management (secondary) | project request management software | project request management; project request software; request management software | Keyword Planner: ~50/mo, Low competition. | Commercial, narrow (intake step) | `/solutions/freelancer-project-management-software` (secondary) | Solution (secondary) | Medium | High if forked into a new page | Reinforced 2026-08-29 (commit 0c67460) | No new page. Monitor. |
@@ -238,8 +238,8 @@ Only commit hashes directly confirmed via `git log` are listed above. No hash is
 - Add contextual homepage/solution linking to the new Feature — as part of the same controlled phase, or immediately following.
 
 **P1 / P2**
-- Email Feature H1 commercial-framing differentiation.
-- General internal-linking improvements identified in §6.1.
+- Email Feature H1 commercial-framing differentiation. [COMPLETE 2026-08-30 — see §12]
+- General internal-linking improvements identified in §6.1. [Substantially addressed by P1A+P1B — see §11.20]
 
 **P2**
 - Client Project Tracker ↔ Client Feedback to Tasks direction-explicit cross-links.
@@ -273,21 +273,21 @@ Only commit hashes directly confirmed via `git log` are listed above. No hash is
 
 ## 10. Current Stop Point / Next Phase
 
-**Status update (2026-08-30, P1B internal-linking pass):** P1A **COMPLETE**. P1B **COMPLETE**. P1C **COMPLETE**. The Client Project Tracker Feature page is fully built, visually integrated, discoverable from the Homepage and the Freelancer Solution page, and included in the sitemap and footer. Full implementation records: **§11.17** (P1A), **§11.18** (post-P1A copy refinement), **§11.19** (P1C visual integration), **§11.20** (P1B internal linking). Nothing was staged, committed, pushed, or deployed as part of any of these phases — the working tree changes are ready for review.
+**Status update (2026-08-30, Email Feature H1 differentiation pass):** P1A **COMPLETE**. P1B **COMPLETE**. P1C **COMPLETE**. Email Feature H1 commercial-framing differentiation **COMPLETE**. Client Project Tracker is fully built, integrated, and discoverable (§11.17–§11.20). The Email Feature's H1 no longer echoes the Resource's informational phrasing (§12). Nothing was staged, committed, pushed, or deployed as part of any of these phases — the working tree changes are ready for review.
 
-> **NEXT PLANNED PHASE: Email Feature H1 commercial-framing differentiation**
-> - **Source:** §8 (P1/P2 tier) and §3A's Email — Commercial cluster row, whose own recorded Next Action is "tighten H1 toward commercial framing."
-> - **Why this item next:** Client Project Tracker's P1A/P1B/P1C work is now fully complete; per §8's existing priority order (not reordered), this is the next unstarted item in the P1/P2 tier. The other P1/P2 item, "general internal-linking improvements (§6.1)," is now substantially addressed by the combined P1A+P1B work.
-> - **Status:** NOT started. Requires its own audit/mapping turn before implementation, per this project's established discipline.
+> **NEXT PLANNED PHASE: P2 tier (not yet authorized to start)**
+> - **Source:** §8 (P2 tier)
+> - **Candidates:** Web Designers Use Case vs. Revisions Resource differentiation (§5, rule 7); `/features/project-deadline-calendar` footer/navigation reinforcement.
+> - **Status:** NOT started. This document does not authorize beginning P2 work on its own — wait for an explicit instruction naming one of these items.
 
 **Before starting the next phase, the next session must:**
 
-1. Re-read §11.17 (P1A), §11.18 (copy refinement), §11.19 (P1C visuals), and §11.20 (P1B linking) to confirm exactly what already shipped for Client Project Tracker — that work is finished and should not be revisited without new evidence.
-2. Re-read §3A's Email — Commercial row and §2 for the full Email to Tasks context before proposing new H1 wording.
+1. Re-read §11.17–§11.20 to confirm Client Project Tracker is fully finished, and §12 to confirm the Email Feature H1 work is finished — neither should be revisited without new evidence.
+2. Wait for an explicit instruction identifying which P2 item to start; do not assume both, and do not begin without direction.
 3. Follow this project's established discipline: audit first, propose, wait for approval, then implement in a narrow, single-purpose diff.
 4. Run the same full verification ritual used for every phase so far: `npx tsc --noEmit`, `npm run build`, targeted tests, `git diff --check`.
 
-**The next Claude session should begin exactly here — Section 10 — after first re-reading §11.17–§11.20 to confirm Client Project Tracker is fully finished, then §3A and §8 before starting Email Feature H1 work.**
+**The next Claude session should begin exactly here — Section 10 — after first re-reading §11.17–§11.20 and §12 to confirm what is already finished, then §5 and §8 before any P2 work — which requires its own explicit instruction to begin.**
 
 ---
 
@@ -674,3 +674,86 @@ Every candidate page named in §11.9 was re-inspected by reading its actual curr
 - P1A, P1B, and P1C are all now COMPLETE for Client Project Tracker. No further Tracker-specific linking work is planned or recommended — the deferred Use Case and Email/Messages candidates were evaluated on their merits and genuinely do not warrant a link with the content as it exists today; revisit only if/when those pages' own copy changes to include an outbound-sharing narrative.
 - Note for roadmap accuracy (§8): the P2 item "Client Project Tracker ↔ Client Feedback to Tasks direction-explicit cross-links" was already satisfied by P1A's relatedLinks addition on `client-feedback-to-tasks/page.tsx` — it does not require separate P1B/future work.
 - Per §8's existing priority order, the next unstarted item in the P1/P2 tier is: Email Feature H1 commercial-framing differentiation (§3, Email — Commercial cluster's own recorded next action: "tighten H1 toward commercial framing"). General internal-linking improvements (§6.1) are now substantially addressed by the combined P1A+P1B work; any further items there would need their own fresh audit, not an assumption of remaining scope.
+
+---
+
+## 12. Email Feature H1 Commercial-Framing Differentiation (2026-08-30) — COMPLETE
+
+This is a separate roadmap item from Client Project Tracker (Section 11) — the next unstarted P1/P2-tier item per §8's existing priority order, not reordered or invented. Scope: a single H1 refinement on `/features/email-to-tasks`, resolving the low-grade cannibalization risk §3A had flagged against `/resources/how-to-turn-emails-into-tasks`. No route, canonical, schema, sitemap, FAQ, CTA, or Resource content was touched.
+
+### 12.1 Audit — both pages, as found
+
+| Field | Feature (`/features/email-to-tasks`) | Resource (`/resources/how-to-turn-emails-into-tasks`) |
+|---|---|---|
+| Title | Email to Tasks: Turn Emails Into Projects | How to Turn Emails Into Tasks: A Practical Workflow |
+| Meta description | Paste an email into Text2Task to extract a reviewable project, tasks, deadlines, priorities, budget details, and client information before saving. | Learn a practical workflow for turning client emails into organized tasks, deadlines, priorities, and a reviewable project before saving. |
+| H1 (before) | Turn emails into organized projects and tasks. | How to turn emails into tasks without losing project context (unchanged) |
+| Primary CTA | "Start for free" → /signup | "Explore Email to Tasks" → /features/email-to-tasks |
+| Schema | WebPage + 2-level BreadcrumbList + FAQPage | Article (buildArticleJsonLd) + 3-level BreadcrumbList (Home / Resources / article) |
+| Intent signal | Commercial/tool: capability checklist, "How it works" steps, FAQ about the tool itself | Informational/how-to: worked example, 5-step manual workflow, "Common mistakes" section |
+
+- Internal links between the two pages were already bidirectional before this phase: Feature → Resource via its relatedLinks card ("How to turn emails into tasks"); Resource → Feature via an inline sentence in its "How Text2Task supports this workflow" section ("turn selected email text into a reviewable project and task draft").
+- No test file existed for either page before this phase.
+- Repeated phrase: the Feature's old H1 ("Turn emails into organized projects and tasks") and the Resource's H1/primary keyword ("how to turn emails into tasks" / "turn emails into tasks") shared the same "turn emails into tasks" construction — the exact overlap §3A had already flagged as a low cannibalization risk.
+
+### 12.2 Cannibalization analysis
+
+- Is the Feature's H1 too close to the Resource's informational intent? **YES** — both led with the identical "turn emails into tasks" construction, which is also the Resource's own validated informational keyword and the phrase GSC already ranks the Resource for.
+- Does the current Feature title already provide enough commercial differentiation? **YES** — "Email to Tasks: Turn Emails Into Projects" already leads with the product name and is distinct from the Resource's "How to Turn Emails Into Tasks" title. No title change was needed.
+- Does the H1 itself need changing? **YES** — it was the one element still echoing the Resource's phrasing.
+- Would changing the H1 risk weakening a useful phrase already supported by GSC? **NO** — the GSC ranking cited in this project's research is for the Resource page's "turn emails into tasks" query, not for any Feature-page ranking tied to the old H1 string. No evidence exists that the Feature's exact old H1 wording itself was driving any tracked ranking.
+- Can the commercial distinction be improved with a narrow H1 refinement rather than broader copy changes? **YES** — confirmed and implemented as the only change (§12.3).
+- Is any metadata change actually needed? **NO** — title/description/canonical/OG/Twitter already commercially differentiate the page adequately; none was changed, per this phase's default expectation.
+
+### 12.3 H1 decision
+
+- **Old H1:** "Turn emails into organized projects and tasks."
+- **Final H1:** "Paste an email. Get an organized project and tasks."
+
+- Structurally breaks the "Turn emails into tasks" pattern entirely (rather than a word-swap within the same construction), which is what actually resolves the overlap with the Resource's H1/keyword — a synonym substitution alone would not have.
+- Leads with the real, product-accurate user action ("Paste an email") rather than an instructional "how to" framing, reinforcing commercial/tool intent (describing what the tool does for the user) instead of tutorial intent.
+- "Get an organized project and tasks" is outcome-focused, transactional phrasing consistent with the "email to task" commercial cluster's intent, without exact-matching the phrase awkwardly.
+- No mailbox/inbox-sync claim: "Paste" is the explicit, correct action — Text2Task does not connect to Gmail/Outlook or monitor an inbox (confirmed against the page's own existing "No inbox connection" / "Your inbox stays separate" copy, which was not touched and remains accurate alongside the new H1).
+- Reads naturally to a US audience (short action → outcome pattern, a common and effective SaaS landing-page convention) rather than a keyword-first construction.
+
+### 12.4 Implementation
+
+- Single line changed: the `<h1>` text in `app/features/email-to-tasks/page.tsx`. No hero-support copy, section, CTA, schema, metadata, canonical, or route was touched.
+- The Resource page (`app/resources/how-to-turn-emails-into-tasks/page.tsx`) was not modified — no contradiction was found that would have justified touching it.
+
+### 12.5 Internal-link relationship after the change
+
+- Both existing links (Feature → Resource card; Resource → Feature inline sentence) use descriptive anchor text unrelated to the literal old H1 string, so neither needed updating and neither was touched.
+- No duplicate link was added.
+
+### 12.6 SEO QA
+
+| Check | Result |
+|---|---|
+| Feature H1 is not a near-copy of Resource H1 | CONFIRMED — verified by an automated test |
+| Resource left untouched | CONFIRMED — zero lines changed in the Resource page |
+| No exact-match keyword stuffing | CONFIRMED — new H1 does not repeat "email to task" verbatim |
+| No mailbox-integration overclaim | CONFIRMED — verified by an automated test asserting the absence of sync/connect/monitor phrasing |
+| No automatic-ingestion overclaim | CONFIRMED — H1 explicitly says "Paste," matching the page's existing paste-only product truth |
+| No broad positioning drift | CONFIRMED — title, hero lead, all H2s, FAQ, and CTA are unchanged |
+| No metadata drift | CONFIRMED — title/description/canonical/OG/Twitter unchanged, verified by an automated test |
+
+### 12.7 Exact production files changed
+
+- `app/features/email-to-tasks/page.tsx` — one line (H1 text).
+- `app/features/email-to-tasks/page.test.tsx` — NEW. First test file for this page; 5 tests.
+- `app/resources/how-to-turn-emails-into-tasks/page.test.tsx` — NEW. First test file for this page; 3 tests (protects that it stays unmodified over time).
+- No other file was touched.
+
+### 12.8 Tests and verification results
+
+- Targeted tests: 65 passed across 3 files (2 new files + `schema-dangling-entity-references.test.ts`, re-run since `email-to-tasks/page.tsx` changed).
+- Full project test suite: 5,067 tests passed across 186 test files — zero regressions.
+- `npx tsc --noEmit`: clean, zero errors.
+- `npm run build`: succeeded; `/features/email-to-tasks` confirmed present in the route output as a statically prerendered page.
+- `git diff --check`: clean (one harmless LF/CRLF line-ending notice).
+- Full diff reviewed line by line — exactly one line changed in one production file; no unrelated code touched.
+
+### 12.9 Next SEO roadmap item
+
+> **Next action:** Per §8's existing priority order, with Email Feature H1 differentiation now COMPLETE and Client Project Tracker (§11) fully COMPLETE, the next unstarted items are the P2 tier: Web Designers Use Case vs. Revisions Resource differentiation (§5, rule 7) and `/features/project-deadline-calendar` footer/navigation reinforcement. Do not begin either without a fresh, explicit instruction — this document does not authorize starting them on its own.
