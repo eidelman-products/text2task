@@ -72,7 +72,7 @@ const problemPoints = [
 const workflowSteps = [
   {
     title: "Paste the text",
-    text: "Add the client message, notes, brief, or other text you want to organize.",
+    text: "Add the notes, brief, client message, or other text you want to organize.",
   },
   {
     title: "Review the project and tasks",
@@ -144,7 +144,7 @@ const faqs = [
   {
     question: "What text can I paste into the AI Task Extractor?",
     answer:
-      "You can paste client messages, notes, briefs, meeting notes, or other unstructured text containing work you want to organize.",
+      "You can paste notes, briefs, meeting notes, client messages, or other unstructured text containing work you want to organize.",
   },
   {
     question: "Can it extract several tasks from one message?",
@@ -242,7 +242,7 @@ export default function AiTaskExtractorPage() {
             <p className={shared.eyebrow}>AI Task Extractor</p>
             <h1>Extract tasks and action items from text</h1>
             <p className={shared.heroLead}>
-              Paste client messages, notes, or other unstructured text.
+              Paste notes, client messages, or other unstructured text.
               Text2Task organizes project context and related tasks into a
               draft you can review before saving.
             </p>
@@ -324,7 +324,7 @@ export default function AiTaskExtractorPage() {
             </p>
             <h2>Action items are often mixed with project context</h2>
             <p className={shared.sectionLead}>
-              A client message or note may contain the work itself,
+              A note or client message may contain the work itself,
               background information, dates, amounts, and contact details
               in the same paragraph. A simple task list can lose that
               context, while manual restructuring takes additional time.
@@ -465,7 +465,7 @@ export default function AiTaskExtractorPage() {
           <div className={shared.finalCtaContent}>
             <h2>Turn unstructured text into a project and task draft</h2>
             <p>
-              Paste a client message or note, review the organized project
+              Paste a note or client message, review the organized project
               and tasks, and save only the result you approve.
             </p>
           </div>

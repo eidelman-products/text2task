@@ -24,6 +24,10 @@ const productLinks = [
     label: "Client project tracker",
     href: "/features/client-project-tracker",
   },
+  {
+    label: "Project deadline calendar",
+    href: "/features/project-deadline-calendar",
+  },
 ];
 
 const useCaseLinks = [

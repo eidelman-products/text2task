@@ -273,6 +273,11 @@ const featureLinks = [
     title: "Client Project Tracker",
     text: "Share selected project progress with your client through a private link.",
   },
+  {
+    href: "/features/project-deadline-calendar",
+    title: "Project Deadline Calendar",
+    text: "See project deadlines and upcoming work in one calendar built for client projects.",
+  },
 ] as const;
 
 const faqs = [

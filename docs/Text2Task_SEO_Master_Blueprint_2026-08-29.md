@@ -122,7 +122,7 @@ Narrower, capability-specific clusters, including the not-yet-built Client Proje
 | Cluster | Primary Keyword | Secondary | Search Evidence | Intent | Current Owner | Type | Confidence | Cannib. Risk | Status | Next Action |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Client Project Tracker / Client Share | client project tracker | share project progress with client; project updates for clients; client project updates; client update link; project share link; project status for clients (none independently validated for volume) | Keyword Planner: ~50/mo, Medium competition (idx 57), CPC $21.42–$54.75. | Commercial, narrow (outbound client visibility) | Future: `/features/client-project-tracker` | Feature (future) | Medium | Low vs. most pages; Medium vs. Client Feedback to Tasks (direction overlap) | Decision made: YES, justified. NOT YET implemented. | P1 — build after this document's Section 10 spec |
-| AI Task Extraction | ai task extractor | task extractor; extract action items from text; extract tasks from text | Weak/no non-brand GSC signal currently. | Commercial, generic engine (hub, not a channel) | `/features/ai-task-extractor` | Feature | Low | Low (soft overlap: "client messages" language shared with Messages cluster) | Needs differentiation | P3: sharpen copy away from "client messages" phrasing |
+| AI Task Extraction | ai task extractor | task extractor; extract action items from text; extract tasks from text | Weak/no non-brand GSC signal currently. | Commercial, generic engine (hub, not a channel) | `/features/ai-task-extractor` | Feature | Low | Low (soft overlap reduced: "client message(s)" no longer leads any supporting-copy sentence — 2026-08-30, §18) | Differentiation complete | Complete — see §18 |
 | Screenshot → Tasks | screenshot to tasks / turn screenshots into tasks | project screenshot | GSC: "project screenshot" → Resource, 1 impression, avg. position ~35. No assumed primary from route name. | Commercial + informational | `/features/screenshot-to-tasks` + `/resources/how-to-turn-screenshots-into-tasks` | Feature + Resource | Low-Medium | None | Validated pattern, weak signal | Keep as-is |
 | Client Feedback / Revisions | client feedback to tasks | manage client revisions | Secondary priority per original research scope. | Commercial + informational, INBOUND (client → owner) | `/features/client-feedback-to-tasks` + `/resources/how-to-turn-client-feedback-into-tasks` | Feature + Resource | Low-Medium | Medium vs. future Client Project Tracker (direction confusion risk) | Keep as-is; secondary positioning | P2: direction-explicit cross-linking once Tracker exists |
 
@@ -233,23 +233,25 @@ Only commit hashes directly confirmed via `git log` are listed above. No hash is
 - Factual Client Share limitation correction — §2.4
 - Freelancer Solution secondary-cluster reinforcement — §2.5
 
-**P1 — NEXT**
-- Build `/features/client-project-tracker` (full spec in §4.3 and §10).
-- Add contextual homepage/solution linking to the new Feature — as part of the same controlled phase, or immediately following.
+**P1 — COMPLETE** [corrected 2026-08-30, §19.17 — was stale as "NEXT"]
+- Build `/features/client-project-tracker` (full spec in §4.3 and §10). [COMPLETE — see §11]
+- Add contextual homepage/solution linking to the new Feature. [COMPLETE — see §11.20]
 
 **P1 / P2**
 - Email Feature H1 commercial-framing differentiation. [COMPLETE 2026-08-30 — see §12]
 - General internal-linking improvements identified in §6.1. [Substantially addressed by P1A+P1B — see §11.20]
 
-**P2**
-- Client Project Tracker ↔ Client Feedback to Tasks direction-explicit cross-links.
+**P2 — COMPLETE**
+- Client Project Tracker ↔ Client Feedback to Tasks direction-explicit cross-links. [COMPLETE — confirmed reciprocal in code, see §19.9; was stale/unmarked, corrected 2026-08-30]
 - Web Designers Use Case vs. Revisions Resource differentiation pass (§5, rule 7). [COMPLETE 2026-08-30 — see §14]
-- `/features/project-deadline-calendar` footer/navigation reinforcement.
+- `/features/project-deadline-calendar` footer/navigation reinforcement. [COMPLETE 2026-08-30 — see §16; was stale/unmarked, corrected 2026-08-30]
 
-**P3**
-- AI Task Extractor copy differentiation (away from "client messages" phrasing).
-- Periodic GSC / Keyword Planner re-validation of all clusters in §3, especially thin-evidence ones.
-- Lower-priority Use Case optimizations.
+**P3 — COMPLETE**
+- AI Task Extractor copy differentiation (away from "client messages" phrasing). [COMPLETE 2026-08-30 — see §18]
+- Periodic GSC / Keyword Planner re-validation of all clusters in §3, especially thin-evidence ones. [Standing monitoring item — safe to defer past deployment]
+- Lower-priority Use Case optimizations. [Standing monitoring item — safe to defer past deployment]
+
+**FINAL SEO PACKAGE AUDIT — COMPLETE, BLOCKED.** See §19. One technical SEO defect (Calendar title-tag doubling) must be resolved in its own scoped follow-up phase before this package is fully release-ready. See §10.
 
 ---
 
@@ -273,22 +275,29 @@ Only commit hashes directly confirmed via `git log` are listed above. No hash is
 
 ## 10. Current Stop Point / Next Phase
 
-**Status update (2026-08-30, P2 Web Designers implementation pass):** P1A **COMPLETE**. P1B **COMPLETE**. P1C **COMPLETE**. Email Feature H1 commercial-framing differentiation **COMPLETE**. P2 Web Designers vs. Revisions Resource differentiation **COMPLETE** (§14) — the Use Case's title/H1/description now represent the broader client-work workflow instead of echoing the Resource's revisions topic; the Resource itself is unchanged. Client Project Tracker is fully built, integrated, and discoverable (§11.17–§11.20). The Email Feature's H1 no longer echoes the Resource's informational phrasing (§12). Nothing was staged, committed, pushed, or deployed as part of any of these phases — the working tree changes are ready for review.
+**CURRENT SEO PACKAGE:**
+**FINAL AUDIT PASSED**
 
-> **NEXT PLANNED PHASE: `/features/project-deadline-calendar` footer/navigation reinforcement — NOT audited yet**
-> - **Source:** §6.1 and §8 (P2 tier)
-> - **What's known:** project-deadline-calendar is the one Feature page missing from `landing-footer.tsx`'s `productLinks` array (§6.1) — already observed, not yet re-verified or scoped into an implementation plan.
-> - **Status:** NOT started, NOT audited. This document does not authorize beginning it on its own — it needs its own audit turn first, matching this project's established discipline.
+**BLOCKER:**
+**RESOLVED — Project Deadline Calendar duplicate title suffix**
+
+**NEXT:**
+**Create one meaningful local commit for the remaining verified SEO working-tree changes, then perform final Git verification before push.**
+
+**Status update (2026-08-30, Blocker Resolution):** The §19 Final SEO Package Audit's sole blocker — `/features/project-deadline-calendar` rendering a doubled `<title>` suffix — is now fixed, verified via a fresh live dev-server render, covered by 7 new regression tests, and confirmed via a repository-wide read-only scan to be the only live public SEO page that had this defect (2 unrelated `noindex`/`nofollow` demo-funnel pages share the same code pattern but are out of the SEO package's scope — see §20.5/§20.9). Every dimension the original audit checked remains clean; the focused delta re-verification in §20.12 confirms nothing else was disturbed. Nothing has been staged, committed, pushed, or deployed — the fix exists only in the working tree, alongside the pre-existing verified Calendar-discovery and P3 AI Task Extractor changes.
+
+> **NEXT: Create the final local commit**
+> The full accumulated SEO package — P1 Client Project Tracker, Email H1 differentiation, Web Designers differentiation, Calendar discovery reinforcement, P3 AI Task Extractor, and the Calendar title-tag fix — is release-ready. The remaining step is to create **one meaningful local commit** for the working-tree changes still uncommitted (Calendar discovery's 4 files, P3's 2 files, the Calendar title fix's 2 files, plus the docs), then run final Git verification before push. **This still requires its own explicit instruction — do not create the commit or push without being told to.**
 
 **Before starting the next phase, the next session must:**
 
-1. Re-read §11.17–§11.20, §12, and §14 to confirm Client Project Tracker, the Email Feature H1 work, and the Web Designers differentiation are all fully finished — none should be revisited without new evidence.
-2. Run a fresh audit of `/features/project-deadline-calendar`'s current footer/navigation state before proposing any change — do not assume §6.1's observation still holds without re-verifying it.
-3. Wait for an explicit instruction before starting; do not begin without direction.
-4. Follow this project's established discipline: audit first, propose, wait for approval, then implement in a narrow, single-purpose diff.
-5. Run the same full verification ritual used for every phase so far: `npx tsc --noEmit`, `npm run build`, targeted tests, `git diff --check`.
+1. Re-read §19 (the Final Audit) and §20 (the blocker resolution) in full before doing anything else — together they are the authoritative, current state of the whole package.
+2. Confirm with the user that the batching instruction is being lifted for this specific commit — the standing rule has been "do not commit after each phase"; creating the final commit is the explicit milestone this rule was building toward, but still needs its own go-ahead.
+3. When authorized, stage exactly the expected working-tree files (§20.13), write a commit message describing the whole batch, and create ONE commit — do not split it into multiple commits unless asked.
+4. Do not push without a further, separate explicit instruction, even after the commit exists.
+5. Run the standard verification ritual one more time immediately before committing, as a final sanity check: `npx tsc --noEmit`, `npm run build`, `git diff --check`.
 
-**The next Claude session should begin exactly here — Section 10 — after first re-reading §11.17–§11.20, §12, and §14 to confirm what is already finished, then run a fresh audit of `/features/project-deadline-calendar`'s footer/navigation state before implementing anything — which requires its own explicit instruction to begin.**
+**The next Claude session should begin exactly here — Section 10 — after first re-reading §19 and §20 in full, then proceed only when given explicit instruction to create the final local commit.**
 
 ---
 
@@ -953,4 +962,719 @@ Implements the §13.10 blueprint exactly, with one deliberate, evidence-based de
 
 ### 14.11 Next SEO roadmap phase
 
-> **Next action:** P2 Web Designers vs. Revisions Resource differentiation is COMPLETE. The next unstarted, still-unaudited roadmap item is: `/features/project-deadline-calendar` footer/navigation reinforcement (§6.1, §8 P2 tier). It was explicitly NOT started or audited in this phase and requires its own audit turn before implementation.
+> **Next action (superseded — see §15):** This pointed at the Project Deadline Calendar discovery item next. That item has since been AUDITED and MAPPED in §15 (not yet implemented).
+
+---
+
+## 15. P2 — Project Deadline Calendar Discovery Audit (2026-08-30)
+
+> **Status: PROJECT DEADLINE CALENDAR DISCOVERY — MAPPED, NOT IMPLEMENTED**
+> This section is an audit and implementation blueprint only. No production code was changed. Nothing here is authorized to be implemented without a separate, explicit instruction.
+
+### 15.1 Calendar page audit — current state
+
+- Route/file: `app/features/project-deadline-calendar/page.tsx`
+- Title: "Project Deadline Calendar for Freelancers & Small Teams | Text2Task" — description, canonical (`/features/project-deadline-calendar`), H1 ("A Project Deadline Calendar Built for Client Work"), schema (WebPage + BreadcrumbList + FAQPage, no SoftwareApplication), and sitemap entry (priority 0.84, monthly, identical to all 5 siblings) are all healthy and are NOT recommended for change.
+- Structural anomaly, unrelated to discovery: this is the only one of the 6 Feature pages with no relatedLinks section at all — its only outbound links are 4 audienceLinks (Freelancer Solution, small-agencies, project-managers, web-designers). Noted for completeness; not part of this phase's recommendation (would be a content change, out of scope for a discovery-only phase).
+- Confirms this phase is genuinely a discovery-only question — the page itself is healthy.
+
+### 15.2 Feature discovery matrix (all 6 Features)
+
+| Feature | Footer | Header/Nav | Homepage | Contextual inbound links | Sitemap | Discovery strength |
+|---|---|---|---|---|---|---|
+| Email to Tasks | YES | NO (none have it) | NO | Solution featureLinks; inbound from AI Task Extractor | YES | Strong |
+| AI Task Extractor | YES | NO | NO | Solution featureLinks; inbound from Screenshot-to-Tasks, Email-to-Tasks, Client Feedback to Tasks | YES | Strong |
+| Screenshot to Tasks | YES | NO | NO | Solution featureLinks; inbound from AI Task Extractor, Client Feedback to Tasks | YES | Strong |
+| Client Feedback to Tasks | YES | NO | NO | Solution featureLinks; inbound from Client Project Tracker | YES | Strong |
+| Client Project Tracker | YES | NO | YES | Solution featureLinks; inbound from Client Feedback to Tasks | YES | Strong |
+| Project Deadline Calendar | NO | NO | YES | 4 Use Cases (web-designers, wordpress-freelancers, project-managers, small-agencies) — NOT in Solution featureLinks | YES | Medium — strong contextual/Homepage linking, but missing both sitewide-template surfaces (Footer, Solution grid) |
+
+Header/Nav is uniformly NO for all 6 — no Feature page is individually listed in `landing-header.tsx` ("Features" points to the homepage `#features` anchor). This is the established, uniform pattern, not a Calendar-specific gap.
+
+### 15.3 Footer audit
+
+1. **Is Calendar currently listed** in `app/components/landing/landing-footer.tsx`'s `productLinks`? NO — confirmed by direct inspection. 5 of 6 Features are listed (Email to tasks, Screenshot to tasks, AI task extractor, Client feedback to tasks, Client project tracker); Calendar/Work Calendar is the sole omission. The historical issue is CONFIRMED CURRENT, not stale.
+2. **Should it be added?** YES — matches every sibling Feature; no evidenced reason found to treat Calendar differently.
+3. **Where should it appear?** Appended after "Client project tracker" (the last Feature entry), preserving the existing feature-launch-order pattern and requiring no reordering of the other 11 entries.
+4. **Does adding it create an overly long Product column?** LOW risk — the column already holds 12 entries in production today; one more (13) is a minor addition, not a structural change. Recommend a quick visual check at implementation time, not a blocker to the recommendation.
+5. **Is the current footer ordering logical?** YES — grouped by type (general nav, Solution, then Features in launch order); no reordering recommended.
+6. **Add only Calendar, or is the footer architecture already complete otherwise?** Add only Calendar — no other Feature, Solution, Resource, or Use Case is missing from its respective footer column.
+
+### 15.4 Header / navigation
+
+- `landing-header.tsx`'s `navigation` array has 6 entries, none of which are individual Feature links ("Features" → homepage `#features` anchor). No Features dropdown/menu exists anywhere in the codebase.
+- **Recommendation: NO CHANGE.** Creating a dropdown or individually surfacing Calendar in header nav would be architecturally inconsistent with how all 5 sibling Features are treated, and is explicitly out of scope for this phase.
+
+### 15.5 Homepage
+
+- The Homepage (via `homepage-post-extraction-section.tsx`'s capabilities list, "Everything you need after the first request") ALREADY links to Calendar: capability #5, "Plan client work on a calendar" → `/features/project-deadline-calendar`, "Explore the Work Calendar." This link already existed prior to this project's SEO work and was not added by any prior phase.
+- **Decision: LINK already exists. NO ACTION NEEDED.** This directly resolves what would otherwise be Part 5's question — the Homepage does not need a new section or a new link.
+
+### 15.6 Contextual internal-link audit
+
+| Candidate | Decision | Reason |
+|---|---|---|
+| Freelancer Solution (featureLinks grid) | LINK | Confirmed gap: the Solution page's "Explore Text2Task features" grid lists all 5 OTHER Features (including Client Project Tracker, added in P1B) but not Calendar — the only Feature missing from this grid. This is a newly-confirmed finding from this audit, not previously documented in §6.1. |
+| Use Case — project-managers | Already linked | relatedLinks: "Project deadline calendar" → Calendar, already present. No action. |
+| Use Case — small-agencies | Already linked | relatedLinks: "Plan client deadlines in one calendar" → Calendar, already present. No action. |
+| Use Case — web-designers | Already linked | relatedLinks: "Calendar for project deadlines" → Calendar, already present. No action. |
+| Use Case — wordpress-freelancers | Already linked | relatedLinks: "Client work calendar" → Calendar, already present. No action. |
+| Use Case — virtual-assistants | DO NOT LINK | No natural scheduling/deadline emphasis found in its actual current copy (per the P1B audit of this page); forcing a link would not reflect existing content. |
+| Email to Tasks / AI Task Extractor / Screenshot to Tasks / Client Feedback to Tasks (sibling Features) | DO NOT LINK | "Deadline" appears only as one extractable data field on these pages, not as a workflow tie-in to a calendar view; no sibling Feature currently cross-links to any other Feature purely for a shared field mention, and forcing one here would be inconsistent with that established pattern. |
+
+Net new recommendation from this audit: exactly ONE contextual link (Freelancer Solution) is a genuine, confirmed gap. Every other strong candidate is either already linked (4 Use Cases) or has no natural fit (virtual-assistants, sibling Features).
+
+### 15.7 Sitemap
+
+- Confirmed present in `app/sitemap.ts`'s `featureRoutes` array: `{ path: "/features/project-deadline-calendar", priority: 0.84, changeFrequency: "monthly" }` — identical to all 5 sibling Feature routes.
+- NO CHANGE needed.
+
+### 15.8 Discovery severity
+
+- Classification: **LOW** (downgraded from an assumed MEDIUM/HIGH, based on evidence gathered in this audit — not preserved from the original prior note, which only ever specifically named the footer).
+- Reasoning: the page already has UNUSUALLY STRONG contextual discovery — 4 Use Cases link to it (more than any other single Feature receives from Use Cases) plus a direct Homepage link (shared only with Client Project Tracker among the 6 Features) plus a correct sitemap entry. The only real gaps are the two sitewide-template surfaces every OTHER Feature has 100% coverage on: the Footer and the Freelancer Solution's featureLinks grid.
+- A footer-only fix would resolve the originally-flagged, sitewide-template gap. Footer + the one Solution-grid link (newly confirmed by this audit) together achieve full structural parity with all 5 sibling Features on every surface this audit checked.
+- Broader discovery work (new sections, additional Use Case links, header/nav changes) is NOT justified — the evidence does not support it, and Part 6's own instruction against "site-wide link stuffing" applies.
+
+### 15.9 Exact minimal future implementation plan (NOT executed this turn)
+
+| File | Current state | Proposed change | Why | Discovery benefit | SEO risk |
+|---|---|---|---|---|---|
+| `app/components/landing/landing-footer.tsx` | `productLinks` has 12 entries; Calendar is the only Feature missing | Add one entry: `{ label: "Project deadline calendar" (or "Work Calendar", to be finalized at implementation), href: "/features/project-deadline-calendar" }`, appended after "Client project tracker" | Matches the exact pattern used for all 5 sibling Features and for Client Project Tracker in P1A | Sitewide footer presence on every page, matching siblings | None — single array entry, no copy/route/canonical change |
+| `app/solutions/freelancer-project-management-software/page.tsx` | `featureLinks` has 5 entries (all Features except Calendar) | Add one entry: `{ href: "/features/project-deadline-calendar", title: <TBD, e.g. "Work Calendar">, text: <TBD, e.g. "Plan project deadlines and scheduled client work in one calendar."> }` | Matches the exact pattern used for Client Project Tracker's addition to this same grid in P1B; closes the one confirmed gap in this grid | Highest-authority Solution page now links to all 6 Features, matching sibling parity | None — single array entry, no copy/route/canonical change; this file has been edited under narrow, explicitly-scoped instructions 5 times this session and would need its own explicit approval again |
+| Any other file | n/a | NO CHANGE recommended | No other confirmed gap found by this audit | n/a | n/a |
+
+### 15.10 Test plan (not created this turn)
+
+- Likely new file: `app/components/landing/landing-footer.test.tsx` (first test file for this component) — asserts the Calendar href is present exactly once, alongside the other 5 Feature hrefs, with no duplicate.
+- Likely new file: `app/solutions/freelancer-project-management-software/page.test.tsx` already exists (from §14) — extend it with one assertion that the featureLinks grid now includes Calendar's href.
+- Re-run (not modify) `app/components/landing/homepage-post-extraction-section.test.tsx` and `app/lib/schema-dangling-entity-references.test.ts` as regression sanity checks — neither needs new assertions, since the Homepage link and schema are already correct and unchanged by this plan.
+- Do not snapshot the footer or Solution page in full; assert only href presence/uniqueness, matching this project's established minimal-assertion convention.
+
+### 15.11 Unresolved issues
+
+- Exact footer link label is not finalized — candidates are "Project deadline calendar" (matches the page's own URL/topic framing, and the exact wording already used by the project-managers Use Case's relatedLinks entry) or "Work Calendar" (matches the page's own H1 eyebrow/breadcrumb name). Both are accurate; the choice should be made at implementation time, not assumed here.
+- Exact Freelancer Solution featureLinks title/description text is not finalized — should follow the established pattern of the other 5 entries on that page (short title + one-sentence benefit description) once approved.
+- The Calendar page's own missing relatedLinks section (§15.1) is a real structural anomaly but is a content change, not a discovery change — explicitly out of scope for this phase; not included in the §15.9 plan.
+
+### 15.12 Exact next action
+
+> **Next action (superseded — see §16):** The §15.9 blueprint was implemented on 2026-08-30. §15.1–§15.11 above are preserved unchanged as decision history — the plan they describe is exactly what was built. §16 records the implementation result.
+
+---
+
+## 16. P2 — Project Deadline Calendar Discovery Reinforcement — Implementation (2026-08-30) — COMPLETE
+
+Implements the §15.9 blueprint exactly, both recommended copy strings used verbatim after accuracy verification against the Calendar page's own copy. The Calendar Feature page itself, the Homepage, all Use Cases, header/nav, and the sitemap were not touched.
+
+### 16.1 Final copy
+
+- **Footer label:** "Project deadline calendar"
+- **Footer href:** `/features/project-deadline-calendar`
+- **Solution-grid title:** "Project Deadline Calendar"
+- **Solution-grid description:** "See project deadlines and upcoming work in one calendar built for client projects."
+- **Solution-grid href:** `/features/project-deadline-calendar`
+
+The recommended description was verified against the Calendar page's own hero lead ("See project deadlines, schedule client work, and add manual events in one clear calendar") and FAQ ("A project deadline calendar gives you one calendar view of your project deadlines and scheduled work, along with the project and client context behind each date") before use — it accurately reflects the real feature (deadlines + manual/scheduled work, in a client-project context) with no automation overclaim. No wording adjustment was needed; used verbatim as recommended.
+
+### 16.2 Exact production files changed
+
+- `app/components/landing/landing-footer.tsx` — one new `productLinks` entry, appended after "Client project tracker."
+- `app/solutions/freelancer-project-management-software/page.tsx` — one new `featureLinks` entry, appended after "Client Project Tracker."
+- No other production file was touched.
+
+### 16.3 Confirmations
+
+| Item | Result |
+|---|---|
+| Calendar Feature page (`app/features/project-deadline-calendar/`) untouched? | CONFIRMED — `git diff` against this path returns empty |
+| Homepage / `homepage-post-extraction-section.tsx` untouched? | CONFIRMED — `git diff` returns empty |
+| All Use Cases untouched? | CONFIRMED — no Use Case file appears in the diff |
+| Header/Nav (`landing-header.tsx`) untouched? | CONFIRMED — `git diff` returns empty |
+| Sitemap (`app/sitemap.ts`) untouched? | CONFIRMED — `git diff` returns empty |
+| Calendar metadata/title/H1/canonical/schema unchanged? | CONFIRMED — the page file itself has zero diff |
+| Freelancer Solution title/meta/H1/canonical/schema unchanged? | CONFIRMED — only the `featureLinks` array changed; verified by the existing identity test (still passing) |
+
+### 16.4 Tests
+
+- `app/components/landing/landing-footer.test.tsx` — NEW. First test file for this component. 3 tests: Calendar link renders with exact label/href; Calendar link appears exactly once; all 6 Feature pages now have exactly one footer link each.
+- `app/solutions/freelancer-project-management-software/page.test.tsx` — MODIFIED. One new describe block, 1 new test: Calendar link present with exact href. The existing identity tests (canonical/title/H1/no-keyword-stuffing) were re-run unmodified and still pass.
+
+### 16.5 Verification results
+
+- Targeted tests: 75 passed across 5 files (2 new/modified files + `homepage-post-extraction-section.test.tsx` + `schema-dangling-entity-references.test.ts` + `app/page.test.ts`, all re-run as regression sanity checks).
+- No sitemap test file exists in this codebase (confirmed by direct check) — `sitemap.ts` was not touched, so there was nothing to re-run there; consistent with the §15.7 audit finding.
+- Full project test suite: 5,082 tests passed across 189 test files — zero regressions.
+- `npx tsc --noEmit`: clean, zero errors.
+- `npm run build`: succeeded; all 6 Feature routes, the Solution route, and every other route confirmed present in the output.
+- `git diff --check`: clean (harmless LF/CRLF line-ending notices only).
+- Full diff reviewed line by line — exactly 2 production files changed (one array entry each), 1 new test file, 1 modified test file. The production diff did not become materially broader than expected.
+
+### 16.6 Discovery QA
+
+| Check | Result |
+|---|---|
+| All 6 Feature pages now have Footer Product exposure? | YES — verified by an automated test |
+| Calendar no longer the sole Footer omission? | YES |
+| All 6 Feature pages now appear in the Freelancer Solution feature grid? | YES — verified by an automated test |
+| Header/Nav unchanged? | YES — confirmed empty diff |
+| Homepage unchanged? | YES — confirmed empty diff |
+| Existing Use Case → Calendar links unchanged? | YES — no Use Case file touched |
+| Sitemap unchanged? | YES — confirmed empty diff |
+| Calendar Feature page byte/line unchanged? | YES — confirmed empty diff |
+| Calendar metadata/H1 unchanged? | YES |
+| Freelancer Solution H1/title/meta unchanged? | YES — verified by the pre-existing identity test |
+| No exact-match keyword stuffing introduced? | YES — one new short array entry per file, natural non-repetitive copy |
+
+### 16.7 Roadmap status
+
+- Project Deadline Calendar footer/navigation reinforcement: COMPLETE. This closes the last unstarted item in the §8 P2 tier.
+- Note for roadmap accuracy (§6.1): the historical observation that project-deadline-calendar was missing from the footer is now resolved.
+
+### 16.8 Next SEO roadmap phase
+
+> **Next action (superseded — see §17):** This pointed at the AI Task Extractor differentiation item next. That item has since been AUDITED and MAPPED in §17 (not yet implemented).
+
+---
+
+## 17. P3 — AI Task Extractor Pre-Implementation Audit (2026-08-30)
+
+> **Status: AI TASK EXTRACTOR DIFFERENTIATION — MAPPED, NOT IMPLEMENTED**
+> This section is an audit and implementation blueprint only. No production code was changed. Nothing here is authorized to be implemented without a separate, explicit instruction.
+
+### 17.1 Current page identity
+
+- Route/file: `app/features/ai-task-extractor/page.tsx`
+- Title: "AI Task Extractor: Extract Tasks and Action Items From Text" — already generic, channel-agnostic, no overlap found.
+- Meta description: "Paste notes, client messages, or other text to create a reviewable project and task draft. Edit supported fields, remove tasks, and save only after approval." — "client messages" appears once, as the second of three listed input types, not leading.
+- Canonical: `/features/ai-task-extractor` — unchanged, no issue found.
+- H1: "Extract tasks and action items from text" — already generic, no overlap found.
+- Hero support copy: "Paste client messages, notes, or other unstructured text. Text2Task organizes project context and related tasks into a draft you can review before saving." — "client messages" is the FIRST word of the FIRST sentence directly under the H1. This is the single most prominent instance of channel-centric framing on the page.
+- No test file exists for this page today — only the shared, generic `schema-dangling-entity-references.test.ts` touches it (schema shape only, no content assertions).
+- Product truth was verified directly against source code, not assumed from copy: `app/api/extract/route.ts` accepts a plain string `input` (no channel-specific parameters), calling `extractProjectFromText`; `lib/extraction/schemas.ts`'s `TextExtractedProjectMetadataSchema`/`TextExtractedTaskSchema` confirm the exact extracted fields — title, summary, client_name, contact_name, client_phone, client_email, client_notes, amount, currency_code, deadline_text, priority — which matches every capability the page claims, field for field. No inbox/WhatsApp/email connection logic exists anywhere in this code path.
+
+### 17.2 Adjacent-page intent matrix
+
+| Page | Primary intent | Channel owned | Terminology it owns | AI Task Extractor should avoid leading with |
+|---|---|---|---|---|
+| Email to Tasks (Feature) | Commercial tool, email-specific intake | Email | "email to task" | "email" as a leading example (already not an issue — no overlap found) |
+| Screenshot to Tasks (Feature) | Commercial tool, screenshot-specific intake | Screenshot/image | "screenshot to tasks" | "screenshot" as a leading example (already correctly secondary/absent) |
+| Turn Client Messages Into Tasks (Resource) | Informational how-to, message-based intake generally | "Client messages" (chat-style) | "client messages", "turn client messages into tasks" | "client message(s)" as the FIRST/default example — this is the central finding of this audit |
+| How to Turn Emails Into Tasks (Resource) | Informational how-to, email-specific | Email | "turn emails into tasks" | No meaningful overlap found on the AI Task Extractor page |
+| How to Turn Screenshots Into Tasks (Resource) | Informational how-to, screenshot-specific | Screenshot | "turn screenshots into tasks" | No meaningful overlap found on the AI Task Extractor page |
+| How to Extract Action Items From Text (Resource) | AI Task Extractor's OWN healthy informational counterpart (Feature/Resource pairing, same pattern as Email and Screenshot) | None — generic text | "extract action items from text" | N/A — this pairing is healthy and out of scope |
+
+### 17.3 Verified product-truth matrix
+
+| Claim | Safe to state? | Evidence |
+|---|---|---|
+| Paste text | YES | `app/api/extract/route.ts`: `ExtractRequestSchema` requires a plain string `input` |
+| Analyze unstructured text | YES | `extractProjectFromText` processes the raw string; no structural/format requirement enforced |
+| Identify project/task information | YES | `TextExtractedProjectMetadataSchema` + `TextExtractedTaskSchema` |
+| Extract tasks | YES | `tasks: z.array(TextExtractedTaskSchema)` |
+| Extract deadlines | YES | `deadline_text` field |
+| Extract priorities | YES | `priority`: low/medium/high enum |
+| Extract budget/amount details | YES | `amount`, `currency_code` fields |
+| Extract client/contact information | YES | `client_name`, `contact_name`, `client_phone`, `client_email`, `client_notes` fields |
+| Produce a reviewable project | YES | project metadata object returned separately from tasks, matches the page's "draft you review" framing |
+| Allow review before saving | YES | confirmed sitewide pattern; page's own FAQ explicitly states no auto-save |
+| Automatic inbox monitoring | UNSAFE — not claimed, and must not be | No inbox/mailbox logic anywhere in this code path |
+| Autonomous task creation from messages | UNSAFE — not claimed, and must not be | FAQ: "Does Text2Task save or assign tasks automatically? No." |
+| Automatic saving | UNSAFE — not claimed, and must not be | Same FAQ answer |
+| Universal document/file parsing | UNSAFE — not claimed, and must not be | API only accepts a string; no file upload in this schema |
+| Background integrations | UNSAFE — not claimed, and must not be | No integration code found |
+
+Finding: the page currently makes NO unsafe claims. Every claim on the page today is accurate and evidenced. The issue this audit identifies is purely one of example-ordering emphasis, not overclaiming.
+
+### 17.4 Overlap analysis
+
+| Element | Current wording | Overlaps with | Severity | Why it matters | Recommended action |
+|---|---|---|---|---|---|
+| Title | "AI Task Extractor: Extract Tasks and Action Items From Text" | None | NONE | Already generic | Keep |
+| Meta description | "Paste notes, client messages, or other text..." | Messages Resource | LOW | "client messages" is 2nd of 3 listed items, not leading | Keep (optional low-priority reorder) |
+| H1 | "Extract tasks and action items from text" | None | NONE | Already generic | Keep |
+| Hero support copy | "Paste client messages, notes, or other unstructured text." | Messages Resource | MEDIUM | "client messages" is the first word of the first sentence under the H1 — the single most prominent instance on the page | Refine — reorder |
+| How-it-works step 1 | "Add the client message, notes, brief, or other text..." | Messages Resource | MEDIUM | Second-most-visible instance | Refine — reorder |
+| Example input (`id="example"`) | Business-brief-style text ("Website refresh for Acme...") | None | NONE | Already channel-neutral, reads like a written brief, not a chat message | Keep |
+| Section 5 intro | "A client message or note may contain the work itself..." | Messages Resource | LOW-MEDIUM | Leads with "client message" a third time | Refine — reorder |
+| Final CTA body | "Paste a client message or note, review the organized project..." | Messages Resource | LOW-MEDIUM | Leads with "client message" a fourth time; the page's last impression | Refine — reorder |
+| FAQ Q1 answer | "You can paste client messages, notes, briefs, meeting notes..." | Messages Resource | LOW | Lists "client messages" first, but FAQ has lower visual prominence than hero | Optional refine, lower priority |
+| relatedLinks / capability list / trust section / audience section | As-is | None found | NONE | Already healthy, appropriately scoped | Keep |
+
+### 17.5 Cannibalization severity
+
+- Overall: **LOW-MEDIUM**. NOT high — no unsafe claims, no title/H1/metadata convergence with any adjacent page, no literal duplication of another page's title or H1.
+- The issue is narrowly confined to repeated example-ordering emphasis: "client message(s)" is listed FIRST in 4 separate sentences across the page's supporting copy (hero, how-it-works step 1, section 5, final CTA), which cumulatively risks the page reading as "the client messages tool" rather than "the generic text tool" — even though the title, H1, worked example, and capability list are all already correctly generic.
+- This matches and confirms — via direct page-content evidence, not by assumption — the blueprint's existing §3B note ("soft overlap: 'client messages' language shared with Messages cluster").
+
+### 17.6 Permanent intent boundary
+
+1. **AI Task Extractor should own:** the generic, channel-agnostic text/unstructured-input extraction capability — paste any text (notes, briefs, meeting notes, requests, messages) and get a structured project+task draft.
+2. **Email to Tasks should own:** the email-specific commercial intent ("email to task").
+3. **Screenshot to Tasks should own:** the image/screenshot-specific commercial intent.
+4. **Messages Resource should own:** the informational "how to turn client messages into tasks" concept and the primary claim on "client messages" as a leading phrase.
+5. **AI Task Extractor should use naturally, not leading:** "client messages" remains accurate and should still appear — just not as the first-listed example, repeatedly.
+6. **AI Task Extractor should lead with instead:** "notes," "briefs," "pasted text," "unstructured text," "project details" — neutral terms already used elsewhere on the same page.
+
+This boundary was derived independently from direct evidence (the repeated first-position phrasing found in §17.4), not adopted blindly from the phase's own suggested conceptual model — the two happen to agree.
+
+### 17.7 Title / meta / H1 / hero decisions
+
+- **SEO title:** KEEP. Already generic, already strongly owns the page's identity; no evidence justifies a change.
+- **Meta description:** KEEP (default). Low-severity, optional reorder only if convenient alongside other changes — not required on its own merits, and not being changed merely to add keywords.
+- **H1:** KEEP. Already generic and correctly positioned; changing it would destabilize an identity that is not actually the problem.
+- **Hero support copy:** CHANGE (primary recommended fix). This is the single highest-visibility instance of the pattern this audit exists to fix.
+
+Matches this phase's own default preference exactly: minimum sufficient differentiation, supporting copy only, primary identity (title/H1) left untouched.
+
+### 17.8 Section-by-section decisions
+
+| Section | Decision | Reason |
+|---|---|---|
+| Hero (title/H1) | KEEP | Already generic; not the source of the issue. |
+| Hero support copy (heroLead) | REFINE | Primary fix — reorder so "client messages" is not the first word. |
+| Worked example (`id="example"`) | KEEP | Already channel-neutral; no change needed. |
+| Problem section (problemPoints) | KEEP | Already channel-neutral ("Instructions and background information are mixed together," etc.) — no channel words at all. |
+| How it works — step 1 text | REFINE | Second-most-visible instance of the pattern. |
+| How it works — steps 2-3 | KEEP | No channel-centric wording found. |
+| Capability list | KEEP | Neutral field descriptions, not channel claims. |
+| Section 5 ("A task extractor should preserve the bigger picture") | REFINE | Intro paragraph leads with "client message or note." |
+| Trust section | KEEP | No channel-centric wording found. |
+| Audience section | KEEP | No channel-centric wording found. |
+| Related links | KEEP | Already a healthy, appropriately-scoped capability-hub set. |
+| FAQ Q1 answer | REFINE (optional, lower priority) | Same pattern, lower visual prominence than hero. |
+| FAQ Q2–Q6 | KEEP | No channel-centric wording found. |
+| Final CTA body | REFINE | Leads with "client message or note" — the page's last impression. |
+
+Net scope: 4 required sentence-level refinements + 1 optional. Every other section is KEEP. This is intentionally small — the page should still feel like the same Feature page after implementation.
+
+### 17.9 Example-input strategy
+
+- The page's actual worked example (`id="example"` section) is ALREADY channel-neutral: a business-brief-style paragraph ("Website refresh for Acme. Update the hero copy, fix the mobile menu, and add the pricing section...") that reads like a written brief, not a chat message or email. KEEP as-is — no change needed to the example itself.
+- For the 4 REFINE targets, lead with neutral terms already used elsewhere on the page — "notes," "briefs," "pasted text," "unstructured text," "project details" — and mention "client messages" later in the same sentence, not removed entirely. Matches this project's established "rebalance, not erase" approach (same pattern used in the Web Designers Use Case differentiation, §14).
+- Do not claim support for file/document formats the product does not accept — confirmed by source code (§17.1) that the extraction API accepts only a plain string, no file upload.
+
+### 17.10 Internal-link decisions
+
+| Candidate | Decision | Reason |
+|---|---|---|
+| Screenshot to Tasks (existing relatedLinks) | KEEP | Already present, correct sibling-channel cross-link, healthy capability-hub pattern. |
+| Email to Tasks (existing relatedLinks) | KEEP | Same. |
+| How to Organize Client Requests as a Freelancer (existing relatedLinks) | KEEP | Already present, not part of this audit's concern. |
+| How to Extract Action Items From Text (existing relatedLinks) | KEEP | AI Task Extractor's own healthy Resource counterpart. |
+| Turn Client Messages Into Tasks (Messages Resource) | DO NOT ADD | Deliberately adding a new link to the Messages Resource during a phase whose entire purpose is de-emphasizing the "client messages" framing would work against this phase's own goal; no evidenced gap exists in the current link architecture. |
+| Client Feedback to Tasks | DO NOT ADD | Conceptually different (follow-up feedback on an existing saved project, not initial extraction); no evidenced gap. |
+
+Inbound links to AI Task Extractor were also confirmed healthy: Screenshot to Tasks, Client Feedback to Tasks, and the Freelancer Solution's featureLinks grid, plus the Messages Resource itself, all already link in — this page is not under-discovered. This phase is about internal copy emphasis, not discovery (unlike §15/§16's Calendar work).
+
+### 17.11 Exact minimal future implementation blueprint (NOT executed this turn)
+
+| Field/section | Current | Proposed direction (example only, not final copy) | Why |
+|---|---|---|---|
+| `hero.heroLead` | "Paste client messages, notes, or other unstructured text. Text2Task organizes project context and related tasks into a draft you can review before saving." | Reorder to lead with neutral terms, e.g. "Paste notes, briefs, client messages, or other unstructured text..." (final wording TBD) | Removes "client messages" as the first word after the H1 — the single strongest overlap signal |
+| `workflowSteps[0].text` | "Add the client message, notes, brief, or other text you want to organize." | Reorder similarly | Second-most-visible instance |
+| Section 5 intro paragraph | "A client message or note may contain the work itself, background information..." | Reorder / lead with "text" or "note" | Third instance |
+| Final CTA body paragraph | "Paste a client message or note, review the organized project and tasks, and save only the result you approve." | Reorder | Fourth instance; the page's last impression |
+| `faqs[0].answer` (optional, lower priority) | "You can paste client messages, notes, briefs, meeting notes, or other unstructured text..." | Optional reorder | Consistency once the required four are fixed |
+| title, meta description, H1, worked example, capability list, trust section, audience section, related links, CTA hrefs, schema | As-is | NO CHANGE | Already correctly generic/healthy |
+
+`email-to-tasks/page.tsx`, `screenshot-to-tasks/page.tsx`, and `turn-client-messages-into-tasks/page.tsx`: NO CHANGE for any of the three — not the source of the imbalance; each already correctly owns its own channel.
+
+### 17.12 Test plan (not created this turn)
+
+- Likely new file: `app/features/ai-task-extractor/page.test.tsx` (first test file for this page). Recommended assertions: the four refined sentences no longer start with "client message"; H1/title remain unchanged and generic; no automatic inbox/WhatsApp-sync/auto-save overclaim is introduced (mirrors the pattern already established for email-to-tasks and client-project-tracker's own test files); relatedLinks to Screenshot to Tasks and Email to Tasks remain present.
+- Do not snapshot the whole page; assert only the specific invariants this phase protects.
+
+### 17.13 SEO evidence discipline
+
+- No search volume was invented in this audit. The blueprint's own recorded evidence (§3B) states weak/no meaningful non-brand GSC signal for the AI Task Extraction cluster, and no strong validated volume for the exact phrase "ai task extractor" was established in prior research.
+- The architectural reason for this phase is product clarity and generic-capability ownership, not a fabricated search-demand claim.
+
+### 17.14 Unresolved issues
+
+- Exact final wording for the 4 (or 5, if the optional FAQ item is included) refined sentences is not decided — only the reordering direction was evaluated. Final copy must be proposed and approved in the implementation turn.
+- Whether the FAQ Q1 reorder is included is a judgment call for the implementation turn, not resolved here — it is explicitly lower priority than the other four.
+
+### 17.15 Exact next action
+
+> **Next action (superseded — see §18):** Wait for an explicit instruction to implement the §17.11 blueprint. That instruction was given and the blueprint was implemented on 2026-08-30 — see §18.
+
+---
+
+## 18. P3 — AI Task Extractor Implementation (2026-08-30)
+
+> **Status: AI TASK EXTRACTOR COPY DIFFERENTIATION — COMPLETE**
+> Implements the blueprint mapped in §17.11 exactly. Narrow sentence-level copy refinement only — no route, title, meta description, canonical, H1, schema, sitemap, worked example, CTA label, page structure, relatedLinks structure, or section-ordering change. Nothing staged, committed, pushed, or deployed.
+
+### 18.1 Exact sentence changes
+
+All 4 required changes plus the optional FAQ change were implemented as minimal single-item reorders — the smallest possible edit that removes "client message(s)" as the first word of each sentence while adding no new claims and changing no other wording.
+
+| # | Location | Old | New |
+|---|---|---|---|
+| 1 (required) | `hero.heroLead` (`app/features/ai-task-extractor/page.tsx`, rendered under the H1) | "Paste client messages, notes, or other unstructured text. Text2Task organizes project context and related tasks into a draft you can review before saving." | "Paste notes, client messages, or other unstructured text. Text2Task organizes project context and related tasks into a draft you can review before saving." |
+| 2 (required) | `workflowSteps[0].text` | "Add the client message, notes, brief, or other text you want to organize." | "Add the notes, brief, client message, or other text you want to organize." |
+| 3 (required) | Section 5 intro (`sectionLead` under "Action items are often mixed with project context") | "A client message or note may contain the work itself, background information, dates, amounts, and contact details in the same paragraph. A simple task list can lose that context, while manual restructuring takes additional time." | "A note or client message may contain the work itself, background information, dates, amounts, and contact details in the same paragraph. A simple task list can lose that context, while manual restructuring takes additional time." |
+| 4 (required) | Final CTA body | "Paste a client message or note, review the organized project and tasks, and save only the result you approve." | "Paste a note or client message, review the organized project and tasks, and save only the result you approve." |
+| 5 (optional) | `faqs[0].answer` | "You can paste client messages, notes, briefs, meeting notes, or other unstructured text containing work you want to organize." | "You can paste notes, briefs, meeting notes, client messages, or other unstructured text containing work you want to organize." |
+
+### 18.2 FAQ decision
+
+**REFINE** (item 5 above was implemented, not just kept). Reasoning: §17.8 already recorded this as a REFINE decision (optional/lower priority, not KEEP), and after the 4 required fixes this remained the one surviving instance of "client message(s)" leading a sentence on the page — leaving it unchanged would have reintroduced the exact pattern this phase exists to remove, for internal consistency with the other four. The question text was not touched; only the answer's example ordering changed. Meaning is unchanged — the same five input types are listed, only reordered.
+
+### 18.3 Confirmations — unchanged elements
+
+- **Title:** unchanged — "AI Task Extractor: Extract Tasks and Action Items From Text" (verified: not present in the diff).
+- **Meta description:** unchanged — "Paste notes, client messages, or other text to create a reviewable project and task draft. Edit supported fields, remove tasks, and save only after approval." This sentence already led with "notes," not "client messages" (confirmed by §17.1/§17.4 as already-healthy, KEEP), so it required no edit and received none.
+- **Canonical:** unchanged — `/features/ai-task-extractor`.
+- **H1:** unchanged — "Extract tasks and action items from text" (verified: not present in the diff).
+- **Worked example (`id="example"`):** unchanged — the Acme business-brief text and its output panel (verified: not present in the diff).
+- **Schema (WebPage/Breadcrumb/FAQPage JSON-LD):** unchanged — the FAQPage schema pulls `faq.answer` directly from the `faqs` array, so its text automatically reflects change #5 above; no schema *structure*, `@id`, or entity type was touched.
+- **relatedLinks, capability list, trust section, audience section, problem section, section ordering:** all unchanged.
+- **Adjacent pages:** `app/features/email-to-tasks/page.tsx`, `app/features/screenshot-to-tasks/page.tsx`, `app/resources/turn-client-messages-into-tasks/page.tsx`, `app/resources/how-to-turn-emails-into-tasks/page.tsx`, `app/resources/how-to-turn-screenshots-into-tasks/page.tsx` — none modified, confirmed by `git status --short` showing no entries for any of these paths.
+
+### 18.4 Exact files changed
+
+- **Production file modified:** `app/features/ai-task-extractor/page.tsx` — 5 single-line string edits only (see §18.1). Full diff reviewed line-by-line; confirmed no other lines touched.
+- **Test file created (new):** `app/features/ai-task-extractor/page.test.tsx` — first test file for this page. 10 tests across 4 groups: locked identity (title/H1/worked example unchanged), copy-emphasis rebalance (no sentence leads with "client message(s)"; the phrase still appears; workflow step 1 exact text), no-unsafe-claims (no inbox/email/WhatsApp sync claim, no auto-save-without-review claim), and related-links presence (Email to Tasks, Screenshot to Tasks, both informational Resources).
+
+### 18.5 Channel-neutrality QA
+
+Every occurrence of "client message(s)" on the page was re-grepped after the edit (case-insensitive, full file):
+
+| Line | Sentence start | Leads with "client message(s)"? |
+|---|---|---|
+| Meta description | "Paste notes, client messages, or other text..." | No (already correct pre-edit) |
+| `workflowSteps[0].text` | "Add the notes, brief, client message..." | No |
+| `faqs[0].answer` | "You can paste notes, briefs, meeting notes, client messages..." | No |
+| `hero.heroLead` | "Paste notes, client messages..." | No |
+| Section 5 intro | "A note or client message..." | No |
+| Final CTA body | "Paste a note or client message..." | No |
+
+Result: **0 of 6 occurrences now lead a sentence.** All 6 still contain the phrase — per §17.6/the core copy rule, "client message" was never meant to be erased, only demoted from the default leading example. The generic-extraction framing (title, H1, hero's overall identity, worked example) was already healthy per §17 and remains unchanged.
+
+### 18.6 Adjacent-page intent QA
+
+Re-confirmed against the §17.2 matrix after implementation — no adjacent page was touched, so no re-audit of their content was needed; intent boundaries stand exactly as recorded in §17.6:
+
+- **AI Task Extractor** = generic, channel-agnostic supplied-text extraction (reinforced, not changed, by this phase).
+- **Email to Tasks** = email-specific commercial intake. Unchanged.
+- **Screenshot to Tasks** = screenshot/image-specific commercial intake. Unchanged.
+- **Turn Client Messages Into Tasks (Resource)** = informational "client messages" how-to, still the sole owner of that phrase as a leading/primary claim. Unchanged — and, if anything, the boundary is now cleaner, since the Feature page no longer leads with the same phrase in 4 places.
+
+### 18.7 Test results
+
+- **Targeted:** `npx vitest run app/features/ai-task-extractor app/features/email-to-tasks app/features/screenshot-to-tasks app/resources/how-to-turn-emails-into-tasks app/resources/how-to-turn-screenshots-into-tasks app/components/landing/landing-footer.test.tsx app/solutions/freelancer-project-management-software/page.test.tsx` → **5 test files, 27 tests, all passed.** (Only 5 files matched — screenshot-to-tasks and how-to-turn-screenshots-into-tasks have no dedicated test files yet, consistent with pre-existing repository state; not a gap introduced by this phase.)
+- **Schema regression:** `npx vitest run app/lib/schema-dangling-entity-references.test.ts` → **1 file, 57 tests, all passed.**
+- **Full suite:** `npx vitest run` → **190 test files, 5,093 tests, all passed** (up from the pre-existing 189 files / 5,082 tests baseline by exactly +1 file / +11 tests — matching the new `ai-task-extractor/page.test.tsx` file exactly, confirming no other test was silently added, removed, or broken).
+
+### 18.8 TypeScript / build / diff-check
+
+- **TypeScript:** `npx tsc --noEmit` → clean, zero errors.
+- **Build:** `npm run build` → succeeded. `○ /features/ai-task-extractor` confirmed present in the route output as a statically prerendered page.
+- **`git diff --check`:** exit 0 — only pre-existing LF→CRLF line-ending warnings (Windows checkout convention on this repo, not a conflict marker or trailing-whitespace error), consistent with every prior phase in this project.
+
+### 18.9 Working-tree separation
+
+`git status --short` after implementation:
+
+```
+ M app/components/landing/landing-footer.tsx                              <- pre-existing, Calendar phase (§16), untouched this turn
+ M app/features/ai-task-extractor/page.tsx                                <- THIS TURN (P3, §18.1)
+ M app/solutions/freelancer-project-management-software/page.test.tsx     <- pre-existing, Calendar phase (§16), untouched this turn
+ M app/solutions/freelancer-project-management-software/page.tsx          <- pre-existing, Calendar phase (§16), untouched this turn
+ M docs/Text2Task_SEO_Master_Blueprint_2026-08-29.docx                    <- cumulative (Calendar phase + this turn)
+ M docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md                      <- cumulative (Calendar phase + this turn)
+?? app/components/landing/landing-footer.test.tsx                        <- pre-existing, Calendar phase (§16), untouched this turn
+?? app/features/ai-task-extractor/page.test.tsx                          <- THIS TURN (P3, new file, §18.4)
+```
+
+The 4 Calendar-phase entries were confirmed unchanged (not reverted, staged, or modified) throughout this turn per the working-tree-safety instruction. This turn's own production diff is exactly 2 files: 1 modified (`page.tsx`, 5 lines), 1 new (`page.test.tsx`).
+
+### 18.10 Roadmap status
+
+P0 complete. P1 (Client Project Tracker) complete. P1/P2 tier (Email H1, internal linking) complete. P2 tier (Web Designers, Calendar) complete. **P3 (AI Task Extractor) now COMPLETE.** Every item currently recorded in §8's P0–P3 tiers is now either complete or a standing periodic-maintenance item (GSC/Keyword Planner re-validation, lower-priority Use Case optimizations) — no further new-implementation roadmap item is currently mapped. Per this phase's explicit instruction, the next step is a **Final SEO Package Audit / Verification** reviewing the accumulated P1+P2+P3 batch as a coherent whole, before any commit/push decision — not a new optimization phase. See §10.
+
+---
+
+## 19. FINAL SEO PACKAGE AUDIT — 2026-08-30
+
+> **Result: FINAL AUDIT BLOCKED.** One concrete, pre-existing, previously-undetected technical SEO defect was found on `/features/project-deadline-calendar` — a doubled `<title>` tag suffix (`... | Text2Task | Text2Task`), verified empirically via a live dev-server request. Per this audit's explicit instructions, production code was **not** fixed in this turn. No other blocker was found. Every other audited dimension — routes, metadata elsewhere, intent ownership, Client Share product truth, structured data, internal linking, assets, sitemap/redirects, tests, and full verification — passed cleanly.
+
+### 19.1 Repository state
+
+- Branch: `main`. Upstream: `origin/main` (confirmed via `git status -sb`, not assumed).
+- `main` is **7 commits ahead** of `origin/main`.
+- Nothing staged (`git diff --cached` empty).
+- Working tree: 6 modified + 2 untracked files, all attributable to known SEO-package phases (Calendar discovery, P3 AI Task Extractor, cumulative docs) — no unrelated or unexpected file found.
+
+### 19.2 Local unpushed commit inventory
+
+| Hash | Message | Scope | Result |
+|---|---|---|---|
+| `382387a` | Differentiate web designer SEO intent | `web-designers.ts`/`.test.tsx`, Revisions Resource test, docs | PASS |
+| `81ecb0e` | Map web designer SEO differentiation | docs only (audit) | PASS |
+| `373b964` | Differentiate email to tasks SEO intent | `email-to-tasks/page.tsx`, 2 new test files, docs | PASS |
+| `e38731a` | Add client project tracker internal links | Homepage section + test, Freelancer Solution page + test, docs | PASS |
+| `7dd9ac0` | Add client project tracker feature page | Tracker page/CSS/test, footer link, Client Feedback reciprocal link, sitemap entry, schema test, 2 image assets, docs | PASS |
+| `234c7e0` | Map client project tracker SEO implementation | docs only (audit) | PASS |
+| `d7eebd3` | Add SEO master blueprint | docs only (creation) | PASS |
+
+Every unpushed commit's file scope is coherent with its message and belongs to the SEO package; no accidental unrelated file in any commit. History was not rewritten, rebased, or squashed.
+
+### 19.3 Working-tree inventory (uncommitted)
+
+| File | Status | Attribution |
+|---|---|---|
+| `app/components/landing/landing-footer.tsx` | M | Calendar discovery (§16) |
+| `app/components/landing/landing-footer.test.tsx` | new | Calendar discovery (§16) |
+| `app/solutions/freelancer-project-management-software/page.tsx` | M | Calendar discovery (§16) |
+| `app/solutions/freelancer-project-management-software/page.test.tsx` | M | Calendar discovery (§16) |
+| `app/features/ai-task-extractor/page.tsx` | M | P3 (§18) |
+| `app/features/ai-task-extractor/page.test.tsx` | new | P3 (§18) |
+| `docs/Text2Task_SEO_Master_Blueprint_2026-08-29.docx` | M | Cumulative |
+| `docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md` | M | Cumulative |
+
+Unrelated/unexpected files: **NONE.**
+
+### 19.4 Public route / sitemap audit
+
+All 6 Feature routes, the 1 Solution route, all 8 Resource routes, and all 12 Use Case routes (dynamic via `getAllUseCases()`) are present in `app/sitemap.ts` exactly once each. No stale, duplicate, or orphaned sitemap entry found. No auth/dashboard/admin route is exposed in the sitemap. Internal hrefs sampled across Footer, Freelancer Solution, Homepage, Client Feedback ↔ Client Project Tracker, Email Feature ↔ Email Resource, Web Designers ↔ Revisions Resource, and Messages Resource → AI Task Extractor all resolve to real, correctly-spelled routes. **Result: PASS.**
+
+### 19.5 Metadata audit
+
+| Page | Title | Canonical | Result |
+|---|---|---|---|
+| `/features/client-project-tracker` | Plain string, template-safe; verified via live render: single `\| Text2Task` suffix | Correct | PASS |
+| `/features/email-to-tasks` | Plain `pageTitle` for `metadata.title`; separate `ogTitle` (with suffix) used only for OG/Twitter — correct, intentional pattern | Correct | PASS |
+| `/features/ai-task-extractor` | Plain string, template-safe | Correct | PASS |
+| `/features/screenshot-to-tasks` | Plain string, template-safe | Correct | PASS |
+| `/features/client-feedback-to-tasks` | Plain string, template-safe | Correct | PASS |
+| **`/features/project-deadline-calendar`** | **`pageTitle` constant already contains a literal `\| Text2Task"` suffix AND is assigned directly to `metadata.title` as a plain string. The root layout's `title.template: "%s \| Text2Task"` applies on top of it.** | Correct | **ISSUE — see §19.14 blocker** |
+| `/use-cases/web-designers` | `seo.title` plain, template-safe | N/A (Use Case route) | PASS |
+| `/resources/manage-client-revisions-web-designers` | Plain string, template-safe | Correct | PASS |
+| `/solutions/freelancer-project-management-software` | Plain string, template-safe | Correct | PASS |
+| `/about` | Uses `title: { absolute: pageTitle }` to deliberately bypass the template (title itself already contains "Text2Task") | Correct | PASS (reference pattern) |
+
+**Live verification (dev server, this audit):**
+```
+/features/client-project-tracker            => Client Project Tracker: Share Project Progress With Clients | Text2Task
+/features/email-to-tasks                     => Email to Tasks: Turn Emails Into Projects | Text2Task
+/features/ai-task-extractor                  => AI Task Extractor: Extract Tasks and Action Items From Text | Text2Task
+/features/screenshot-to-tasks                => Screenshot to Tasks: Turn Screenshots Into Organized Tasks | Text2Task
+/features/client-feedback-to-tasks           => Client Feedback to Tasks: Review Project Updates | Text2Task
+/solutions/freelancer-project-management-... => Freelancer Project Management Software | Text2Task
+/use-cases/web-designers                     => Web Designer Task Management for Client Projects | Text2Task
+/resources/manage-client-revisions-web-de... => How Web Designers Can Manage Client Revisions Faster | Text2Task
+/resources/how-to-turn-emails-into-tasks     => How to Turn Emails Into Tasks: A Practical Workflow | Text2Task
+/about                                        => About Text2Task | Our Story and Product Principles
+/features/project-deadline-calendar          => Project Deadline Calendar for Freelancers & Small Teams | Text2Task | Text2Task  <- BROKEN
+```
+
+This is the exact `\| Text2Task \| Text2Task` doubling pattern this audit was asked to check for. It is **isolated to this one page** — every other page checked (10 pages, positive controls) renders a single, correct suffix. **Root cause:** `app/features/project-deadline-calendar/page.tsx` bakes the brand suffix into its own `pageTitle` constant and assigns it directly to `metadata.title` as a plain string, instead of either (a) omitting the suffix and letting the template add it once (the pattern every other Feature/Resource/Solution page uses), or (b) wrapping it as `title: { absolute: pageTitle }` (the pattern `/about` uses when a title must carry its own brand string verbatim). **Not fixed this turn** per explicit instruction. **Pre-existing:** `app/features/project-deadline-calendar/page.tsx` was never modified at any point in this SEO package (confirmed empty diff in §16 and again this turn) — this defect predates the package and was not introduced by it, but was not previously caught because this specific empirical-render check had only ever been run against the Web Designers page (during its implementation), never against Calendar.
+
+### 19.6 H1 / search-intent ownership audit
+
+| Pair | Classification |
+|---|---|
+| Email commercial vs. Email informational | CLEAR |
+| Freelancer PM (anchor) vs. Client Project Management (secondary) vs. Project Request Management (secondary) | CLEAR — single page, no fork, "a simple project request management process" appears naturally once, not stuffed |
+| Client Project Tracker (outbound) vs. Client Feedback to Tasks (inbound) | CLEAR — direction-explicit reciprocal cross-links confirmed both directions in current code |
+| Web Designers Use Case (broad) vs. Client Revisions Resource (focused) | CLEAR — H1s verified distinct: "Turn client requests into organized website tasks." vs. "How Web Designers Can Manage Client Revisions Faster" |
+| AI Task Extraction (generic) vs. Screenshot (image-specific) vs. Messages Resource (client-message how-to) | CLEAR — all 6 Feature H1s verified distinct via direct grep, no collision |
+| Client Project Management / Project Request Management vs. any future forked page | ACCEPTABLE OVERLAP — deliberately kept as secondary positioning on the Freelancer Solution anchor page per standing rule; monitored, no fork |
+
+No POTENTIAL CONFLICT found anywhere in the audited set. **Result: PASS.**
+
+### 19.7 Client Share product-truth audit
+
+Searched for `client portal`, `client account`, `client login`, `Client Project Tracker`, `Client Share`, `Share with Client` across `app/`. The only matches for unsafe-sounding terms (`client portal`, `client account`) are in `app/solutions/freelancer-project-management-software/page.tsx`'s `notReplacements` list — a "what Text2Task does NOT provide" disclaimer (§2.4's factual correction), not a positive claim. `app/features/client-project-tracker/page.tsx` was read in full: every claim (one project share link, selected visibility, optional PIN, optional expiration, revoke/regenerate, optional comments reviewed by the owner before anything is added, no Text2Task account required for the client, internal data stays separate) matches the locked safe-claims list exactly. No full-account, persistent-login, CRM/chat/helpdesk, or unrestricted-workspace claim found anywhere in public copy. **Result: PASS.**
+
+### 19.8 Structured-data audit
+
+Searched for `SoftwareApplication`, `aggregateRating`, `"@type": "Review"`, and `SITE_SCHEMA_ENTITY_IDS.softwareApplication` across `app/`. Every match is either an explanatory code comment documenting the 2026-08-26 historical fix, or a test assertion confirming the *absence* of these — none is live production schema. `app/lib/schema-dangling-entity-references.test.ts` covers all 7 relevant WebPage JSON-LD exports (Freelancer Solution, AI Task Extractor, Screenshot, Calendar, Email, Client Feedback, Client Project Tracker) plus the About page and the `SITE_SCHEMA_ENTITY_IDS` constant itself. No dangling `@id`, no fabricated rating/review/testimonial data anywhere. **Result: PASS.**
+
+### 19.9 Internal-linking audit
+
+- Client Project Tracker: Footer ✓, Homepage ✓, Freelancer Solution ✓, reciprocal Client Feedback link (both directions) ✓, outbound relatedLinks ✓.
+- Project Deadline Calendar: Footer ✓, Homepage ✓, Freelancer Solution ✓, 4 Use Cases (web-designers, project-managers, wordpress-freelancers, small-agencies) ✓, sitemap ✓.
+- Email Feature ↔ Email Resource: reciprocal, both directions confirmed.
+- Web Designers Use Case ↔ Revisions Resource: reciprocal, both directions confirmed, plus Calendar cross-link.
+- No malformed path, no accidental duplicate link, no keyword-stuffed repeated exact-match anchor found in any file sampled. No orphaned public page found among the pages audited. **Result: PASS.**
+
+### 19.10 Asset audit
+
+Both Client Project Tracker images (`client-project-tracker-share-progress-with-clients.png`, `client-share-project-link-management.png`) exist exactly once at the correct path, referenced correctly (`Image` with `fill` + `sizes`, alt text present on both), OG/Twitter image path resolves via `absoluteUrl()`. Commit history confirms both were net-new file additions (`Bin 0 -> ...`), not overwrites of any existing asset. No stale duplicate copy found elsewhere in `public/`. **Result: PASS.**
+
+### 19.11 Sitemap / redirect / indexability audit
+
+`app/sitemap.ts`: Client Project Tracker and Project Deadline Calendar each appear exactly once; all 6 Features, the Solution, all 8 Resources, and all Use Cases present; no auth/dashboard/admin route exposed. `next.config.ts`: exactly one redirect (`/index.html` → `/`, permanent), no loop, no wildcard; confirmed no `middleware.ts` or `vercel.json` exists to introduce a second, competing redirect mechanism. `app/robots.ts`: disallows only `/api/`, `/auth/`, `/dashboard`, `/admin/`, `/share` — Feature/Solution/Resource paths are not explicitly listed in `allow` but are not disallowed either, so they remain crawlable by default robots.txt semantics; noted as informational only, not an issue. **Result: PASS (not modified).**
+
+### 19.12 Test inventory health
+
+17 SEO-relevant test files inventoried (Footer, homepage section, Use Case detail template + Web Designers, 6 Feature pages' worth of coverage, 2 Resource pages, Freelancer Solution, schema regression, homepage schema). Spot-checked `web-designers.test.tsx` assertions against current file content — still accurate. No duplicate/redundant, brittle, or obsolete-copy assertion found in the files reviewed. No sitemap-specific or redirect-specific test file exists (pre-existing gap, not introduced by this package — noted as a non-blocking follow-up). **Result: HEALTHY.**
+
+### 19.13 Full verification (this audit turn)
+
+- `npx tsc --noEmit`: clean, zero errors.
+- `npm run build`: succeeded. All required routes confirmed present, including `/`, all 6 Features, the Solution, `/use-cases/web-designers`, and `/resources/manage-client-revisions-web-designers`/`how-to-turn-emails-into-tasks`.
+- Full test suite (this audit's own fresh run): **190 test files, 5,093 tests — 189 files/5,092 tests passed, 1 file/1 test failed** (`app/share/[publicId]/share-view.client.test.tsx`, a `findByText` timing assertion in the Client Share public view — entirely unrelated to any file touched by this SEO package). Re-ran that single file in isolation: **44/44 passed**, confirming a timing-sensitive flake under full-suite parallel load, not a real regression. The identical full suite had already passed 190/5093 with zero failures earlier the same day (P3 implementation turn), with no change to that file in between. **Not classified as a blocker** — unrelated file, non-reproducible in isolation.
+- `git diff --check`: exit 0, only pre-existing LF→CRLF warnings.
+- `git status --short`: matches the exact expected inventory (§19.3), no unrelated file.
+
+### 19.14 Blockers
+
+1. **`/features/project-deadline-calendar` renders a doubled title-tag suffix** (`... | Text2Task | Text2Task`) — see §19.5 for full evidence and root cause. Pre-existing (not introduced by this SEO package's diffs), but directly relevant because this package is actively adding inbound links to this exact page. **Not fixed this turn per explicit instruction.**
+
+### 19.15 Non-blocking follow-ups
+
+- Fix the Calendar title-doubling bug (§19.14) in a small, dedicated, explicitly-scoped follow-up phase — remove the baked-in `\| Text2Task` from `pageTitle` (or switch to `title: { absolute: pageTitle }`), leaving H1/meta description/canonical/schema untouched.
+- `app/share/[publicId]/share-view.client.test.tsx` shows timing-sensitive flakiness under full-suite parallel load (§19.13) — worth a look outside SEO scope, not urgent.
+- No sitemap-specific or redirect-specific test file exists (§19.12) — a pre-existing coverage gap, low priority given both are simple and currently correct.
+- §8's roadmap bullets for "Client Project Tracker ↔ Client Feedback to Tasks direction-explicit cross-links" and "`/features/project-deadline-calendar` footer/navigation reinforcement" were stale (work is actually complete in code, per §19.9, but wasn't marked `[COMPLETE]`) — corrected in §8 as part of this audit's documentation update, since accurate roadmap bookkeeping is itself part of what this final audit checks.
+- Periodic GSC/Keyword Planner re-validation and lower-priority Use Case optimizations remain standing monitoring items — explicitly fine to happen after deployment, not required before ship.
+
+### 19.16 Final cannibalization matrix
+
+| Cluster | Primary owner | Secondary/supporting | Intent | Risk after package | Status |
+|---|---|---|---|---|---|
+| Email commercial | `/features/email-to-tasks` | — | Commercial, tool-specific | None | Validated / stable |
+| Email informational | `/resources/how-to-turn-emails-into-tasks` | — | Informational/how-to | None | Validated / stable |
+| Freelancer PM | `/solutions/freelancer-project-management-software` | — | Commercial, category/end-to-end (anchor) | None (anchor) | Validated / stable |
+| Client Project Management | `/solutions/freelancer-project-management-software` (secondary) | — | Commercial, broad category | High if forked — monitored, no fork | Reinforced, monitor |
+| Project Request Management | `/solutions/freelancer-project-management-software` (secondary) | — | Commercial, narrow (intake) | High if forked — monitored, no fork | Reinforced, monitor |
+| Client Project Tracker | `/features/client-project-tracker` | — | Commercial, narrow (outbound client visibility) | Low (direction-explicit vs. Client Feedback) | COMPLETE |
+| Client Feedback | `/features/client-feedback-to-tasks` | — | Commercial + informational, INBOUND (client→owner) | Low | Keep as-is; secondary positioning |
+| AI Task Extraction | `/features/ai-task-extractor` | — | Commercial, generic engine | Low (soft overlap reduced 2026-08-30) | COMPLETE |
+| Screenshot | `/features/screenshot-to-tasks` + Resource | — | Commercial + informational | None | Validated, weak signal |
+| Messages | `/resources/turn-client-messages-into-tasks` | Homepage (de facto anchor) | Informational + light commercial | None | Validated / stable |
+| Web Designers | `/use-cases/web-designers` | — | Broader client-work/task workflow | None (differentiated) | COMPLETE |
+| Client Revisions | `/resources/manage-client-revisions-web-designers` | — | Focused revisions/how-to | None (differentiated) | COMPLETE |
+| Project Deadline Calendar (bonus, not in required list) | `/features/project-deadline-calendar` | — | Commercial, scheduling/deadlines | None keyword-wise; **technical metadata defect, §19.14** | Discovery COMPLETE; **title bug BLOCKING** |
+
+### 19.17 P0–P3 roadmap status
+
+- **P0 — COMPLETE.** All 3 items pushed (technical SEO cleanup, Client Share correction, Freelancer secondary reinforcement).
+- **P1 — COMPLETE.** Client Project Tracker built and linked (Footer, Homepage, Freelancer Solution). (§8's "P1 — NEXT" header was stale; corrected to COMPLETE in this audit's doc update.)
+- **P1/P2 — COMPLETE.** Email H1 differentiation; general internal linking substantially addressed.
+- **P2 — COMPLETE.** All 3 items: Tracker↔Feedback cross-links, Web Designers differentiation, Calendar footer/navigation reinforcement. (Two of these three were done in code but unmarked in §8; corrected in this audit's doc update.)
+- **P3 — COMPLETE.** AI Task Extractor copy differentiation.
+- **Required before ship:** the §19.14 Calendar title-tag fix is a real technical defect but is explicitly deferred (not to be fixed this turn) — it is the one item standing between this package and a clean gate.
+- **Safe to defer past deployment (monitor only):** periodic GSC/Keyword Planner re-validation; lower-priority Use Case optimizations.
+
+### 19.18 FINAL RELEASE GATE
+
+> **NOT READY — BLOCKER(S)**
+> Blocker: `/features/project-deadline-calendar` renders a doubled `<title>` tag (`\| Text2Task \| Text2Task`) — see §19.14. Everything else audited in this package (routes, other pages' metadata, intent ownership, Client Share product truth, structured data, internal linking, assets, sitemap/redirects, tests, build, TypeScript) passed cleanly. The blocker is narrow, well-understood, and was intentionally left unfixed this turn per this audit's own instructions not to make production changes during an audit.
+
+---
+
+## 20. Final Audit Blocker Resolution — Calendar Title (2026-08-30)
+
+> **Status: BLOCKER RESOLVED.** The §19.14 Calendar title-doubling defect is fixed, verified empirically via live dev-server render, and covered by new regression tests. No other page shares the live, public-facing version of this defect. Nothing staged, committed, pushed, or deployed this turn.
+
+### 20.1 Exact bug
+
+`/features/project-deadline-calendar` rendered `<title>Project Deadline Calendar for Freelancers & Small Teams | Text2Task | Text2Task</title>` — a doubled brand suffix, confirmed via live dev-server curl during the §19 Final SEO Package Audit.
+
+### 20.2 Root cause
+
+The root layout (`app/layout.tsx`) declares `title: { default: "...", template: "%s | Text2Task" }`. Any descendant page that sets `metadata.title` as a plain string has that template applied automatically, appending `" | Text2Task"`. The Calendar page's own `pageTitle` constant already contained the literal suffix `"| Text2Task"` and was assigned directly to `metadata.title` as a plain string — so the template appended the suffix a second time. This root-layout mechanism itself is correct and working exactly as intended for every other page; it was not touched.
+
+### 20.3 Fix — exact old → new
+
+| Field | Old | New |
+|---|---|---|
+| `pageTitle` (used for `metadata.title` and `webPageJsonLd.name`) | `"Project Deadline Calendar for Freelancers & Small Teams \| Text2Task"` | `"Project Deadline Calendar for Freelancers & Small Teams"` (suffix removed) |
+| `ogTitle` (new constant, used only for `openGraph.title` / `twitter.title`) | *(did not exist — OG/Twitter previously reused the suffixed `pageTitle`)* | `"Project Deadline Calendar for Freelancers & Small Teams \| Text2Task"` |
+
+This follows the established sibling convention exactly: `/features/email-to-tasks` already uses this identical two-constant pattern (a plain, unsuffixed `pageTitle` for `metadata.title`/schema `name`, and a separately-declared, fully-suffixed `ogTitle` for `openGraph.title`/`twitter.title`, since OpenGraph/Twitter metadata does not inherit `title.template` and therefore must carry the complete brand string explicitly). `/features/client-project-tracker` was also compared; it uses a single unsuffixed constant everywhere including OG/Twitter (meaning its OG tag currently omits the brand suffix) — a different, minor, out-of-scope characteristic not touched or replicated here, since the email-to-tasks pattern is the one that correctly keeps OG/Twitter fully suffixed while keeping `metadata.title` template-safe, matching this fix's exact goal.
+
+### 20.4 Final rendered title
+
+**Confirmed via live dev-server render** (not inferred from source): `curl http://localhost:3000/features/project-deadline-calendar` after the fix returned:
+
+```
+<title>Project Deadline Calendar for Freelancers &amp; Small Teams | Text2Task</title>
+<meta property="og:title" content="Project Deadline Calendar for Freelancers &amp; Small Teams | Text2Task"
+```
+
+Exactly one `| Text2Task` suffix — matches the expected final title exactly. The dev server was started fresh for this verification and stopped immediately after.
+
+### 20.5 Repository-wide duplicate-suffix scan (read-only, before editing)
+
+Searched every `page.tsx` for `pageTitle` usage and for the literal string `"| Text2Task"`, and classified each occurrence:
+
+| File | Classification | Reason |
+|---|---|---|
+| `app/layout.tsx` | SAFE | This is the template definition itself, not a consumer of it. |
+| `app/page.tsx` (Homepage) | SAFE | `metadata.title` uses unsuffixed `homepageTitle`; OG/Twitter hardcode the full suffixed string directly (correct, template-independent fields). |
+| `app/use-cases/page.tsx` | SAFE | `metadata.title` is unsuffixed; OG/Twitter carry the suffix — correct pattern. |
+| `app/about/page.tsx` | SAFE | Deliberately uses `title: { absolute: pageTitle } }` to bypass the template, since its own title already carries "Text2Task". |
+| `app/solutions/freelancer-project-management-software/page.tsx` | SAFE | Same two-constant pattern as email-to-tasks (unsuffixed `pageTitle`, separate suffixed `ogTitle`). |
+| `app/features/email-to-tasks/page.tsx` | SAFE | Same two-constant pattern — the reference convention this fix replicates. |
+| `app/resources/how-to-turn-emails-into-tasks/page.tsx` | SAFE | Same two-constant pattern. |
+| `app/features/client-project-tracker/page.tsx`, `ai-task-extractor`, `screenshot-to-tasks`, `client-feedback-to-tasks` | SAFE | Single unsuffixed `pageTitle` used everywhere; template-safe (OG/Twitter lack the suffix, a separate minor characteristic, not the doubling bug). |
+| `app/components/use-cases/use-case-detail-page.test.tsx` | SAFE | Test fixture text only, not live production metadata. |
+| **`app/features/project-deadline-calendar/page.tsx`** | **SAME BUG (fixed this turn)** | The defect this section resolves. |
+| `app/homepage-demo/review/page.tsx` | **SAME MECHANICAL PATTERN, but NOT a public SEO page** | `metadata.title: "Review your project \| Text2Task"` is a plain string with the suffix baked in — the identical rendering mechanism would double it. However, this page carries `robots: { index: false, follow: false, ... }` (explicit noindex/nofollow) and is a transient step in the anonymous demo-to-signup funnel — never part of the sitemap, never linked from any SEO surface, never in scope of the SEO package or its §19 audit. Not fixed this turn (out of scope); flagged here for transparency. |
+| `app/homepage-demo/claim/continue/page.tsx` | **SAME MECHANICAL PATTERN, but NOT a public SEO page** | Identical situation: `metadata.title: "Saving your project \| Text2Task"`, also `robots: { index: false, follow: false }`, also a transient funnel step. Not fixed this turn (out of scope); flagged here for transparency. |
+
+**Conclusion: Calendar was genuinely the only live, public, indexable SEO page with this defect.** The two `homepage-demo` pages share the identical code-level pattern but are explicitly excluded from indexing and were never part of the SEO package's scope — they are noted as a non-blocking, out-of-scope observation (§20.9), not a second blocker, and were not modified.
+
+### 20.6 Exact production file changed
+
+`app/features/project-deadline-calendar/page.tsx` — a `pageTitle`/`ogTitle` split (2 lines changed to 3) plus 2 field reassignments (`openGraph.title` and `twitter.title` now reference `ogTitle` instead of `pageTitle`). No other line touched — confirmed via full diff review. `webPageJsonLd.name` was not edited directly; it already referenced `pageTitle`, which now automatically resolves to the unsuffixed value.
+
+### 20.7 Test file created
+
+`app/features/project-deadline-calendar/page.test.tsx` — new, first test file for this page. 7 tests across 2 groups: title-template doubling fix (local title doesn't end with the suffix, local title is exactly the unsuffixed string, composing local title + root template yields exactly one suffix, OG/Twitter carry the full suffixed string exactly once), and identity-unchanged (H1, canonical, meta description all still match their pre-fix values).
+
+### 20.8 Confirmations
+
+- **H1 unchanged:** confirmed — "A Project Deadline Calendar Built for Client Work", verified both by live render and by the new test.
+- **Meta description unchanged:** confirmed — verified both by live render and by the new test.
+- **Canonical unchanged:** confirmed — `/features/project-deadline-calendar`, verified both by live render and by the new test.
+- **Body copy unchanged:** confirmed — the diff touches only the metadata block (title/OG/Twitter fields); no section, FAQ, or visible copy was touched.
+
+### 20.9 Non-blocking follow-ups (new this turn)
+
+- `app/homepage-demo/review/page.tsx` and `app/homepage-demo/claim/continue/page.tsx` share the identical "suffix baked into a plain-string `metadata.title`" code pattern as the fixed Calendar bug (§20.5). Both are `noindex`/`nofollow` transient funnel pages, outside the SEO package's scope, so this is not a package blocker — but the same narrow fix pattern (drop the baked-in suffix, or use `title: { absolute: ... }`) would resolve it if ever brought into scope.
+
+### 20.10 Verification results
+
+- Targeted: `npx vitest run app/features/project-deadline-calendar app/lib/schema-dangling-entity-references.test.ts` → **2 test files, 64 tests, all passed.**
+- `npx tsc --noEmit`: clean, zero errors.
+- `npm run build`: succeeded; `○ /features/project-deadline-calendar` confirmed present in the route output.
+- Full test suite: see §20.11.
+- `git diff --check`: exit 0, only pre-existing LF→CRLF warnings.
+
+### 20.11 Full-suite result and flaky-test status
+
+**191 test files, 5,100 tests — all passed, zero failures.** Exactly +1 file / +7 tests over the pre-fix baseline (190 files / 5,093 tests), matching the new `project-deadline-calendar/page.test.tsx` file exactly (7 tests) — confirming no other test was silently added, removed, or broken. The previously-observed `app/share/[publicId]/share-view.client.test.tsx` flake (1/1 failed in the §19 audit's full-suite parallel run, 44/44 passed in isolation) **passed cleanly in this run** — consistent with the earlier isolated-pass evidence that it was a transient timing flake under parallel load, not a real regression. It was not modified this turn, per explicit instruction.
+
+### 20.12 Re-run final release gate (focused delta verification)
+
+- Metadata/title defect: **RESOLVED** (§20.4).
+- No second duplicated-title occurrence on any live public SEO page: **CONFIRMED** (§20.5).
+- Structured data still clean: **CONFIRMED** — `webPageJsonLd.name` now correctly unsuffixed (matching sibling convention), schema regression suite still 57/57 passing, no SoftwareApplication/aggregateRating/review introduced.
+- Sitemap/routes still clean: **CONFIRMED** — `app/sitemap.ts` untouched, Calendar route still present exactly once, build output confirms the route.
+- Working tree contains only expected SEO changes: **CONFIRMED** — see §20.13 for the exact separation.
+- Tests, TypeScript, build, `git diff --check`: all clean (§20.10–§20.11).
+
+### 20.13 Working-tree separation (this turn)
+
+```
+ M app/components/landing/landing-footer.tsx                              <- pre-existing, Calendar discovery phase (§16), untouched this turn
+ M app/features/ai-task-extractor/page.tsx                                <- pre-existing, P3 (§18), untouched this turn
+ M app/features/project-deadline-calendar/page.tsx                        <- THIS TURN (blocker fix, §20.3/§20.6)
+ M app/solutions/freelancer-project-management-software/page.test.tsx     <- pre-existing, Calendar discovery phase (§16), untouched this turn
+ M app/solutions/freelancer-project-management-software/page.tsx          <- pre-existing, Calendar discovery phase (§16), untouched this turn
+ M docs/Text2Task_SEO_Master_Blueprint_2026-08-29.docx                    <- cumulative
+ M docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md                      <- cumulative
+?? app/components/landing/landing-footer.test.tsx                        <- pre-existing, Calendar discovery phase (§16), untouched this turn
+?? app/features/ai-task-extractor/page.test.tsx                          <- pre-existing, P3 (§18), untouched this turn
+?? app/features/project-deadline-calendar/page.test.tsx                  <- THIS TURN (blocker fix, new test file, §20.7)
+```
+
+This turn's own diff is exactly 2 files: 1 modified (`page.tsx`, metadata block only), 1 new (`page.test.tsx`). Every pre-existing entry was confirmed unchanged.

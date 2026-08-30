@@ -13,7 +13,8 @@ import { absoluteUrl } from "@/app/lib/site-config";
 import shared from "../feature-page.module.css";
 import styles from "./page.module.css";
 
-const pageTitle =
+const pageTitle = "Project Deadline Calendar for Freelancers & Small Teams";
+const ogTitle =
   "Project Deadline Calendar for Freelancers & Small Teams | Text2Task";
 const pageDescription =
   "Plan project deadlines, client work, and manual events in one clear calendar. Keep projects, clients, and scheduled work organized with Text2Task.";
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
     canonical: pagePath,
   },
   openGraph: {
-    title: pageTitle,
+    title: ogTitle,
     description: pageDescription,
     url: pageUrl,
     siteName: "Text2Task",
@@ -46,7 +47,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: pageTitle,
+    title: ogTitle,
     description: pageDescription,
     images: [
       {

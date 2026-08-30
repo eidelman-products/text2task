@@ -26,6 +26,23 @@ describe("FreelancerProjectManagementSoftwarePage - P1B link", () => {
   });
 });
 
+/*
+  2026-08-30 -- P2 Project Deadline Calendar discovery reinforcement (SEO
+  master blueprint, Section 15 -> Section 16 implementation record).
+  Project Deadline Calendar was the one sibling Feature missing from this
+  page's featureLinks grid; this closes that gap.
+*/
+describe("FreelancerProjectManagementSoftwarePage - Project Deadline Calendar discovery link", () => {
+  it("links to the Project Deadline Calendar feature page", () => {
+    const { container } = render(<FreelancerProjectManagementSoftwarePage />);
+    const link = container.querySelector(
+      'a[href="/features/project-deadline-calendar"]'
+    );
+
+    expect(link).not.toBeNull();
+  });
+});
+
 describe("FreelancerProjectManagementSoftwarePage - identity unchanged by P1B", () => {
   it("canonical and title still point at the locked route/identity", () => {
     expect(metadata.alternates?.canonical).toBe(
