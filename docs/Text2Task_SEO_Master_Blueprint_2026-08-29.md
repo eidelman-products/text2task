@@ -133,7 +133,7 @@ Audience-segmented pages, including the one unresolved overlap flagged for futur
 | Cluster | Primary Keyword | Secondary | Search Evidence | Intent | Current Owner | Type | Confidence | Cannib. Risk | Status | Next Action |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Use Case — WordPress | (audience-specific, no forced primary) | wordpress related tasks; wordpress tasks | GSC: "wordpress related tasks" ~7 impr./pos. ~77; "wordpress tasks" ~5 impr./pos. ~66.6 — page-only, no cannibalization observed. | Audience fit | `/use-cases/wordpress-freelancers` | Use Case | Low (thin but clean) | None | Validated, no conflict | Keep as-is |
-| Use Case — Web Designers vs. Revisions Resource | (audience-specific) | web designers; manage client revisions | GSC: manage-client-revisions-web-designers ~16 impr., avg. pos. ~15.2 (queries hidden). Use Case is mostly branded traffic. | Audience fit vs. informational how-to — same audience+problem combo | `/use-cases/web-designers` AND `/resources/manage-client-revisions-web-designers` | Use Case + Resource | Low | Medium-High — audited, fix mapped, not yet implemented | Audited 2026-08-30 — see §13 | Implement per §13 blueprint (pending explicit approval) |
+| Use Case — Web Designers vs. Revisions Resource | (audience-specific) | web designers; manage client revisions | GSC: manage-client-revisions-web-designers ~16 impr., avg. pos. ~15.2 (queries hidden). Use Case is mostly branded traffic. | Audience fit vs. informational how-to — same audience+problem combo | `/use-cases/web-designers` AND `/resources/manage-client-revisions-web-designers` | Use Case + Resource | Low | Low (identity-layer differentiation implemented 2026-08-30 — §14) | Resolved 2026-08-30 — implemented (§14) | None — complete |
 
 ---
 
@@ -243,7 +243,7 @@ Only commit hashes directly confirmed via `git log` are listed above. No hash is
 
 **P2**
 - Client Project Tracker ↔ Client Feedback to Tasks direction-explicit cross-links.
-- Web Designers Use Case vs. Revisions Resource differentiation pass (§5, rule 7). [MAPPED, NOT IMPLEMENTED 2026-08-30 — see §13]
+- Web Designers Use Case vs. Revisions Resource differentiation pass (§5, rule 7). [COMPLETE 2026-08-30 — see §14]
 - `/features/project-deadline-calendar` footer/navigation reinforcement.
 
 **P3**
@@ -273,22 +273,22 @@ Only commit hashes directly confirmed via `git log` are listed above. No hash is
 
 ## 10. Current Stop Point / Next Phase
 
-**Status update (2026-08-30, P2 Web Designers audit pass):** P1A **COMPLETE**. P1B **COMPLETE**. P1C **COMPLETE**. Email Feature H1 commercial-framing differentiation **COMPLETE**. P2 Web Designers vs. Revisions Resource differentiation: **MAPPED, NOT IMPLEMENTED** (§13) — audit and implementation blueprint only, no production code changed. Client Project Tracker is fully built, integrated, and discoverable (§11.17–§11.20). The Email Feature's H1 no longer echoes the Resource's informational phrasing (§12). Nothing was staged, committed, pushed, or deployed as part of any of these phases — the working tree changes are ready for review.
+**Status update (2026-08-30, P2 Web Designers implementation pass):** P1A **COMPLETE**. P1B **COMPLETE**. P1C **COMPLETE**. Email Feature H1 commercial-framing differentiation **COMPLETE**. P2 Web Designers vs. Revisions Resource differentiation **COMPLETE** (§14) — the Use Case's title/H1/description now represent the broader client-work workflow instead of echoing the Resource's revisions topic; the Resource itself is unchanged. Client Project Tracker is fully built, integrated, and discoverable (§11.17–§11.20). The Email Feature's H1 no longer echoes the Resource's informational phrasing (§12). Nothing was staged, committed, pushed, or deployed as part of any of these phases — the working tree changes are ready for review.
 
-> **NEXT PLANNED PHASE: implement the §13 Web Designers blueprint, OR the other unstarted P2 item — neither authorized to start automatically**
-> - **Option A:** Implement §13.10's blueprint (title/H1/description refinement on `app/lib/use-cases/cases/web-designers.ts` only) — requires its own explicit instruction to begin; exact final copy is not yet decided (§13.12).
-> - **Option B:** `/features/project-deadline-calendar` footer/navigation reinforcement — remains unstarted AND unaudited; would need its own audit turn first.
-> - **Status:** NEITHER started. This document does not authorize beginning either on its own.
+> **NEXT PLANNED PHASE: `/features/project-deadline-calendar` footer/navigation reinforcement — NOT audited yet**
+> - **Source:** §6.1 and §8 (P2 tier)
+> - **What's known:** project-deadline-calendar is the one Feature page missing from `landing-footer.tsx`'s `productLinks` array (§6.1) — already observed, not yet re-verified or scoped into an implementation plan.
+> - **Status:** NOT started, NOT audited. This document does not authorize beginning it on its own — it needs its own audit turn first, matching this project's established discipline.
 
 **Before starting the next phase, the next session must:**
 
-1. Re-read §11.17–§11.20 and §12 to confirm Client Project Tracker and the Email Feature H1 work are both fully finished — neither should be revisited without new evidence.
-2. Re-read §13 in full (especially §13.10's blueprint and §13.12's unresolved items) before implementing the Web Designers differentiation — final title/H1/description copy still needs to be proposed and approved, it was not finalized in the audit.
-3. Wait for an explicit instruction identifying which next item to work on; do not assume either, and do not begin without direction.
+1. Re-read §11.17–§11.20, §12, and §14 to confirm Client Project Tracker, the Email Feature H1 work, and the Web Designers differentiation are all fully finished — none should be revisited without new evidence.
+2. Run a fresh audit of `/features/project-deadline-calendar`'s current footer/navigation state before proposing any change — do not assume §6.1's observation still holds without re-verifying it.
+3. Wait for an explicit instruction before starting; do not begin without direction.
 4. Follow this project's established discipline: audit first, propose, wait for approval, then implement in a narrow, single-purpose diff.
 5. Run the same full verification ritual used for every phase so far: `npx tsc --noEmit`, `npm run build`, targeted tests, `git diff --check`.
 
-**The next Claude session should begin exactly here — Section 10 — after first re-reading §11.17–§11.20 and §12 to confirm what is already finished, then §13 in full before implementing the Web Designers differentiation — which requires its own explicit instruction to begin.**
+**The next Claude session should begin exactly here — Section 10 — after first re-reading §11.17–§11.20, §12, and §14 to confirm what is already finished, then run a fresh audit of `/features/project-deadline-calendar`'s footer/navigation state before implementing anything — which requires its own explicit instruction to begin.**
 
 ---
 
@@ -872,4 +872,85 @@ The severity concentration is specific and useful — HIGH-severity items are al
 
 ### 13.13 Exact next action
 
-> **Next action:** Wait for an explicit instruction to implement the §13.10 blueprint (title/H1/description refinement on `app/lib/use-cases/cases/web-designers.ts` only). This document does not authorize implementation on its own. Do not begin `/features/project-deadline-calendar` footer/navigation reinforcement (the other unstarted P2 item) without its own separate instruction either.
+> **Next action (superseded — see §14):** The §13.10 blueprint was implemented on 2026-08-30. §13.1–§13.12 above are preserved unchanged as decision history — the plan they describe is exactly what was built. §14 records the implementation result.
+
+---
+
+## 14. P2 — Web Designers vs. Revisions Resource Differentiation — Implementation (2026-08-30) — COMPLETE
+
+Implements the §13.10 blueprint exactly, with one deliberate, evidence-based deviation from the literally-recommended SEO title string (§14.2). No route, canonical, schema, capabilities, workflow, FAQ, proof, or CTA was touched. The Resource page was not modified.
+
+### 14.1 Old → final copy
+
+- **SEO title — old:** "Website Revision Task Manager for Web Designers"
+- **SEO title — final:** "Web Designer Task Management for Client Projects"
+- **Meta description — old:** "Turn client revision emails, WhatsApp messages, and marked-up screenshots into tracked website tasks, organized by page and reviewed before saving."
+- **Meta description — final:** "Turn client emails, WhatsApp messages, screenshots, and revision feedback into organized website tasks, reviewed before saving."
+- **Rendered H1 — old:** "Stop rebuilding revision emails into task lists. Start tracking each page change."
+- **Rendered H1 — final:** "Turn client requests into organized website tasks." (`hero.title` "Turn client requests into" + `hero.highlight` "organized website tasks.")
+- **Hero support copy — final:** "Text2Task helps web designers turn emails, WhatsApp messages, screenshots, and revision feedback into clear, reviewable tasks organized by page before saving."
+
+### 14.2 Deliberate deviation from the recommended SEO title string
+
+> **The literal recommended title ("...Client Projects | Text2Task") was NOT used verbatim:**
+> - The root layout (`app/layout.tsx`) declares `title.template: "%s | Text2Task"`, which Next.js applies automatically to every descendant page's plain-string title.
+> - Empirically confirmed by rendering the page before this change: `seo.title` "Website Revision Task Manager for Web Designers" (no suffix in the config) already rendered as `<title>Website Revision Task Manager for Web Designers | Text2Task</title>`.
+> - Baking "| Text2Task" into `seo.title` literally would have produced a doubled suffix ("... | Text2Task | Text2Task") in both the `<title>` tag and the route's own `brandedTitle` construction used for OpenGraph/Twitter — a real, verifiable bug, and also inconsistent with every other Use Case's `seo.title` (none of the other 11 include the suffix).
+> - Final `seo.title` omits the suffix, exactly matching sibling convention; the rendered `<title>` was re-verified after the change: "Web Designer Task Management for Client Projects | Text2Task" — correct, single suffix, matching the recommended visible result.
+
+### 14.3 H1 field-split rationale
+
+- The rendered H1 is `hero.title` + " " + `hero.highlight` (confirmed by reading `app/components/use-cases/use-case-hero.tsx`'s "editorial" variant, the variant this page uses).
+- The recommended H1 concept was a single short sentence ("Turn client requests into organized website tasks."). Rather than forcing two separate, artificially-distinct sentences into title/highlight (the page's OLD pattern, and a pattern that risks reading as two disconnected statements), the sentence was split at its natural midpoint — `hero.title` carries the first clause, `hero.highlight` (rendered in blue) carries the outcome noun phrase — mirroring the cleaner single-sentence pattern already used by the project-managers Use Case.
+- Result verified by rendering: one natural, un-stuffed sentence, no duplicated or awkward phrasing.
+
+### 14.4 Why the Use Case now has a distinct intent
+
+- Title and H1 no longer lead with "revision" — they lead with the broader "client request → organized website task" workflow, matching the permanent intent boundary in §13.5.
+- Revision language remains present and real, not erased: `hero.description` explicitly lists "revision feedback" as one of several input types (alongside emails, WhatsApp messages, screenshots), and every mid-page section (capabilities, workflow, painPoints, clientUpdates, FAQ, proof) — none of which were touched — still covers revisions in depth.
+- The Resource remains the clear, sole owner of "manage client revisions" as a dedicated topic; the Use Case now clearly owns the broader audience-fit workflow question instead of duplicating the Resource's narrow topic.
+
+### 14.5 Confirmation: Resource unchanged
+
+- `app/resources/manage-client-revisions-web-designers/page.tsx`: zero lines changed. Verified by `git diff` (file does not appear in the diff) and by re-rendering the page: H1 "How Web Designers Can Manage Client Revisions Faster" and `<title>` "How Web Designers Can Manage Client Revisions Faster | Text2Task" — identical to §13.1's recorded pre-implementation state.
+
+### 14.6 Cross-link status
+
+- NO CHANGE, as predicted in §13.8. Use Case → Resource (relatedLinks card) and Resource → Use Case (inline link in "Where Text2Task fits") both verified still present and correct after the change — neither anchor text quoted the old H1, so nothing needed updating.
+- No duplicate link was added.
+
+### 14.7 Cannibalization / SEO QA
+
+| Check | Result |
+|---|---|
+| Use Case and Resource H1s clearly distinct? | YES — "Turn client requests into organized website tasks." vs. "How Web Designers Can Manage Client Revisions Faster" |
+| Use Case and Resource titles clearly distinct? | YES — "Web Designer Task Management for Client Projects" vs. "How Web Designers Can Manage Client Revisions Faster" |
+| "Revision" no longer the Use Case's dominant identity? | YES — absent from title and H1; present only as one input type in `hero.description` and in the untouched mid-page sections |
+| Revision language still exists naturally? | YES — confirmed by an automated test asserting the rendered page still contains "revision" |
+| Route/canonical/schema changed? | NO — none touched |
+| Existing cross-links intact? | YES — verified by automated tests in both directions |
+| New cannibalization with `/solutions/freelancer-project-management-software`? | NO — verified by an automated test that the rendered page does not contain "freelancer project management software" |
+
+### 14.8 Exact production files changed
+
+- `app/lib/use-cases/cases/web-designers.ts` — 4 fields changed: `seo.title`, `seo.description`, `hero.title`, `hero.highlight`, `hero.description` (5 string values across 4 named fields; `hero.title`/`hero.highlight` together form the single rendered H1).
+- No other file was touched. `capabilities`, `workflow`, `faq`, `proof`, `clientUpdates`, `relatedLinks`, `finalCta`, and the top-level unused `title` field are all unchanged.
+
+### 14.9 Tests
+
+- `app/lib/use-cases/cases/web-designers.test.tsx` — NEW. 8 tests: rendered H1 matches the new intent; H1 doesn't lead with revision framing; H1 not near-identical to the Resource's H1; SEO title distinct and revision-free; revision language still present; no new Freelancer Solution cannibalization; no automatic inbox/WhatsApp-sync overclaim; Use Case → Resource link present.
+- `app/resources/manage-client-revisions-web-designers/page.test.tsx` — NEW. 3 tests: H1 unchanged; title/canonical unchanged; Resource → Use Case link present.
+
+### 14.10 Verification results
+
+- Targeted tests: 62 passed across 3 files (2 new files + the shared `app/components/use-cases/use-case-detail-page.test.tsx`, re-run since it renders every Use Case including web-designers).
+- Full project test suite: 5,078 tests passed across 188 test files — zero regressions.
+- `npx tsc --noEmit`: clean, zero errors.
+- `npm run build`: succeeded; both `/use-cases/web-designers` and `/resources/manage-client-revisions-web-designers` confirmed present in the route output.
+- `git diff --check`: clean (one harmless LF/CRLF line-ending notice).
+- Full diff reviewed line by line — exactly one production file changed, 4 fields, nothing else.
+- Rendered `<title>`/H1 verified empirically for both pages via the dev server both before and after the change (see §14.2), not assumed from source alone.
+
+### 14.11 Next SEO roadmap phase
+
+> **Next action:** P2 Web Designers vs. Revisions Resource differentiation is COMPLETE. The next unstarted, still-unaudited roadmap item is: `/features/project-deadline-calendar` footer/navigation reinforcement (§6.1, §8 P2 tier). It was explicitly NOT started or audited in this phase and requires its own audit turn before implementation.

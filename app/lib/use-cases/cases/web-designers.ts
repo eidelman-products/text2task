@@ -5,8 +5,8 @@ export const webDesignersUseCase = {
   "audienceLabel": "Web Designers",
   "title": "AI Website Revision Task Manager for Web Designers",
   "seo": {
-    "title": "Website Revision Task Manager for Web Designers",
-    "description": "Turn client revision emails, WhatsApp messages, and marked-up screenshots into tracked website tasks, organized by page and reviewed before saving."
+    "title": "Web Designer Task Management for Client Projects",
+    "description": "Turn client emails, WhatsApp messages, screenshots, and revision feedback into organized website tasks, reviewed before saving."
   },
   "listing": {
     "category": "website-development",
@@ -21,9 +21,9 @@ export const webDesignersUseCase = {
     ]
   },
   "hero": {
-    "title": "Stop rebuilding revision emails into task lists.",
-    "highlight": "Start tracking each page change.",
-    "description": "Paste a client's revision email, WhatsApp message, or a marked-up screenshot. Text2Task extracts the page or section it affects, the deadline, and whether it looks like a quick fix or bigger scope — organized into a project you review before saving.",
+    "title": "Turn client requests into",
+    "highlight": "organized website tasks.",
+    "description": "Text2Task helps web designers turn emails, WhatsApp messages, screenshots, and revision feedback into clear, reviewable tasks organized by page before saving.",
     "primaryCta": {
       "label": "Try Text2Task",
       "href": "/signup"
