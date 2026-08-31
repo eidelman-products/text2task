@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { DM_Sans, Inter } from "next/font/google";
 import { Toaster } from "sonner";
+import { AnalyticsErrorBoundary } from "./components/analytics/analytics-error-boundary";
 import { AttributionCapture } from "./components/analytics/attribution-capture";
 import { ConsentAwareVercelAnalytics } from "./components/analytics/consent-aware-vercel-analytics";
 import { CookieConsentBanner } from "./components/analytics/cookie-consent-banner";
@@ -105,7 +106,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} ${dmSans.variable}`}>
         <GoogleAdsTag />
-        <MicrosoftClarity />
+        <AnalyticsErrorBoundary>
+          <MicrosoftClarity />
+        </AnalyticsErrorBoundary>
         <AttributionCapture />
 
         {children}
