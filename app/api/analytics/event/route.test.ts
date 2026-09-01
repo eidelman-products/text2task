@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
+import { OWNER_ANALYTICS_EXCLUSION_COOKIE } from "@/lib/analytics/owner-exclusion.server";
+
 /*
   Phase 4B -- first test file for this route. Phase 1-4's read-only audits
   repeatedly flagged this as the one untested link in the anonymous
@@ -22,9 +24,14 @@ const { POST } = await import("./route");
 const VALID_PAGE_VIEW_ID = "22222222-2222-4222-8222-222222222222";
 const ANOTHER_VALID_PAGE_VIEW_ID = "33333333-3333-4333-8333-333333333333";
 
-function buildRequest(rawBody: string, contentLength?: number) {
+function buildRequest(
+  rawBody: string,
+  contentLength?: number,
+  extraHeaders?: Record<string, string>
+) {
   const headers: Record<string, string> = {
     "content-type": "application/json",
+    ...extraHeaders,
   };
 
   if (contentLength !== undefined) {
@@ -38,8 +45,12 @@ function buildRequest(rawBody: string, contentLength?: number) {
   });
 }
 
-function buildJsonRequest(body: unknown) {
-  return buildRequest(JSON.stringify(body));
+function buildJsonRequest(body: unknown, extraHeaders?: Record<string, string>) {
+  return buildRequest(JSON.stringify(body), undefined, extraHeaders);
+}
+
+function withOwnerExclusionCookie(): Record<string, string> {
+  return { cookie: `${OWNER_ANALYTICS_EXCLUSION_COOKIE}=1` };
 }
 
 beforeEach(() => {
@@ -215,5 +226,126 @@ describe("POST /api/analytics/event - existing behavior preserved", () => {
     );
 
     expect(response.status).toBe(204);
+  });
+});
+
+describe("POST /api/analytics/event - owner analytics exclusion", () => {
+  it.each(["/", "/dashboard", "/pricing", "/use-cases/web-designers"])(
+    "owner-exclusion cookie present + page_view %s -> returns 204 and never logs",
+    async (pagePath) => {
+      const response = await POST(
+        buildJsonRequest(
+          {
+            event_name: "page_view",
+            page_path: pagePath,
+            anonymous_id: "anon-owner-browser",
+            page_view_id: VALID_PAGE_VIEW_ID,
+          },
+          withOwnerExclusionCookie()
+        )
+      );
+
+      expect(response.status).toBe(204);
+      expect(logAnalyticsEventSafeMock).not.toHaveBeenCalled();
+    }
+  );
+
+  it("owner-exclusion cookie present + /admin path -> still never logs (existing /admin exclusion is unaffected)", async () => {
+    const response = await POST(
+      buildJsonRequest(
+        {
+          event_name: "page_view",
+          page_path: "/admin",
+          anonymous_id: "anon-owner-browser",
+          page_view_id: VALID_PAGE_VIEW_ID,
+        },
+        withOwnerExclusionCookie()
+      )
+    );
+
+    expect(response.status).toBe(204);
+    expect(logAnalyticsEventSafeMock).not.toHaveBeenCalled();
+  });
+
+  it("no owner-exclusion cookie -> anonymous visitor is logged normally", async () => {
+    const response = await POST(
+      buildJsonRequest({
+        event_name: "page_view",
+        page_path: "/",
+        anonymous_id: "anon-normal-visitor",
+        page_view_id: VALID_PAGE_VIEW_ID,
+      })
+    );
+
+    expect(response.status).toBe(204);
+    expect(logAnalyticsEventSafeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("a crafted body claiming isOwner: true, without the trusted cookie, does NOT activate exclusion", async () => {
+    const response = await POST(
+      buildJsonRequest({
+        event_name: "page_view",
+        page_path: "/",
+        anonymous_id: "anon-spoofer",
+        page_view_id: VALID_PAGE_VIEW_ID,
+        isOwner: true,
+      })
+    );
+
+    expect(response.status).toBe(204);
+    expect(logAnalyticsEventSafeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("a crafted anonymous_id that merely looks owner-related does NOT activate exclusion", async () => {
+    const response = await POST(
+      buildJsonRequest({
+        event_name: "page_view",
+        page_path: "/",
+        anonymous_id: "owner-admin-text2task",
+        page_view_id: VALID_PAGE_VIEW_ID,
+      })
+    );
+
+    expect(response.status).toBe(204);
+    expect(logAnalyticsEventSafeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["true", "0", "2", "", "yes"])(
+    "a malformed exclusion-cookie value (%j) does NOT activate exclusion -- only the exact value '1' does",
+    async (malformedValue) => {
+      const response = await POST(
+        buildJsonRequest(
+          {
+            event_name: "page_view",
+            page_path: "/",
+            anonymous_id: "anon-malformed-cookie",
+            page_view_id: VALID_PAGE_VIEW_ID,
+          },
+          { cookie: `${OWNER_ANALYTICS_EXCLUSION_COOKIE}=${malformedValue}` }
+        )
+      );
+
+      expect(response.status).toBe(204);
+      expect(logAnalyticsEventSafeMock).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it("owner-exclusion cookie alongside other unrelated cookies still activates exclusion", async () => {
+    const response = await POST(
+      buildJsonRequest(
+        {
+          event_name: "page_view",
+          page_path: "/",
+          anonymous_id: "anon-owner-browser",
+          page_view_id: VALID_PAGE_VIEW_ID,
+        },
+        {
+          cookie: `t2t_anon_id=some-anon-id; ${OWNER_ANALYTICS_EXCLUSION_COOKIE}=1; t2t_analytics_consent=accepted`,
+        }
+      )
+    );
+
+    expect(response.status).toBe(204);
+    expect(logAnalyticsEventSafeMock).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isOwnerEmail } from "@/lib/auth/owner.server";
+import { setOwnerAnalyticsExclusionCookie } from "@/lib/analytics/owner-exclusion.server";
 import { getSafePostAuthDestination } from "@/lib/auth/post-auth-destination";
 import {
   HOMEPAGE_DEMO_CLAIM_AUTH_INTENT,
@@ -112,5 +114,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.redirect(new URL(next, request.url));
+  const response = NextResponse.redirect(new URL(next, request.url));
+
+  if (isOwnerEmail(user.email)) {
+    setOwnerAnalyticsExclusionCookie(response);
+  }
+
+  return response;
 }

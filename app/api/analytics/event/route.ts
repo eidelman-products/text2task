@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { logAnalyticsEventSafe } from "@/lib/analytics/internal-events.server";
+import { hasOwnerAnalyticsExclusionCookie } from "@/lib/analytics/owner-exclusion.server";
 import {
   getAnalyticsStringField,
   getRequestCountryCode,
@@ -108,6 +109,10 @@ function mergeAttribution(
 
 export async function POST(request: NextRequest) {
   try {
+    if (hasOwnerAnalyticsExclusionCookie(request)) {
+      return emptyResponse();
+    }
+
     const body = await readJsonBody(request);
 
     if (!body) {

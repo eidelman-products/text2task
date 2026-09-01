@@ -1,5 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
+import { isOwnerEmail } from "@/lib/auth/owner.server";
+import { setOwnerAnalyticsExclusionCookie } from "@/lib/analytics/owner-exclusion.server";
 import { getDestinationForProPurchaseIntent } from "@/lib/auth/post-auth-destination";
 import {
   HOMEPAGE_DEMO_CLAIM_AUTH_INTENT,
@@ -133,10 +135,16 @@ export async function POST(request: NextRequest) {
         ? getDestinationForProPurchaseIntent(hasProPurchaseIntent)
         : HOMEPAGE_DEMO_CLAIM_CONTINUATION_PATH;
 
-    return NextResponse.redirect(
+    const response = NextResponse.redirect(
       new URL(postAuthDestination, request.url),
       { status: 303 }
     );
+
+    if (isOwnerEmail(data.user.email)) {
+      setOwnerAnalyticsExclusionCookie(response);
+    }
+
+    return response;
   } catch {
     return NextResponse.json(
       { error: "Unexpected error" },
