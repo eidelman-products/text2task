@@ -98,20 +98,33 @@ function getSafeReferrer() {
   }
 }
 
-function generateAnonymousId() {
+function generateRandomId() {
   if (window.crypto?.randomUUID) {
     return window.crypto.randomUUID();
   }
 
-  return `anon_${Date.now().toString(36)}_${Math.random()
+  return `id_${Date.now().toString(36)}_${Math.random()
     .toString(36)
     .slice(2, 12)}`;
+}
+
+/**
+ * Phase 4B -- one stable identifier per logical page view. Generated fresh
+ * exactly once per genuine navigation (a real pathname change), then reused
+ * across any retry/remount of that SAME logical view's send attempt --
+ * never regenerated merely because a send was deferred, retried, or the
+ * component re-rendered. This is what the server-side idempotency key is
+ * built from (see app/api/analytics/event/route.ts): the identity of "one
+ * logical page view", not a time bucket or a page-path guess.
+ */
+function generatePageViewId() {
+  return generateRandomId();
 }
 
 function getAnonymousId() {
   const stored = clamp(localStorage.getItem(ANONYMOUS_STORAGE_KEY), 120);
   const cookie = clamp(getCookie(ANONYMOUS_COOKIE), 120);
-  const anonymousId = stored ?? cookie ?? generateAnonymousId();
+  const anonymousId = stored ?? cookie ?? generateRandomId();
 
   localStorage.setItem(ANONYMOUS_STORAGE_KEY, anonymousId);
   setCookie(ANONYMOUS_COOKIE, anonymousId);
@@ -153,6 +166,16 @@ function writeAttributionCookie(attribution: AttributionData) {
   );
 }
 
+/**
+ * First-touch attribution capture. Safe to call on every logical page
+ * view (not just the first): once a stored record exists, its
+ * utm_source/utm_medium/utm_campaign/utm_content/referrer/landing_page are
+ * REUSED verbatim, never recalculated from the current page -- only
+ * page_path is refreshed to reflect where this specific call is reporting
+ * from. This preserves first-touch semantics exactly as before; the only
+ * change in this phase is that it is now called once per logical
+ * navigation instead of once per hard load.
+ */
 function captureAttribution() {
   const params = new URLSearchParams(window.location.search);
   const anonymousId = getAnonymousId();
@@ -195,10 +218,20 @@ function captureAttribution() {
   return attribution;
 }
 
-function sendPageView(attribution: AttributionData) {
+/**
+ * Sends exactly one logical page_view. pagePath and pageViewId are passed
+ * in explicitly by the caller (captured once, at the moment the logical
+ * navigation was detected) rather than re-read live from
+ * window.location.pathname -- this event describes a specific, already-
+ * decided page view; it must not silently change identity if the visitor
+ * has navigated further by the time this deferred call actually runs.
+ */
+function sendPageView(
+  attribution: AttributionData,
+  pagePath: string,
+  pageViewId: string
+) {
   try {
-    const pagePath = getSafePath();
-
     if (shouldSkipAnalyticsPath(pagePath)) {
       return;
     }
@@ -206,6 +239,7 @@ function sendPageView(attribution: AttributionData) {
     const payload = JSON.stringify({
       event_name: "page_view",
       page_path: pagePath,
+      page_view_id: pageViewId,
       attribution,
     });
 
@@ -233,13 +267,40 @@ function sendPageView(attribution: AttributionData) {
   }
 }
 
-function EnabledAttributionCapture() {
+/**
+ * Phase 4B -- fires once per genuine logical navigation (the effect's own
+ * dependency is `pathname`, so React only re-invokes it when the pathname
+ * itself actually changes -- not on unrelated re-renders, and not on
+ * query-string-only changes, since usePathname() never reflects the query
+ * string at all). Each invocation captures its own pagePath + a freshly
+ * minted pageViewId in local closure variables and schedules exactly one
+ * deferred send using those captured values.
+ *
+ * Deliberately does NOT cancel a still-pending deferred send when the
+ * pathname changes again before it fires: under the SPA-aware page_view
+ * definition, every genuine navigation must eventually be recorded, even
+ * if the visitor moves on quickly. Cancelling on cleanup would silently
+ * drop exactly the fast-navigation sessions this phase exists to capture.
+ * Nothing here touches React state, so there is no unmount-safety concern
+ * with letting a scheduled callback fire after the component has moved on
+ * to tracking a different pathname.
+ */
+function EnabledAttributionCapture({ pathname }: { pathname: string }) {
   useEffect(() => {
+    // Effects only re-run when `pathname` itself changes (React's own
+    // dependency comparison), so every invocation here already represents
+    // a genuine new logical navigation -- including the very first mount,
+    // which is exactly "the page currently being viewed" the moment
+    // analytics consent is accepted or an excluded->allowed transition
+    // occurs (this component doesn't exist in the tree until then).
+    const pagePath = pathname;
+    const pageViewId = generatePageViewId();
+
     const run = () => {
       try {
         const attribution = captureAttribution();
 
-        sendPageView(attribution);
+        sendPageView(attribution, pagePath, pageViewId);
       } catch {
         // Attribution capture is optional and must never affect the page.
       }
@@ -248,31 +309,23 @@ function EnabledAttributionCapture() {
     const idleWindow = window as IdleWindow;
 
     if (idleWindow.requestIdleCallback) {
-      const idleId = idleWindow.requestIdleCallback(run, { timeout: 2000 });
-
-      return () => {
-        idleWindow.cancelIdleCallback?.(idleId);
-      };
+      idleWindow.requestIdleCallback(run, { timeout: 2000 });
+    } else {
+      window.setTimeout(run, 1200);
     }
-
-    const timeoutId = window.setTimeout(run, 1200);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, []);
+  }, [pathname]);
 
   return null;
 }
 
-function ConsentGatedAttributionCapture() {
+function ConsentGatedAttributionCapture({ pathname }: { pathname: string }) {
   const hasConsent = useAnalyticsConsentAccepted();
 
   if (!hasConsent) {
     return null;
   }
 
-  return <EnabledAttributionCapture />;
+  return <EnabledAttributionCapture pathname={pathname} />;
 }
 
 export function AttributionCapture() {
@@ -282,5 +335,5 @@ export function AttributionCapture() {
     return null;
   }
 
-  return <ConsentGatedAttributionCapture />;
+  return <ConsentGatedAttributionCapture pathname={pathname} />;
 }
