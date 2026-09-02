@@ -65,7 +65,8 @@ export default function HomepageHero({
 
           {liveDemoEnabled ? (
             <p className="mt-4 text-sm font-semibold text-slate-500">
-              No signup or credit card required for the live demo.
+              No signup for the demo · No inbox connection · Review before
+              saving
             </p>
           ) : null}
         </div>

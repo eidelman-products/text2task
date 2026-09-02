@@ -30,7 +30,7 @@ export default async function HomepageCustomerStoriesSection() {
             id="homepage-customer-stories-heading"
             className="homepage-heading text-[1.75rem] text-slate-950 sm:text-3xl"
           >
-            What users say
+            What early users say
           </h2>
         </div>
 
@@ -54,14 +54,14 @@ export default async function HomepageCustomerStoriesSection() {
 
               <footer className="mt-5 flex min-w-0 items-center gap-3">
                 <div
-                  className="grid size-8 shrink-0 place-items-center rounded-full border border-blue-100 bg-blue-50 text-[0.65rem] font-bold text-blue-700"
+                  className="grid size-9 shrink-0 place-items-center rounded-full border border-blue-100 bg-blue-50 text-xs font-bold text-blue-700"
                   aria-hidden="true"
                 >
                   {getInitials(story.displayName)}
                 </div>
 
                 <div className="min-w-0">
-                  <div className="break-words text-sm font-bold leading-5 text-slate-950">
+                  <div className="break-words text-base font-bold leading-5 text-slate-950">
                     {story.displayName}
                   </div>
                   {formatRoleLine(story.roleOrBusinessType) ? (

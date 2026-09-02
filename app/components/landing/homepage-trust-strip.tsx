@@ -20,6 +20,12 @@ export default function HomepageTrustStrip() {
       aria-label="Text2Task product assurances"
       className="border-b border-slate-200/80 bg-white"
     >
+      <div className="mx-auto max-w-7xl px-4 pt-7 sm:px-6 lg:px-8">
+        <h2 className="homepage-heading text-center text-lg text-slate-950 sm:text-xl">
+          You stay in control
+        </h2>
+      </div>
+
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-x-8 gap-y-6 px-4 py-7 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
         {trustItems.map((item) => (
           <div key={item.label} className="min-w-0 text-center">
