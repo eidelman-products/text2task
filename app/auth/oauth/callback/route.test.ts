@@ -114,6 +114,102 @@ describe("GET /auth/oauth/callback - owner-exclusion cookie", () => {
   });
 });
 
+describe("GET /auth/oauth/callback - homepage-demo claim intent continuity (Phase 0A)", () => {
+  it("a successful callback WITH intent=homepage-demo-claim redirects to the claim continuation route, not /dashboard", async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: "user-1", email: NORMAL_EMAIL } },
+      error: null,
+    });
+
+    const response = await GET(
+      buildCallbackRequest("?code=valid-code&intent=homepage-demo-claim")
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain(
+      "/homepage-demo/claim/continue"
+    );
+    expect(response.headers.get("location")).not.toContain("/dashboard");
+  });
+
+  it("Google reporting an error WITH intent=homepage-demo-claim preserves the intent on the /login retry redirect", async () => {
+    const response = await GET(
+      buildCallbackRequest("?error=access_denied&intent=homepage-demo-claim")
+    );
+
+    expect(response.headers.get("location")).toContain("/login");
+    expect(response.headers.get("location")).toContain("error=oauth_cancelled");
+    expect(response.headers.get("location")).toContain(
+      "intent=homepage-demo-claim"
+    );
+  });
+
+  it("a missing code WITH intent=homepage-demo-claim preserves the intent on the /login retry redirect", async () => {
+    const response = await GET(
+      buildCallbackRequest("?intent=homepage-demo-claim")
+    );
+
+    expect(response.headers.get("location")).toContain(
+      "error=oauth_callback_failed"
+    );
+    expect(response.headers.get("location")).toContain(
+      "intent=homepage-demo-claim"
+    );
+  });
+
+  it("a failed code exchange WITH intent=homepage-demo-claim preserves the intent on retry", async () => {
+    exchangeCodeForSessionMock.mockResolvedValue({
+      error: { message: "invalid code" },
+    });
+
+    const response = await GET(
+      buildCallbackRequest("?code=bad-code&intent=homepage-demo-claim")
+    );
+
+    expect(response.headers.get("location")).toContain(
+      "error=oauth_callback_failed"
+    );
+    expect(response.headers.get("location")).toContain(
+      "intent=homepage-demo-claim"
+    );
+  });
+
+  it("an ensureUser account-link conflict WITH intent=homepage-demo-claim preserves the intent on retry", async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: "user-1", email: NORMAL_EMAIL } },
+      error: null,
+    });
+    ensureUserMock.mockRejectedValue(
+      new Error("already linked to another auth identity")
+    );
+
+    const response = await GET(
+      buildCallbackRequest("?code=valid-code&intent=homepage-demo-claim")
+    );
+
+    expect(response.headers.get("location")).toContain(
+      "error=account_link_conflict"
+    );
+    expect(response.headers.get("location")).toContain(
+      "intent=homepage-demo-claim"
+    );
+  });
+
+  it("no intent present behaves exactly as before (redirects to /dashboard)", async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: "user-1", email: NORMAL_EMAIL } },
+      error: null,
+    });
+
+    const response = await GET(buildCallbackRequest("?code=valid-code"));
+
+    expect(response.headers.get("location")).toContain("/dashboard");
+    expect(response.headers.get("location")).not.toContain(
+      "/homepage-demo/claim/continue"
+    );
+  });
+});
+
 describe("GET /auth/oauth/callback - existing behavior preserved", () => {
   it("redirects to the dashboard on a normal successful callback", async () => {
     getUserMock.mockResolvedValue({

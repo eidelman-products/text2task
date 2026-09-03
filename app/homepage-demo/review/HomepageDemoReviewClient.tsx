@@ -18,6 +18,8 @@ import styles from "./homepage-demo-review.module.css";
 const REVIEW_PAGE_PATH = "/homepage-demo/review";
 const REVIEW_API_PATH = "/api/homepage-demo/review";
 const CLAIM_PREPARE_API_PATH = "/api/homepage-demo/claim/prepare";
+const ANALYTICS_EVENT_API_PATH = "/api/analytics/event";
+const DEMO_ACCOUNT_CTA_CLICKED_EVENT = "demo_account_cta_clicked";
 const CLAIM_SIGNUP_PATH = `/signup?intent=${HOMEPAGE_DEMO_CLAIM_AUTH_INTENT}`;
 const PUBLIC_REVIEW_FRAGMENT_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const HOMEPAGE_DEMO_REVIEW_RESPONSE_MAX_BYTES = 256 * 1024;
@@ -446,6 +448,46 @@ function getClaimAuthDestinationPath(destination: AuthPreparationDestination): s
   return destination === "signup" ? CLAIM_SIGNUP_PATH : HOMEPAGE_DEMO_CLAIM_LOGIN_PATH;
 }
 
+type DemoAccountCta = "start_free" | "log_in";
+
+function getDemoAccountCta(destination: AuthPreparationDestination): DemoAccountCta {
+  return destination === "signup" ? "start_free" : "log_in";
+}
+
+/**
+ * Phase 1B -- best-effort, fire-and-forget product-analytics beacon for
+ * the one moment this event is meant to represent: the user
+ * intentionally activating an account CTA from a genuinely ready
+ * review (this is only ever called from inside prepareClaimAndNavigate,
+ * itself only reachable once state.status === "review_ready"). Uses the
+ * existing internal /api/analytics/event pipeline -- the same
+ * consent/owner-exclusion/fail-safe behavior already governing every
+ * other browser-fired event in this codebase, not a new mechanism.
+ * page_path is a hardcoded safe constant, never window.location, so the
+ * temporary review-token URL fragment can never leak into analytics.
+ * Never awaited by the caller and keepalive-flagged so the beacon
+ * survives the page navigation that follows almost immediately after.
+ */
+function trackDemoAccountCtaClicked(cta: DemoAccountCta): void {
+  try {
+    void fetch(ANALYTICS_EVENT_API_PATH, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_name: DEMO_ACCOUNT_CTA_CLICKED_EVENT,
+        page_path: REVIEW_PAGE_PATH,
+        cta,
+      }),
+      credentials: "same-origin",
+      keepalive: true,
+    }).catch(() => {
+      // Best-effort only. Analytics failure must never affect navigation.
+    });
+  } catch {
+    // Best-effort only. Analytics failure must never affect navigation.
+  }
+}
+
 export default function HomepageDemoReviewClient() {
   const [state, setState] = useState<ReviewState>({ status: "waiting_for_extraction" });
   const [authPreparationState, setAuthPreparationState] =
@@ -654,6 +696,7 @@ export default function HomepageDemoReviewClient() {
 
     authPreparationInFlightRef.current = true;
     setAuthPreparationState({ status: "preparing", destination });
+    trackDemoAccountCtaClicked(getDemoAccountCta(destination));
 
     try {
       const response = await fetch(CLAIM_PREPARE_API_PATH, {

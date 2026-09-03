@@ -28,10 +28,12 @@ export const HOMEPAGE_DEMO_CLAIM_IMPORT_PERSISTENCE_OPTIONS: ProjectImportPersis
 export type HomepageDemoClaimSaveSource =
   | Readonly<{
       kind: "pending";
+      claimId: string;
       projectGroup: ProjectImportJsonRecord;
     }>
   | Readonly<{
       kind: "rpc_replay";
+      claimId: string;
       projectGroup: ProjectImportJsonRecord;
     }>
   | Readonly<{
@@ -194,6 +196,7 @@ export async function loadHomepageDemoClaimSaveSource({
   if (claim.status !== "pending" || claim.expires_at <= now) {
     return {
       kind: "rpc_replay",
+      claimId: claim.id,
       projectGroup: buildRpcReplayProjectGroup(),
     };
   }
@@ -215,6 +218,7 @@ export async function loadHomepageDemoClaimSaveSource({
   if (trial.expires_at <= now || draft.expires_at <= now) {
     return {
       kind: "rpc_replay",
+      claimId: claim.id,
       projectGroup: buildRpcReplayProjectGroup(),
     };
   }
@@ -233,6 +237,7 @@ export async function loadHomepageDemoClaimSaveSource({
 
   return {
     kind: "pending",
+    claimId: claim.id,
     projectGroup: buildProjectImportGroup(parsedDraft.data),
   };
 }

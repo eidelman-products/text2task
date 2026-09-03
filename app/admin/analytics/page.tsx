@@ -6,6 +6,20 @@ import {
   getDateTimePart,
   OWNER_ANALYTICS_TIME_ZONE,
 } from "@/lib/analytics/owner-analytics-window";
+import {
+  buildKnownOwnerAnonymousIds,
+  buildLiveDemoConversionCounts,
+  buildLiveDemoCtaBreakdown,
+  buildLiveDemoDuplicateOverrideBreakdown,
+  excludeKnownOwnerRows,
+  isPossiblyTruncated,
+  LIVE_DEMO_FUNNEL_SUPPLEMENT_EVENT_NAMES,
+  type LiveDemoConversionCounts,
+  type LiveDemoCtaBreakdown,
+  type LiveDemoDuplicateOverrideBreakdown,
+  type LiveDemoFunnelEventName,
+  type LiveDemoFunnelEventRow,
+} from "@/lib/analytics/live-demo-funnel";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type AnalyticsEventRow = {
@@ -41,6 +55,7 @@ type LiveDemoAnalyticsEventName =
 type LiveDemoAnalyticsRow = {
   event_name: LiveDemoAnalyticsEventName;
   occurred_at: string;
+  anonymous_id: string | null;
   metadata: Record<string, unknown>;
 };
 
@@ -97,6 +112,7 @@ const AUTHENTICATED_ACTIVITY_ROWS_LIMIT = 10000;
 const AUTH_USERS_PAGE_SIZE = 1000;
 const AUTH_USERS_MAX_PAGES = 5; // safety cap: up to 5,000 auth accounts
 const LIVE_DEMO_ROWS_LIMIT = 5000;
+const LIVE_DEMO_FUNNEL_SUPPLEMENT_ROWS_LIMIT = 5000;
 const RECENT_USERS_LIMIT = 25;
 const SIGNUP_ATTRIBUTION_LIMIT = 200;
 const SIGNUP_ATTRIBUTION_EVENTS = [
@@ -626,7 +642,7 @@ async function loadLiveDemoAnalyticsRows(sinceMs: number) {
     const since = new Date(sinceMs).toISOString();
     const { data, error } = await supabaseAdmin
       .from("analytics_events")
-      .select("event_name, occurred_at, metadata")
+      .select("event_name, occurred_at, anonymous_id, metadata")
       .in("event_name", LIVE_DEMO_ANALYTICS_EVENTS)
       .gte("occurred_at", since)
       .order("occurred_at", { ascending: false })
@@ -655,6 +671,8 @@ async function loadLiveDemoAnalyticsRows(sinceMs: number) {
         return {
           event_name: eventName,
           occurred_at: occurredAt,
+          anonymous_id:
+            typeof row.anonymous_id === "string" ? row.anonymous_id : null,
           metadata,
         } satisfies LiveDemoAnalyticsRow;
       })
@@ -665,6 +683,112 @@ async function loadLiveDemoAnalyticsRows(sinceMs: number) {
         error instanceof Error
           ? error.message
           : "Unknown live demo analytics error",
+    });
+
+    return null;
+  }
+}
+
+function isLiveDemoFunnelSupplementEventName(
+  value: unknown
+): value is LiveDemoFunnelEventName {
+  return (
+    typeof value === "string" &&
+    LIVE_DEMO_FUNNEL_SUPPLEMENT_EVENT_NAMES.includes(
+      value as (typeof LIVE_DEMO_FUNNEL_SUPPLEMENT_EVENT_NAMES)[number]
+    )
+  );
+}
+
+/**
+ * Phase 1D -- loads the three funnel events not already covered by
+ * loadLiveDemoAnalyticsRows (demo_review_viewed, demo_account_cta_clicked,
+ * demo_claim_saved). Deliberately reuses the SAME bounded-row +
+ * truncation-detection pattern as loadLiveDemoAnalyticsRows rather than
+ * a second, differently-shaped query strategy -- see isPossiblyTruncated
+ * usage in loadAdminAnalyticsViewModel. This does not duplicate the
+ * extract attempt/succeeded rows already loaded elsewhere; those are
+ * merged in by the caller instead of being re-queried here.
+ */
+async function loadLiveDemoFunnelSupplementRows(sinceMs: number) {
+  try {
+    const since = new Date(sinceMs).toISOString();
+    const { data, error } = await supabaseAdmin
+      .from("analytics_events")
+      .select("event_name, occurred_at, anonymous_id, user_id, metadata")
+      .in("event_name", LIVE_DEMO_FUNNEL_SUPPLEMENT_EVENT_NAMES)
+      .gte("occurred_at", since)
+      .order("occurred_at", { ascending: false })
+      .limit(LIVE_DEMO_FUNNEL_SUPPLEMENT_ROWS_LIMIT);
+
+    if (error) {
+      console.warn("Owner live demo funnel query failed:", error.message);
+
+      return null;
+    }
+
+    return ((data ?? []) as Array<Record<string, unknown>>)
+      .map((row) => {
+        const eventName = row.event_name;
+        const occurredAt = row.occurred_at;
+        const metadata = row.metadata;
+
+        if (
+          !isLiveDemoFunnelSupplementEventName(eventName) ||
+          typeof occurredAt !== "string" ||
+          !isRecord(metadata)
+        ) {
+          return null;
+        }
+
+        return {
+          event_name: eventName,
+          occurred_at: occurredAt,
+          anonymous_id:
+            typeof row.anonymous_id === "string" ? row.anonymous_id : null,
+          user_id: typeof row.user_id === "string" ? row.user_id : null,
+          metadata,
+        } satisfies LiveDemoFunnelEventRow;
+      })
+      .filter((row): row is LiveDemoFunnelEventRow => row !== null);
+  } catch (error) {
+    console.warn("Owner live demo funnel query failed:", {
+      message:
+        error instanceof Error ? error.message : "Unknown live demo funnel error",
+    });
+
+    return null;
+  }
+}
+
+/**
+ * Phase 1D -- an exact, DB-side count (no rows transferred, no
+ * truncation risk at any volume) of trials created in the window. This
+ * is a genuinely different query shape from the bounded-row approach
+ * above: homepage_demo_trials has no owner concept and needs no
+ * per-row correlation, so a head-count is both simpler and exact.
+ */
+async function loadUniqueDemoTrialCount(sinceMs: number) {
+  try {
+    const since = new Date(sinceMs).toISOString();
+    const { count, error } = await supabaseAdmin
+      .from("homepage_demo_trials")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", since);
+
+    if (error) {
+      console.warn("Owner unique demo trial count query failed:", error.message);
+
+      return null;
+    }
+
+    return typeof count === "number" ? count : null;
+  } catch (error) {
+    console.warn("Owner unique demo trial count query failed:", {
+      message:
+        error instanceof Error
+          ? error.message
+          : "Unknown unique demo trial count error",
     });
 
     return null;
@@ -810,6 +934,17 @@ function formatPercentage(value: number) {
   return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
 }
 
+/**
+ * Phase 1D -- renders "-" for a zero/undefined-denominator SafeRate
+ * instead of a misleading 0% or NaN%. Never called with a rate whose
+ * denominator could itself be a best-effort/consent-gated count (see
+ * lib/analytics/live-demo-funnel.ts -- no rate is ever built against
+ * observed CTA clicks in the first place).
+ */
+function formatSafeRate(rate: { value: number | null }) {
+  return rate.value === null ? "—" : formatPercentage(rate.value);
+}
+
 function formatDate(value: string | null | undefined) {
   const timestamp = parseTimestamp(value);
 
@@ -916,6 +1051,13 @@ type AdminAnalyticsViewModel = {
   liveDemoFailureStageRows: LiveDemoFailureStageRow[];
   recentLiveDemoRows: LiveDemoAnalyticsRow[];
   signupAttributionByUser: Map<string, SignupAttributionRow>;
+  liveDemoConversionPeriodStats: LiveDemoConversionCounts[];
+  liveDemoCtaBreakdown: LiveDemoCtaBreakdown | null;
+  liveDemoDuplicateOverrideBreakdown: LiveDemoDuplicateOverrideBreakdown | null;
+  liveDemoFunnelAvailable: boolean;
+  liveDemoHealthPossiblyTruncated: boolean;
+  liveDemoFunnelPossiblyTruncated: boolean;
+  uniqueDemoTrialCount: number | null;
 };
 
 /*
@@ -937,12 +1079,16 @@ async function loadAdminAnalyticsViewModel(): Promise<AdminAnalyticsViewModel> {
     trafficRows,
     productData,
     liveDemoRows,
+    liveDemoFunnelSupplementRows,
+    uniqueDemoTrialCount,
     authenticatedProductEventRows,
     ownerTestUserIds,
   ] = await Promise.all([
     loadTrafficRows(thirtyDaysAgoMs),
     loadProductActivationData(),
     loadLiveDemoAnalyticsRows(thirtyDaysAgoMs),
+    loadLiveDemoFunnelSupplementRows(thirtyDaysAgoMs),
+    loadUniqueDemoTrialCount(thirtyDaysAgoMs),
     loadAuthenticatedProductEventRows(thirtyDaysAgoMs),
     loadOwnerTestUserIds(),
   ]);
@@ -1004,6 +1150,75 @@ async function loadAdminAnalyticsViewModel(): Promise<AdminAnalyticsViewModel> {
     signupAttributionRows ?? []
   );
 
+  // Phase 1D -- the business conversion funnel reuses the SAME extract
+  // attempt/succeeded rows already loaded for the operational Health
+  // section above (no second query for the same event data), merged
+  // with the three new funnel-only events. See lib/analytics/
+  // live-demo-funnel.ts for the owner-exclusion propagation model.
+  const extractFunnelRows: LiveDemoFunnelEventRow[] = (liveDemoRows ?? [])
+    .filter(
+      (row) =>
+        row.event_name === "homepage_demo_extract_attempt" ||
+        row.event_name === "homepage_demo_extract_succeeded"
+    )
+    .map((row) => ({
+      event_name: row.event_name as LiveDemoFunnelEventName,
+      occurred_at: row.occurred_at,
+      anonymous_id: row.anonymous_id,
+      user_id: null,
+      metadata: row.metadata,
+    }));
+  const combinedFunnelRows: LiveDemoFunnelEventRow[] | null =
+    liveDemoRows && liveDemoFunnelSupplementRows
+      ? [...extractFunnelRows, ...liveDemoFunnelSupplementRows]
+      : null;
+  const ownerAnonymousIds = combinedFunnelRows
+    ? buildKnownOwnerAnonymousIds(combinedFunnelRows)
+    : new Set<string>();
+  const businessFunnelRows = combinedFunnelRows
+    ? excludeKnownOwnerRows(combinedFunnelRows, ownerAnonymousIds)
+    : null;
+  const liveDemoConversionPeriodStats: LiveDemoConversionCounts[] =
+    businessFunnelRows
+      ? [
+          buildLiveDemoConversionCounts(
+            "Today",
+            businessFunnelRows,
+            startOfTodayMs
+          ),
+          buildLiveDemoConversionCounts(
+            "Last 7 days",
+            businessFunnelRows,
+            sevenDaysAgoMs
+          ),
+          buildLiveDemoConversionCounts(
+            "Last 30 days",
+            businessFunnelRows,
+            thirtyDaysAgoMs
+          ),
+        ]
+      : [];
+  const liveDemoCtaBreakdown: LiveDemoCtaBreakdown | null = businessFunnelRows
+    ? buildLiveDemoCtaBreakdown(businessFunnelRows, thirtyDaysAgoMs)
+    : null;
+  const liveDemoDuplicateOverrideBreakdown: LiveDemoDuplicateOverrideBreakdown | null =
+    businessFunnelRows
+      ? buildLiveDemoDuplicateOverrideBreakdown(
+          businessFunnelRows,
+          thirtyDaysAgoMs
+        )
+      : null;
+  const liveDemoHealthPossiblyTruncated =
+    liveDemoRows !== null &&
+    isPossiblyTruncated(liveDemoRows.length, LIVE_DEMO_ROWS_LIMIT);
+  const liveDemoFunnelPossiblyTruncated =
+    liveDemoHealthPossiblyTruncated ||
+    (liveDemoFunnelSupplementRows !== null &&
+      isPossiblyTruncated(
+        liveDemoFunnelSupplementRows.length,
+        LIVE_DEMO_FUNNEL_SUPPLEMENT_ROWS_LIMIT
+      ));
+
   return {
     trafficRows,
     productData,
@@ -1017,6 +1232,13 @@ async function loadAdminAnalyticsViewModel(): Promise<AdminAnalyticsViewModel> {
     liveDemoFailureStageRows,
     recentLiveDemoRows,
     signupAttributionByUser,
+    liveDemoConversionPeriodStats,
+    liveDemoCtaBreakdown,
+    liveDemoDuplicateOverrideBreakdown,
+    liveDemoFunnelAvailable: businessFunnelRows !== null,
+    liveDemoHealthPossiblyTruncated,
+    liveDemoFunnelPossiblyTruncated,
+    uniqueDemoTrialCount,
   };
 }
 
@@ -1036,6 +1258,13 @@ export default async function AdminAnalyticsPage() {
     liveDemoFailureStageRows,
     recentLiveDemoRows,
     signupAttributionByUser,
+    liveDemoConversionPeriodStats,
+    liveDemoCtaBreakdown,
+    liveDemoDuplicateOverrideBreakdown,
+    liveDemoFunnelAvailable,
+    liveDemoHealthPossiblyTruncated,
+    liveDemoFunnelPossiblyTruncated,
+    uniqueDemoTrialCount,
   } = await loadAdminAnalyticsViewModel();
 
   if (!trafficRows && !productData && !liveDemoRows) {
@@ -1223,10 +1452,133 @@ export default async function AdminAnalyticsPage() {
         <section className="admin-section">
           <div className="admin-section-heading">
             <div>
-              <h2>Live Demo usage</h2>
+              <h2>Live Demo Conversion</h2>
               <p className="admin-muted">
-                Operational telemetry for the public live demo. Counted
-                server-side even without analytics-cookie consent.
+                Business conversion funnel with identifiable owner traffic
+                excluded. Demo attempts, successful demos, review reached,
+                and claims saved are server-authoritative; observed CTA
+                clicks are client-fired, best-effort, and depend on
+                analytics consent.
+              </p>
+            </div>
+            <span>Last 30 days</span>
+          </div>
+
+          {liveDemoFunnelAvailable ? (
+            <>
+              <div className="admin-stat-grid">
+                {liveDemoConversionPeriodStats.map((stat) => (
+                  <article className="admin-stat-card" key={stat.label}>
+                    <p>{stat.label}</p>
+                    <strong>{formatNumber(stat.successfulDemos)}</strong>
+                    <span>successful demos</span>
+                    <span>{formatNumber(stat.attempts)} attempts</span>
+                    <span>
+                      {formatNumber(stat.reviewReached)} review reached (
+                      {formatSafeRate(stat.reviewReachedRate)})
+                    </span>
+                    <span>
+                      {formatNumber(stat.observedCtaClicks)} observed CTA
+                      clicks
+                    </span>
+                    <span>
+                      {formatNumber(stat.claimsSaved)} claims saved (
+                      {formatSafeRate(stat.claimsSavedRate)})
+                    </span>
+                    <span>
+                      {formatNumber(stat.correlatedSuccessfulDemos)}{" "}
+                      correlated / {formatNumber(stat.uncorrelatedSuccessfulDemos)}{" "}
+                      uncorrelated demos
+                    </span>
+                  </article>
+                ))}
+              </div>
+
+              <section className="admin-panel">
+                <div className="admin-panel-header">
+                  <h2>Conversion breakdown</h2>
+                  <span>Last 30 days</span>
+                </div>
+                <div className="admin-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Metric</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Start free CTA clicks</td>
+                        <td>{formatNumber(liveDemoCtaBreakdown?.startFree ?? 0)}</td>
+                      </tr>
+                      <tr>
+                        <td>Log in CTA clicks</td>
+                        <td>{formatNumber(liveDemoCtaBreakdown?.logIn ?? 0)}</td>
+                      </tr>
+                      {liveDemoCtaBreakdown && liveDemoCtaBreakdown.other > 0 ? (
+                        <tr>
+                          <td>Other/unrecognized CTA clicks</td>
+                          <td>{formatNumber(liveDemoCtaBreakdown.other)}</td>
+                        </tr>
+                      ) : null}
+                      <tr>
+                        <td>Normal saves</td>
+                        <td>
+                          {formatNumber(
+                            liveDemoDuplicateOverrideBreakdown?.normalSave ?? 0
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Save-anyway (duplicate override)</td>
+                        <td>
+                          {formatNumber(
+                            liveDemoDuplicateOverrideBreakdown?.saveAnyway ?? 0
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Unique demo trials</td>
+                        <td>
+                          {uniqueDemoTrialCount === null
+                            ? "Unavailable"
+                            : formatNumber(uniqueDemoTrialCount)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <p className="admin-muted">
+                Owner filtering applies to traffic identifiable by the
+                current production exclusion mechanism (a verified owner
+                login sets a trusted browser cookie); older or
+                unidentified activity may remain in historical totals.
+                Fresh/incognito owner testing that never reaches a
+                verified login cannot be reliably excluded.
+              </p>
+              {liveDemoFunnelPossiblyTruncated ? (
+                <p className="admin-muted">
+                  Showing the most recent events for this window --
+                  totals may undercount at higher volume.
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <UnavailablePanel message="Live Demo conversion analytics unavailable." />
+          )}
+        </section>
+
+        <section className="admin-section">
+          <div className="admin-section-heading">
+            <div>
+              <h2>Live Demo Health</h2>
+              <p className="admin-muted">
+                Operational telemetry for the public live demo, including
+                owner/admin traffic. Counted server-side even without
+                analytics-cookie consent.
               </p>
             </div>
             <span>Last 30 days</span>
@@ -1321,6 +1673,13 @@ export default async function AdminAnalyticsPage() {
                   </div>
                 </div>
               </section>
+
+              {liveDemoHealthPossiblyTruncated ? (
+                <p className="admin-muted">
+                  Showing the most recent events for this window --
+                  totals may undercount at higher volume.
+                </p>
+              ) : null}
             </>
           ) : (
             <UnavailablePanel message="Live Demo usage analytics unavailable." />

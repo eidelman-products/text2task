@@ -1,6 +1,8 @@
 import { after, NextRequest, NextResponse } from "next/server";
 
 import { logAnalyticsEventSafe } from "@/lib/analytics/internal-events.server";
+import { hasOwnerAnalyticsExclusionCookie } from "@/lib/analytics/owner-exclusion.server";
+import { readAnonymousIdCookie } from "@/lib/analytics/request-attribution.server";
 import {
   isHomepageDemoChallengeError,
   isHomepageDemoExtractionError,
@@ -123,6 +125,25 @@ type ExtractJsonResponse = Readonly<{
 }>;
 
 export async function POST(request: NextRequest) {
+  // Phase 1A -- the existing, general-purpose first-party analytics
+  // identifier (also used by page_view/signup_success), read the same
+  // way the existing /api/analytics/event route already reads it as a
+  // direct fallback (lib/analytics/request-attribution.server.ts). This
+  // is intentionally NOT the demo's own session/device/public/claim
+  // tokens (those remain a purpose-separated security identity) and is
+  // read unconditionally, matching this route's existing "operational
+  // telemetry, counted regardless of consent" treatment -- read before
+  // anything else in the request can throw, so it's available to the
+  // catch block's failure-analytics calls too.
+  const anonymousId = readAnonymousIdCookie(request);
+  // Phase 1D -- computed once per request and merged into every event's
+  // metadata below. This is the SAME verified, server-set-only cookie
+  // used to silently suppress client analytics for the owner
+  // (lib/analytics/owner-exclusion.server.ts); here it only ever adds a
+  // boolean fact to a row that is stored either way -- it never
+  // suppresses ingestion of server-authoritative operational telemetry.
+  const ownerFlagged = hasOwnerAnalyticsExclusionCookie(request);
+
   try {
     assertHomepageDemoPublicExtractEnabled();
     validateHomepageDemoPublicRequestOrigin({
@@ -154,33 +175,50 @@ export async function POST(request: NextRequest) {
     });
     const response = mapOrchestrationResult(result);
 
-    scheduleHomepageDemoExtractAttempt(response.status);
-    scheduleHomepageDemoExtractOrchestrationOutcome(result, response.status);
+    scheduleHomepageDemoExtractAttempt(response.status, anonymousId, ownerFlagged);
+    scheduleHomepageDemoExtractOrchestrationOutcome(
+      result,
+      response.status,
+      anonymousId,
+      ownerFlagged
+    );
 
     return response;
   } catch (error) {
     const mapped = mapExtractError(error);
 
-    scheduleHomepageDemoExtractAttempt(mapped.response.status);
-    scheduleHomepageDemoExtractFailure(mapped.failure);
+    scheduleHomepageDemoExtractAttempt(
+      mapped.response.status,
+      anonymousId,
+      ownerFlagged
+    );
+    scheduleHomepageDemoExtractFailure(mapped.failure, anonymousId, ownerFlagged);
 
     return mapped.response;
   }
 }
 
-function scheduleHomepageDemoExtractAttempt(httpStatus: number): void {
+function scheduleHomepageDemoExtractAttempt(
+  httpStatus: number,
+  anonymousId: string | null,
+  ownerFlagged: boolean
+): void {
   scheduleHomepageDemoExtractAnalytics({
     eventName: HOMEPAGE_DEMO_EXTRACT_ATTEMPT_EVENT,
     metadata: {
       statusCategory: "attempt",
       httpStatus,
     },
+    anonymousId,
+    ownerFlagged,
   });
 }
 
 function scheduleHomepageDemoExtractOrchestrationOutcome(
   result: HomepageDemoTextTrialOrchestrationResult,
-  httpStatus: number
+  httpStatus: number,
+  anonymousId: string | null,
+  ownerFlagged: boolean
 ): void {
   switch (result.outcome) {
     case "review_ready":
@@ -191,37 +229,53 @@ function scheduleHomepageDemoExtractOrchestrationOutcome(
           httpStatus,
           source: result.source,
         },
+        anonymousId,
+        ownerFlagged,
       });
       return;
 
     case "challenge_failed":
-      scheduleHomepageDemoExtractFailure({
-        stage: "challenge",
-        errorCode: result.blocked
-          ? "challenge_rate_limited"
-          : "challenge_failed",
-        httpStatus,
-      });
+      scheduleHomepageDemoExtractFailure(
+        {
+          stage: "challenge",
+          errorCode: result.blocked
+            ? "challenge_rate_limited"
+            : "challenge_failed",
+          httpStatus,
+        },
+        anonymousId,
+        ownerFlagged
+      );
       return;
 
     case "not_admitted":
-      scheduleHomepageDemoExtractFailure({
-        stage: "admission",
-        errorCode: result.admission.decision,
-        httpStatus,
-      });
+      scheduleHomepageDemoExtractFailure(
+        {
+          stage: "admission",
+          errorCode: result.admission.decision,
+          httpStatus,
+        },
+        anonymousId,
+        ownerFlagged
+      );
       return;
   }
 
-  scheduleHomepageDemoExtractFailure({
-    stage: "unexpected",
-    errorCode: "unexpected",
-    httpStatus,
-  });
+  scheduleHomepageDemoExtractFailure(
+    {
+      stage: "unexpected",
+      errorCode: "unexpected",
+      httpStatus,
+    },
+    anonymousId,
+    ownerFlagged
+  );
 }
 
 function scheduleHomepageDemoExtractFailure(
-  failure: HomepageDemoExtractFailureAnalytics
+  failure: HomepageDemoExtractFailureAnalytics,
+  anonymousId: string | null,
+  ownerFlagged: boolean
 ): void {
   scheduleHomepageDemoExtractAnalytics({
     eventName: HOMEPAGE_DEMO_EXTRACT_FAILED_EVENT,
@@ -231,15 +285,21 @@ function scheduleHomepageDemoExtractFailure(
       errorCode: failure.errorCode,
       httpStatus: failure.httpStatus,
     },
+    anonymousId,
+    ownerFlagged,
   });
 }
 
 function scheduleHomepageDemoExtractAnalytics({
   eventName,
   metadata,
+  anonymousId,
+  ownerFlagged,
 }: Readonly<{
   eventName: HomepageDemoExtractAnalyticsEventName;
   metadata: HomepageDemoExtractAnalyticsMetadata;
+  anonymousId: string | null;
+  ownerFlagged: boolean;
 }>): void {
   try {
     const environment = getHomepageDemoExtractAnalyticsEnvironment();
@@ -249,13 +309,14 @@ function scheduleHomepageDemoExtractAnalytics({
         await logAnalyticsEventSafe({
           eventName,
           userId: null,
-          anonymousId: null,
+          anonymousId,
           pagePath: HOMEPAGE_DEMO_EXTRACT_ANALYTICS_ROUTE,
           metadata: {
             mode: "text",
             anonymous: true,
             environment,
             ...metadata,
+            owner_flagged: ownerFlagged,
           },
         });
       } catch {

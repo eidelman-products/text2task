@@ -349,3 +349,41 @@ describe("POST /api/analytics/event - owner analytics exclusion", () => {
     expect(logAnalyticsEventSafeMock).not.toHaveBeenCalled();
   });
 });
+
+describe("POST /api/analytics/event - demo_account_cta_clicked owner exclusion (Phase 1D)", () => {
+  it("owner-exclusion cookie present -> demo_account_cta_clicked is never logged (ingestion suppression, not tagging)", async () => {
+    const response = await POST(
+      buildJsonRequest(
+        {
+          event_name: "demo_account_cta_clicked",
+          page_path: "/homepage-demo/review",
+          cta: "start_free",
+        },
+        withOwnerExclusionCookie()
+      )
+    );
+
+    expect(response.status).toBe(204);
+    expect(logAnalyticsEventSafeMock).not.toHaveBeenCalled();
+  });
+
+  it("a client-supplied owner_flagged field can never appear in the stored metadata (server derives it, client cannot forge it)", async () => {
+    await POST(
+      buildJsonRequest({
+        event_name: "demo_account_cta_clicked",
+        page_path: "/homepage-demo/review",
+        cta: "log_in",
+        owner_flagged: false,
+      })
+    );
+
+    expect(logAnalyticsEventSafeMock).toHaveBeenCalledTimes(1);
+    const metadata = (
+      logAnalyticsEventSafeMock.mock.calls[0][0] as {
+        metadata: Record<string, unknown>;
+      }
+    ).metadata;
+    expect(metadata).not.toHaveProperty("owner_flagged");
+    expect(metadata).toEqual({ source: "browser", cta: "log_in" });
+  });
+});

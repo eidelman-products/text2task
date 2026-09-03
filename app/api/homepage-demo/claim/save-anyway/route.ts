@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
+import { logAnalyticsEventSafe } from "@/lib/analytics/internal-events.server";
+import { hasOwnerAnalyticsExclusionCookie } from "@/lib/analytics/owner-exclusion.server";
+import { readAnonymousIdCookie } from "@/lib/analytics/request-attribution.server";
 import {
   getHomepageDemoDuplicateOverrideCookieClearPolicy,
   readHomepageDemoDuplicateOverrideCookie,
@@ -40,6 +43,50 @@ export const dynamic = "force-dynamic";
 const DASHBOARD_DESTINATION = "/dashboard";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const DEMO_CLAIM_SAVED_EVENT = "demo_claim_saved";
+
+/**
+ * Phase 1C -- server-authoritative final conversion milestone, shared
+ * with app/api/homepage-demo/claim/save/route.ts. Fires only when a
+ * genuine successful claim outcome (saved or already_claimed) has
+ * already been produced by the save-anyway RPC. The idempotency key is
+ * keyed on the claim's own internal database id, which the normal save
+ * route uses for the SAME underlying claim -- so a save followed by a
+ * save-anyway retry, or vice versa, can never produce more than one
+ * demo_claim_saved row.
+ */
+function scheduleHomepageDemoClaimSavedAnalytics({
+  claimId,
+  userId,
+  anonymousId,
+  ownerFlagged,
+}: {
+  claimId: string;
+  userId: string;
+  anonymousId: string | null;
+  ownerFlagged: boolean;
+}): void {
+  try {
+    const idempotencyKey = `${DEMO_CLAIM_SAVED_EVENT}:${claimId}`;
+
+    after(async () => {
+      try {
+        await logAnalyticsEventSafe({
+          eventName: DEMO_CLAIM_SAVED_EVENT,
+          userId,
+          anonymousId,
+          metadata: { duplicate_override: true, owner_flagged: ownerFlagged },
+          idempotencyKey,
+        });
+      } catch {
+        // Operational analytics is best-effort and must never affect the claim response.
+      }
+    });
+  } catch {
+    // Scheduling analytics is best-effort and must never affect the claim response.
+  }
+}
 
 const SECURITY_HEADERS = [
   ["Cache-Control", "no-store, no-cache, max-age=0, must-revalidate"],
@@ -82,6 +129,13 @@ type ClaimSaveAnywayJsonResponse =
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ClaimSaveAnywayJsonResponse>> {
+  // Phase 1C -- read before anything else can throw, matching the Phase
+  // 1A/1B/1C convention: the existing, general-purpose first-party
+  // analytics identifier, kept fully separate from this route's own
+  // claim/session/duplicate-override token identity.
+  const anonymousId = readAnonymousIdCookie(request);
+  const ownerFlagged = hasOwnerAnalyticsExclusionCookie(request);
+
   try {
     assertHomepageDemoPublicExtractEnabled();
     validateHomepageDemoPublicRequestOrigin({
@@ -156,7 +210,12 @@ export async function POST(
       importGroupsJson: prepared.payloadJson,
     });
 
-    return mapClaimSaveAnywayResult(claimResult);
+    return mapClaimSaveAnywayResult(claimResult, {
+      claimId: source.claimId,
+      userId: user.id,
+      anonymousId,
+      ownerFlagged,
+    });
   } catch (error) {
     try {
       return mapClaimSaveAnywayError(error);
@@ -167,16 +226,26 @@ export async function POST(
 }
 
 function mapClaimSaveAnywayResult(
-  result: ClaimHomepageDemoProjectWithDuplicateOverrideResult
+  result: ClaimHomepageDemoProjectWithDuplicateOverrideResult,
+  context: {
+    claimId: string;
+    userId: string;
+    anonymousId: string | null;
+    ownerFlagged: boolean;
+  }
 ): NextResponse<ClaimSaveAnywayJsonResponse> {
   switch (result.outcome) {
     case "saved":
+      scheduleHomepageDemoClaimSavedAnalytics(context);
+
       return createSuccessfulClaimSaveAnywayResponse({
         code: "saved",
         destination: DASHBOARD_DESTINATION,
         created: true,
       });
     case "already_claimed":
+      scheduleHomepageDemoClaimSavedAnalytics(context);
+
       return createSuccessfulClaimSaveAnywayResponse({
         code: "already_claimed",
         destination: DASHBOARD_DESTINATION,

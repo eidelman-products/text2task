@@ -13,7 +13,37 @@ import {
 } from "@/lib/analytics/request-attribution.server";
 
 const MAX_BODY_CHARS = 8192;
-const ALLOWED_BROWSER_EVENTS = new Set(["page_view"]);
+const ALLOWED_BROWSER_EVENTS = new Set([
+  "page_view",
+  "demo_account_cta_clicked",
+]);
+
+/**
+ * Phase 1B -- demo_account_cta_clicked is the one browser-fired event
+ * that carries a piece of structured metadata (which CTA was clicked).
+ * Strictly enum-validated so a client can never write arbitrary free
+ * text into analytics_events.metadata; any other/missing value is
+ * simply omitted, never rejecting the event itself (matching the
+ * existing page_view_id handling below).
+ */
+const DEMO_ACCOUNT_CTA_CLICKED_EVENT = "demo_account_cta_clicked";
+const ALLOWED_DEMO_ACCOUNT_CTA_VALUES = new Set(["start_free", "log_in"]);
+
+function getValidDemoAccountCtaValue(body: UnknownRecord) {
+  const raw = getAnalyticsStringField(body, 20, "cta");
+
+  return raw && ALLOWED_DEMO_ACCOUNT_CTA_VALUES.has(raw) ? raw : null;
+}
+
+function getEventMetadata(eventName: string, body: UnknownRecord) {
+  if (eventName !== DEMO_ACCOUNT_CTA_CLICKED_EVENT) {
+    return { source: "browser" };
+  }
+
+  const cta = getValidDemoAccountCtaValue(body);
+
+  return cta ? { source: "browser", cta } : { source: "browser" };
+}
 
 /**
  * Phase 4B -- validates the shape of a client-supplied page_view_id before
@@ -149,9 +179,7 @@ export async function POST(request: NextRequest) {
       }),
       pagePath,
       countryCode: getRequestCountryCode(request),
-      metadata: {
-        source: "browser",
-      },
+      metadata: getEventMetadata(eventName, body),
       idempotencyKey,
     });
   } catch {

@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
+import { logAnalyticsEventSafe } from "@/lib/analytics/internal-events.server";
+import { hasOwnerAnalyticsExclusionCookie } from "@/lib/analytics/owner-exclusion.server";
+import { readAnonymousIdCookie } from "@/lib/analytics/request-attribution.server";
 import {
   isHomepageDemoIdentityError,
   isHomepageDemoPublicRequestError,
@@ -13,7 +16,10 @@ import {
   readHomepageDemoPublicExtractRequestJson,
   validateHomepageDemoPublicRequestOrigin,
 } from "@/lib/homepage-demo/public-extract-request.server";
-import { getHomepageDemoReviewDraft } from "@/lib/homepage-demo/review-repository.server";
+import {
+  getHomepageDemoReviewDraft,
+  type HomepageDemoReviewDraft,
+} from "@/lib/homepage-demo/review-repository.server";
 import {
   createHomepageDemoPublicReviewPayload,
   type HomepageDemoPublicReviewPayload,
@@ -30,6 +36,48 @@ const SECURITY_HEADERS = [
   ["Referrer-Policy", "no-referrer"],
   ["X-Robots-Tag", "noindex, nofollow, noarchive"],
 ] as const;
+
+const HOMEPAGE_DEMO_REVIEW_ANALYTICS_ROUTE = "/api/homepage-demo/review";
+const DEMO_REVIEW_VIEWED_EVENT = "demo_review_viewed";
+
+/**
+ * Phase 1B -- server-authoritative: fires only once this exact function
+ * has been reached, i.e. only on a genuine review_ready draft (any
+ * pending/expired/unavailable outcome throws before this point and
+ * never reaches this call). Idempotency key is keyed on draftId alone
+ * -- a stable, internal, server-only UUID (never exposed to the client,
+ * distinct from the public/session/claim tokens) that is unique per
+ * trial by the database's own schema -- so polling, refreshing, or
+ * reopening the review all safely collapse to exactly one row per
+ * draft via the existing analytics_events.idempotency_key partial
+ * unique index. No new DB object is required.
+ */
+function scheduleHomepageDemoReviewViewedAnalytics(
+  draft: HomepageDemoReviewDraft,
+  anonymousId: string | null,
+  ownerFlagged: boolean
+): void {
+  try {
+    const idempotencyKey = `${DEMO_REVIEW_VIEWED_EVENT}:${draft.draftId}`;
+
+    after(async () => {
+      try {
+        await logAnalyticsEventSafe({
+          eventName: DEMO_REVIEW_VIEWED_EVENT,
+          userId: null,
+          anonymousId,
+          pagePath: HOMEPAGE_DEMO_REVIEW_ANALYTICS_ROUTE,
+          metadata: { owner_flagged: ownerFlagged },
+          idempotencyKey,
+        });
+      } catch {
+        // Operational analytics is best-effort and must never affect the review response.
+      }
+    });
+  } catch {
+    // Scheduling analytics is best-effort and must never affect the review response.
+  }
+}
 
 type ReviewSuccessResponse = Readonly<{
   code: "review_ready";
@@ -56,6 +104,16 @@ type ReviewJsonResponse = ReviewSuccessResponse | ReviewErrorResponse;
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ReviewJsonResponse>> {
+  // Phase 1B -- read before anything else can throw, matching the
+  // Phase 1A convention in app/api/homepage-demo/extract/route.ts: the
+  // existing, general-purpose first-party analytics identifier, kept
+  // fully separate from this route's own public/session token identity.
+  const anonymousId = readAnonymousIdCookie(request);
+  // Phase 1D -- see the identical comment in
+  // app/api/homepage-demo/extract/route.ts: adds a trusted boolean fact
+  // to a row that is stored either way, never suppresses ingestion.
+  const ownerFlagged = hasOwnerAnalyticsExclusionCookie(request);
+
   try {
     assertHomepageDemoPublicExtractEnabled();
     validateHomepageDemoPublicRequestOrigin({
@@ -79,6 +137,12 @@ export async function POST(
     });
     const publicDraft =
       createHomepageDemoPublicReviewPayload(repositoryDraft);
+
+    scheduleHomepageDemoReviewViewedAnalytics(
+      repositoryDraft,
+      anonymousId,
+      ownerFlagged
+    );
 
     return createJsonResponse(
       {
