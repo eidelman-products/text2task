@@ -1,0 +1,193 @@
+{
+  "generated_at": "2026-09-05T00:00:00.000Z",
+  "policy": "Historical per-migration tests are archived with the pre-canonical lineage. Durable canonical regression tests remain active under supabase/migration-tests/.",
+  "keep_active": [
+    "supabase/migration-tests/canonical-baseline.test.ts"
+  ],
+  "move_with_archive": [
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202607230001_project_update_needs_review_type.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202607270001_project_completion_reconciliation.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202607290001_calendar_events.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202607310001_calendar_events_custom_names.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030001_authenticated_product_events.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030002_owner_authenticated_activity_report_rpc.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030003_client_share_owner_foundation.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030004_client_share_session_foundation.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030005_client_share_integrity_and_security.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608050001_client_share_owner_reads.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608060001_client_share_lifecycle_operations.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608060002_client_share_access_operations.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608060003_client_share_configuration_save.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608110001_client_share_publication_intent.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608110002_client_share_management_mapping_metadata.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608130001_client_share_rate_limit_increment.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608190001_client_share_message_owner_rpcs.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608210001_client_share_project_update_provenance.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608230001_client_share_apply_boundary.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608230002_client_share_apply_conversion_closure.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202608250001_client_share_access_epoch.test.ts",
+    "docs/database/migration-archive/precanonical-2026-09-04/tests/202609030001_homepage_demo_claim_auth_continuation.test.ts"
+  ],
+  "repoint_to_canonical": [
+    "new canonical static regression tests for generated columns, FK ordering, PUBLIC rendering, CHECK final states, privileges, storage, platform boundaries, and canonical hashes"
+  ],
+  "obsolete_but_keep_as_historical_evidence": [],
+  "records": [
+    {
+      "filename": "202607230001_project_update_needs_review_type.test.ts",
+      "original_path": "supabase/migrations/202607230001_project_update_needs_review_type.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202607230001_project_update_needs_review_type.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202607270001_project_completion_reconciliation.test.ts",
+      "original_path": "supabase/migrations/202607270001_project_completion_reconciliation.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202607270001_project_completion_reconciliation.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202607290001_calendar_events.test.ts",
+      "original_path": "supabase/migrations/202607290001_calendar_events.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202607290001_calendar_events.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202607310001_calendar_events_custom_names.test.ts",
+      "original_path": "supabase/migrations/202607310001_calendar_events_custom_names.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202607310001_calendar_events_custom_names.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608030001_authenticated_product_events.test.ts",
+      "original_path": "supabase/migrations/202608030001_authenticated_product_events.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030001_authenticated_product_events.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608030002_owner_authenticated_activity_report_rpc.test.ts",
+      "original_path": "supabase/migrations/202608030002_owner_authenticated_activity_report_rpc.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030002_owner_authenticated_activity_report_rpc.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608030003_client_share_owner_foundation.test.ts",
+      "original_path": "supabase/migrations/202608030003_client_share_owner_foundation.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030003_client_share_owner_foundation.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608030004_client_share_session_foundation.test.ts",
+      "original_path": "supabase/migrations/202608030004_client_share_session_foundation.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030004_client_share_session_foundation.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608030005_client_share_integrity_and_security.test.ts",
+      "original_path": "supabase/migrations/202608030005_client_share_integrity_and_security.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030005_client_share_integrity_and_security.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608050001_client_share_owner_reads.test.ts",
+      "original_path": "supabase/migrations/202608050001_client_share_owner_reads.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608050001_client_share_owner_reads.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608060001_client_share_lifecycle_operations.test.ts",
+      "original_path": "supabase/migrations/202608060001_client_share_lifecycle_operations.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608060001_client_share_lifecycle_operations.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608060002_client_share_access_operations.test.ts",
+      "original_path": "supabase/migrations/202608060002_client_share_access_operations.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608060002_client_share_access_operations.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608060003_client_share_configuration_save.test.ts",
+      "original_path": "supabase/migrations/202608060003_client_share_configuration_save.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608060003_client_share_configuration_save.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608110001_client_share_publication_intent.test.ts",
+      "original_path": "supabase/migrations/202608110001_client_share_publication_intent.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608110001_client_share_publication_intent.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608110002_client_share_management_mapping_metadata.test.ts",
+      "original_path": "supabase/migrations/202608110002_client_share_management_mapping_metadata.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608110002_client_share_management_mapping_metadata.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608130001_client_share_rate_limit_increment.test.ts",
+      "original_path": "supabase/migrations/202608130001_client_share_rate_limit_increment.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608130001_client_share_rate_limit_increment.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608190001_client_share_message_owner_rpcs.test.ts",
+      "original_path": "supabase/migrations/202608190001_client_share_message_owner_rpcs.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608190001_client_share_message_owner_rpcs.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608210001_client_share_project_update_provenance.test.ts",
+      "original_path": "supabase/migrations/202608210001_client_share_project_update_provenance.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608210001_client_share_project_update_provenance.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608230001_client_share_apply_boundary.test.ts",
+      "original_path": "supabase/migrations/202608230001_client_share_apply_boundary.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608230001_client_share_apply_boundary.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608230002_client_share_apply_conversion_closure.test.ts",
+      "original_path": "supabase/migrations/202608230002_client_share_apply_conversion_closure.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608230002_client_share_apply_conversion_closure.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202608250001_client_share_access_epoch.test.ts",
+      "original_path": "supabase/migrations/202608250001_client_share_access_epoch.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608250001_client_share_access_epoch.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    },
+    {
+      "filename": "202609030001_homepage_demo_claim_auth_continuation.test.ts",
+      "original_path": "supabase/migrations/202609030001_homepage_demo_claim_auth_continuation.test.ts",
+      "archived_path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202609030001_homepage_demo_claim_auth_continuation.test.ts",
+      "classification": "ARCHIVED_HISTORICAL_TEST",
+      "reason": "Bound to pre-canonical sequential migration files; preserved beside archived historical SQL after M6 active-lineage cutover."
+    }
+  ],
+  "archived_historical_tests": 22,
+  "active_historical_tests_remaining": 0
+}

@@ -1,0 +1,97 @@
+{
+  "generated_at": "2026-09-05T00:00:00.000Z",
+  "raw_production_snapshots_committed": false,
+  "canonical_active_lineage_target": [
+    {
+      "version": "20260615222035",
+      "role": "immutable_recovered_remote_anchor",
+      "filename": "20260615222035_remote_schema.sql",
+      "expected_sha256": "9a799941742523fb34bf304d579b0a9da5aea6c94922b678a803de262ef5a991",
+      "path": "docs/database/production-baseline-evidence/canonical-migrations/20260615222035_remote_schema.sql",
+      "sha256": "9a799941742523fb34bf304d579b0a9da5aea6c94922b678a803de262ef5a991",
+      "hash_ok": true
+    },
+    {
+      "version": "202609040001",
+      "role": "canonical_production_closure",
+      "filename": "202609040001_canonical_production_closure.sql",
+      "expected_sha256": "13a7aa8d12b8a6685e38fa13b4e53c2fdfc499c030201500ec2564789f70c830",
+      "path": "docs/database/production-baseline-evidence/canonical-migrations/202609040001_canonical_production_closure.sql",
+      "sha256": "13a7aa8d12b8a6685e38fa13b4e53c2fdfc499c030201500ec2564789f70c830",
+      "hash_ok": true
+    }
+  ],
+  "canonical_hashes_ok": true,
+  "m4c_parity_report_temp_source": "C:\\Users\\Home\\AppData\\Local\\Temp\\text2task-supabase-migration-audit\\m4a\\m4c_post_replay_parity_report.json",
+  "m4c_drift_resolution_report_temp_source": "C:\\Users\\Home\\AppData\\Local\\Temp\\text2task-supabase-migration-audit\\m4a\\m4c_drift_resolution_report.json",
+  "production_unchanged": true,
+  "staging_unchanged_during_comparison": true,
+  "cron_runtime_verification": "VERIFIED",
+  "production_migration_history": "CANONICAL_ALIGNED_M7_VERIFIED",
+  "active_repository_cutover": "COMPLETE",
+  "active_repository_migrations": [
+    {
+      "version": "20260615222035",
+      "role": "immutable_recovered_remote_anchor",
+      "filename": "20260615222035_remote_schema.sql",
+      "expected_sha256": "9a799941742523fb34bf304d579b0a9da5aea6c94922b678a803de262ef5a991",
+      "active_path": "supabase/migrations/20260615222035_remote_schema.sql",
+      "active_sha256": "9a799941742523fb34bf304d579b0a9da5aea6c94922b678a803de262ef5a991",
+      "evidence_path": "docs/database/production-baseline-evidence/canonical-migrations/20260615222035_remote_schema.sql",
+      "evidence_sha256": "9a799941742523fb34bf304d579b0a9da5aea6c94922b678a803de262ef5a991",
+      "active_hash_ok": true,
+      "evidence_hash_ok": true,
+      "active_matches_evidence": true
+    },
+    {
+      "version": "202609040001",
+      "role": "canonical_production_closure",
+      "filename": "202609040001_canonical_production_closure.sql",
+      "expected_sha256": "13a7aa8d12b8a6685e38fa13b4e53c2fdfc499c030201500ec2564789f70c830",
+      "active_path": "supabase/migrations/202609040001_canonical_production_closure.sql",
+      "active_sha256": "13a7aa8d12b8a6685e38fa13b4e53c2fdfc499c030201500ec2564789f70c830",
+      "evidence_path": "docs/database/production-baseline-evidence/canonical-migrations/202609040001_canonical_production_closure.sql",
+      "evidence_sha256": "13a7aa8d12b8a6685e38fa13b4e53c2fdfc499c030201500ec2564789f70c830",
+      "active_hash_ok": true,
+      "evidence_hash_ok": true,
+      "active_matches_evidence": true
+    }
+  ],
+  "active_repository_sql_count": 2,
+  "active_repository_exact_files": [
+    "20260615222035_remote_schema.sql",
+    "202609040001_canonical_production_closure.sql"
+  ],
+  "precanonical_archive_path": "docs/database/migration-archive/precanonical-2026-09-04",
+  "precanonical_sql_archived": 57,
+  "precanonical_tests_archived": 22,
+  "staging_unchanged_during_m6": true,
+  "cron_evidence": {
+    "job": "homepage-demo-maintenance-v1",
+    "schedule": "*/5 * * * *",
+    "command": "select * from public.run_homepage_demo_maintenance(1000);",
+    "active": true,
+    "database": "postgres",
+    "username": "postgres",
+    "duplicate_homepage_demo_maintenance_jobs": 0,
+    "recent_runs_inspected": 10,
+    "recent_successes": 10,
+    "recent_failures": 0,
+    "latest_status": "succeeded"
+  },
+  "db_push_warning": "DO_NOT_USE_SUPABASE_DB_PUSH_EXCEPT_THROUGH_THE_STAGING_FIRST_CANONICAL_WORKFLOW",
+  "production_history_versions": [
+    "20260615222035",
+    "202609040001"
+  ],
+  "m7_history_reconciliation": {
+    "status": "PASS",
+    "reconciliation_type": "HISTORY_ONLY",
+    "target_version": "202609040001",
+    "schema_sql_reexecuted": false,
+    "db_push_dry_run_result": "REMOTE_DATABASE_UP_TO_DATE",
+    "pending_migrations": 0,
+    "project_ref_recorded": false
+  },
+  "database_migration_governance_recovery": "COMPLETE"
+}

@@ -1,0 +1,61 @@
+{
+  "generated_at": "2026-09-05T00:00:00.000Z",
+  "status": "PASS",
+  "reconciliation_type": "HISTORY_ONLY",
+  "production_project_identity_verified": true,
+  "project_ref_recorded": false,
+  "target_version": "202609040001",
+  "executed_command_redacted": "npx supabase@latest migration repair 202609040001 --status applied --linked",
+  "cli_result": [
+    "Repaired migration history: [202609040001] => applied",
+    "Finished supabase migration repair."
+  ],
+  "pre_repair_history": [
+    {
+      "version": "20260615222035",
+      "local": true,
+      "remote": true
+    },
+    {
+      "version": "202609040001",
+      "local": true,
+      "remote": false
+    }
+  ],
+  "post_repair_history": [
+    {
+      "version": "20260615222035",
+      "local": true,
+      "remote": true
+    },
+    {
+      "version": "202609040001",
+      "local": true,
+      "remote": true
+    }
+  ],
+  "db_push_dry_run": {
+    "executed_by_user": true,
+    "result": "DRY RUN: migrations will *not* be pushed to the database. Remote database is up to date.",
+    "pending_migrations": 0,
+    "real_db_push_required": false,
+    "real_db_push_run": false
+  },
+  "schema_sql_reexecuted": false,
+  "production_schema_intentionally_mutated_by_reconciliation": false,
+  "production_data_mutated_by_reconciliation": false,
+  "cron_status": "VERIFIED",
+  "canonical_production_history": [
+    "20260615222035",
+    "202609040001"
+  ],
+  "archived_historical_migrations_remain_archive_only": true,
+  "future_migration_timestamp_must_be_greater_than": "202609040001",
+  "future_workflow": "STAGING_FIRST_CANONICAL",
+  "live_demo_application_rollout_performed": false,
+  "raw_snapshots_committed": false,
+  "credentials_committed": false,
+  "project_connection_metadata_committed": false,
+  "raw_runtime_dumps_committed": false,
+  "database_migration_governance_recovery": "COMPLETE"
+}

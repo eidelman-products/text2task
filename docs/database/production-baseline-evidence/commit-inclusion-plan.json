@@ -1,0 +1,805 @@
+{
+  "generated_at": "2026-09-05T00:00:00.000Z",
+  "phase": "M7_FINAL_CLOSEOUT_DEDICATED_MIGRATION_GOVERNANCE_COMMIT_BOUNDARY",
+  "production_history_reconciliation": "EXECUTED_AND_VERIFIED_BY_USER",
+  "production_changed_during_closeout": false,
+  "staging_changed_during_closeout": false,
+  "database_migration_governance_recovery": "COMPLETE",
+  "include_in_dedicated_migration_governance_commit": [
+    {
+      "status": " M",
+      "path": ".gitignore"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202605250001_project_update_engine.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202605280002_customer_stories.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606020001_user_billing_fields.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606150001_project_update_apply_hardening.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606150002_transactional_project_bulk_actions.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606150003_transactional_bulk_task_status.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606150004_project_import_idempotency.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606150005_transactional_project_import.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606150006_secure_project_import_lifecycle.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606150007_transactional_project_client_identity.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606150008_transactional_project_update_apply.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606160001_fix_project_update_client_detail_json.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606160002_fix_client_detail_mutation_json_paths.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606190001_analytics_events.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606200001_owner_product_activation_analytics.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606230001_billing_checkout_attempts.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606270001_creem_webhook_event_processing.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606270002_homepage_demo_trials.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606270003_homepage_demo_privilege_hardening.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606270004_homepage_demo_trial_lifecycle.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606280001_homepage_demo_review_access.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606280002_homepage_demo_admission_schema.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606280003_homepage_demo_admission_retention_config.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606280004_homepage_demo_admission_rpc.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606290001_homepage_demo_processing_accounting_rpc.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606300001_homepage_demo_maintenance_recovery.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202606300002_homepage_demo_maintenance_cron.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607020001_homepage_demo_claim_model.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607020002_homepage_demo_claim_save_rpc.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607020003_homepage_demo_duplicate_override_authority.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607020004_project_priority_source.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607020005_project_update_priority_provenance.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607210001_user_activity_tracking_fields.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607210002_user_activity_write_rpcs.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607210003_owner_user_activity_report_rpc.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607230001_project_update_needs_review_type.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607230001_project_update_needs_review_type.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607270001_project_completion_reconciliation.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607270001_project_completion_reconciliation.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607290001_calendar_events.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607290001_calendar_events.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607310001_calendar_events_custom_names.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202607310001_calendar_events_custom_names.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608030001_authenticated_product_events.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608030001_authenticated_product_events.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608030002_owner_authenticated_activity_report_rpc.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608030002_owner_authenticated_activity_report_rpc.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608030003_client_share_owner_foundation.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608030003_client_share_owner_foundation.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608030004_client_share_session_foundation.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608030004_client_share_session_foundation.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608030005_client_share_integrity_and_security.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608030005_client_share_integrity_and_security.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608050001_client_share_owner_reads.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608050001_client_share_owner_reads.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608060001_client_share_lifecycle_operations.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608060001_client_share_lifecycle_operations.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608060002_client_share_access_operations.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608060002_client_share_access_operations.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608060003_client_share_configuration_save.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608060003_client_share_configuration_save.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608110001_client_share_publication_intent.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608110001_client_share_publication_intent.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608110002_client_share_management_mapping_metadata.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608110002_client_share_management_mapping_metadata.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608130001_client_share_rate_limit_increment.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608130001_client_share_rate_limit_increment.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608190001_client_share_message_owner_rpcs.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608190001_client_share_message_owner_rpcs.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608210001_client_share_project_update_provenance.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608210001_client_share_project_update_provenance.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608230001_client_share_apply_boundary.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608230001_client_share_apply_boundary.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608230002_client_share_apply_conversion_closure.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608230002_client_share_apply_conversion_closure.test.ts"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608250001_client_share_access_epoch.sql"
+    },
+    {
+      "status": " D",
+      "path": "supabase/migrations/202608250001_client_share_access_epoch.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/Text2Task_Supabase_Migration_Governance_Master_2026-09-04.docx"
+    },
+    {
+      "status": "??",
+      "path": "docs/Text2Task_Supabase_Migration_Governance_Master_2026-09-04.md"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202605250001_project_update_engine.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202605280002_customer_stories.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606020001_user_billing_fields.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606150001_project_update_apply_hardening.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606150002_transactional_project_bulk_actions.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606150003_transactional_bulk_task_status.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606150004_project_import_idempotency.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606150005_transactional_project_import.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606150006_secure_project_import_lifecycle.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606150007_transactional_project_client_identity.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606150008_transactional_project_update_apply.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606160001_fix_project_update_client_detail_json.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606160002_fix_client_detail_mutation_json_paths.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606190001_analytics_events.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606200001_owner_product_activation_analytics.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606230001_billing_checkout_attempts.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606270001_creem_webhook_event_processing.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606270002_homepage_demo_trials.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606270003_homepage_demo_privilege_hardening.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606270004_homepage_demo_trial_lifecycle.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606280001_homepage_demo_review_access.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606280002_homepage_demo_admission_schema.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606280003_homepage_demo_admission_retention_config.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606280004_homepage_demo_admission_rpc.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606290001_homepage_demo_processing_accounting_rpc.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606300001_homepage_demo_maintenance_recovery.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202606300002_homepage_demo_maintenance_cron.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202607020001_homepage_demo_claim_model.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202607020002_homepage_demo_claim_save_rpc.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202607020003_homepage_demo_duplicate_override_authority.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202607020004_project_priority_source.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202607020005_project_update_priority_provenance.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202607210001_user_activity_tracking_fields.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202607210002_user_activity_write_rpcs.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202607210003_owner_user_activity_report_rpc.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202607230001_project_update_needs_review_type.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202607270001_project_completion_reconciliation.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202607290001_calendar_events.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202607310001_calendar_events_custom_names.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608030001_authenticated_product_events.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608030002_owner_authenticated_activity_report_rpc.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608030003_client_share_owner_foundation.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608030004_client_share_session_foundation.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608030005_client_share_integrity_and_security.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608050001_client_share_owner_reads.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608060001_client_share_lifecycle_operations.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608060002_client_share_access_operations.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608060003_client_share_configuration_save.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608110001_client_share_publication_intent.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608110002_client_share_management_mapping_metadata.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608130001_client_share_rate_limit_increment.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608190001_client_share_message_owner_rpcs.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608210001_client_share_project_update_provenance.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608230001_client_share_apply_boundary.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608230002_client_share_apply_conversion_closure.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202608250001_client_share_access_epoch.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/202609030001_homepage_demo_claim_auth_continuation.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/README.md"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/archive-manifest.json"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202607230001_project_update_needs_review_type.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202607270001_project_completion_reconciliation.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202607290001_calendar_events.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202607310001_calendar_events_custom_names.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030001_authenticated_product_events.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030002_owner_authenticated_activity_report_rpc.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030003_client_share_owner_foundation.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030004_client_share_session_foundation.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608030005_client_share_integrity_and_security.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608050001_client_share_owner_reads.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608060001_client_share_lifecycle_operations.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608060002_client_share_access_operations.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608060003_client_share_configuration_save.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608110001_client_share_publication_intent.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608110002_client_share_management_mapping_metadata.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608130001_client_share_rate_limit_increment.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608190001_client_share_message_owner_rpcs.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608210001_client_share_project_update_provenance.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608230001_client_share_apply_boundary.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608230002_client_share_apply_conversion_closure.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202608250001_client_share_access_epoch.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/migration-archive/precanonical-2026-09-04/tests/202609030001_homepage_demo_claim_auth_continuation.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/production-baseline-evidence/README.md"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/production-baseline-evidence/canonical-artifact-manifest.json"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/production-baseline-evidence/canonical-migrations/20260615222035_remote_schema.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/production-baseline-evidence/canonical-migrations/202609040001_canonical_production_closure.sql"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/production-baseline-evidence/commit-inclusion-plan.json"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/production-baseline-evidence/m4c-parity-summary.json"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/production-baseline-evidence/m7-history-reconciliation-summary.json"
+    },
+    {
+      "status": "??",
+      "path": "docs/database/production-baseline-evidence/migration-test-classification.json"
+    },
+    {
+      "status": "??",
+      "path": "supabase/README.md"
+    },
+    {
+      "status": "??",
+      "path": "supabase/migration-tests/canonical-baseline.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "supabase/migrations/20260615222035_remote_schema.sql"
+    },
+    {
+      "status": "??",
+      "path": "supabase/migrations/202609040001_canonical_production_closure.sql"
+    }
+  ],
+  "keep_out_of_dedicated_migration_governance_commit": [
+    {
+      "status": " M",
+      "path": "app/api/homepage-demo/claim/prepare/route.test.ts"
+    },
+    {
+      "status": " M",
+      "path": "app/api/homepage-demo/claim/prepare/route.ts"
+    },
+    {
+      "status": " M",
+      "path": "app/api/homepage-demo/claim/save-anyway/route.test.ts"
+    },
+    {
+      "status": " M",
+      "path": "app/api/homepage-demo/claim/save-anyway/route.ts"
+    },
+    {
+      "status": " M",
+      "path": "app/api/homepage-demo/claim/save/route.test.ts"
+    },
+    {
+      "status": " M",
+      "path": "app/api/homepage-demo/claim/save/route.ts"
+    },
+    {
+      "status": " M",
+      "path": "app/components/landing/HomepageLiveDemoClient.tsx"
+    },
+    {
+      "status": " M",
+      "path": "app/homepage-demo/review/HomepageDemoReviewClient.test.tsx"
+    },
+    {
+      "status": " M",
+      "path": "app/homepage-demo/review/HomepageDemoReviewClient.tsx"
+    },
+    {
+      "status": " M",
+      "path": "app/homepage-demo/review/homepage-demo-review.module.css"
+    },
+    {
+      "status": " M",
+      "path": "app/homepage-demo/review/page.tsx"
+    },
+    {
+      "status": " M",
+      "path": "docs/Text2Task_Live_Demo_Conversion_Master_Handoff_2026-09-03.docx"
+    },
+    {
+      "status": " M",
+      "path": "docs/Text2Task_Live_Demo_Conversion_Master_Handoff_2026-09-03.md"
+    },
+    {
+      "status": " M",
+      "path": "lib/homepage-demo/claim-duplicate-override-repository.server.ts"
+    },
+    {
+      "status": " M",
+      "path": "lib/homepage-demo/claim-repository.server.ts"
+    },
+    {
+      "status": " M",
+      "path": "lib/homepage-demo/claim-save-repository.server.ts"
+    },
+    {
+      "status": " M",
+      "path": "lib/homepage-demo/types.ts"
+    },
+    {
+      "status": "??",
+      "path": "app/components/landing/HomepageLiveDemoClient.test.tsx"
+    },
+    {
+      "status": "??",
+      "path": "app/homepage-demo/review/page.test.tsx"
+    },
+    {
+      "status": "??",
+      "path": "lib/homepage-demo/claim-continuation-identity.server.ts"
+    },
+    {
+      "status": "??",
+      "path": "lib/homepage-demo/claim-repository.server.test.ts"
+    },
+    {
+      "status": "??",
+      "path": "lib/homepage-demo/claim-save-repository.server.test.ts"
+    }
+  ],
+  "needs_manual_review_before_commit": [],
+  "expected_active_migrations": [
+    "20260615222035_remote_schema.sql",
+    "202609040001_canonical_production_closure.sql"
+  ],
+  "archived_precanonical_sql_count": 57,
+  "archived_precanonical_test_count": 22,
+  "notes": [
+    "Live Demo application files are intentionally excluded from the dedicated migration-governance closeout commit.",
+    "Raw production/staging snapshots, Supabase link metadata, credentials, project connection metadata, and raw runtime dumps must remain uncommitted.",
+    "Production migration history is now aligned for the canonical two-file migration lineage.",
+    "Future migrations must use timestamps greater than 202609040001 and follow the Staging-first canonical workflow."
+  ]
+}

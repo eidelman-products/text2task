@@ -53,6 +53,27 @@ yarn-error.log*
 .vercel
 
 # =========================
+# LOCAL TOOLING / CONNECTION METADATA
+# =========================
+.claude/
+supabase/.temp/
+supabase/.branches/
+supabase/.env
+supabase/.env.*
+**/linked-project.json
+**/project-ref
+**/pooler-url
+
+# =========================
+# LOCAL DATABASE AUDIT EXPORTS
+# =========================
+text2task-supabase-migration-audit/
+production_schema_snapshot_*.json
+staging_schema_snapshot_*.json
+m4*_parity_report.json
+m4*_drift_resolution_report.json
+
+# =========================
 # TYPESCRIPT
 # =========================
 *.tsbuildinfo

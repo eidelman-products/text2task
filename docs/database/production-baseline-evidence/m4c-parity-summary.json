@@ -1,0 +1,188 @@
+{
+  "generated_at": "2026-09-05T00:00:00.000Z",
+  "source_report": "C:\\Users\\Home\\AppData\\Local\\Temp\\text2task-supabase-migration-audit\\m4a\\m4c_post_replay_parity_report.json",
+  "final_status": "PASS",
+  "canonical_rebuild_status": "VERIFIED",
+  "application_drift": 0,
+  "security_gates": {
+    "passed": 15,
+    "total": 15
+  },
+  "prior_drift_resolution": {
+    "prior_drifts": 298,
+    "resolved": 298,
+    "still_present": 0,
+    "changed": 0,
+    "no_longer_comparable": 0,
+    "new_drifts": 0
+  },
+  "structural_counts": {
+    "tables": {
+      "production": 42,
+      "staging": 42
+    },
+    "columns": {
+      "production": 605,
+      "staging": 605
+    },
+    "constraints": {
+      "production": 329,
+      "staging": 329
+    },
+    "check_constraints": {
+      "production": 174,
+      "staging": 174
+    },
+    "indexes": {
+      "production": 212,
+      "staging": 212
+    },
+    "functions": {
+      "production": 76,
+      "staging": 76
+    },
+    "triggers": {
+      "production": 36,
+      "staging": 36
+    },
+    "policies": {
+      "production": 57,
+      "staging": 57
+    },
+    "grants": {
+      "production": 166,
+      "staging": 166
+    },
+    "extensions": {
+      "production": 6,
+      "staging": 5
+    },
+    "sequences": {
+      "production": 1,
+      "staging": 1
+    },
+    "views": {
+      "production": 0,
+      "staging": 0
+    },
+    "types": {
+      "production": 0,
+      "staging": 0
+    },
+    "default_privileges": {
+      "production": 144,
+      "staging": 144
+    },
+    "schema_privileges": {
+      "production": 7,
+      "staging": 7
+    },
+    "storage_policies": {
+      "production": 4,
+      "staging": 4
+    },
+    "storage_table_grants": {
+      "production": 6,
+      "staging": 6
+    },
+    "foreign_keys": {
+      "production": 86,
+      "staging": 86
+    }
+  },
+  "effective_privilege_parity": {
+    "production_grant_count": 166,
+    "staging_grant_count": 166,
+    "extra_by_role": {
+      "PUBLIC": 0,
+      "anon": 0,
+      "authenticated": 0,
+      "service_role": 0
+    },
+    "missing_by_role": {
+      "PUBLIC": 0,
+      "anon": 0,
+      "authenticated": 0,
+      "service_role": 0
+    },
+    "changed_by_role": {
+      "PUBLIC": 0,
+      "anon": 0,
+      "authenticated": 0,
+      "service_role": 0
+    },
+    "public_function_execute": {
+      "production": [
+        "enforce_calendar_event_relationship_integrity()",
+        "set_calendar_events_updated_at()",
+        "set_customer_stories_updated_at()",
+        "set_task_resources_updated_at()",
+        "set_updated_at()"
+      ],
+      "staging": [
+        "enforce_calendar_event_relationship_integrity()",
+        "set_calendar_events_updated_at()",
+        "set_customer_stories_updated_at()",
+        "set_task_resources_updated_at()",
+        "set_updated_at()"
+      ]
+    }
+  },
+  "platform_variance_count": 4,
+  "governance_history_difference_count": 0,
+  "snapshot_representation_difference_count": 67,
+  "needs_evidence_count": 0,
+  "cron_status": "VERIFIED",
+  "notes": [
+    "Raw Production M3/M3B snapshots remain TEMP-only and are not committed.",
+    "This summary contains counts, hashes, and pass/fail outcomes only.",
+    "Production cron job was verified separately with sanitized read-only evidence.",
+    "M6 performed only local repository migration cutover; Production and Staging were not modified.",
+    "Production migration history was reconciled history-only in M7; 202609040001 is now recorded as applied.",
+    "Post-repair db push dry-run reported Remote database is up to date with no migrations pending."
+  ],
+  "cron_evidence": {
+    "job": "homepage-demo-maintenance-v1",
+    "schedule": "*/5 * * * *",
+    "command": "select * from public.run_homepage_demo_maintenance(1000);",
+    "active": true,
+    "database": "postgres",
+    "username": "postgres",
+    "duplicate_homepage_demo_maintenance_jobs": 0,
+    "recent_runs_inspected": 10,
+    "recent_successes": 10,
+    "recent_failures": 0,
+    "latest_status": "succeeded"
+  },
+  "m6_repository_cutover": {
+    "status": "COMPLETE",
+    "production_unchanged": true,
+    "staging_unchanged": true,
+    "active_migration_sql_count": 2,
+    "active_migrations": [
+      "20260615222035_remote_schema.sql",
+      "202609040001_canonical_production_closure.sql"
+    ],
+    "historical_sql_archived": 57,
+    "historical_tests_archived": 22,
+    "live_demo_rollout_status": "PAUSED",
+    "production_migration_history": "CANONICAL_ALIGNED_M7_VERIFIED",
+    "db_push_allowed": true
+  },
+  "production_migration_history": "CANONICAL_ALIGNED_M7_VERIFIED",
+  "database_migration_governance_recovery": "COMPLETE",
+  "m7_history_reconciliation": {
+    "status": "PASS",
+    "reconciliation_type": "HISTORY_ONLY",
+    "target_version": "202609040001",
+    "post_repair_history": [
+      "20260615222035",
+      "202609040001"
+    ],
+    "db_push_dry_run_result": "REMOTE_DATABASE_UP_TO_DATE",
+    "pending_migrations": 0,
+    "schema_sql_reexecuted": false,
+    "real_db_push_required": false,
+    "project_ref_recorded": false
+  }
+}
