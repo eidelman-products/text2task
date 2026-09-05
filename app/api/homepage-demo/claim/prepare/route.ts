@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  createHomepageDemoClaimContinuationAuthority,
+  getHomepageDemoClaimContinuationCookiePolicy,
+  readHomepageDemoClaimContinuationCookie,
+} from "@/lib/homepage-demo/claim-continuation-identity.server";
 import { createHomepageDemoClaimAuthority } from "@/lib/homepage-demo/claim-identity.server";
 import {
   getHomepageDemoClaimCookiePolicy,
@@ -10,9 +15,11 @@ import {
   readHomepageDemoClaimPrepareRequestJson,
 } from "@/lib/homepage-demo/claim-request.server";
 import {
+  prepareHomepageDemoClaimAuthContinuation,
   prepareHomepageDemoPendingClaim,
   type HomepageDemoClaimPreparationCode,
 } from "@/lib/homepage-demo/claim-repository.server";
+import { HOMEPAGE_DEMO_CONFIG } from "@/lib/homepage-demo/config.server";
 import {
   isHomepageDemoIdentityError,
   isHomepageDemoPublicRequestError,
@@ -71,6 +78,8 @@ export async function POST(
       sessionCookie,
     });
     const existingClaimCookie = readHomepageDemoClaimCookie(request.cookies);
+    const existingContinuationCookie =
+      readHomepageDemoClaimContinuationCookie(request.cookies);
     let generatedClaimAuthority: ReturnType<
       typeof createHomepageDemoClaimAuthority
     > | null = null;
@@ -95,6 +104,60 @@ export async function POST(
       return createJsonResponse({ code: "draft_unavailable" }, 503);
     }
 
+    let generatedContinuationAuthority: ReturnType<
+      typeof createHomepageDemoClaimContinuationAuthority
+    > | null = null;
+    let continuationExpiresAt: Date | null = null;
+
+    if (preparation.code === "claim_prepared") {
+      const claimTokenHash =
+        generatedClaimAuthority?.tokenHash ??
+        existingClaimCookie?.tokenHash ??
+        null;
+
+      if (claimTokenHash === null) {
+        return createJsonResponse({ code: "draft_unavailable" }, 503);
+      }
+
+      generatedContinuationAuthority =
+        createHomepageDemoClaimContinuationAuthority();
+
+      const continuationPreparation =
+        await prepareHomepageDemoClaimAuthContinuation({
+          claimTokenHash,
+          existingContinuationTokenHash:
+            existingContinuationCookie.kind === "valid"
+              ? existingContinuationCookie.tokenHash
+              : null,
+          candidateContinuationTokenHash:
+            generatedContinuationAuthority.tokenHash,
+          continuationTtlSeconds:
+            HOMEPAGE_DEMO_CONFIG.signupContinuationTtlSeconds,
+        });
+
+      switch (continuationPreparation.outcome) {
+        case "continuation_prepared":
+          continuationExpiresAt = continuationPreparation.expiresAt;
+          break;
+        case "continuation_reused":
+          generatedContinuationAuthority = null;
+          break;
+        case "continuation_in_progress":
+          generatedContinuationAuthority = null;
+          return createJsonResponse(
+            { code: "claim_in_progress", authenticated: false },
+            409
+          );
+        case "already_claimed":
+          generatedContinuationAuthority = null;
+          break;
+        case "expired":
+          return createJsonResponse({ code: "expired" }, 410);
+        case "invalid_claim":
+          return createJsonResponse({ code: "draft_unavailable" }, 404);
+      }
+    }
+
     const authenticated = await readAuthenticatedStatus();
     const response = createJsonResponse(
       {
@@ -115,6 +178,21 @@ export async function POST(
       response.cookies.set(
         cookiePolicy.name,
         generatedClaimAuthority.rawToken,
+        cookiePolicy
+      );
+    }
+
+    if (
+      generatedContinuationAuthority !== null &&
+      continuationExpiresAt !== null
+    ) {
+      const cookiePolicy = getHomepageDemoClaimContinuationCookiePolicy(
+        continuationExpiresAt
+      );
+
+      response.cookies.set(
+        cookiePolicy.name,
+        generatedContinuationAuthority.rawToken,
         cookiePolicy
       );
     }

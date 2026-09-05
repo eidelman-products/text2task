@@ -7,8 +7,9 @@ import HomepageDemoReviewClient from "./HomepageDemoReviewClient";
 
 /*
   Phase 1B -- first test coverage for this component. Focus: the
-  demo_account_cta_clicked analytics beacon fired from the "Start for
-  free"/"Log in" buttons on a genuinely ready review. Does NOT snapshot
+  demo_account_cta_clicked analytics beacon fired from the
+  "Save project free"/"Already have an account? Log in" buttons on a
+  genuinely ready review. Does NOT snapshot
   the rendered draft content or exercise the full polling/backoff
   timing behavior in detail -- fetch is mocked to return review_ready
   immediately, so these tests protect the CTA-click contract itself,
@@ -30,7 +31,18 @@ const DRAFT_BODY = {
   deadlineText: null,
   deadlineDate: null,
   priority: null,
-  subtasks: [],
+  subtasks: [
+    {
+      task: "Draft homepage sections",
+      priority: "High",
+      deadlineText: null,
+      deadlineDate: null,
+      amountText: null,
+      amountValue: null,
+      currencyCode: null,
+      order: 1,
+    },
+  ],
 };
 
 /*
@@ -147,12 +159,37 @@ function getAnalyticsRequestBody(callIndex = 0) {
 }
 
 describe("HomepageDemoReviewClient - demo_account_cta_clicked (Phase 1B)", () => {
-  it("clicking 'Start for free' on a ready review emits exactly one demo_account_cta_clicked with cta=start_free", async () => {
+  it("shows the Phase 2C ready-review conversion copy without hiding the extracted result", async () => {
+    render(<HomepageDemoReviewClient />);
+
+    expect(
+      await screen.findByText(
+        "This is a temporary preview. Save it to your workspace to keep the project and tasks."
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Save project free" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Already have an account? Log in",
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "30 total AI extracts included. No credit card required."
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText("Website refresh")).toBeInTheDocument();
+    expect(screen.getByText("Draft homepage sections")).toBeInTheDocument();
+  });
+
+  it("clicking 'Save project free' on a ready review emits exactly one demo_account_cta_clicked with cta=start_free", async () => {
     const user = userEvent.setup();
     render(<HomepageDemoReviewClient />);
 
     const startFreeButton = await screen.findByRole("button", {
-      name: "Start for free",
+      name: "Save project free",
     });
     await user.click(startFreeButton);
 
@@ -163,11 +200,13 @@ describe("HomepageDemoReviewClient - demo_account_cta_clicked (Phase 1B)", () =>
     );
   });
 
-  it("clicking 'Log in' on a ready review emits demo_account_cta_clicked with cta=log_in", async () => {
+  it("clicking the returning-user CTA on a ready review emits demo_account_cta_clicked with cta=log_in", async () => {
     const user = userEvent.setup();
     render(<HomepageDemoReviewClient />);
 
-    const loginButton = await screen.findByRole("button", { name: "Log in" });
+    const loginButton = await screen.findByRole("button", {
+      name: "Already have an account? Log in",
+    });
     await user.click(loginButton);
 
     await waitFor(() => expect(getAnalyticsCalls()).toHaveLength(1));
@@ -179,7 +218,7 @@ describe("HomepageDemoReviewClient - demo_account_cta_clicked (Phase 1B)", () =>
     render(<HomepageDemoReviewClient />);
 
     const startFreeButton = await screen.findByRole("button", {
-      name: "Start for free",
+      name: "Save project free",
     });
     await user.click(startFreeButton);
 
@@ -199,7 +238,7 @@ describe("HomepageDemoReviewClient - demo_account_cta_clicked (Phase 1B)", () =>
     render(<HomepageDemoReviewClient />);
 
     const startFreeButton = await screen.findByRole("button", {
-      name: "Start for free",
+      name: "Save project free",
     });
     await user.click(startFreeButton);
 
@@ -213,7 +252,9 @@ describe("HomepageDemoReviewClient - demo_account_cta_clicked (Phase 1B)", () =>
     const user = userEvent.setup();
     render(<HomepageDemoReviewClient />);
 
-    const loginButton = await screen.findByRole("button", { name: "Log in" });
+    const loginButton = await screen.findByRole("button", {
+      name: "Already have an account? Log in",
+    });
     await user.click(loginButton);
 
     await waitFor(() => expect(assignMock).toHaveBeenCalledTimes(1));
@@ -242,7 +283,7 @@ describe("HomepageDemoReviewClient - demo_account_cta_clicked (Phase 1B)", () =>
     render(<HomepageDemoReviewClient />);
 
     const startFreeButton = await screen.findByRole("button", {
-      name: "Start for free",
+      name: "Save project free",
     });
     await user.click(startFreeButton);
 
@@ -257,7 +298,7 @@ describe("HomepageDemoReviewClient - demo_account_cta_clicked (Phase 1B)", () =>
     render(<HomepageDemoReviewClient />);
 
     const startFreeButton = await screen.findByRole("button", {
-      name: "Start for free",
+      name: "Save project free",
     });
     await user.click(startFreeButton);
 
@@ -272,7 +313,7 @@ describe("HomepageDemoReviewClient - demo_account_cta_clicked (Phase 1B)", () =>
     render(<HomepageDemoReviewClient />);
 
     const startFreeButton = await screen.findByRole("button", {
-      name: "Start for free",
+      name: "Save project free",
     });
     await user.click(startFreeButton);
 
@@ -311,7 +352,7 @@ describe("HomepageDemoReviewClient - demo_account_cta_clicked (Phase 1B)", () =>
     render(<HomepageDemoReviewClient />);
 
     const startFreeButton = await screen.findByRole("button", {
-      name: "Start for free",
+      name: "Save project free",
     });
 
     await user.click(startFreeButton);

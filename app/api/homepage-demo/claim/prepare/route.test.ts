@@ -21,8 +21,11 @@ const readJsonMock = vi.fn();
 const parseRequestMock = vi.fn();
 const resolveIdentityMock = vi.fn();
 const readClaimCookieMock = vi.fn();
+const readContinuationCookieMock = vi.fn();
 const prepareClaimMock = vi.fn();
+const prepareContinuationMock = vi.fn();
 const createClaimAuthorityMock = vi.fn();
+const createContinuationAuthorityMock = vi.fn();
 const getUserMock = vi.fn();
 
 vi.mock("@/lib/homepage-demo/public-extract-request.server", () => ({
@@ -70,9 +73,35 @@ vi.mock("@/lib/homepage-demo/claim-identity.server", () => ({
   }),
 }));
 
+vi.mock("@/lib/homepage-demo/claim-continuation-identity.server", () => ({
+  createHomepageDemoClaimContinuationAuthority: (...args: unknown[]) =>
+    createContinuationAuthorityMock(...args),
+  readHomepageDemoClaimContinuationCookie: (...args: unknown[]) =>
+    readContinuationCookieMock(...args),
+  getHomepageDemoClaimContinuationCookiePolicy: (expiresAt: Date) => ({
+    name: "t2t_homepage_demo_claim_continuation_dev",
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure: false,
+    maxAge: Math.max(
+      0,
+      Math.floor((expiresAt.getTime() - Date.now()) / 1000)
+    ),
+  }),
+}));
+
 vi.mock("@/lib/homepage-demo/claim-repository.server", () => ({
   prepareHomepageDemoPendingClaim: (...args: unknown[]) =>
     prepareClaimMock(...args),
+  prepareHomepageDemoClaimAuthContinuation: (...args: unknown[]) =>
+    prepareContinuationMock(...args),
+}));
+
+vi.mock("@/lib/homepage-demo/config.server", () => ({
+  HOMEPAGE_DEMO_CONFIG: {
+    signupContinuationTtlSeconds: 3600,
+  },
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -114,10 +143,20 @@ beforeEach(() => {
     sessionTokenHash: VALID_TOKEN_HASH_B,
   });
   readClaimCookieMock.mockReset().mockReturnValue(null);
+  readContinuationCookieMock.mockReset().mockReturnValue({ kind: "missing" });
   prepareClaimMock.mockReset();
+  prepareContinuationMock.mockReset().mockResolvedValue({
+    outcome: "continuation_prepared",
+    setCookie: true,
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+  });
   createClaimAuthorityMock.mockReset().mockReturnValue({
     rawToken: "raw-claim-token",
     tokenHash: "c".repeat(64),
+  });
+  createContinuationAuthorityMock.mockReset().mockReturnValue({
+    rawToken: "raw-continuation-token",
+    tokenHash: "d".repeat(64),
   });
   getUserMock.mockReset().mockResolvedValue({ data: { user: null }, error: null });
 });
@@ -141,9 +180,20 @@ describe("POST /api/homepage-demo/claim/prepare - valid claim preparation", () =
     const setCookie = response.cookies.get("t2t_homepage_demo_claim_dev");
     expect(setCookie?.value).toBe("raw-claim-token");
     expect(setCookie?.maxAge).toBe(1200);
+    const continuationCookie = response.cookies.get(
+      "t2t_homepage_demo_claim_continuation_dev"
+    );
+    expect(continuationCookie?.value).toBe("raw-continuation-token");
+    expect(prepareContinuationMock).toHaveBeenCalledWith({
+      claimTokenHash: "c".repeat(64),
+      existingContinuationTokenHash: null,
+      candidateContinuationTokenHash: "d".repeat(64),
+      continuationTtlSeconds: 3600,
+    });
   });
 
   it("does not create a new claim authority when one already exists for this trial (action: none)", async () => {
+    readClaimCookieMock.mockReturnValueOnce({ tokenHash: "c".repeat(64) });
     prepareClaimMock.mockResolvedValueOnce({
       action: "none",
       code: "claim_prepared",
@@ -159,9 +209,12 @@ describe("POST /api/homepage-demo/claim/prepare - valid claim preparation", () =
     expect(body).toEqual({ code: "claim_prepared", authenticated: false });
     expect(createClaimAuthorityMock).not.toHaveBeenCalled();
     expect(response.cookies.get("t2t_homepage_demo_claim_dev")).toBeUndefined();
+    expect(
+      response.cookies.get("t2t_homepage_demo_claim_continuation_dev")?.value
+    ).toBe("raw-continuation-token");
   });
 
-  it("modifies no other cookie/state beyond the claim cookie on success", async () => {
+  it("sets only the short claim cookie and bounded continuation cookie on fresh success", async () => {
     prepareClaimMock
       .mockResolvedValueOnce({ action: "needs_claim_authority" })
       .mockResolvedValueOnce({
@@ -175,7 +228,35 @@ describe("POST /api/homepage-demo/claim/prepare - valid claim preparation", () =
     const allSetCookies = response.headers.getSetCookie
       ? response.headers.getSetCookie()
       : [];
-    expect(allSetCookies).toHaveLength(1);
+    expect(allSetCookies).toHaveLength(2);
+  });
+
+  it("reuses an existing continuation without sliding expiry or setting a new continuation cookie", async () => {
+    readClaimCookieMock.mockReturnValueOnce({ tokenHash: "c".repeat(64) });
+    readContinuationCookieMock.mockReturnValueOnce({
+      kind: "valid",
+      tokenHash: "d".repeat(64),
+    });
+    prepareClaimMock.mockResolvedValueOnce({
+      action: "none",
+      code: "claim_prepared",
+      cookieMaxAgeSeconds: null,
+    });
+    prepareContinuationMock.mockResolvedValueOnce({
+      outcome: "continuation_reused",
+      setCookie: false,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
+
+    const response = await POST(buildRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ code: "claim_prepared", authenticated: false });
+    expect(createContinuationAuthorityMock).toHaveBeenCalledTimes(1);
+    expect(
+      response.cookies.get("t2t_homepage_demo_claim_continuation_dev")
+    ).toBeUndefined();
   });
 });
 

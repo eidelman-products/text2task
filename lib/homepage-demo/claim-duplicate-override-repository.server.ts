@@ -9,7 +9,8 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 const SHA_256_HASH_PATTERN = /^[0-9a-f]{64}$/;
 
 export type PrepareHomepageDemoDuplicateOverrideInput = Readonly<{
-  claimTokenHash: string;
+  claimTokenHash: string | null;
+  continuationTokenHash: string | null;
   authenticatedUserId: string;
   existingAuthorityTokenHash: string | null;
   candidateAuthorityTokenHash: string;
@@ -39,7 +40,8 @@ export type PrepareHomepageDemoDuplicateOverrideResult =
     }>;
 
 export type ClaimHomepageDemoProjectWithDuplicateOverrideInput = Readonly<{
-  claimTokenHash: string;
+  claimTokenHash: string | null;
+  continuationTokenHash: string | null;
   authenticatedUserId: string;
   authorityTokenHash: string;
   requestHash: string;
@@ -105,7 +107,14 @@ type ClaimWithDuplicateOverrideRpcRow = z.infer<
 export async function prepareHomepageDemoDuplicateOverride(
   input: PrepareHomepageDemoDuplicateOverrideInput
 ): Promise<PrepareHomepageDemoDuplicateOverrideResult> {
-  const claimTokenHash = validateTokenHash(input.claimTokenHash);
+  const claimTokenHash =
+    input.claimTokenHash === null
+      ? null
+      : validateTokenHash(input.claimTokenHash);
+  const continuationTokenHash =
+    input.continuationTokenHash === null
+      ? null
+      : validateTokenHash(input.continuationTokenHash);
   const authenticatedUserId = validateUuid(input.authenticatedUserId);
   const existingAuthorityTokenHash =
     input.existingAuthorityTokenHash === null
@@ -117,11 +126,16 @@ export async function prepareHomepageDemoDuplicateOverride(
   const requestHash = validateTokenHash(input.requestHash);
   const importGroupsJson = validateSingleImportGroup(input.importGroupsJson);
 
+  if (claimTokenHash === null && continuationTokenHash === null) {
+    throw new HomepageDemoRepositoryError("invalid_repository_input");
+  }
+
   try {
     const { data, error } = await supabaseAdmin.rpc(
-      "prepare_homepage_demo_duplicate_override",
+      "prepare_homepage_demo_duplicate_override_v2",
       {
         p_claim_token_hash: claimTokenHash,
+        p_auth_continuation_token_hash: continuationTokenHash,
         p_authenticated_user_id: authenticatedUserId,
         p_existing_authority_token_hash: existingAuthorityTokenHash,
         p_candidate_authority_token_hash: candidateAuthorityTokenHash,
@@ -149,17 +163,29 @@ export async function prepareHomepageDemoDuplicateOverride(
 export async function claimHomepageDemoProjectWithDuplicateOverride(
   input: ClaimHomepageDemoProjectWithDuplicateOverrideInput
 ): Promise<ClaimHomepageDemoProjectWithDuplicateOverrideResult> {
-  const claimTokenHash = validateTokenHash(input.claimTokenHash);
+  const claimTokenHash =
+    input.claimTokenHash === null
+      ? null
+      : validateTokenHash(input.claimTokenHash);
+  const continuationTokenHash =
+    input.continuationTokenHash === null
+      ? null
+      : validateTokenHash(input.continuationTokenHash);
   const authenticatedUserId = validateUuid(input.authenticatedUserId);
   const authorityTokenHash = validateTokenHash(input.authorityTokenHash);
   const requestHash = validateTokenHash(input.requestHash);
   const importGroupsJson = validateSingleImportGroup(input.importGroupsJson);
 
+  if (claimTokenHash === null && continuationTokenHash === null) {
+    throw new HomepageDemoRepositoryError("invalid_repository_input");
+  }
+
   try {
     const { data, error } = await supabaseAdmin.rpc(
-      "claim_homepage_demo_project_with_duplicate_override",
+      "claim_homepage_demo_project_with_duplicate_override_v2",
       {
         p_claim_token_hash: claimTokenHash,
+        p_auth_continuation_token_hash: continuationTokenHash,
         p_authenticated_user_id: authenticatedUserId,
         p_authority_token_hash: authorityTokenHash,
         p_request_hash: requestHash,

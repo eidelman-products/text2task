@@ -41,7 +41,8 @@ export type HomepageDemoClaimSaveSource =
     }>;
 
 export type ClaimHomepageDemoProjectInput = Readonly<{
-  claimTokenHash: string;
+  claimTokenHash: string | null;
+  continuationTokenHash: string | null;
   authenticatedUserId: string;
   requestHash: string;
   importGroups: ProjectImportJsonRecord[];
@@ -88,6 +89,10 @@ const ClaimRowSchema = z
     session_token_hash: TokenHashSchema,
     status: ClaimStatusSchema,
     expires_at: RawTimestampSchema,
+    auth_continuation_token_hash: TokenHashSchema.nullable(),
+    auth_continuation_started_at: RawTimestampSchema.nullable(),
+    auth_continuation_expires_at: RawTimestampSchema.nullable(),
+    auth_continuation_consumed_at: RawTimestampSchema.nullable(),
   })
   .strict();
 
@@ -152,6 +157,10 @@ const CLAIM_SELECT = [
   "session_token_hash",
   "status",
   "expires_at",
+  "auth_continuation_token_hash",
+  "auth_continuation_started_at",
+  "auth_continuation_expires_at",
+  "auth_continuation_consumed_at",
 ].join(", ");
 
 const TRIAL_SELECT = [
@@ -181,19 +190,55 @@ const DRAFT_SELECT = [
 
 export async function loadHomepageDemoClaimSaveSource({
   claimTokenHash,
+  continuationTokenHash = null,
 }: {
-  claimTokenHash: string;
+  claimTokenHash: string | null;
+  continuationTokenHash?: string | null;
 }): Promise<HomepageDemoClaimSaveSource> {
-  const validatedClaimTokenHash = validateTokenHash(claimTokenHash);
-  const claim = await loadClaimByHash(validatedClaimTokenHash);
+  const validatedClaimTokenHash =
+    claimTokenHash === null ? null : validateTokenHash(claimTokenHash);
+  const validatedContinuationTokenHash =
+    continuationTokenHash === null
+      ? null
+      : validateTokenHash(continuationTokenHash);
+
+  if (
+    validatedClaimTokenHash === null &&
+    validatedContinuationTokenHash === null
+  ) {
+    throw new HomepageDemoRepositoryError("invalid_repository_input");
+  }
+
+  const claim =
+    validatedClaimTokenHash !== null
+      ? await loadClaimByHash(validatedClaimTokenHash)
+      : validatedContinuationTokenHash !== null
+        ? await loadClaimByContinuationHash(validatedContinuationTokenHash)
+        : null;
 
   if (claim === null) {
     return { kind: "claim_unavailable" };
   }
 
   const now = new Date();
+  const hasShortClaimAuthority =
+    validatedClaimTokenHash !== null &&
+    claim.claim_token_hash === validatedClaimTokenHash &&
+    claim.status === "pending" &&
+    claim.expires_at > now;
+  const hasContinuationAuthority =
+    validatedContinuationTokenHash !== null &&
+    claim.auth_continuation_token_hash === validatedContinuationTokenHash &&
+    claim.auth_continuation_started_at !== null &&
+    claim.auth_continuation_expires_at !== null &&
+    claim.auth_continuation_consumed_at === null &&
+    claim.auth_continuation_started_at < claim.expires_at &&
+    claim.auth_continuation_expires_at > now;
 
-  if (claim.status !== "pending" || claim.expires_at <= now) {
+  if (
+    claim.status !== "pending" ||
+    (!hasShortClaimAuthority && !hasContinuationAuthority)
+  ) {
     return {
       kind: "rpc_replay",
       claimId: claim.id,
@@ -215,7 +260,10 @@ export async function loadHomepageDemoClaimSaveSource({
     return { kind: "claim_unavailable" };
   }
 
-  if (trial.expires_at <= now || draft.expires_at <= now) {
+  if (
+    (trial.expires_at <= now || draft.expires_at <= now) &&
+    !hasContinuationAuthority
+  ) {
     return {
       kind: "rpc_replay",
       claimId: claim.id,
@@ -245,9 +293,20 @@ export async function loadHomepageDemoClaimSaveSource({
 export async function claimHomepageDemoProject(
   input: ClaimHomepageDemoProjectInput
 ): Promise<ClaimHomepageDemoProjectResult> {
-  const claimTokenHash = validateTokenHash(input.claimTokenHash);
+  const claimTokenHash =
+    input.claimTokenHash === null
+      ? null
+      : validateTokenHash(input.claimTokenHash);
+  const continuationTokenHash =
+    input.continuationTokenHash === null
+      ? null
+      : validateTokenHash(input.continuationTokenHash);
   const authenticatedUserId = validateUuid(input.authenticatedUserId);
   const requestHash = validateTokenHash(input.requestHash);
+
+  if (claimTokenHash === null && continuationTokenHash === null) {
+    throw new HomepageDemoRepositoryError("invalid_repository_input");
+  }
 
   if (!Array.isArray(input.importGroups) || input.importGroups.length !== 1) {
     throw new HomepageDemoRepositoryError("invalid_repository_input");
@@ -255,9 +314,10 @@ export async function claimHomepageDemoProject(
 
   try {
     const { data, error } = await supabaseAdmin.rpc(
-      "claim_homepage_demo_project",
+      "claim_homepage_demo_project_v2",
       {
         p_claim_token_hash: claimTokenHash,
+        p_auth_continuation_token_hash: continuationTokenHash,
         p_authenticated_user_id: authenticatedUserId,
         p_request_hash: requestHash,
         p_import_groups: input.importGroups,
@@ -293,6 +353,22 @@ async function loadClaimByHash(claimTokenHash: string): Promise<ClaimRow | null>
     .from("homepage_demo_claims")
     .select(CLAIM_SELECT)
     .eq("claim_token_hash", claimTokenHash)
+    .limit(1);
+
+  if (error) {
+    throw new HomepageDemoRepositoryError("repository_unavailable");
+  }
+
+  return parseSingleOptionalRow(data, ClaimRowSchema);
+}
+
+async function loadClaimByContinuationHash(
+  continuationTokenHash: string
+): Promise<ClaimRow | null> {
+  const { data, error } = await supabaseAdmin
+    .from("homepage_demo_claims")
+    .select(CLAIM_SELECT)
+    .eq("auth_continuation_token_hash", continuationTokenHash)
     .limit(1);
 
   if (error) {

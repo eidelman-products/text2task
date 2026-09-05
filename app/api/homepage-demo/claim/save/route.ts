@@ -4,6 +4,10 @@ import { logAnalyticsEventSafe } from "@/lib/analytics/internal-events.server";
 import { hasOwnerAnalyticsExclusionCookie } from "@/lib/analytics/owner-exclusion.server";
 import { readAnonymousIdCookie } from "@/lib/analytics/request-attribution.server";
 import {
+  getHomepageDemoClaimContinuationCookieClearPolicy,
+  readHomepageDemoClaimContinuationCookie,
+} from "@/lib/homepage-demo/claim-continuation-identity.server";
+import {
   createHomepageDemoDuplicateOverrideAuthority,
   getHomepageDemoDuplicateOverrideCookieClearPolicy,
   getHomepageDemoDuplicateOverrideCookiePolicy,
@@ -157,8 +161,15 @@ export async function POST(
     parseHomepageDemoClaimSaveRequest(requestJson);
 
     const claimCookie = readHomepageDemoClaimCookie(request.cookies);
+    const continuationCookie = readHomepageDemoClaimContinuationCookie(
+      request.cookies
+    );
+    const continuationTokenHash =
+      continuationCookie.kind === "valid"
+        ? continuationCookie.tokenHash
+        : null;
 
-    if (claimCookie === null) {
+    if (claimCookie === null && continuationTokenHash === null) {
       return createJsonResponse({ code: "claim_unavailable" }, 404);
     }
 
@@ -173,7 +184,8 @@ export async function POST(
     }
 
     const source = await loadHomepageDemoClaimSaveSource({
-      claimTokenHash: claimCookie.tokenHash,
+      claimTokenHash: claimCookie?.tokenHash ?? null,
+      continuationTokenHash,
     });
 
     if (source.kind === "claim_unavailable") {
@@ -203,13 +215,15 @@ export async function POST(
 
       if (duplicate !== null) {
         const latestSource = await loadHomepageDemoClaimSaveSource({
-          claimTokenHash: claimCookie.tokenHash,
+          claimTokenHash: claimCookie?.tokenHash ?? null,
+          continuationTokenHash,
         });
 
         if (latestSource.kind !== "rpc_replay") {
           return prepareDuplicateOverrideAuthorityResponse({
             request,
-            claimTokenHash: claimCookie.tokenHash,
+            claimTokenHash: claimCookie?.tokenHash ?? null,
+            continuationTokenHash,
             authenticatedUserId: user.id,
             claimId: source.claimId,
             anonymousId,
@@ -223,7 +237,8 @@ export async function POST(
     }
 
     const claimResult = await claimHomepageDemoProject({
-      claimTokenHash: claimCookie.tokenHash,
+      claimTokenHash: claimCookie?.tokenHash ?? null,
+      continuationTokenHash,
       authenticatedUserId: user.id,
       requestHash: prepared.requestHash,
       importGroups: prepared.payloadJson,
@@ -248,6 +263,7 @@ export async function POST(
 async function prepareDuplicateOverrideAuthorityResponse({
   request,
   claimTokenHash,
+  continuationTokenHash,
   authenticatedUserId,
   claimId,
   anonymousId,
@@ -255,7 +271,8 @@ async function prepareDuplicateOverrideAuthorityResponse({
   prepared,
 }: {
   request: NextRequest;
-  claimTokenHash: string;
+  claimTokenHash: string | null;
+  continuationTokenHash: string | null;
   authenticatedUserId: string;
   claimId: string;
   anonymousId: string | null;
@@ -272,6 +289,7 @@ async function prepareDuplicateOverrideAuthorityResponse({
   const candidateAuthority = createHomepageDemoDuplicateOverrideAuthority();
   const preparation = await prepareHomepageDemoDuplicateOverride({
     claimTokenHash,
+    continuationTokenHash,
     authenticatedUserId,
     existingAuthorityTokenHash,
     candidateAuthorityTokenHash: candidateAuthority.tokenHash,
@@ -452,6 +470,7 @@ function createSuccessfulClaimSaveResponse(
   const response = createJsonResponse<ClaimSaveJsonResponse>(body, 200);
 
   clearPrimaryClaimCookie(response);
+  clearClaimContinuationCookie(response);
   clearDuplicateOverrideCookie(response);
 
   return response;
@@ -480,6 +499,12 @@ function createJsonResponse<TBody extends ClaimSaveJsonResponse>(
 
 function clearPrimaryClaimCookie(response: NextResponse): void {
   const cookiePolicy = getHomepageDemoClaimCookieClearPolicy();
+
+  response.cookies.set(cookiePolicy.name, "", cookiePolicy);
+}
+
+function clearClaimContinuationCookie(response: NextResponse): void {
+  const cookiePolicy = getHomepageDemoClaimContinuationCookieClearPolicy();
 
   response.cookies.set(cookiePolicy.name, "", cookiePolicy);
 }

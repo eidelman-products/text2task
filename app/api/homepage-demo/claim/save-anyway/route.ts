@@ -4,6 +4,10 @@ import { logAnalyticsEventSafe } from "@/lib/analytics/internal-events.server";
 import { hasOwnerAnalyticsExclusionCookie } from "@/lib/analytics/owner-exclusion.server";
 import { readAnonymousIdCookie } from "@/lib/analytics/request-attribution.server";
 import {
+  getHomepageDemoClaimContinuationCookieClearPolicy,
+  readHomepageDemoClaimContinuationCookie,
+} from "@/lib/homepage-demo/claim-continuation-identity.server";
+import {
   getHomepageDemoDuplicateOverrideCookieClearPolicy,
   readHomepageDemoDuplicateOverrideCookie,
 } from "@/lib/homepage-demo/claim-duplicate-override-identity.server";
@@ -147,8 +151,15 @@ export async function POST(
     parseHomepageDemoClaimSaveRequest(requestJson);
 
     const claimCookie = readHomepageDemoClaimCookie(request.cookies);
+    const continuationCookie = readHomepageDemoClaimContinuationCookie(
+      request.cookies
+    );
+    const continuationTokenHash =
+      continuationCookie.kind === "valid"
+        ? continuationCookie.tokenHash
+        : null;
 
-    if (claimCookie === null) {
+    if (claimCookie === null && continuationTokenHash === null) {
       return createJsonResponse({ code: "claim_unavailable" }, 404);
     }
 
@@ -180,7 +191,8 @@ export async function POST(
     }
 
     const source = await loadHomepageDemoClaimSaveSource({
-      claimTokenHash: claimCookie.tokenHash,
+      claimTokenHash: claimCookie?.tokenHash ?? null,
+      continuationTokenHash,
     });
 
     if (source.kind === "claim_unavailable") {
@@ -203,7 +215,8 @@ export async function POST(
       HOMEPAGE_DEMO_CLAIM_IMPORT_PERSISTENCE_OPTIONS
     );
     const claimResult = await claimHomepageDemoProjectWithDuplicateOverride({
-      claimTokenHash: claimCookie.tokenHash,
+      claimTokenHash: claimCookie?.tokenHash ?? null,
+      continuationTokenHash,
       authenticatedUserId: user.id,
       authorityTokenHash: duplicateOverrideCookie.tokenHash,
       requestHash: prepared.requestHash,
@@ -338,6 +351,7 @@ function createSuccessfulClaimSaveAnywayResponse(
   const response = createJsonResponse<ClaimSaveAnywayJsonResponse>(body, 200);
 
   clearPrimaryClaimCookie(response);
+  clearClaimContinuationCookie(response);
   clearDuplicateOverrideCookie(response);
 
   return response;
@@ -366,6 +380,12 @@ function createJsonResponse<TBody extends ClaimSaveAnywayJsonResponse>(
 
 function clearPrimaryClaimCookie(response: NextResponse): void {
   const cookiePolicy = getHomepageDemoClaimCookieClearPolicy();
+
+  response.cookies.set(cookiePolicy.name, "", cookiePolicy);
+}
+
+function clearClaimContinuationCookie(response: NextResponse): void {
+  const cookiePolicy = getHomepageDemoClaimContinuationCookieClearPolicy();
 
   response.cookies.set(cookiePolicy.name, "", cookiePolicy);
 }

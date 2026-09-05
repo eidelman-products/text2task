@@ -36,9 +36,6 @@ export type HomepageLiveDemoClientProps = Readonly<{
 const BOOTSTRAP_API_PATH = "/api/homepage-demo/bootstrap";
 const EXTRACT_API_PATH = "/api/homepage-demo/extract";
 const REVIEW_PAGE_PATH = "/homepage-demo/review";
-const REVIEW_WINDOW_NAME = "text2task_homepage_demo_review";
-const DESKTOP_REVIEW_MEDIA_QUERY =
-  "(min-width: 900px) and (hover: hover) and (pointer: fine)";
 const PUBLIC_RESPONSE_MAX_BYTES = 16 * 1024;
 const TEXT_INPUT_MAX_CHARACTERS = 8000;
 const TEXT_INPUT_MAX_UTF8_BYTES = TEXT_INPUT_MAX_CHARACTERS * 4;
@@ -58,7 +55,6 @@ type LiveDemoStep = "bootstrapping" | "verifying_challenge" | "extracting" | "op
 type LiveDemoState =
   | Readonly<{ status: "idle" }>
   | Readonly<{ status: "working"; step: LiveDemoStep }>
-  | Readonly<{ status: "done" }>
   | Readonly<{ status: "error"; code: LiveDemoErrorCode }>;
 
 type LiveDemoErrorCode =
@@ -86,10 +82,6 @@ type BootstrapTokens = Readonly<{
   publicToken: string;
   text: string;
 }>;
-
-type ReviewTarget =
-  | Readonly<{ kind: "current" }>
-  | Readonly<{ kind: "prepared"; windowRef: Window }>;
 
 class HomepageLiveDemoFlowError extends Error {
   readonly code: LiveDemoErrorCode;
@@ -137,8 +129,7 @@ export default function HomepageLiveDemoClient({
   const turnstileExecutionConsumedRef = useRef(false);
 
   const isWorking = state.status === "working";
-  const isDone = state.status === "done";
-  const isInteractionDisabled = isWorking || isDone;
+  const isInteractionDisabled = isWorking;
   const isTextError =
     state.status === "error" &&
     (state.code === "invalid_text_input" || state.code === "request_too_large");
@@ -198,7 +189,7 @@ export default function HomepageLiveDemoClient({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
-    if (submissionActiveRef.current || isDone) {
+    if (submissionActiveRef.current) {
       return;
     }
 
@@ -216,7 +207,6 @@ export default function HomepageLiveDemoClient({
 
     trackLiveDemoSubmit();
 
-    const reviewTarget = prepareReviewTarget();
     const runId = runIdRef.current + 1;
     runIdRef.current = runId;
     submissionActiveRef.current = true;
@@ -241,11 +231,8 @@ export default function HomepageLiveDemoClient({
 
       assertActiveRun(runId, mountedRef, runIdRef);
       setState({ status: "working", step: "opening_review" });
-      navigateToReview(reviewTarget, bootstrap.publicToken);
-      if (mountedRef.current && runIdRef.current === runId) {
-        setState({ status: "done" });
-        trackLiveDemoSuccess();
-      }
+      trackLiveDemoSuccess();
+      navigateToReview(bootstrap.publicToken);
     } catch (error) {
       if (isIgnorableRunError(error)) {
         return;
@@ -445,9 +432,7 @@ export default function HomepageLiveDemoClient({
   const statusCopy =
     state.status === "working"
       ? getWorkingCopy(state.step)
-      : state.status === "done"
-        ? getWorkingCopy("opening_review")
-        : null;
+      : null;
   const errorCopy = state.status === "error" ? getErrorCopy(state.code) : null;
 
   return (
@@ -544,11 +529,7 @@ export default function HomepageLiveDemoClient({
                 className={styles.primaryButton}
                 disabled={isInteractionDisabled}
               >
-                {isDone
-                  ? "✓ Done"
-                  : isWorking
-                    ? "Creating preview…"
-                    : "Preview my project"}
+                {isWorking ? "Creating preview..." : "Preview my project"}
               </button>
             </div>
           </div>
@@ -580,48 +561,8 @@ function validateLiveDemoTextInput(value: string): ValidatedTextResult {
   return { ok: true, text: trimmedValue };
 }
 
-function prepareReviewTarget(): ReviewTarget {
-  if (!isDesktopReviewHandoffCapable()) {
-    return { kind: "current" };
-  }
-
-  try {
-    const windowRef = window.open(REVIEW_PAGE_PATH, REVIEW_WINDOW_NAME);
-
-    if (windowRef !== null) {
-      return {
-        kind: "prepared",
-        windowRef,
-      };
-    }
-  } catch {
-    // Popup failures are expected in some browsers; current-tab navigation remains.
-  }
-
-  return { kind: "current" };
-}
-
-function isDesktopReviewHandoffCapable(): boolean {
-  return (
-    typeof window.matchMedia === "function" &&
-    window.matchMedia(DESKTOP_REVIEW_MEDIA_QUERY).matches
-  );
-}
-
-function navigateToReview(target: ReviewTarget, publicToken: string): void {
+function navigateToReview(publicToken: string): void {
   const reviewUrl = `${REVIEW_PAGE_PATH}#${publicToken}`;
-
-  if (target.kind === "prepared") {
-    try {
-      if (!target.windowRef.closed) {
-        target.windowRef.location.replace(reviewUrl);
-        target.windowRef.focus();
-        return;
-      }
-    } catch {
-      // If the prepared same-origin tab is unavailable, fall through safely.
-    }
-  }
 
   window.location.assign(reviewUrl);
 }

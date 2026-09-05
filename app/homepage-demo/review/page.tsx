@@ -8,8 +8,8 @@ import styles from "./homepage-demo-review.module.css";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Review your project | Text2Task",
-  description: "Review the project and tasks prepared from your message.",
+  title: "Your project is ready | Text2Task",
+  description: "Save the project and tasks prepared from your message.",
   robots: {
     index: false,
     follow: false,
@@ -43,10 +43,12 @@ export default function HomepageDemoReviewPage() {
             />
           </Link>
           <div className={styles.headerCopy}>
-            <p className={styles.kicker}>Temporary review</p>
-            <h1 className={styles.pageTitle}>Review your project draft</h1>
+            <p className={styles.kicker}>Temporary preview</p>
+            <h1 className={styles.pageTitle}>Your project is ready</h1>
             <p className={styles.pageDescription}>
-              Check the project and tasks prepared from your message before creating an account.
+              Save this project to your free Text2Task workspace and keep
+              working with its tasks, client details, deadline, budget, and
+              notes.
             </p>
           </div>
         </header>

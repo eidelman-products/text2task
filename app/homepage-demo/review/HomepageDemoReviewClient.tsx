@@ -775,7 +775,8 @@ export default function HomepageDemoReviewClient() {
       <div className={styles.previewNotice}>
         <p className={styles.previewNoticeLabel}>Temporary preview</p>
         <p className={styles.previewNoticeText}>
-          This preview has not been saved to an account.
+          This is a temporary preview. Save it to your workspace to keep the
+          project and tasks.
         </p>
       </div>
     );
@@ -791,8 +792,8 @@ export default function HomepageDemoReviewClient() {
             disabled={isPreparing}
           >
             {preparingDestination === "signup"
-              ? "Preparing..."
-              : "Start for free"}
+              ? "Preparing save..."
+              : "Save project free"}
           </button>
           <button
             type="button"
@@ -802,12 +803,17 @@ export default function HomepageDemoReviewClient() {
             }}
             disabled={isPreparing}
           >
-            {preparingDestination === "login" ? "Preparing..." : "Log in"}
+            {preparingDestination === "login"
+              ? "Preparing login..."
+              : "Already have an account? Log in"}
           </button>
           <Link href="/" prefetch={false} className={styles.secondaryAction}>
             Back to homepage
           </Link>
         </div>
+        <p className={styles.conversionMicrocopy}>
+          30 total AI extracts included. No credit card required.
+        </p>
         {authPreparationState.status === "preparing" ? (
           <p className={styles.statusText} role="status" aria-live="polite">
             Preparing your project...

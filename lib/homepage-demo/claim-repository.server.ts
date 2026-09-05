@@ -28,6 +28,34 @@ export type PrepareHomepageDemoPendingClaimInput = Readonly<{
   candidateClaimTokenHash: string | null;
 }>;
 
+export type PrepareHomepageDemoClaimAuthContinuationInput = Readonly<{
+  claimTokenHash: string;
+  existingContinuationTokenHash: string | null;
+  candidateContinuationTokenHash: string;
+  continuationTtlSeconds: number;
+}>;
+
+export type PrepareHomepageDemoClaimAuthContinuationResult =
+  | Readonly<{
+      outcome: "continuation_prepared";
+      setCookie: true;
+      expiresAt: Date;
+    }>
+  | Readonly<{
+      outcome: "continuation_reused";
+      setCookie: false;
+      expiresAt: Date;
+    }>
+  | Readonly<{
+      outcome:
+        | "continuation_in_progress"
+        | "already_claimed"
+        | "expired"
+        | "invalid_claim";
+      setCookie: false;
+      expiresAt: null;
+    }>;
+
 export type PrepareHomepageDemoPendingClaimResult =
   | Readonly<{
       action: "needs_claim_authority";
@@ -107,9 +135,29 @@ const ClaimRowSchema = z
   })
   .strict();
 
+const PrepareAuthContinuationOutcomeSchema = z.enum([
+  "continuation_prepared",
+  "continuation_reused",
+  "continuation_in_progress",
+  "already_claimed",
+  "expired",
+  "invalid_claim",
+]);
+
+const PrepareAuthContinuationRpcRowSchema = z
+  .object({
+    outcome: PrepareAuthContinuationOutcomeSchema,
+    set_cookie: z.boolean(),
+    expires_at: z.string().nullable(),
+  })
+  .strict();
+
 type TrialRow = z.infer<typeof TrialRowSchema>;
 type DraftRow = z.infer<typeof DraftRowSchema>;
 type ClaimRow = z.infer<typeof ClaimRowSchema>;
+type PrepareAuthContinuationRpcRow = z.infer<
+  typeof PrepareAuthContinuationRpcRowSchema
+>;
 
 const TRIAL_SELECT = [
   "id",
@@ -227,6 +275,52 @@ export async function prepareHomepageDemoPendingClaim(
     claimExpiry,
     now,
   });
+}
+
+export async function prepareHomepageDemoClaimAuthContinuation(
+  input: PrepareHomepageDemoClaimAuthContinuationInput
+): Promise<PrepareHomepageDemoClaimAuthContinuationResult> {
+  const claimTokenHash = validateTokenHash(input.claimTokenHash);
+  const existingContinuationTokenHash =
+    input.existingContinuationTokenHash === null
+      ? null
+      : validateTokenHash(input.existingContinuationTokenHash);
+  const candidateContinuationTokenHash = validateTokenHash(
+    input.candidateContinuationTokenHash
+  );
+
+  if (
+    !Number.isSafeInteger(input.continuationTtlSeconds) ||
+    input.continuationTtlSeconds < 1
+  ) {
+    throw new HomepageDemoRepositoryError("invalid_repository_input");
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin.rpc(
+      "prepare_homepage_demo_claim_auth_continuation",
+      {
+        p_claim_token_hash: claimTokenHash,
+        p_existing_continuation_token_hash: existingContinuationTokenHash,
+        p_candidate_continuation_token_hash: candidateContinuationTokenHash,
+        p_continuation_ttl_seconds: input.continuationTtlSeconds,
+      }
+    );
+
+    if (error) {
+      throw new HomepageDemoRepositoryError("repository_unavailable");
+    }
+
+    return parsePrepareAuthContinuationResult(
+      parseSingleRpcRow(data, PrepareAuthContinuationRpcRowSchema)
+    );
+  } catch (error) {
+    if (error instanceof HomepageDemoRepositoryError) {
+      throw error;
+    }
+
+    throw new HomepageDemoRepositoryError("repository_unavailable");
+  }
 }
 
 function validateInput(
@@ -594,6 +688,20 @@ function parseSingleOptionalRow<T>(
   return parsed.data;
 }
 
+function parseSingleRpcRow<T>(data: unknown, schema: z.ZodType<T>): T {
+  if (!Array.isArray(data) || data.length !== 1) {
+    throw new HomepageDemoRepositoryError("repository_response_invalid");
+  }
+
+  const parsed = schema.safeParse(data[0]);
+
+  if (!parsed.success) {
+    throw new HomepageDemoRepositoryError("repository_response_invalid");
+  }
+
+  return parsed.data;
+}
+
 function parseClaimRows(value: unknown): ClaimRow[] {
   const parsed = z.array(ClaimRowSchema).safeParse(value);
 
@@ -602,6 +710,66 @@ function parseClaimRows(value: unknown): ClaimRow[] {
   }
 
   return parsed.data;
+}
+
+function parsePrepareAuthContinuationResult(
+  row: PrepareAuthContinuationRpcRow
+): PrepareHomepageDemoClaimAuthContinuationResult {
+  switch (row.outcome) {
+    case "continuation_prepared": {
+      const expiresAt = parseRpcTimestamp(row.expires_at);
+
+      if (!row.set_cookie || expiresAt === null) {
+        throw new HomepageDemoRepositoryError("repository_response_invalid");
+      }
+
+      return {
+        outcome: row.outcome,
+        setCookie: true,
+        expiresAt,
+      };
+    }
+    case "continuation_reused": {
+      const expiresAt = parseRpcTimestamp(row.expires_at);
+
+      if (row.set_cookie || expiresAt === null) {
+        throw new HomepageDemoRepositoryError("repository_response_invalid");
+      }
+
+      return {
+        outcome: row.outcome,
+        setCookie: false,
+        expiresAt,
+      };
+    }
+    case "continuation_in_progress":
+    case "already_claimed":
+    case "expired":
+    case "invalid_claim":
+      if (row.set_cookie || row.expires_at !== null) {
+        throw new HomepageDemoRepositoryError("repository_response_invalid");
+      }
+
+      return {
+        outcome: row.outcome,
+        setCookie: false,
+        expiresAt: null,
+      };
+  }
+}
+
+function parseRpcTimestamp(value: string | null): Date | null {
+  if (value === null) {
+    return null;
+  }
+
+  const timestamp = new Date(value);
+
+  if (!Number.isFinite(timestamp.getTime())) {
+    throw new HomepageDemoRepositoryError("repository_response_invalid");
+  }
+
+  return timestamp;
 }
 
 function isEligibleReviewDraft({
@@ -657,6 +825,14 @@ function needsClaimAuthority(): PrepareHomepageDemoPendingClaimResult {
 
 function isUniqueViolation(error: SupabaseError): boolean {
   return error.code === "23505";
+}
+
+function validateTokenHash(value: unknown): string {
+  if (!isTokenHash(value)) {
+    throw new HomepageDemoRepositoryError("invalid_repository_input");
+  }
+
+  return value;
 }
 
 function isTokenHash(value: unknown): value is string {

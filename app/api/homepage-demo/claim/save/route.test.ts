@@ -46,6 +46,7 @@ const validateOriginMock = vi.fn();
 const readJsonMock = vi.fn();
 const parseRequestMock = vi.fn();
 const readClaimCookieMock = vi.fn();
+const readContinuationCookieMock = vi.fn();
 const readDuplicateOverrideCookieMock = vi.fn();
 const loadClaimSaveSourceMock = vi.fn();
 const claimHomepageDemoProjectMock = vi.fn();
@@ -75,6 +76,19 @@ vi.mock("@/lib/homepage-demo/claim-identity.server", () => ({
     readClaimCookieMock(...args),
   getHomepageDemoClaimCookieClearPolicy: () => ({
     name: "t2t_homepage_demo_claim_dev",
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure: false,
+    maxAge: 0,
+  }),
+}));
+
+vi.mock("@/lib/homepage-demo/claim-continuation-identity.server", () => ({
+  readHomepageDemoClaimContinuationCookie: (...args: unknown[]) =>
+    readContinuationCookieMock(...args),
+  getHomepageDemoClaimContinuationCookieClearPolicy: () => ({
+    name: "t2t_homepage_demo_claim_continuation_dev",
     httpOnly: true,
     sameSite: "lax",
     path: "/",
@@ -143,6 +157,7 @@ const { POST } = await import("./route");
 const VALID_USER_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_USER_ID = "22222222-2222-4222-8222-222222222222";
 const CLAIM_TOKEN_HASH = "a".repeat(64);
+const CONTINUATION_TOKEN_HASH = "d".repeat(64);
 const CLAIM_ID = "55555555-5555-4555-8555-555555555555";
 const PROJECT_GROUP = { name: "Demo project", tasks: [] };
 const PREPARED_INPUT = {
@@ -179,6 +194,7 @@ beforeEach(() => {
   readJsonMock.mockReset().mockResolvedValue({});
   parseRequestMock.mockReset().mockReturnValue({});
   readClaimCookieMock.mockReset().mockReturnValue({ tokenHash: CLAIM_TOKEN_HASH });
+  readContinuationCookieMock.mockReset().mockReturnValue({ kind: "missing" });
   readDuplicateOverrideCookieMock.mockReset().mockReturnValue({ kind: "missing" });
   loadClaimSaveSourceMock.mockReset().mockResolvedValue({
     kind: "pending",
@@ -228,7 +244,7 @@ describe("POST /api/homepage-demo/claim/save - unauthenticated request", () => {
     expect(body).toEqual({ code: "unauthorized" });
   });
 
-  it("rejects with claim_unavailable before even checking auth if no claim cookie is present", async () => {
+  it("rejects with claim_unavailable before even checking auth if no claim authority cookie is present", async () => {
     readClaimCookieMock.mockReturnValueOnce(null);
 
     const response = await POST(buildRequest());
@@ -259,6 +275,7 @@ describe("POST /api/homepage-demo/claim/save - authenticated valid claim", () =>
     expect(claimHomepageDemoProjectMock).toHaveBeenCalledWith(
       expect.objectContaining({
         claimTokenHash: CLAIM_TOKEN_HASH,
+        continuationTokenHash: null,
         authenticatedUserId: VALID_USER_ID,
         requestHash: "hash-1",
         importGroups: [PROJECT_GROUP],
@@ -267,8 +284,44 @@ describe("POST /api/homepage-demo/claim/save - authenticated valid claim", () =>
     );
     expect(response.cookies.get("t2t_homepage_demo_claim_dev")?.value).toBe("");
     expect(
+      response.cookies.get("t2t_homepage_demo_claim_continuation_dev")?.value
+    ).toBe("");
+    expect(
       response.cookies.get("t2t_homepage_demo_duplicate_override_dev")?.value
     ).toBe("");
+  });
+
+  it("saves with a valid continuation cookie after the short claim cookie is gone", async () => {
+    readClaimCookieMock.mockReturnValueOnce(null);
+    readContinuationCookieMock.mockReturnValueOnce({
+      kind: "valid",
+      tokenHash: CONTINUATION_TOKEN_HASH,
+    });
+    claimHomepageDemoProjectMock.mockResolvedValueOnce({
+      outcome: "saved",
+      created: true,
+    });
+
+    const response = await POST(buildRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      code: "saved",
+      destination: "/dashboard",
+      created: true,
+    });
+    expect(loadClaimSaveSourceMock).toHaveBeenCalledWith({
+      claimTokenHash: null,
+      continuationTokenHash: CONTINUATION_TOKEN_HASH,
+    });
+    expect(claimHomepageDemoProjectMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        claimTokenHash: null,
+        continuationTokenHash: CONTINUATION_TOKEN_HASH,
+        authenticatedUserId: VALID_USER_ID,
+      })
+    );
   });
 
   it("checks for duplicates only when the source is pending (fresh claim)", async () => {
