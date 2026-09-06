@@ -69,6 +69,21 @@ function jsonResponse(body: unknown, status = 200) {
   } as unknown as Response;
 }
 
+function createDeferredResponse(): Readonly<{
+  promise: Promise<Response>;
+  resolve: (response: Response) => void;
+}> {
+  let resolveResponse: (response: Response) => void = () => {};
+  const promise = new Promise<Response>((resolve) => {
+    resolveResponse = resolve;
+  });
+
+  return {
+    promise,
+    resolve: resolveResponse,
+  };
+}
+
 let fetchMock: ReturnType<typeof vi.fn>;
 let assignMock: ReturnType<typeof vi.fn>;
 let openMock: ReturnType<typeof vi.fn>;
@@ -205,6 +220,26 @@ describe("HomepageLiveDemoClient - review new-tab navigation", () => {
     expect(assignMock).not.toHaveBeenCalled();
   });
 
+  it("transitions the landing page to a completed reuse-only state after opening the review tab", async () => {
+    setViewport("desktop");
+
+    await submitLiveDemo();
+
+    await screen.findByRole("button", { name: "Open preview again" });
+    expect(
+      screen.getByText("Preview opened in a new tab")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Your temporary preview is ready.")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Creating preview..." })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Preview my project" })
+    ).not.toBeInTheDocument();
+  });
+
   it("keeps the original landing page open on mobile success", async () => {
     setViewport("mobile");
 
@@ -235,6 +270,101 @@ describe("HomepageLiveDemoClient - review new-tab navigation", () => {
     expect(pathAndQuery).toBe("/homepage-demo/review");
     expect(pathAndQuery).not.toContain(VALID_PUBLIC_TOKEN);
     expect(fragment).toBe(VALID_PUBLIC_TOKEN);
+  });
+
+  it("opens the existing review URL again without starting a new extraction flow", async () => {
+    setViewport("desktop");
+    const user = userEvent.setup();
+
+    await submitLiveDemo();
+
+    await screen.findByRole("button", { name: "Open preview again" });
+    openMock.mockClear();
+    fetchMock.mockClear();
+    analyticsMocks.trackLiveDemoSubmit.mockClear();
+    analyticsMocks.trackLiveDemoSuccess.mockClear();
+    turnstileMocks.adapter.execute.mockClear();
+
+    await user.click(screen.getByRole("button", { name: "Open preview again" }));
+
+    expect(openMock).toHaveBeenCalledTimes(1);
+    expect(openMock).toHaveBeenCalledWith(
+      `/homepage-demo/review#${VALID_PUBLIC_TOKEN}`,
+      "_blank"
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(turnstileMocks.adapter.execute).not.toHaveBeenCalled();
+    expect(analyticsMocks.trackLiveDemoSubmit).not.toHaveBeenCalled();
+    expect(analyticsMocks.trackLiveDemoSuccess).not.toHaveBeenCalled();
+    expect(assignMock).not.toHaveBeenCalled();
+  });
+
+  it("multiple reopen clicks reuse the same existing review URL without extraction", async () => {
+    setViewport("desktop");
+    const user = userEvent.setup();
+
+    await submitLiveDemo();
+
+    const reopenButton = await screen.findByRole("button", {
+      name: "Open preview again",
+    });
+    openMock.mockClear();
+    fetchMock.mockClear();
+    turnstileMocks.adapter.execute.mockClear();
+
+    await user.click(reopenButton);
+    await user.click(reopenButton);
+
+    expect(openMock).toHaveBeenCalledTimes(2);
+    expect(openMock).toHaveBeenNthCalledWith(
+      1,
+      `/homepage-demo/review#${VALID_PUBLIC_TOKEN}`,
+      "_blank"
+    );
+    expect(openMock).toHaveBeenNthCalledWith(
+      2,
+      `/homepage-demo/review#${VALID_PUBLIC_TOKEN}`,
+      "_blank"
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(turnstileMocks.adapter.execute).not.toHaveBeenCalled();
+  });
+
+  it("falls back to same-tab navigation for reopening only the existing review URL when popups are blocked", async () => {
+    setViewport("desktop");
+    const user = userEvent.setup();
+
+    await submitLiveDemo();
+
+    await screen.findByRole("button", { name: "Open preview again" });
+    openMock.mockClear();
+    fetchMock.mockClear();
+    turnstileMocks.adapter.execute.mockClear();
+    openMock.mockReturnValue(null);
+
+    await user.click(screen.getByRole("button", { name: "Open preview again" }));
+
+    expect(assignMock).toHaveBeenCalledTimes(1);
+    expect(assignMock).toHaveBeenCalledWith(
+      `/homepage-demo/review#${VALID_PUBLIC_TOKEN}`
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(turnstileMocks.adapter.execute).not.toHaveBeenCalled();
+  });
+
+  it("editing controls stay disabled after success and do not expose a second-demo CTA", async () => {
+    setViewport("desktop");
+
+    await submitLiveDemo();
+
+    await screen.findByRole("button", { name: "Open preview again" });
+    expect(screen.getByLabelText("Client message")).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Try another example" })
+    ).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "Preview my project" })
+    ).not.toBeInTheDocument();
   });
 
   it("preserves extraction behavior and success tracking before navigation", async () => {
@@ -282,6 +412,12 @@ describe("HomepageLiveDemoClient - review new-tab navigation", () => {
     await submitLiveDemo();
 
     await screen.findByRole("alert");
+    expect(
+      screen.queryByRole("button", { name: "Open preview again" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Preview my project" })
+    ).toBeEnabled();
     expect(assignMock).not.toHaveBeenCalled();
     expect(openMock).toHaveBeenCalledWith("about:blank", "_blank");
     expect(pendingReviewWindow.close).toHaveBeenCalledTimes(1);
@@ -308,6 +444,9 @@ describe("HomepageLiveDemoClient - review new-tab navigation", () => {
     await submitLiveDemo();
 
     await screen.findByRole("alert");
+    expect(
+      screen.queryByRole("button", { name: "Open preview again" })
+    ).not.toBeInTheDocument();
     expect(getFetchCalls("/api/homepage-demo/extract")).toHaveLength(0);
     expect(assignMock).not.toHaveBeenCalled();
     expect(openMock).toHaveBeenCalledWith("about:blank", "_blank");
@@ -331,10 +470,34 @@ describe("HomepageLiveDemoClient - review new-tab navigation", () => {
   it("double-submitting while loading does not create duplicate navigation", async () => {
     setViewport("desktop");
     const user = userEvent.setup();
+    const extractResponse = createDeferredResponse();
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.includes("/api/homepage-demo/bootstrap")) {
+        return jsonResponse({
+          code: "bootstrap_ready",
+          publicToken: VALID_PUBLIC_TOKEN,
+          idempotencyToken: VALID_IDEMPOTENCY_TOKEN,
+        });
+      }
+
+      if (url.includes("/api/homepage-demo/extract")) {
+        return await extractResponse.promise;
+      }
+
+      throw new Error(`Unexpected fetch to ${url}`);
+    });
     render(<HomepageLiveDemoClient turnstileSiteKey="site-key" />);
 
     const button = screen.getByRole("button", { name: "Preview my project" });
     await user.dblClick(button);
+
+    await waitFor(() =>
+      expect(getFetchCalls("/api/homepage-demo/extract")).toHaveLength(1)
+    );
+    expect(openMock).toHaveBeenCalledTimes(1);
+    extractResponse.resolve(jsonResponse({ code: "review_ready" }));
 
     await waitFor(() =>
       expect(pendingReviewWindow.location.replace).toHaveBeenCalledTimes(1)
@@ -347,6 +510,24 @@ describe("HomepageLiveDemoClient - review new-tab navigation", () => {
   it("keeps the submit button disabled with loading copy until review navigation begins", async () => {
     setViewport("desktop");
     const user = userEvent.setup();
+    const extractResponse = createDeferredResponse();
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.includes("/api/homepage-demo/bootstrap")) {
+        return jsonResponse({
+          code: "bootstrap_ready",
+          publicToken: VALID_PUBLIC_TOKEN,
+          idempotencyToken: VALID_IDEMPOTENCY_TOKEN,
+        });
+      }
+
+      if (url.includes("/api/homepage-demo/extract")) {
+        return await extractResponse.promise;
+      }
+
+      throw new Error(`Unexpected fetch to ${url}`);
+    });
     render(<HomepageLiveDemoClient turnstileSiteKey="site-key" />);
 
     await user.click(
@@ -358,8 +539,13 @@ describe("HomepageLiveDemoClient - review new-tab navigation", () => {
         screen.getByRole("button", { name: "Creating preview..." })
       ).toBeDisabled()
     );
+    extractResponse.resolve(jsonResponse({ code: "review_ready" }));
     await waitFor(() =>
       expect(pendingReviewWindow.location.replace).toHaveBeenCalledTimes(1)
     );
+    await screen.findByRole("button", { name: "Open preview again" });
+    expect(
+      screen.queryByRole("button", { name: "Creating preview..." })
+    ).not.toBeInTheDocument();
   });
 });

@@ -56,6 +56,7 @@ type LiveDemoStep = "bootstrapping" | "verifying_challenge" | "extracting" | "op
 type LiveDemoState =
   | Readonly<{ status: "idle" }>
   | Readonly<{ status: "working"; step: LiveDemoStep }>
+  | Readonly<{ status: "review_opened"; reviewUrl: string }>
   | Readonly<{ status: "error"; code: LiveDemoErrorCode }>;
 
 type LiveDemoErrorCode =
@@ -130,7 +131,8 @@ export default function HomepageLiveDemoClient({
   const turnstileExecutionConsumedRef = useRef(false);
 
   const isWorking = state.status === "working";
-  const isInteractionDisabled = isWorking;
+  const isReviewOpened = state.status === "review_opened";
+  const isInteractionDisabled = isWorking || isReviewOpened;
   const isTextError =
     state.status === "error" &&
     (state.code === "invalid_text_input" || state.code === "request_too_large");
@@ -233,9 +235,22 @@ export default function HomepageLiveDemoClient({
       });
 
       assertActiveRun(runId, mountedRef, runIdRef);
+      const reviewUrl = createReviewUrl(bootstrap.publicToken);
+
       setState({ status: "working", step: "opening_review" });
       trackLiveDemoSuccess();
-      navigateToReview(bootstrap.publicToken, pendingReviewWindow);
+      const openedInReviewWindow = navigateToReview(
+        reviewUrl,
+        pendingReviewWindow
+      );
+
+      if (
+        openedInReviewWindow &&
+        mountedRef.current &&
+        runIdRef.current === runId
+      ) {
+        setState({ status: "review_opened", reviewUrl });
+      }
     } catch (error) {
       closePendingReviewWindow(pendingReviewWindow);
 
@@ -438,6 +453,8 @@ export default function HomepageLiveDemoClient({
     state.status === "working"
       ? getWorkingCopy(state.step)
       : null;
+  const reviewOpenedCopy =
+    state.status === "review_opened" ? getReviewOpenedCopy() : null;
   const errorCopy = state.status === "error" ? getErrorCopy(state.code) : null;
 
   return (
@@ -513,6 +530,18 @@ export default function HomepageLiveDemoClient({
               </div>
             ) : null}
 
+            {reviewOpenedCopy !== null ? (
+              <div
+                id={statusTextId}
+                className={styles.status}
+                role="status"
+                aria-live="polite"
+              >
+                <p className={styles.statusTitle}>{reviewOpenedCopy.title}</p>
+                <p className={styles.statusText}>{reviewOpenedCopy.body}</p>
+              </div>
+            ) : null}
+
             {errorCopy !== null ? (
               <div
                 ref={alertRef}
@@ -527,15 +556,27 @@ export default function HomepageLiveDemoClient({
 
             <div className={styles.actions}>
               <p id={helpTextId} className={styles.actionHelper}>
-                Paste from email, WhatsApp, notes, or a project brief.
+                {isReviewOpened
+                  ? "This browser session has used its temporary preview."
+                  : "Paste from email, WhatsApp, notes, or a project brief."}
               </p>
-              <button
-                type="submit"
-                className={styles.primaryButton}
-                disabled={isInteractionDisabled}
-              >
-                {isWorking ? "Creating preview..." : "Preview my project"}
-              </button>
+              {state.status === "review_opened" ? (
+                <button
+                  type="button"
+                  className={styles.primaryButton}
+                  onClick={() => openExistingReview(state.reviewUrl)}
+                >
+                  Open preview again
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className={styles.primaryButton}
+                  disabled={isInteractionDisabled}
+                >
+                  {isWorking ? "Creating preview..." : "Preview my project"}
+                </button>
+              )}
             </div>
           </div>
         </form>
@@ -606,22 +647,45 @@ function closePendingReviewWindow(pendingReviewWindow: Window | null): void {
   }
 }
 
-function navigateToReview(
-  publicToken: string,
-  pendingReviewWindow: Window | null
-): void {
-  const reviewUrl = `${REVIEW_PAGE_PATH}#${publicToken}`;
+function createReviewUrl(publicToken: string): string {
+  return `${REVIEW_PAGE_PATH}#${publicToken}`;
+}
 
+function openExistingReview(reviewUrl: string): void {
+  try {
+    const reviewWindow = window.open(reviewUrl, "_blank");
+
+    if (reviewWindow !== null) {
+      try {
+        reviewWindow.opener = null;
+      } catch {
+        // Some browsers expose a read-only opener; the review URL is same-origin.
+      }
+
+      return;
+    }
+  } catch {
+    // Fall back below so a blocked popup does not strand the existing preview.
+  }
+
+  window.location.assign(reviewUrl);
+}
+
+function navigateToReview(
+  reviewUrl: string,
+  pendingReviewWindow: Window | null
+): boolean {
   if (pendingReviewWindow !== null) {
     try {
       pendingReviewWindow.location.replace(reviewUrl);
-      return;
+      return true;
     } catch {
       closePendingReviewWindow(pendingReviewWindow);
     }
   }
 
   window.location.assign(reviewUrl);
+  return false;
 }
 
 function getPendingReviewDocumentHtml(): string {
@@ -827,6 +891,16 @@ function getWorkingCopy(step: LiveDemoStep): Readonly<{
         body: "Your temporary preview is ready.",
       };
   }
+}
+
+function getReviewOpenedCopy(): Readonly<{
+  body: string;
+  title: string;
+}> {
+  return {
+    title: "Preview opened in a new tab",
+    body: "Your temporary preview is ready.",
+  };
 }
 
 function getErrorCopy(code: LiveDemoErrorCode): Readonly<{
