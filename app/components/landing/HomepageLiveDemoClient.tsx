@@ -36,6 +36,7 @@ export type HomepageLiveDemoClientProps = Readonly<{
 const BOOTSTRAP_API_PATH = "/api/homepage-demo/bootstrap";
 const EXTRACT_API_PATH = "/api/homepage-demo/extract";
 const REVIEW_PAGE_PATH = "/homepage-demo/review";
+const REVIEW_PENDING_PAGE_TITLE = "Preparing your Text2Task preview";
 const PUBLIC_RESPONSE_MAX_BYTES = 16 * 1024;
 const TEXT_INPUT_MAX_CHARACTERS = 8000;
 const TEXT_INPUT_MAX_UTF8_BYTES = TEXT_INPUT_MAX_CHARACTERS * 4;
@@ -205,6 +206,8 @@ export default function HomepageLiveDemoClient({
       return;
     }
 
+    const pendingReviewWindow = openPendingReviewWindow();
+
     trackLiveDemoSubmit();
 
     const runId = runIdRef.current + 1;
@@ -232,8 +235,10 @@ export default function HomepageLiveDemoClient({
       assertActiveRun(runId, mountedRef, runIdRef);
       setState({ status: "working", step: "opening_review" });
       trackLiveDemoSuccess();
-      navigateToReview(bootstrap.publicToken);
+      navigateToReview(bootstrap.publicToken, pendingReviewWindow);
     } catch (error) {
+      closePendingReviewWindow(pendingReviewWindow);
+
       if (isIgnorableRunError(error)) {
         return;
       }
@@ -561,10 +566,108 @@ function validateLiveDemoTextInput(value: string): ValidatedTextResult {
   return { ok: true, text: trimmedValue };
 }
 
-function navigateToReview(publicToken: string): void {
+function openPendingReviewWindow(): Window | null {
+  try {
+    const pendingReviewWindow = window.open("about:blank", "_blank");
+
+    if (pendingReviewWindow === null) {
+      return null;
+    }
+
+    try {
+      pendingReviewWindow.opener = null;
+    } catch {
+      // Some browsers expose a read-only opener; the review URL is same-origin.
+    }
+
+    try {
+      pendingReviewWindow.document.open();
+      pendingReviewWindow.document.write(getPendingReviewDocumentHtml());
+      pendingReviewWindow.document.close();
+    } catch {
+      // A blocked or restricted temporary tab should not block the demo flow.
+    }
+
+    return pendingReviewWindow;
+  } catch {
+    return null;
+  }
+}
+
+function closePendingReviewWindow(pendingReviewWindow: Window | null): void {
+  if (pendingReviewWindow === null) {
+    return;
+  }
+
+  try {
+    pendingReviewWindow.close();
+  } catch {
+    // Ignore browser-specific restrictions while preserving the landing error UI.
+  }
+}
+
+function navigateToReview(
+  publicToken: string,
+  pendingReviewWindow: Window | null
+): void {
   const reviewUrl = `${REVIEW_PAGE_PATH}#${publicToken}`;
 
+  if (pendingReviewWindow !== null) {
+    try {
+      pendingReviewWindow.location.replace(reviewUrl);
+      return;
+    } catch {
+      closePendingReviewWindow(pendingReviewWindow);
+    }
+  }
+
   window.location.assign(reviewUrl);
+}
+
+function getPendingReviewDocumentHtml(): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="referrer" content="no-referrer">
+  <title>${REVIEW_PENDING_PAGE_TITLE}</title>
+  <style>
+    :root { color-scheme: light; font-family: Arial, sans-serif; }
+    body {
+      align-items: center;
+      background: #f8fafc;
+      color: #0f172a;
+      display: flex;
+      justify-content: center;
+      margin: 0;
+      min-height: 100vh;
+    }
+    main {
+      max-width: 28rem;
+      padding: 2rem;
+      text-align: center;
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1.4;
+      margin: 0 0 0.5rem;
+    }
+    p {
+      color: #475569;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Preparing your preview</h1>
+    <p>This tab will update automatically when your project preview is ready.</p>
+  </main>
+</body>
+</html>`;
 }
 
 function assertActiveRun(

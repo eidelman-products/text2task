@@ -72,6 +72,18 @@ function jsonResponse(body: unknown, status = 200) {
 let fetchMock: ReturnType<typeof vi.fn>;
 let assignMock: ReturnType<typeof vi.fn>;
 let openMock: ReturnType<typeof vi.fn>;
+let pendingReviewWindow: {
+  close: ReturnType<typeof vi.fn>;
+  document: {
+    close: ReturnType<typeof vi.fn>;
+    open: ReturnType<typeof vi.fn>;
+    write: ReturnType<typeof vi.fn>;
+  };
+  location: {
+    replace: ReturnType<typeof vi.fn>;
+  };
+  opener: Window | null;
+};
 const originalLocation = window.location;
 
 beforeEach(() => {
@@ -85,6 +97,18 @@ beforeEach(() => {
 
   assignMock = vi.fn();
   openMock = vi.fn();
+  pendingReviewWindow = {
+    close: vi.fn(),
+    document: {
+      close: vi.fn(),
+      open: vi.fn(),
+      write: vi.fn(),
+    },
+    location: {
+      replace: vi.fn(),
+    },
+    opener: window,
+  };
 
   Object.defineProperty(window, "location", {
     configurable: true,
@@ -93,7 +117,7 @@ beforeEach(() => {
 
   Object.defineProperty(window, "open", {
     configurable: true,
-    value: openMock,
+    value: openMock.mockReturnValue(pendingReviewWindow),
   });
 
   turnstileMocks.adapter.execute.mockResolvedValue(CHALLENGE_TOKEN);
@@ -164,29 +188,35 @@ function getFetchCalls(path: string) {
   );
 }
 
-describe("HomepageLiveDemoClient - Phase 2C same-tab review navigation", () => {
-  it("desktop success navigates the current tab to the review hash URL without opening a popup", async () => {
+describe("HomepageLiveDemoClient - review new-tab navigation", () => {
+  it("opens a pending review tab from the preview click and navigates it to the review hash URL", async () => {
     setViewport("desktop");
 
     await submitLiveDemo();
 
-    await waitFor(() => expect(assignMock).toHaveBeenCalledTimes(1));
-    expect(assignMock).toHaveBeenCalledWith(
+    expect(openMock).toHaveBeenCalledWith("about:blank", "_blank");
+    await waitFor(() =>
+      expect(pendingReviewWindow.location.replace).toHaveBeenCalledTimes(1)
+    );
+    expect(pendingReviewWindow.location.replace).toHaveBeenCalledWith(
       `/homepage-demo/review#${VALID_PUBLIC_TOKEN}`
     );
-    expect(openMock).not.toHaveBeenCalled();
+    expect(pendingReviewWindow.opener).toBeNull();
+    expect(assignMock).not.toHaveBeenCalled();
   });
 
-  it("mobile success uses the same same-tab review hash URL", async () => {
+  it("keeps the original landing page open on mobile success", async () => {
     setViewport("mobile");
 
     await submitLiveDemo();
 
-    await waitFor(() => expect(assignMock).toHaveBeenCalledTimes(1));
-    expect(assignMock).toHaveBeenCalledWith(
+    await waitFor(() =>
+      expect(pendingReviewWindow.location.replace).toHaveBeenCalledTimes(1)
+    );
+    expect(pendingReviewWindow.location.replace).toHaveBeenCalledWith(
       `/homepage-demo/review#${VALID_PUBLIC_TOKEN}`
     );
-    expect(openMock).not.toHaveBeenCalled();
+    expect(assignMock).not.toHaveBeenCalled();
   });
 
   it("keeps the public review token in the URL fragment, not in query string or pathname", async () => {
@@ -194,8 +224,12 @@ describe("HomepageLiveDemoClient - Phase 2C same-tab review navigation", () => {
 
     await submitLiveDemo();
 
-    await waitFor(() => expect(assignMock).toHaveBeenCalledTimes(1));
-    const assignedUrl = String(assignMock.mock.calls[0][0]);
+    await waitFor(() =>
+      expect(pendingReviewWindow.location.replace).toHaveBeenCalledTimes(1)
+    );
+    const assignedUrl = String(
+      pendingReviewWindow.location.replace.mock.calls[0][0]
+    );
     const [pathAndQuery, fragment] = assignedUrl.split("#");
 
     expect(pathAndQuery).toBe("/homepage-demo/review");
@@ -208,7 +242,9 @@ describe("HomepageLiveDemoClient - Phase 2C same-tab review navigation", () => {
 
     await submitLiveDemo();
 
-    await waitFor(() => expect(assignMock).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(pendingReviewWindow.location.replace).toHaveBeenCalledTimes(1)
+    );
     expect(analyticsMocks.trackLiveDemoSubmit).toHaveBeenCalledTimes(1);
     expect(analyticsMocks.trackLiveDemoSuccess).toHaveBeenCalledTimes(1);
     expect(turnstileMocks.adapter.execute).toHaveBeenCalledTimes(1);
@@ -247,7 +283,9 @@ describe("HomepageLiveDemoClient - Phase 2C same-tab review navigation", () => {
 
     await screen.findByRole("alert");
     expect(assignMock).not.toHaveBeenCalled();
-    expect(openMock).not.toHaveBeenCalled();
+    expect(openMock).toHaveBeenCalledWith("about:blank", "_blank");
+    expect(pendingReviewWindow.close).toHaveBeenCalledTimes(1);
+    expect(pendingReviewWindow.location.replace).not.toHaveBeenCalled();
     expect(analyticsMocks.trackLiveDemoSuccess).not.toHaveBeenCalled();
   });
 
@@ -272,7 +310,22 @@ describe("HomepageLiveDemoClient - Phase 2C same-tab review navigation", () => {
     await screen.findByRole("alert");
     expect(getFetchCalls("/api/homepage-demo/extract")).toHaveLength(0);
     expect(assignMock).not.toHaveBeenCalled();
-    expect(openMock).not.toHaveBeenCalled();
+    expect(openMock).toHaveBeenCalledWith("about:blank", "_blank");
+    expect(pendingReviewWindow.close).toHaveBeenCalledTimes(1);
+    expect(pendingReviewWindow.location.replace).not.toHaveBeenCalled();
+  });
+
+  it("falls back to same-tab review navigation if the pending tab is blocked", async () => {
+    setViewport("desktop");
+    openMock.mockReturnValue(null);
+
+    await submitLiveDemo();
+
+    await waitFor(() => expect(assignMock).toHaveBeenCalledTimes(1));
+    expect(assignMock).toHaveBeenCalledWith(
+      `/homepage-demo/review#${VALID_PUBLIC_TOKEN}`
+    );
+    expect(pendingReviewWindow.location.replace).not.toHaveBeenCalled();
   });
 
   it("double-submitting while loading does not create duplicate navigation", async () => {
@@ -283,9 +336,12 @@ describe("HomepageLiveDemoClient - Phase 2C same-tab review navigation", () => {
     const button = screen.getByRole("button", { name: "Preview my project" });
     await user.dblClick(button);
 
-    await waitFor(() => expect(assignMock).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(pendingReviewWindow.location.replace).toHaveBeenCalledTimes(1)
+    );
     expect(getFetchCalls("/api/homepage-demo/bootstrap")).toHaveLength(1);
     expect(getFetchCalls("/api/homepage-demo/extract")).toHaveLength(1);
+    expect(openMock).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the submit button disabled with loading copy until review navigation begins", async () => {
@@ -302,6 +358,8 @@ describe("HomepageLiveDemoClient - Phase 2C same-tab review navigation", () => {
         screen.getByRole("button", { name: "Creating preview..." })
       ).toBeDisabled()
     );
-    await waitFor(() => expect(assignMock).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(pendingReviewWindow.location.replace).toHaveBeenCalledTimes(1)
+    );
   });
 });
