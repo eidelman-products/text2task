@@ -308,6 +308,7 @@ function formatProgressSummary(progress: {
   inProgress: number;
   comingUp: number;
   waitingForFeedback: number;
+  unknown: number;
 }): string {
   const parts = [
     `${progress.completed} completed`,
@@ -316,6 +317,9 @@ function formatProgressSummary(progress: {
   ];
   if (progress.waitingForFeedback > 0) {
     parts.push(`${progress.waitingForFeedback} waiting for your feedback`);
+  }
+  if (progress.unknown > 0) {
+    parts.push(`${progress.unknown} status unavailable`);
   }
   return parts.join(" · ");
 }

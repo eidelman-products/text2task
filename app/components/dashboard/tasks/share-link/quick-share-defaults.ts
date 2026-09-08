@@ -4,6 +4,10 @@ import type {
   SaveShareConfigurationResourceItem,
   SaveShareConfigurationTaskItem,
 } from "@/lib/share/share-contracts";
+import {
+  deriveClientShareTaskPublicGroup,
+  deriveClientShareTaskWorkflowStatus,
+} from "@/lib/share/client-share-task-state";
 import type { TaskProjectSubtask } from "../task-types";
 import type { TaskResource } from "../../resources/resource-api";
 import { isShareableResource } from "./share-link-configuration-editor";
@@ -14,22 +18,21 @@ type SharePublicGroup = SaveShareConfigurationTaskItem["publicGroup"];
   Objective B (owner UX simplification): pure, framework-free helpers
   behind the "Share project update" quick-share flow. Nothing here talks
   to the network -- every function takes already-loaded data and returns
-  either a save-request fragment or a display summary. This keeps the
-  "automatic defaults, persisted overrides always win" rule testable in
-  isolation from the panel/hook wiring that calls it.
+  either a save-request fragment or a display summary.
 
-  CORE RULE (owner overrides always win): automatic grouping is applied
-  ONLY when a link has no persisted task mapping at all yet
+  CORE RULE: persisted mapping controls inclusion/order/configuration
+  only; canonical mutable work state is always read from the current
+  subtask status/completed_at values. Automatic inclusion is applied ONLY
+  when a link has no persisted task mapping at all yet
   (mappedTasks.length === 0). share_link_tasks has no distinct "owner
   explicitly hid this task" state separate from "never mapped" -- once
-  ANY mapping exists (whether it came from an earlier automatic
-  application or from the advanced editor), recomputing/resending an
-  automatic set on every later quick-share would silently undo a
-  deliberate owner hide the next time they click "Share update". So once
-  a link has a persisted mapping, quick-share leaves `tasks` alone
-  entirely (omitted from the save request) unless the owner explicitly
-  edits it under "Edit what client sees" -- it never re-derives or
-  resets it. See buildQuickShareTaskProgress/buildAutomaticTaskItems.
+  ANY mapping exists, recomputing/resending an automatic set on every
+  later quick-share would silently undo a deliberate owner hide the next
+  time they click "Share update". So once a link has a persisted mapping,
+  quick-share leaves `tasks` alone entirely (omitted from the save
+  request) unless the owner explicitly edits it under "Edit what client
+  sees"; its progress preview still derives completion from the current
+  canonical subtask state for the included tasks.
 */
 
 /** Deleted or archived subtasks are never eligible for automatic
@@ -51,9 +54,12 @@ export function isEligibleSubtask(subtask: TaskProjectSubtask): boolean {
 export function suggestAutomaticPublicGroup(
   internalStatus: string
 ): Extract<SharePublicGroup, "completed" | "in_progress" | "coming_up"> {
-  if (internalStatus === "Done") return "completed";
-  if (internalStatus === "New") return "coming_up";
-  return "in_progress";
+  const group = deriveClientShareTaskPublicGroup({
+    status: internalStatus,
+    completedAt: null,
+  });
+
+  return group === "waiting_for_feedback" ? "in_progress" : group;
 }
 
 export type QuickShareTaskGroupCounts = {
@@ -61,26 +67,53 @@ export type QuickShareTaskGroupCounts = {
   inProgress: number;
   comingUp: number;
   waitingForFeedback: number;
+  unknown: number;
   total: number;
 };
 
 function emptyCounts(): QuickShareTaskGroupCounts {
-  return { completed: 0, inProgress: 0, comingUp: 0, waitingForFeedback: 0, total: 0 };
+  return {
+    completed: 0,
+    inProgress: 0,
+    comingUp: 0,
+    waitingForFeedback: 0,
+    unknown: 0,
+    total: 0,
+  };
 }
 
 function countByGroup(
-  items: Array<{ publicGroup: SharePublicGroup; waitingForClientFeedback: boolean }>
+  items: Array<{
+    status: string | null | undefined;
+    completed_at?: string | null;
+    waitingForClientFeedback: boolean;
+  }>
 ): QuickShareTaskGroupCounts {
   const counts = emptyCounts();
   for (const item of items) {
+    const workflowStatus = deriveClientShareTaskWorkflowStatus({
+      status: item.status,
+      completedAt: item.completed_at ?? null,
+      waitingForClientFeedback: item.waitingForClientFeedback,
+    });
+    const publicGroup = deriveClientShareTaskPublicGroup({
+      status: item.status,
+      completedAt: item.completed_at ?? null,
+      waitingForClientFeedback: item.waitingForClientFeedback,
+    });
+
     counts.total += 1;
-    if (item.waitingForClientFeedback) {
+    if (workflowStatus === "completed") {
+      counts.completed += 1;
+    } else if (workflowStatus === "unknown") {
+      counts.unknown += 1;
+    } else if (publicGroup === "waiting_for_feedback") {
       counts.waitingForFeedback += 1;
-      continue;
+    } else if (publicGroup === "coming_up") {
+      counts.comingUp += 1;
+    } else {
+      counts.inProgress += 1;
     }
-    if (item.publicGroup === "completed") counts.completed += 1;
-    else if (item.publicGroup === "coming_up") counts.comingUp += 1;
-    else counts.inProgress += 1;
   }
   return counts;
 }
@@ -113,18 +146,38 @@ export type QuickShareTaskProgress = QuickShareTaskGroupCounts & {
 /**
  * What the quick-share panel shows as the progress preview line ("4
  * completed - 1 in progress - 5 coming up") BEFORE the owner clicks
- * Share update. Reflects exactly what a Share update click would send:
- * the persisted mapping if one already exists (never recomputed), or the
- * automatic default over eligible subtasks otherwise.
+ * Share update. Persisted mapping narrows the included task set once it
+ * exists, but counts/groups are derived from the current canonical
+ * subtask status/completed_at values, not stale publicGroup values.
  */
 export function buildQuickShareTaskProgress(
   subtasks: TaskProjectSubtask[],
   mappedTasks: MappedShareLinkTask[]
 ): QuickShareTaskProgress {
   if (mappedTasks.length > 0) {
-    return { ...countByGroup(mappedTasks), usingAutomaticDefaults: false };
+    const mappedById = new Map(mappedTasks.map((task) => [task.subtaskId, task]));
+    const mappedSubtasks = subtasks
+      .filter(isEligibleSubtask)
+      .filter((subtask) => mappedById.has(String(subtask.id)))
+      .map((subtask) => ({
+        status: subtask.status,
+        completed_at: subtask.completed_at,
+        waitingForClientFeedback:
+          mappedById.get(String(subtask.id))?.waitingForClientFeedback ?? false,
+      }));
+
+    return { ...countByGroup(mappedSubtasks), usingAutomaticDefaults: false };
   }
-  return { ...countByGroup(buildAutomaticTaskItems(subtasks)), usingAutomaticDefaults: true };
+  return {
+    ...countByGroup(
+      subtasks.filter(isEligibleSubtask).map((subtask) => ({
+        status: subtask.status,
+        completed_at: subtask.completed_at,
+        waitingForClientFeedback: false,
+      }))
+    ),
+    usingAutomaticDefaults: true,
+  };
 }
 
 /** Percent complete for the simple "X% complete" headline, from whichever

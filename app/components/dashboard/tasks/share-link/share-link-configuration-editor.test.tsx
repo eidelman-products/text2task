@@ -220,7 +220,7 @@ describe("ShareLinkConfigurationEditor - task selection (no auto-select, new-sel
 
     expect(screen.getByRole("checkbox", { name: "Task A" })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Task B" })).not.toBeChecked();
-    // "New" would suggest "in_progress" via the new-selection heuristic --
+    // "New" would suggest "coming_up" via the new-selection heuristic --
     // the persisted "waiting_for_feedback" value must win instead.
     expect(screen.getByDisplayValue("Waiting for client feedback")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /waiting for client feedback/i })).toBeChecked();

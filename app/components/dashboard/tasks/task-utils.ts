@@ -1,4 +1,8 @@
 import { formatDeadline } from "@/lib/tasks/format-deadline";
+import {
+  isCanonicalTaskComplete,
+  normalizeCanonicalTaskStatus,
+} from "@/lib/tasks/canonical-task-status";
 import type {
   TaskArchiveView,
   ProjectEntity,
@@ -118,11 +122,14 @@ export function getEditableDeadlineValue(task: TaskRow) {
 }
 
 export function isDoneTask(task: TaskRow) {
-  return String(task.status || "").trim().toLowerCase() === "done";
+  return normalizeCanonicalTaskStatus(task.status) === "done";
 }
 
 export function isCompletedLifetimeTask(task: TaskRow) {
-  return isDoneTask(task) || Boolean(task.completed_at);
+  return isCanonicalTaskComplete({
+    status: task.status,
+    completedAt: task.completed_at,
+  });
 }
 
 export function isDeletedTask(task: TaskRow) {
@@ -246,8 +253,10 @@ function buildSingleTaskProjectGroup(
 
   const completedSubtaskCount = subtasks.filter(
     (subtask) =>
-      String(subtask.status || "").trim().toLowerCase() === "done" ||
-      Boolean(subtask.completed_at)
+      isCanonicalTaskComplete({
+        status: subtask.status,
+        completedAt: subtask.completed_at,
+      })
   ).length;
 
   const contact = getBestContactDetails(tasks);
@@ -464,19 +473,13 @@ function getProjectPriority(tasks: TaskRow[]) {
 }
 
 function getProjectStatus(tasks: TaskRow[]) {
-  const statuses = tasks.map((task) =>
-    String(task.status || "").trim().toLowerCase()
-  );
+  const statuses = tasks.map((task) => normalizeCanonicalTaskStatus(task.status));
 
   if (statuses.length && statuses.every((status) => status === "done")) {
     return "Done";
   }
 
-  if (
-    statuses.includes("in progress") ||
-    statuses.includes("in-progress") ||
-    statuses.includes("working")
-  ) {
+  if (statuses.includes("in_progress")) {
     return "In Progress";
   }
 
@@ -492,7 +495,7 @@ function getProjectStatus(tasks: TaskRow[]) {
     return "In Progress";
   }
 
-  return tasks[0]?.status || "New";
+  return statuses.includes("not_started") ? "New" : tasks[0]?.status || "New";
 }
 
 function getProjectTitle(tasks: TaskRow[], rawInput: string) {

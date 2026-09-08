@@ -54,13 +54,21 @@ describe("suggestAutomaticPublicGroup", () => {
 
   it("maps New to coming_up", () => {
     expect(suggestAutomaticPublicGroup("New")).toBe("coming_up");
+    expect(suggestAutomaticPublicGroup("Not Started")).toBe("coming_up");
   });
 
-  it("maps In Progress, Review, Urgent, and any unknown status to in_progress -- never surfacing 'Urgent' as a group name", () => {
+  it("maps In Progress, Review, Urgent, and unknown status to an in_progress compatibility save value", () => {
     expect(suggestAutomaticPublicGroup("In Progress")).toBe("in_progress");
     expect(suggestAutomaticPublicGroup("Review")).toBe("in_progress");
+    expect(suggestAutomaticPublicGroup("In Review")).toBe("in_progress");
     expect(suggestAutomaticPublicGroup("Urgent")).toBe("in_progress");
     expect(suggestAutomaticPublicGroup("Some Future Status")).toBe("in_progress");
+  });
+
+  it("maps Done aliases to completed", () => {
+    expect(suggestAutomaticPublicGroup("Done")).toBe("completed");
+    expect(suggestAutomaticPublicGroup("Completed")).toBe("completed");
+    expect(suggestAutomaticPublicGroup("Complete")).toBe("completed");
   });
 });
 
@@ -132,39 +140,79 @@ describe("buildQuickShareTaskProgress -- the pre-share preview", () => {
       inProgress: 1,
       comingUp: 1,
       waitingForFeedback: 0,
+      unknown: 0,
       total: 3,
       usingAutomaticDefaults: true,
     });
   });
 
-  it("reflects the persisted mapping exactly once one exists, never recomputed from current subtask status", () => {
+  it("uses persisted mapping for inclusion only once one exists, while deriving progress from current subtask status", () => {
     const progress = buildQuickShareTaskProgress(
       [subtask({ id: 1, status: "New" })],
       [{ subtaskId: "1", publicGroup: "completed", waitingForClientFeedback: false, displayOrder: 0 }]
     );
 
-    expect(progress.completed).toBe(1);
-    expect(progress.comingUp).toBe(0);
+    expect(progress.completed).toBe(0);
+    expect(progress.comingUp).toBe(1);
     expect(progress.usingAutomaticDefaults).toBe(false);
   });
 
   it("counts a waitingForClientFeedback task in its own bucket, not its publicGroup bucket", () => {
     const progress = buildQuickShareTaskProgress(
-      [],
+      [subtask({ id: 1, status: "Review" })],
       [{ subtaskId: "1", publicGroup: "in_progress", waitingForClientFeedback: true, displayOrder: 0 }]
     );
     expect(progress.waitingForFeedback).toBe(1);
     expect(progress.inProgress).toBe(0);
   });
+
+  it("lets canonical completion win over waitingForClientFeedback", () => {
+    const progress = buildQuickShareTaskProgress(
+      [subtask({ id: 1, status: "Done" })],
+      [{ subtaskId: "1", publicGroup: "waiting_for_feedback", waitingForClientFeedback: true, displayOrder: 0 }]
+    );
+
+    expect(progress.completed).toBe(1);
+    expect(progress.waitingForFeedback).toBe(0);
+  });
+
+  it("keeps unknown canonical task status out of the in-progress count", () => {
+    const progress = buildQuickShareTaskProgress(
+      [subtask({ id: 1, status: "Blocked" })],
+      [{ subtaskId: "1", publicGroup: "in_progress", waitingForClientFeedback: false, displayOrder: 0 }]
+    );
+
+    expect(progress.completed).toBe(0);
+    expect(progress.inProgress).toBe(0);
+    expect(progress.unknown).toBe(1);
+  });
 });
 
 describe("percentComplete", () => {
   it("computes a rounded percentage", () => {
-    expect(percentComplete({ completed: 1, inProgress: 1, comingUp: 0, waitingForFeedback: 0, total: 3 })).toBe(33);
+    expect(
+      percentComplete({
+        completed: 1,
+        inProgress: 1,
+        comingUp: 0,
+        waitingForFeedback: 0,
+        unknown: 1,
+        total: 3,
+      })
+    ).toBe(33);
   });
 
   it("returns null when total is 0 (never a fabricated 0%)", () => {
-    expect(percentComplete({ completed: 0, inProgress: 0, comingUp: 0, waitingForFeedback: 0, total: 0 })).toBeNull();
+    expect(
+      percentComplete({
+        completed: 0,
+        inProgress: 0,
+        comingUp: 0,
+        waitingForFeedback: 0,
+        unknown: 0,
+        total: 0,
+      })
+    ).toBeNull();
   });
 });
 

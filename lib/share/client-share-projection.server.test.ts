@@ -44,7 +44,7 @@ function setAdminConfig(config: AdminFakeConfig): void {
 vi.mock("@/lib/supabase/admin", () => ({
   supabaseAdmin: {
     from: (table: string) => ({
-      select: (_columns: string) => {
+      select: () => {
         switch (table) {
           case "project_share_links":
             return makeQueryBuilder({
@@ -150,7 +150,7 @@ type FakeClientConfig = {
 function buildFakeClient(config: FakeClientConfig) {
   const rpc = vi.fn().mockResolvedValue({ data: config.rpcData ?? null, error: config.rpcError ?? null });
   const from = vi.fn((table: string) => ({
-    select: (_columns: string) => {
+    select: () => {
       switch (table) {
         case "project_share_links":
           return makeQueryBuilder({ data: config.linkRows ?? [], error: config.linkError ?? null });
@@ -232,8 +232,8 @@ function fullFixture(configOverrides: Partial<FakeClientConfig> = {}) {
     linkRows: [{ project_id: VALID_PROJECT_ID }],
     projectRows: [{ title: "Website launch", status: "In Progress", deadline_date: "2026-09-01" }],
     taskRows: [
-      { id: 1, task_title: "Design hero section" },
-      { id: 2, task_title: "Build header nav" },
+      { id: 1, task_title: "Design hero section", status: "Done", completed_at: null, is_archived: false },
+      { id: 2, task_title: "Build header nav", status: "Review", completed_at: null, is_archived: false },
     ],
     resourceRows: [
       { id: VALID_RESOURCE_ID, url: null, storage_path: "private/logo.png", file_name: "logo.png", resource_type: "file" },
@@ -382,9 +382,14 @@ describe("buildClientShareProjection - visibility gating", () => {
 describe("buildClientShareProjection - safe status mapping", () => {
   it.each([
     ["New", "not_started"],
+    ["Not Started", "not_started"],
     ["In Progress", "in_progress"],
     ["Review", "in_progress"],
+    ["In Review", "in_progress"],
+    ["Urgent", "in_progress"],
     ["Done", "completed"],
+    ["Completed", "completed"],
+    ["Complete", "completed"],
   ])("maps internal status %s to public status %s", async (internal, expected) => {
     const client = fullFixture({
       projectRows: [{ title: "T", status: internal, deadline_date: null }],
@@ -394,21 +399,21 @@ describe("buildClientShareProjection - safe status mapping", () => {
     if (result.ok) expect(result.data.status).toBe(expected);
   });
 
-  it("never maps priority 'Urgent' as a status -- fails closed to null for any unmapped/unknown internal status value", async () => {
+  it("fails closed to null for any unmapped/unknown project status value", async () => {
     const client = fullFixture({
-      projectRows: [{ title: "T", status: "Urgent", deadline_date: null }],
+      projectRows: [{ title: "T", status: "Paused", deadline_date: null }],
     });
     const result = await buildClientShareProjection(client, { linkId: VALID_LINK_ID, userId: VALID_USER_ID });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.status).toBeNull();
-      expect(JSON.stringify(result.data)).not.toContain("Urgent");
+      expect(JSON.stringify(result.data)).not.toContain("Paused");
     }
   });
 });
 
 describe("buildClientShareProjection - progress", () => {
-  it("computes progress only from mapped/shared tasks that resolved (3 of 5, 60%), never from internal project-wide counts", async () => {
+  it("computes progress only from current canonical mapped/shared tasks that resolved (3 of 5, 60%), never stale public_group or internal project-wide counts", async () => {
     const client = buildFakeClient({
       linkRows: [{ project_id: VALID_PROJECT_ID }],
       projectRows: [{ title: "T", status: "New", deadline_date: null }],
@@ -423,11 +428,11 @@ describe("buildClientShareProjection - progress", () => {
         mappedResources: [],
       }),
       taskRows: [
-        { id: 1, task_title: "A" },
-        { id: 2, task_title: "B" },
-        { id: 3, task_title: "C" },
-        { id: 4, task_title: "D" },
-        { id: 5, task_title: "E" },
+        { id: 1, task_title: "A", status: "New", completed_at: "2026-09-08T00:00:00Z", is_archived: false },
+        { id: 2, task_title: "B", status: "Done", completed_at: null, is_archived: false },
+        { id: 3, task_title: "C", status: "Completed", completed_at: null, is_archived: false },
+        { id: 4, task_title: "D", status: "Review", completed_at: null, is_archived: false },
+        { id: 5, task_title: "E", status: "Not Started", completed_at: null, is_archived: false },
       ],
     });
 
@@ -465,22 +470,34 @@ describe("buildClientShareProjection - progress", () => {
 });
 
 describe("buildClientShareProjection - task projection", () => {
-  it("includes only mapped tasks, with title/publicGroup/waitingForClientFeedback, and no priority/notes/private metadata", async () => {
+  it("includes only mapped tasks, with title/derived publicGroup/workflowStatus/waitingForClientFeedback, and no priority/notes/private metadata", async () => {
     const client = fullFixture();
     const result = await buildClientShareProjection(client, { linkId: VALID_LINK_ID, userId: VALID_USER_ID });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.tasks).toEqual([
-        { title: "Design hero section", publicGroup: "completed", waitingForClientFeedback: false },
-        { title: "Build header nav", publicGroup: "in_progress", waitingForClientFeedback: true },
+        {
+          title: "Design hero section",
+          publicGroup: "completed",
+          workflowStatus: "completed",
+          waitingForClientFeedback: false,
+        },
+        {
+          title: "Build header nav",
+          publicGroup: "waiting_for_feedback",
+          workflowStatus: "in_review",
+          waitingForClientFeedback: true,
+        },
       ]);
     }
   });
 
   it("a mapped task that no longer resolves (soft-deleted) simply disappears -- fails closed, never a placeholder", async () => {
     const client = fullFixture({
-      taskRows: [{ id: 1, task_title: "Design hero section" }],
+      taskRows: [
+        { id: 1, task_title: "Design hero section", status: "Done", completed_at: null, is_archived: false },
+      ],
     });
 
     const result = await buildClientShareProjection(client, { linkId: VALID_LINK_ID, userId: VALID_USER_ID });
@@ -489,6 +506,147 @@ describe("buildClientShareProjection - task projection", () => {
     if (result.ok) {
       expect(result.data.tasks).toHaveLength(1);
       expect(result.data.tasks[0].title).toBe("Design hero section");
+    }
+  });
+
+  it("omits an archived mapped task from the projection and progress denominator", async () => {
+    const client = fullFixture({
+      rpcData: validManagementStateData({
+        mappedTasks: [
+          { subtaskId: "1", publicGroup: "coming_up", waitingForClientFeedback: false, displayOrder: 1 },
+          { subtaskId: "2", publicGroup: "coming_up", waitingForClientFeedback: false, displayOrder: 2 },
+        ],
+        mappedResources: [],
+      }),
+      taskRows: [
+        { id: 1, task_title: "Active done", status: "Done", completed_at: null, is_archived: false },
+        { id: 2, task_title: "Archived done", status: "Done", completed_at: null, is_archived: true },
+      ],
+    });
+
+    const result = await buildClientShareProjection(client, { linkId: VALID_LINK_ID, userId: VALID_USER_ID });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.tasks).toEqual([
+        {
+          title: "Active done",
+          publicGroup: "completed",
+          workflowStatus: "completed",
+          waitingForClientFeedback: false,
+        },
+      ]);
+      expect(result.data.progress).toEqual({ completed: 1, total: 1, percent: 100 });
+    }
+  });
+
+  it("self-heals an old active link whose persisted public_group is stale by deriving task state from tasks", async () => {
+    const mappedTasks = [1, 2, 3, 4, 5, 6].map((id) => ({
+      subtaskId: String(id),
+      publicGroup: "coming_up" as const,
+      waitingForClientFeedback: false,
+      displayOrder: id,
+    }));
+    const client = fullFixture({
+      rpcData: validManagementStateData({ mappedTasks, mappedResources: [] }),
+      taskRows: [
+        { id: 1, task_title: "Review the final homepage design", status: "Done", completed_at: "2026-09-01T00:00:00Z", is_archived: false },
+        { id: 2, task_title: "Update the pricing section with the approved plans", status: "Done", completed_at: "2026-09-01T00:00:00Z", is_archived: false },
+        { id: 3, task_title: "Check all contact and signup forms", status: "In Progress", completed_at: null, is_archived: false },
+        { id: 4, task_title: "Test the website on mobile and desktop", status: "Review", completed_at: null, is_archived: false },
+        { id: 5, task_title: "Send the final version to the client for approval", status: "Not Started", completed_at: null, is_archived: false },
+        { id: 6, task_title: "Publish the website and confirm everything is working", status: "Not Started", completed_at: null, is_archived: false },
+      ],
+    });
+
+    const result = await buildClientShareProjection(client, { linkId: VALID_LINK_ID, userId: VALID_USER_ID });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.progress).toEqual({ completed: 2, total: 6, percent: 33 });
+      expect(result.data.tasks.map((task) => task.workflowStatus)).toEqual([
+        "completed",
+        "completed",
+        "in_progress",
+        "in_review",
+        "not_started",
+        "not_started",
+      ]);
+      expect(result.data.tasks.map((task) => task.publicGroup)).toEqual([
+        "completed",
+        "completed",
+        "in_progress",
+        "in_progress",
+        "coming_up",
+        "coming_up",
+      ]);
+    }
+  });
+
+  it("fresh reads reflect canonical status changes without changing share_link_tasks public_group", async () => {
+    const mappedTasks = [
+      { subtaskId: "1", publicGroup: "coming_up" as const, waitingForClientFeedback: false, displayOrder: 1 },
+    ];
+    const firstClient = fullFixture({
+      rpcData: validManagementStateData({ mappedTasks, mappedResources: [] }),
+      taskRows: [{ id: 1, task_title: "Mutable task", status: "Not Started", completed_at: null, is_archived: false }],
+    });
+    const secondClient = fullFixture({
+      rpcData: validManagementStateData({ mappedTasks, mappedResources: [] }),
+      taskRows: [{ id: 1, task_title: "Mutable task", status: "Review", completed_at: null, is_archived: false }],
+    });
+
+    const first = await buildClientShareProjection(firstClient, { linkId: VALID_LINK_ID, userId: VALID_USER_ID });
+    const second = await buildClientShareProjection(secondClient, { linkId: VALID_LINK_ID, userId: VALID_USER_ID });
+
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+    if (first.ok && second.ok) {
+      expect(first.data.tasks[0]).toMatchObject({ publicGroup: "coming_up", workflowStatus: "not_started" });
+      expect(second.data.tasks[0]).toMatchObject({ publicGroup: "in_progress", workflowStatus: "in_review" });
+    }
+  });
+
+  it("keeps an unknown canonical task status incomplete and neutral unless completed_at is present", async () => {
+    const client = fullFixture({
+      rpcData: validManagementStateData({
+        mappedTasks: [
+          { subtaskId: "1", publicGroup: "in_progress", waitingForClientFeedback: false, displayOrder: 1 },
+          { subtaskId: "2", publicGroup: "in_progress", waitingForClientFeedback: false, displayOrder: 2 },
+        ],
+        mappedResources: [],
+      }),
+      taskRows: [
+        { id: 1, task_title: "Unknown status task", status: "Blocked", completed_at: null, is_archived: false },
+        {
+          id: 2,
+          task_title: "Completed unknown status task",
+          status: "Blocked",
+          completed_at: "2026-09-08T00:00:00Z",
+          is_archived: false,
+        },
+      ],
+    });
+
+    const result = await buildClientShareProjection(client, { linkId: VALID_LINK_ID, userId: VALID_USER_ID });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.tasks).toEqual([
+        {
+          title: "Unknown status task",
+          publicGroup: "in_progress",
+          workflowStatus: "unknown",
+          waitingForClientFeedback: false,
+        },
+        {
+          title: "Completed unknown status task",
+          publicGroup: "completed",
+          workflowStatus: "completed",
+          waitingForClientFeedback: false,
+        },
+      ]);
+      expect(result.data.progress).toEqual({ completed: 1, total: 2, percent: 50 });
     }
   });
 });
@@ -758,8 +916,8 @@ describe("buildClientShareProjection - MANDATORY toxic fixture privacy test", ()
       // UNSHARED sensitive task) is intentionally never in mappedTasks
       // above, so it must never reach the query for resolved titles.
       taskRows: [
-        { id: 1, task_title: "Design hero section" },
-        { id: 99, task_title: UNSHARED_TASK_TITLE_SENTINEL },
+        { id: 1, task_title: "Design hero section", status: "Done", completed_at: null, is_archived: false },
+        { id: 99, task_title: UNSHARED_TASK_TITLE_SENTINEL, status: "Urgent", completed_at: null, is_archived: false },
       ],
       // Two resources exist internally; only VALID_RESOURCE_ID is shared.
       // VALID_RESOURCE_ID_2 (the UNSHARED sensitive resource) is
@@ -804,7 +962,12 @@ describe("buildClientShareProjection - MANDATORY toxic fixture privacy test", ()
 
     // Only the deliberately shared task/resource made it through.
     expect(result.data.tasks).toEqual([
-      { title: "Design hero section", publicGroup: "completed", waitingForClientFeedback: false },
+      {
+        title: "Design hero section",
+        publicGroup: "completed",
+        workflowStatus: "completed",
+        waitingForClientFeedback: false,
+      },
     ]);
     expect(result.data.resources).toEqual([
       {
@@ -821,7 +984,7 @@ describe("buildClientShareProjection - MANDATORY toxic fixture privacy test", ()
 // Phase 3 -- buildPublicClientShareProjection (service-role path)
 //
 // The shared assembleClientProjection core (visibility gating, safe
-// status mapping, progress-from-shared-tasks-only, Note exclusion,
+// status mapping, canonical task-state derivation for shared tasks, Note exclusion,
 // http/https URL allowlist, fail-closed disappearance) is already
 // exhaustively proven above via the owner path -- these tests instead
 // prove buildPublicClientShareProjection's OWN responsibility: reading
@@ -930,8 +1093,8 @@ describe("buildPublicClientShareProjection - task/resource mapping from share_li
         { resource_id: VALID_RESOURCE_ID, public_label: "Brand guide", can_download: false },
       ],
       taskRows: [
-        { id: 1, task_title: "Design hero" },
-        { id: 2, task_title: "Build header" },
+        { id: 1, task_title: "Design hero", status: "Done", completed_at: null, is_archived: false },
+        { id: 2, task_title: "Build header", status: "Review", completed_at: null, is_archived: false },
       ],
       resourceRows: [
         {
@@ -953,8 +1116,18 @@ describe("buildPublicClientShareProjection - task/resource mapping from share_li
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.tasks).toEqual([
-        { title: "Design hero", publicGroup: "completed", waitingForClientFeedback: false },
-        { title: "Build header", publicGroup: "in_progress", waitingForClientFeedback: true },
+        {
+          title: "Design hero",
+          publicGroup: "completed",
+          workflowStatus: "completed",
+          waitingForClientFeedback: false,
+        },
+        {
+          title: "Build header",
+          publicGroup: "waiting_for_feedback",
+          workflowStatus: "in_review",
+          waitingForClientFeedback: true,
+        },
       ]);
       expect(result.data.progress).toEqual({ completed: 1, total: 2, percent: 50 });
       expect(result.data.resources).toEqual([
@@ -1014,6 +1187,55 @@ describe("buildPublicClientShareProjection - task/resource mapping from share_li
     if (result.ok) {
       expect(result.data.tasks).toEqual([]);
       expect(result.data.progress).toBeNull();
+    }
+  });
+
+  it("matches owner Preview semantics for the Production incident fixture with stale all-coming_up mappings", async () => {
+    setAdminConfig({
+      linkFieldsRows: [validPublicLinkFieldsRow()],
+      projectRows: [{ title: "Greenfield Studio Website Launch", status: "New", deadline_date: null }],
+      taskMappingRows: [1, 2, 3, 4, 5, 6].map((id) => ({
+        subtask_id: String(id),
+        public_group: "coming_up",
+        waiting_for_client_feedback: false,
+        display_order: id,
+      })),
+      resourceMappingRows: [],
+      taskRows: [
+        { id: 1, task_title: "Review the final homepage design", status: "Done", completed_at: "2026-09-01T00:00:00Z", is_archived: false },
+        { id: 2, task_title: "Update the pricing section with the approved plans", status: "Done", completed_at: "2026-09-01T00:00:00Z", is_archived: false },
+        { id: 3, task_title: "Check all contact and signup forms", status: "In Progress", completed_at: null, is_archived: false },
+        { id: 4, task_title: "Test the website on mobile and desktop", status: "Review", completed_at: null, is_archived: false },
+        { id: 5, task_title: "Send the final version to the client for approval", status: "Not Started", completed_at: null, is_archived: false },
+        { id: 6, task_title: "Publish the website and confirm everything is working", status: "Not Started", completed_at: null, is_archived: false },
+      ],
+    });
+
+    const result = await buildPublicClientShareProjection({
+      shareLinkId: VALID_LINK_ID,
+      projectId: VALID_PROJECT_ID,
+      userId: VALID_USER_ID,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.progress).toEqual({ completed: 2, total: 6, percent: 33 });
+      expect(result.data.tasks.map((task) => task.workflowStatus)).toEqual([
+        "completed",
+        "completed",
+        "in_progress",
+        "in_review",
+        "not_started",
+        "not_started",
+      ]);
+      expect(result.data.tasks.map((task) => task.publicGroup)).toEqual([
+        "completed",
+        "completed",
+        "in_progress",
+        "in_progress",
+        "coming_up",
+        "coming_up",
+      ]);
     }
   });
 });
@@ -1076,8 +1298,8 @@ describe("buildPublicClientShareProjection - MANDATORY toxic fixture privacy tes
       projectRows: [{ title: "Website launch", status: "In Progress", deadline_date: "2026-09-01" }],
       // Task id 99 (sensitive, UNSHARED) must never reach the resolved set.
       taskRows: [
-        { id: 1, task_title: "Design hero section" },
-        { id: 99, task_title: UNSHARED_TASK_TITLE_SENTINEL },
+        { id: 1, task_title: "Design hero section", status: "Done", completed_at: null, is_archived: false },
+        { id: 99, task_title: UNSHARED_TASK_TITLE_SENTINEL, status: "Urgent", completed_at: null, is_archived: false },
       ],
       // Resource VALID_RESOURCE_ID_2 (sensitive, UNSHARED) must never
       // reach the resolved set.
@@ -1124,7 +1346,12 @@ describe("buildPublicClientShareProjection - MANDATORY toxic fixture privacy tes
     }
 
     expect(result.data.tasks).toEqual([
-      { title: "Design hero section", publicGroup: "completed", waitingForClientFeedback: false },
+      {
+        title: "Design hero section",
+        publicGroup: "completed",
+        workflowStatus: "completed",
+        waitingForClientFeedback: false,
+      },
     ]);
     expect(result.data.resources).toEqual([
       {

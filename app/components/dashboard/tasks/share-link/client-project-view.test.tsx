@@ -21,13 +21,25 @@ function minimalProjection(overrides: Partial<ClientProjectProjection> = {}): Cl
   };
 }
 
+function clientTask(
+  overrides: Partial<ClientProjectProjection["tasks"][number]> = {}
+): ClientProjectProjection["tasks"][number] {
+  return {
+    title: "Task",
+    publicGroup: "in_progress",
+    workflowStatus: "in_progress",
+    waitingForClientFeedback: false,
+    ...overrides,
+  };
+}
+
 describe("ClientProjectView - strict-projection-only, no private dashboard data", () => {
   it("accepts only the strict projection shape and renders nothing beyond it -- no Project/userId/secret/dashboard chrome can leak because none is ever passed", () => {
     const projection = minimalProjection({
       title: "Website launch",
       status: "in_progress",
       progress: { completed: 1, total: 2, percent: 50 },
-      tasks: [{ title: "Design hero", publicGroup: "completed", waitingForClientFeedback: false }],
+      tasks: [clientTask({ title: "Design hero", publicGroup: "completed", workflowStatus: "completed" })],
     });
 
     const { container } = render(<ClientProjectView projection={projection} />);
@@ -67,7 +79,7 @@ describe("ClientProjectView - LTR / RTL / auto direction", () => {
     const projection = minimalProjection({
       contentDirection: "rtl",
       title: "השקת אתר",
-      tasks: [{ title: "עיצוב", publicGroup: "in_progress", waitingForClientFeedback: false }],
+      tasks: [clientTask({ title: "עיצוב" })],
     });
 
     const { container } = render(<ClientProjectView projection={projection} />);
@@ -131,31 +143,118 @@ describe("ClientProjectView - latest update", () => {
 });
 
 describe("ClientProjectView - task groups", () => {
-  it("groups tasks by publicGroup, in the redesigned fixed display order in_progress, waiting_for_feedback, completed, coming_up", () => {
+  function groupLabelForTask(title: string): string | null {
+    const item = screen.getByText(title).closest("li");
+    const list = item?.parentElement;
+    return list?.previousElementSibling?.textContent ?? null;
+  }
+
+  it("groups tasks by canonical workflow, not publicGroup", () => {
     const projection = minimalProjection({
       tasks: [
-        { title: "Done task", publicGroup: "completed", waitingForClientFeedback: false },
-        { title: "Upcoming task", publicGroup: "coming_up", waitingForClientFeedback: false },
-        { title: "Active task", publicGroup: "in_progress", waitingForClientFeedback: false },
-        { title: "Blocked task", publicGroup: "waiting_for_feedback", waitingForClientFeedback: true },
+        clientTask({ title: "Done task", publicGroup: "coming_up", workflowStatus: "completed" }),
+        clientTask({ title: "Upcoming task", publicGroup: "completed", workflowStatus: "not_started" }),
+        clientTask({ title: "Active task", publicGroup: "coming_up", workflowStatus: "in_progress" }),
+        clientTask({ title: "Review task", publicGroup: "coming_up", workflowStatus: "in_review" }),
+        clientTask({
+          title: "Blocked task",
+          publicGroup: "coming_up",
+          workflowStatus: "in_review",
+          waitingForClientFeedback: true,
+        }),
       ],
     });
 
     render(<ClientProjectView projection={projection} />);
 
-    const labels = screen
-      .getAllByText(/Waiting for your feedback|In progress|Coming up|Completed/)
-      .map((el) => el.textContent);
-    // The status badge (if any) could also match "In progress"; here
-    // status is null, so all matches are group labels, in document order.
-    expect(labels).toEqual(["In progress", "Waiting for your feedback", "Completed", "Coming up"]);
+    expect(groupLabelForTask("Done task")).toBe("Completed");
+    expect(groupLabelForTask("Active task")).toBe("In progress");
+    expect(groupLabelForTask("Review task")).toBe("In review");
+    expect(groupLabelForTask("Upcoming task")).toBe("Coming up");
+    expect(groupLabelForTask("Blocked task")).toBe("Waiting for your feedback");
+  });
+
+  it("renders the Production incident shape correctly even if every task publicGroup is stale coming_up", () => {
+    const projection = minimalProjection({
+      progress: { completed: 2, total: 6, percent: 33 },
+      tasks: [
+        clientTask({
+          title: "Review the final homepage design",
+          publicGroup: "coming_up",
+          workflowStatus: "completed",
+        }),
+        clientTask({
+          title: "Update the pricing section with the approved plans",
+          publicGroup: "coming_up",
+          workflowStatus: "completed",
+        }),
+        clientTask({
+          title: "Check all contact and signup forms",
+          publicGroup: "coming_up",
+          workflowStatus: "in_progress",
+        }),
+        clientTask({
+          title: "Test the website on mobile and desktop",
+          publicGroup: "coming_up",
+          workflowStatus: "in_review",
+        }),
+        clientTask({
+          title: "Send the final version to the client for approval",
+          publicGroup: "coming_up",
+          workflowStatus: "not_started",
+        }),
+        clientTask({
+          title: "Publish the website and confirm everything is working",
+          publicGroup: "coming_up",
+          workflowStatus: "not_started",
+        }),
+      ],
+    });
+
+    render(<ClientProjectView projection={projection} />);
+
+    expect(screen.getByText("2 of 6 complete")).toBeInTheDocument();
+    expect(groupLabelForTask("Review the final homepage design")).toBe("Completed");
+    expect(groupLabelForTask("Update the pricing section with the approved plans")).toBe("Completed");
+    expect(groupLabelForTask("Check all contact and signup forms")).toBe("In progress");
+    expect(groupLabelForTask("Test the website on mobile and desktop")).toBe("In review");
+    expect(groupLabelForTask("Send the final version to the client for approval")).toBe("Coming up");
+    expect(groupLabelForTask("Publish the website and confirm everything is working")).toBe("Coming up");
+  });
+
+  it("renders distinct canonical workflow labels independently from publicGroup", () => {
+    const projection = minimalProjection({
+      tasks: [
+        clientTask({ title: "Review task", publicGroup: "in_progress", workflowStatus: "in_review" }),
+        clientTask({ title: "Urgent task", publicGroup: "in_progress", workflowStatus: "urgent" }),
+        clientTask({ title: "Upcoming task", publicGroup: "coming_up", workflowStatus: "not_started" }),
+      ],
+    });
+
+    render(<ClientProjectView projection={projection} />);
+
+    expect(screen.getAllByText("In review").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Urgent").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Not started").length).toBeGreaterThan(0);
+  });
+
+  it("renders unknown task status as neutral status unavailable, not in progress", () => {
+    const projection = minimalProjection({
+      tasks: [clientTask({ title: "Blocked future task", publicGroup: "in_progress", workflowStatus: "unknown" })],
+    });
+
+    render(<ClientProjectView projection={projection} />);
+
+    expect(groupLabelForTask("Blocked future task")).toBe("Status unavailable");
+    expect(screen.getAllByText("Status unavailable")).toHaveLength(2);
+    expect(screen.queryByText("In progress")).not.toBeInTheDocument();
   });
 
   it("omits the Waiting for client feedback group entirely when no task has it, per the redesign's 'only if applicable' rule", () => {
     const projection = minimalProjection({
       tasks: [
-        { title: "Active task", publicGroup: "in_progress", waitingForClientFeedback: false },
-        { title: "Done task", publicGroup: "completed", waitingForClientFeedback: false },
+        clientTask({ title: "Active task", publicGroup: "in_progress", workflowStatus: "in_progress" }),
+        clientTask({ title: "Done task", publicGroup: "completed", workflowStatus: "completed" }),
       ],
     });
 
@@ -166,8 +265,13 @@ describe("ClientProjectView - task groups", () => {
   it("shows a 'Feedback needed' badge only for tasks with waitingForClientFeedback true", () => {
     const projection = minimalProjection({
       tasks: [
-        { title: "Needs feedback", publicGroup: "waiting_for_feedback", waitingForClientFeedback: true },
-        { title: "No feedback needed", publicGroup: "in_progress", waitingForClientFeedback: false },
+        clientTask({
+          title: "Needs feedback",
+          publicGroup: "waiting_for_feedback",
+          workflowStatus: "in_review",
+          waitingForClientFeedback: true,
+        }),
+        clientTask({ title: "No feedback needed", publicGroup: "in_progress" }),
       ],
     });
 
@@ -419,7 +523,7 @@ describe("ClientProjectView - mobile-safe semantic structure", () => {
     const projection = minimalProjection({
       progress: { completed: 1, total: 2, percent: 50 },
       latestUpdate: { body: "Update body", publishedAt: "2026-08-01T00:00:00Z" },
-      tasks: [{ title: "Task one", publicGroup: "completed", waitingForClientFeedback: false }],
+      tasks: [clientTask({ title: "Task one", publicGroup: "completed", workflowStatus: "completed" })],
       resources: [{ kind: "link", label: "Link one", url: "https://example.com" }],
     });
 
@@ -434,7 +538,7 @@ describe("ClientProjectView - mobile-safe semantic structure", () => {
     const projection = minimalProjection({
       progress: { completed: 1, total: 2, percent: 50 },
       latestUpdate: { body: "Update body", publishedAt: "2026-08-01T00:00:00Z" },
-      tasks: [{ title: "Task one", publicGroup: "completed", waitingForClientFeedback: false }],
+      tasks: [clientTask({ title: "Task one", publicGroup: "completed", workflowStatus: "completed" })],
       resources: [{ kind: "link", label: "Link one", url: "https://example.com" }],
     });
 
@@ -447,7 +551,7 @@ describe("ClientProjectView - mobile-safe semantic structure", () => {
 
   it("Phase 7D: task titles and resource labels carry dir=\"auto\" for per-item bidi-safe rendering", () => {
     const projection = minimalProjection({
-      tasks: [{ title: "עיצוב דף הבית", publicGroup: "in_progress", waitingForClientFeedback: false }],
+      tasks: [clientTask({ title: "עיצוב דף הבית" })],
       resources: [{ kind: "link", label: "מסמך תכנון", url: "https://example.com" }],
     });
 
@@ -460,7 +564,7 @@ describe("ClientProjectView - mobile-safe semantic structure", () => {
   it("Phase 7D: a long unbroken task title does not force horizontal overflow (overflowWrap guard)", () => {
     const longTitle = "a".repeat(200);
     const projection = minimalProjection({
-      tasks: [{ title: longTitle, publicGroup: "in_progress", waitingForClientFeedback: false }],
+      tasks: [clientTask({ title: longTitle })],
     });
 
     render(<ClientProjectView projection={projection} />);

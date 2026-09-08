@@ -714,7 +714,14 @@ describe("ShareView - Phase 7C live invalidation / background revalidation", () 
       ok: true,
       data: {
         ...fakeProjection(),
-        tasks: [{ title: "Design hero", publicGroup: "in_progress", waitingForClientFeedback: false }],
+        tasks: [
+          {
+            title: "Design hero",
+            publicGroup: "in_progress",
+            workflowStatus: "in_progress",
+            waitingForClientFeedback: false,
+          },
+        ],
       },
     };
     const { getProjectionCallCount, setNextProjectionBody } = await renderReady();
