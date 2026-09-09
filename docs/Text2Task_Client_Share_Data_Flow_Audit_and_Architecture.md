@@ -965,3 +965,88 @@ Remaining staging verification:
 - Change a Not Started task to In Progress, refresh Preview/Public, and confirm both update without regenerating the share link.
 - Change In Progress to Review, then Review to Done, then reopen Done, confirming fresh-read synchronization each time.
 - Verify `waiting_for_client_feedback` remains independent: a noncomplete waiting task shows feedback treatment, while a completed waiting task remains completed.
+
+## Staging Validation - 2026-09-09
+
+Status: PASS.
+
+Persistent staging environment:
+- Vercel Preview now points to the persistent staging Supabase project `text2task-staging` for `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`.
+- No key values, secret values, credentials, or sensitive material are recorded in this repository.
+- Production environment variables were not changed.
+- Staging Supabase Authentication URL configuration was corrected operationally: Site URL was changed away from localhost to the Text2Task Vercel Preview branch URL, and a Vercel Preview redirect allow-list wildcard was added for the Text2Task Vercel project.
+- Production Supabase configuration was not changed.
+
+Authentication validation:
+- A dedicated staging test account was created and successfully authenticated against `text2task-staging`.
+- Initial email confirmation reached Supabase successfully.
+- The original redirect failed because staging Site URL was still localhost at that time.
+- Supabase showed the user as confirmed.
+- After correcting staging Auth URL configuration, normal email/password login to the Vercel Preview succeeded.
+- The test password and all secret values are intentionally omitted.
+
+Client Share regression fixture:
+- Project: `Greenfield Studio Website Launch`.
+- Client: `Greenfield Studio`.
+- Budget: `1,500 USD`.
+- Deadline: September 12, 2026.
+- Priority: High.
+- Six subtasks:
+  1. Review the final homepage design
+  2. Update the pricing section with the approved plans
+  3. Check all contact and signup forms
+  4. Test the website on mobile and desktop
+  5. Send the final version to the client for approval
+  6. Publish the website and confirm everything is working
+
+Initial state:
+- Project status: New.
+- All six subtasks: New.
+- Internal progress: 0/6.
+- Client Share link was created while all tasks were still New.
+- Client Share initially displayed 0 of 6 complete.
+- This confirms the share mapping/link was persisted before task status mutations.
+
+Canonical task mutations without regenerating the Client Share link:
+- Task 1 changed to Done.
+- Task 2 changed to Done.
+- Task 3 changed to In Progress.
+- Task 4 changed to Review.
+- Task 5 remained New.
+- Task 6 remained New.
+
+Validation after refreshing the same existing Client Share link:
+- Progress updated to 2 of 6 complete / 33%.
+- Task 1 rendered under Completed.
+- Task 2 rendered under Completed.
+- Task 3 rendered under In progress.
+- Task 4 rendered under In review.
+- Tasks 5 and 6 rendered under Coming up / Not started.
+- Preview/Public Client Share reflected the live canonical task state.
+- No share-link regeneration was required.
+- No `public_group` repair/update was required.
+
+Owner-side Share with client panel validation:
+- 33% complete.
+- 2 completed.
+- 2 in progress.
+- 2 coming up.
+
+Additional fresh-read validation:
+- After the successful 2/6 validation, two additional subtask statuses were changed in Task CRM.
+- The same existing Client Share link was refreshed again.
+- The shared view updated again to reflect the new canonical state.
+- This additional mutation/refresh test also passed.
+
+Project status expectation:
+- The project itself remained `projects.status = New`.
+- Client Share therefore continued to show the project-level label `Not started`.
+- This is expected and is not a synchronization defect.
+- The architecture intentionally keeps project status separate from subtask-derived progress.
+- Do not derive or mutate `projects.status` automatically from subtask statuses.
+
+Root-cause remediation validation:
+- Original Production incident behavior was reproduced and successfully remediated in staging.
+- Old behavior: `share_link_tasks.public_group` could remain stale and Client Share could show 0/6 while canonical tasks were already 2/6 complete.
+- Validated new behavior: existing Client Share links derive mutable workflow/completion/progress from fresh canonical task data, so later task changes become visible on refresh without rebuilding the share mapping.
+- Staging validation result: PASS.
