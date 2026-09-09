@@ -1050,3 +1050,111 @@ Root-cause remediation validation:
 - Old behavior: `share_link_tasks.public_group` could remain stale and Client Share could show 0/6 while canonical tasks were already 2/6 complete.
 - Validated new behavior: existing Client Share links derive mutable workflow/completion/progress from fresh canonical task data, so later task changes become visible on refresh without rebuilding the share mapping.
 - Staging validation result: PASS.
+
+## Production Validation - 2026-09-09
+
+Status: CLIENT SHARE LIVE SYNCHRONIZATION - PRODUCTION VERIFIED / CLOSED.
+
+Production deployment:
+- Commit: `43caa055386414e55e7627dff0881fb94357f7bb`.
+- Commit message: `Merge Client Share live synchronization`.
+- Branch: `main`.
+- Vercel environment: Production.
+- Vercel status: Ready.
+- Deployment was triggered by the normal push to `main`.
+- No manual Promote to Production was used.
+- No manual redeploy was used for this milestone.
+- No Supabase migration was required.
+- No Production Supabase schema change was performed.
+- No Production environment-variable change was required for the Client Share remediation.
+
+Initial Production owner-side smoke test:
+- Existing Production project: `Greenfield Studio Website Launch`.
+- Initial canonical Task CRM state observed after deployment:
+  1. Review the final homepage design - Done
+  2. Update the pricing section with the approved plans - Done
+  3. Check all contact and signup forms - In Progress
+  4. Test the website on mobile and desktop - Review
+  5. Send the final version to the client for approval - New
+  6. Publish the website and confirm everything is working - New
+- Internal Task CRM progress: 2 of 6 done.
+- Project-level status at that point: New.
+- The owner-side Share with client panel was opened without creating a new update first.
+- It correctly displayed 33% complete, 2 completed, 2 in progress, and 2 coming up.
+- This verified that the Production owner-side Client Share projection was deriving current task workflow/progress from canonical task state rather than stale `share_link_tasks.public_group` state.
+- Initial owner-side Production smoke: PASS.
+
+Initial Production public-share projection check:
+- A Production public Client Share page was opened after deployment.
+- The public page correctly displayed progress: 2 of 6 complete.
+- Task grouping:
+  - In review: Test the website on mobile and desktop.
+  - In progress: Check all contact and signup forms.
+  - Completed: Review the final homepage design; Update the pricing section with the approved plans.
+  - Coming up: Send the final version to the client for approval; Publish the website and confirm everything is working.
+- The two coming-up tasks displayed Not started.
+- This matched the canonical Production Task CRM state.
+- Initial public-share Production smoke: PASS.
+
+Accuracy note:
+- The older public Client Share URL from before deployment was not available for this Production smoke test.
+- Production did not directly demonstrate recovery of that exact pre-deployment URL.
+- The Production public-link test used a link opened/created after deployment.
+- Staging had already validated same-link behavior across later canonical task mutations.
+
+Final live-mutation Production test:
+- Further canonical task-state changes were made manually in Production as part of the controlled smoke test.
+- Final observed Task CRM state:
+  - Project status: In Progress.
+  - Progress: 4 of 6 done.
+  - Review the final homepage design - Done.
+  - Update the pricing section with the approved plans - Done.
+  - Check all contact and signup forms - Done.
+  - Test the website on mobile and desktop - Done.
+  - Send the final version to the client for approval - Review.
+  - Publish the website and confirm everything is working - New.
+- The same already-open public Client Share link was observed again.
+- No new Client Share link was generated.
+- Share update was not clicked.
+- No manual browser refresh was required.
+- After several seconds, the already-open public Client Share UI updated automatically.
+- The public view then displayed project label In progress and progress 4 of 6 complete.
+- Updated task grouping:
+  - In review: Send the final version to the client for approval.
+  - Completed: Review the final homepage design; Update the pricing section with the approved plans; Check all contact and signup forms; Test the website on mobile and desktop.
+  - Coming up: Publish the website and confirm everything is working.
+- The remaining coming-up task displayed Not started.
+- This proves in Production that later canonical task mutations propagate to an already-existing Client Share view without rebuilding the share mapping and without requiring a new link.
+- The visible UI refreshed/revalidated automatically within several seconds. No specific polling, refetch, or realtime implementation mechanism is asserted here.
+- Same-link later-mutation Production test: PASS.
+- Automatic no-manual-refresh behavior: PASS.
+
+Final root-cause remediation conclusion:
+- Original Production defect: canonical tasks had progressed to 2/6 complete, persisted `share_link_tasks.public_group` remained stale, Client Share treated that duplicated presentation state as authoritative, and shared progress could therefore remain 0/6.
+- Implemented architecture: canonical projects/tasks -> single server-side Client Share projection -> strict external Client Share contract -> Owner Preview / Public Share rendering.
+- Authoritative mutable task state now comes from `tasks.status`, `tasks.completed_at`, and task archive/delete eligibility.
+- `share_link_tasks.public_group` remains compatibility/configuration/history data only.
+- `share_link_tasks.public_group` is not authoritative for workflow status, completion, progress, or public task grouping.
+- `waiting_for_client_feedback` remains separate share-specific metadata.
+- Project status remains independent from subtask-derived progress.
+
+Final milestone status:
+- STAGING VALIDATION: PASS.
+- PRODUCTION DEPLOYMENT: PASS.
+- OWNER SHARE PROJECTION: PASS.
+- PUBLIC SHARE PROJECTION: PASS.
+- POST-SHARE TASK MUTATION SYNC: PASS.
+- AUTOMATIC OPEN-VIEW UPDATE: PASS.
+- SECURITY REGRESSION: PASS.
+- DB MIGRATION REQUIRED: NO.
+
+Known unrelated repository-wide test baseline issue:
+- Repository-wide `npm.cmd test` currently has a known pre-existing P2 maintenance defect.
+- Last observed full-suite result: 24 failed / 194 passed test files; 4 failed / 4283 passed tests.
+- Cause: historical migration-package tests retained after the canonical migration archival still reference obsolete historical SQL locations.
+- This defect exists on `origin/main` independently of Client Share.
+- Client Share commits did not modify the failing migration tests or migration SQL.
+- Canonical migration baseline validation passes.
+- Archive manifest validates 57/57 historical SQL files.
+- No current canonical migration-integrity defect was found.
+- This must be repaired as a separate milestone.
