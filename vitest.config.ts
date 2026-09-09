@@ -33,6 +33,12 @@ export default defineConfig({
     environment: "node",
     setupFiles: ["./vitest.setup.ts"],
     include: ["**/*.test.ts", "**/*.test.tsx"],
-    exclude: ["node_modules/**", ".next/**"],
+    exclude: [
+      "node_modules/**",
+      ".next/**",
+      // Pre-canonical migration tests are archived audit artifacts. Active
+      // migration validation lives under supabase/migration-tests/.
+      "docs/database/migration-archive/precanonical-2026-09-04/tests/**",
+    ],
   },
 });

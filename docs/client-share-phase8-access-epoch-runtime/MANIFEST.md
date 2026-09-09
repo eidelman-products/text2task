@@ -12,20 +12,20 @@ Re-run the generator to reproduce it exactly, or to pick up source changes.
 | 1 | `00_READ_ME_FIRST.md` | hand-authored | `ff41bb0088208da16de7ba7e86e6bb40ab0632d1888165d5b07cb65a0ee448b1` |
 | 2 | `01_PREPARE_RUNTIME_FIXTURES.sql` | hand-authored | `289dcf6289b22bc6e9ca9e08f2b21d3a1bebb14b9ccd5aa7301e45baf5ee0e99` |
 | 3 | `01B_GRANT_AUTHENTICATED_MUTATION_PRIVILEGES.sql` | hand-authored | `9ffe8a2f027f417e5a661a29d22a21fedb5ede6336a5d41e2b081aaeb9125aed` |
-| 4 | `02_APPLY_OR_VERIFY_PREREQUISITES.sql` | **generated** (mechanically assembled from the seventeen prerequisite migrations below) | `d3bec978bf743550498fb6e79ace585d4942d430e4389c836654bfce2dac7c54` |
+| 4 | `02_APPLY_OR_VERIFY_PREREQUISITES.sql` | **generated** (mechanically assembled from the seventeen prerequisite migrations below) | `1d38e09560a2a8c2ed6d9773d232646e843cb948f1a177f49c39cb2246bb429f` |
 | 5 | `02B_SEED_PRE_MIGRATION_PRODUCT_FIXTURES.sql` | hand-authored | `0b0a30b7987244e995b93213a33b01046885b570a87ac61ed852a0530f14a449` |
-| 6 | `02C_APPLY_ACCESS_EPOCH_MIGRATION.sql` | **generated** (mechanically assembled from the one migration under test) | `28f9be16b3bc2def694bcd827d9d3c41db7cba2ad2b247a96dfa08ab163be7d5` |
+| 6 | `02C_APPLY_ACCESS_EPOCH_MIGRATION.sql` | **generated** (mechanically assembled from the one migration under test) | `82d367cc298ae5793967d44a10f3c0bec563e634cbef33db5f91e4ce0d93df05` |
 | 7 | `03_RUN_ACCESS_EPOCH_RUNTIME_TESTS.sql` | hand-authored | `c641ff11038a7dd54667b4bf21d910406398015b8df4e23594ee3cbc9d0bd8f2` |
-| 8 | `04_CAPTURE_RESULTS.md` | hand-authored | `929e6717e2b1d97f1cd4215b29a7a83ee77b2971a005d09166d1a0fbfbf364f5` |
+| 8 | `04_CAPTURE_RESULTS.md` | hand-authored | `61939a426d46774fe444dbe326087b161b446d9d864b307aa777ec79dbfe7956` |
 | 9 | `MANIFEST.md` | **generated** (this file) | *(intentionally not embedded -- see below)* |
-| 10 | `build-phase8-access-epoch-runtime-package.ps1` | hand-authored (this generator) | `e71494c9945ac1a615fa4444f0e38641a08b9545e8c530a5e17f69eedcea05e5` |
+| 10 | `build-phase8-access-epoch-runtime-package.ps1` | hand-authored (this generator) | `1acb100dcc64893a1495a22fc84c14e00236d87a4c15cc05e0b85a700be39255` |
 
 The Phase 8 Access Epoch implementation report itself is not a package
 file -- it lives at
 `docs/TEXT2TASK_CLIENT_SHARE_LINK_ACCESS_EPOCH_IMPLEMENTATION_REPORT_2026-08-25.md`,
 outside this package directory, and this generator only reads it (to confirm
 it exists) -- it never writes to it. Its hash at generation time was
-`514f67b75af4dac6f4002f52ff673a62d916570b1cb1e5c2ad1d488e438b20dc`.
+`cfcf468b707e9e975c02c302dd46032ea6b390cd71148ac0b45aea49459a9fed`.
 
 ### Why row 8 has no embedded hash
 
@@ -39,31 +39,31 @@ Applied by file 02, in this exact order, verbatim and unmodified.
 
 | # | Migration | SHA-256 |
 |---|---|---|
-| 1 | `supabase/migrations/202605250001_project_update_engine.sql` | `48fd1913a6ed8276939f58ddc6e4a301e630fab9f3441bbfa4ae5aba3c887edb` |
-| 2 | `supabase/migrations/202606150001_project_update_apply_hardening.sql` | `e42a19bba9313df428bc31cb73aa299e3317d2f20d03384019a7fd7b9d510303` |
-| 3 | `supabase/migrations/202607270001_project_completion_reconciliation.sql` | `8d22bc16c851ea7f53b2c4e7af92443317043df377bf48073b171e98a5dbed9a` |
-| 4 | `supabase/migrations/202608030003_client_share_owner_foundation.sql` | `25720fbd366e726b4ae7859dd3fffea5ec21254a0588bdb0627a88db170735fb` |
-| 5 | `supabase/migrations/202608030004_client_share_session_foundation.sql` | `e0cfff71635e32968ee21b7470dafc8075b6ca5b271aaab352af26705a70cdb9` |
-| 6 | `supabase/migrations/202608030005_client_share_integrity_and_security.sql` | `1574b6ea45218219751e70fbbbe32ac8636e090f6955631449829a4ac1edc12d` |
-| 7 | `supabase/migrations/202608050001_client_share_owner_reads.sql` | `f5672a8991452730b1047ec9dca6da845e299375ce53029fc2872f5058e7c97a` |
-| 8 | `supabase/migrations/202608060001_client_share_lifecycle_operations.sql` | `bda56918076db0bf18ec4f9a50375300a232b25327f9a84894681cf23831ae74` |
-| 9 | `supabase/migrations/202608060002_client_share_access_operations.sql` | `35d3874c435792e91d375232b25fd238ad52b00cbd30436741da5be7b7327c58` |
-| 10 | `supabase/migrations/202608060003_client_share_configuration_save.sql` | `5745a7de8775197c41bd07a9d1a765012dce493c0de002923064d06e15f500ed` |
-| 11 | `supabase/migrations/202608110001_client_share_publication_intent.sql` | `1860201391b52a1c84b95c70e717356309effcdee1d47acb5b98e1802d350d22` |
-| 12 | `supabase/migrations/202608110002_client_share_management_mapping_metadata.sql` | `f23e83f5630d608a71c5d7bc9badd89367ed949b7a29092144af731bb7fa5d3d` |
-| 13 | `supabase/migrations/202608130001_client_share_rate_limit_increment.sql` | `5232e6f8a1f3ec4dd1f6126eff420e1109e1713f68a80fd0202c4ff84864fd7d` |
-| 14 | `supabase/migrations/202608190001_client_share_message_owner_rpcs.sql` | `62dd3ff05590608d8891ca89531c525314c79b44978ae73064e9e602be720351` |
-| 15 | `supabase/migrations/202608210001_client_share_project_update_provenance.sql` | `76a9e9682b0471d7554666d306d7f6370e0f68063228d76d918ecd90d679dc0b` |
-| 16 | `supabase/migrations/202608230001_client_share_apply_boundary.sql` | `3cad162f4af710c97f0cc05d58ff9d3e1735fba64fa7b60ce3e7054c0c2bf9e7` |
-| 17 | `supabase/migrations/202608230002_client_share_apply_conversion_closure.sql` | `36f9209b2e17cad19a8aa8c5a279fb74d2de880a790df3fd67a9eecba4d6db65` |
+| 1 | `docs/database/migration-archive/precanonical-2026-09-04/202605250001_project_update_engine.sql` | `48fd1913a6ed8276939f58ddc6e4a301e630fab9f3441bbfa4ae5aba3c887edb` |
+| 2 | `docs/database/migration-archive/precanonical-2026-09-04/202606150001_project_update_apply_hardening.sql` | `e42a19bba9313df428bc31cb73aa299e3317d2f20d03384019a7fd7b9d510303` |
+| 3 | `docs/database/migration-archive/precanonical-2026-09-04/202607270001_project_completion_reconciliation.sql` | `8d22bc16c851ea7f53b2c4e7af92443317043df377bf48073b171e98a5dbed9a` |
+| 4 | `docs/database/migration-archive/precanonical-2026-09-04/202608030003_client_share_owner_foundation.sql` | `25720fbd366e726b4ae7859dd3fffea5ec21254a0588bdb0627a88db170735fb` |
+| 5 | `docs/database/migration-archive/precanonical-2026-09-04/202608030004_client_share_session_foundation.sql` | `e0cfff71635e32968ee21b7470dafc8075b6ca5b271aaab352af26705a70cdb9` |
+| 6 | `docs/database/migration-archive/precanonical-2026-09-04/202608030005_client_share_integrity_and_security.sql` | `1574b6ea45218219751e70fbbbe32ac8636e090f6955631449829a4ac1edc12d` |
+| 7 | `docs/database/migration-archive/precanonical-2026-09-04/202608050001_client_share_owner_reads.sql` | `f5672a8991452730b1047ec9dca6da845e299375ce53029fc2872f5058e7c97a` |
+| 8 | `docs/database/migration-archive/precanonical-2026-09-04/202608060001_client_share_lifecycle_operations.sql` | `bda56918076db0bf18ec4f9a50375300a232b25327f9a84894681cf23831ae74` |
+| 9 | `docs/database/migration-archive/precanonical-2026-09-04/202608060002_client_share_access_operations.sql` | `35d3874c435792e91d375232b25fd238ad52b00cbd30436741da5be7b7327c58` |
+| 10 | `docs/database/migration-archive/precanonical-2026-09-04/202608060003_client_share_configuration_save.sql` | `5745a7de8775197c41bd07a9d1a765012dce493c0de002923064d06e15f500ed` |
+| 11 | `docs/database/migration-archive/precanonical-2026-09-04/202608110001_client_share_publication_intent.sql` | `1860201391b52a1c84b95c70e717356309effcdee1d47acb5b98e1802d350d22` |
+| 12 | `docs/database/migration-archive/precanonical-2026-09-04/202608110002_client_share_management_mapping_metadata.sql` | `f23e83f5630d608a71c5d7bc9badd89367ed949b7a29092144af731bb7fa5d3d` |
+| 13 | `docs/database/migration-archive/precanonical-2026-09-04/202608130001_client_share_rate_limit_increment.sql` | `5232e6f8a1f3ec4dd1f6126eff420e1109e1713f68a80fd0202c4ff84864fd7d` |
+| 14 | `docs/database/migration-archive/precanonical-2026-09-04/202608190001_client_share_message_owner_rpcs.sql` | `62dd3ff05590608d8891ca89531c525314c79b44978ae73064e9e602be720351` |
+| 15 | `docs/database/migration-archive/precanonical-2026-09-04/202608210001_client_share_project_update_provenance.sql` | `76a9e9682b0471d7554666d306d7f6370e0f68063228d76d918ecd90d679dc0b` |
+| 16 | `docs/database/migration-archive/precanonical-2026-09-04/202608230001_client_share_apply_boundary.sql` | `3cad162f4af710c97f0cc05d58ff9d3e1735fba64fa7b60ce3e7054c0c2bf9e7` |
+| 17 | `docs/database/migration-archive/precanonical-2026-09-04/202608230002_client_share_apply_conversion_closure.sql` | `36f9209b2e17cad19a8aa8c5a279fb74d2de880a790df3fd67a9eecba4d6db65` |
 
 ## The migration under test
 
 | Migration | SHA-256 |
 |---|---|
-| `supabase/migrations/202608250001_client_share_access_epoch.sql` | `dbc8af2f6581abb8c4dcbe74d8a94ddce46a26854491d24d579d9e6302a2be4e` |
+| `docs/database/migration-archive/precanonical-2026-09-04/202608250001_client_share_access_epoch.sql` | `dbc8af2f6581abb8c4dcbe74d8a94ddce46a26854491d24d579d9e6302a2be4e` |
 
-**This is the value to independently verify against the real repository file**
+**This is the value to independently verify against the archived repository source file**
 before applying `02C_APPLY_ACCESS_EPOCH_MIGRATION.sql` to any disposable
 project, and again before this migration is ever applied to Production --
 see `00_READ_ME_FIRST.md`'s own item J note.
@@ -76,7 +76,7 @@ powershell -File scripts/client-share/build-phase8-access-epoch-runtime-package.
 
 ## Confirmations
 
-- The generator is read-only against `supabase/migrations/**`.
+- The generator is read-only against `docs/database/migration-archive/precanonical-2026-09-04/**`.
 - All three generated outputs are built and fully validated together in a
   temporary staging subdirectory BEFORE any real package file is touched.
 - File 02's content was assembled from the exact, unmodified text of the
