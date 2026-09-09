@@ -20,4 +20,17 @@ This archive contains:
 
 Do not edit historical SQL or historical tests. Future migrations must use new timestamps after `202609040001`.
 
+## Test Discovery
+
+The files under `tests/` are preserved historical artifacts, not active repository regression tests after canonical adoption. Normal Vitest discovery intentionally excludes only:
+
+`docs/database/migration-archive/precanonical-2026-09-04/tests/**`
+
+Active migration validation now lives under:
+
+- `supabase/migration-tests/`
+- the currently maintained runtime-package tests under `scripts/client-share/`
+
+Runtime-package tests that still need byte-for-byte historical migration bodies must read those source files from this archive, not from `supabase/migrations/`. Do not copy archived SQL back into `supabase/migrations/`; that directory is the active canonical replay chain only.
+
 Archive manifest: `archive-manifest.json`

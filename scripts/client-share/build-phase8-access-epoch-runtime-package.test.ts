@@ -40,7 +40,17 @@ import { describe, expect, it } from "vitest";
 // manually resolved during the original audit.
 
 const REPO_ROOT = path.join(__dirname, "..", "..");
-const MIGRATIONS_DIR = path.join(REPO_ROOT, "supabase", "migrations");
+const HISTORICAL_MIGRATION_ARCHIVE_DIR = path.join(
+  REPO_ROOT,
+  "docs",
+  "database",
+  "migration-archive",
+  "precanonical-2026-09-04"
+);
+const GENERATOR_FILE = path.join(
+  __dirname,
+  "build-phase8-access-epoch-runtime-package.ps1"
+);
 const FIXTURE_FILE = path.join(
   REPO_ROOT,
   "docs",
@@ -82,6 +92,28 @@ type StandInTable = (typeof STAND_IN_TABLES)[number];
 function readNormalized(filePath: string): string {
   return readFileSync(filePath, "utf8").replace(/\r\n/g, "\n");
 }
+
+const generatorSource = readNormalized(GENERATOR_FILE);
+
+describe("Phase 8 Access Epoch runtime package - historical source path contract", () => {
+  it("reads source migrations from the pre-canonical archive, not active supabase/migrations", () => {
+    expect(generatorSource).toMatch(
+      /\$historicalMigrationArchiveDir\s*=\s*Join-Path\s+\$repoRoot\s+'docs\\database\\migration-archive\\precanonical-2026-09-04'/
+    );
+    expect(generatorSource).not.toContain(
+      "$migrationsDir = Join-Path $repoRoot 'supabase\\migrations'"
+    );
+
+    for (const name of [
+      ...PREREQUISITE_MIGRATIONS,
+      "202608250001_client_share_access_epoch.sql",
+    ]) {
+      expect(() =>
+        readNormalized(path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, name))
+      ).not.toThrow();
+    }
+  });
+});
 
 /**
  * Extracts every column this file's SQL genuinely references against one
@@ -227,7 +259,9 @@ describe("Phase 8 Access Epoch runtime package - fixture schema covers every pre
   };
 
   for (const name of PREREQUISITE_MIGRATIONS) {
-    const source = readNormalized(path.join(MIGRATIONS_DIR, name));
+    const source = readNormalized(
+      path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, name)
+    );
     const found = extractRequiredColumns(source);
     for (const table of STAND_IN_TABLES) {
       for (const column of found[table]) {
@@ -515,11 +549,15 @@ describe("Phase 8 Access Epoch runtime package - fixture timestamp/lifecycle coh
   });
 
   it("sanity check: the prerequisite migrations these constraints come from are exactly the ones this package's own chain includes (proves the constraint names asserted throughout this suite are not stale/invented)", () => {
-    const ownerFoundation = readNormalized(path.join(MIGRATIONS_DIR, PROJECT_SHARE_LINKS_MIGRATION));
+    const ownerFoundation = readNormalized(
+      path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, PROJECT_SHARE_LINKS_MIGRATION)
+    );
     expect(ownerFoundation).toContain("project_share_links_timestamp_order_check");
     expect(ownerFoundation).toContain("project_share_links_state_lifecycle_check");
 
-    const sessionFoundation = readNormalized(path.join(MIGRATIONS_DIR, SESSION_FOUNDATION_MIGRATION));
+    const sessionFoundation = readNormalized(
+      path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, SESSION_FOUNDATION_MIGRATION)
+    );
     expect(sessionFoundation).toContain("share_browser_sessions_lifecycle_check");
     expect(sessionFoundation).toContain("share_session_grants_lifecycle_check");
 
@@ -774,8 +812,12 @@ describe("Phase 8 Access Epoch runtime package - RPC call argument-type correctn
     return calls;
   }
 
-  const activateSource = readNormalized(path.join(MIGRATIONS_DIR, ACTIVATE_SHARE_LINK_MIGRATION));
-  const accessEpochSource = readNormalized(path.join(MIGRATIONS_DIR, "202608250001_client_share_access_epoch.sql"));
+  const activateSource = readNormalized(
+    path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, ACTIVATE_SHARE_LINK_MIGRATION)
+  );
+  const accessEpochSource = readNormalized(
+    path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, "202608250001_client_share_access_epoch.sql")
+  );
 
   const activateParamTypes = extractParamTypes(activateSource, "activate_share_link");
   const rotateParamTypes = extractParamTypes(accessEpochSource, "rotate_share_link_secret");
@@ -875,11 +917,36 @@ describe("Phase 8 Access Epoch runtime package - RPC call argument-type correctn
       { name: "create_share_link_draft", source: activateSource },
       { name: "disable_share_link", source: activateSource },
       { name: "reenable_share_link", source: activateSource },
-      { name: "revoke_share_link", source: readNormalized(path.join(MIGRATIONS_DIR, "202608060002_client_share_access_operations.sql")) },
-      { name: "clear_share_link_pin", source: readNormalized(path.join(MIGRATIONS_DIR, "202608060002_client_share_access_operations.sql")) },
-      { name: "set_share_link_expiry", source: readNormalized(path.join(MIGRATIONS_DIR, "202608060002_client_share_access_operations.sql")) },
-      { name: "clear_share_link_expiry", source: readNormalized(path.join(MIGRATIONS_DIR, "202608060002_client_share_access_operations.sql")) },
-      { name: "save_share_configuration", source: readNormalized(path.join(MIGRATIONS_DIR, "202608110001_client_share_publication_intent.sql")) },
+      {
+        name: "revoke_share_link",
+        source: readNormalized(
+          path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, "202608060002_client_share_access_operations.sql")
+        ),
+      },
+      {
+        name: "clear_share_link_pin",
+        source: readNormalized(
+          path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, "202608060002_client_share_access_operations.sql")
+        ),
+      },
+      {
+        name: "set_share_link_expiry",
+        source: readNormalized(
+          path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, "202608060002_client_share_access_operations.sql")
+        ),
+      },
+      {
+        name: "clear_share_link_expiry",
+        source: readNormalized(
+          path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, "202608060002_client_share_access_operations.sql")
+        ),
+      },
+      {
+        name: "save_share_configuration",
+        source: readNormalized(
+          path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, "202608110001_client_share_publication_intent.sql")
+        ),
+      },
     ];
     for (const fn of noSmallintFunctions) {
       const types = extractParamTypes(fn.source, fn.name);
@@ -1033,9 +1100,15 @@ describe("Phase 8 Access Epoch runtime package - constraint preflight matrix", (
   const testSource = readNormalized(
     path.join(REPO_ROOT, "docs", "client-share-phase8-access-epoch-runtime", "03_RUN_ACCESS_EPOCH_RUNTIME_TESTS.sql")
   );
-  const ownerFoundationSource = readNormalized(path.join(MIGRATIONS_DIR, "202608030003_client_share_owner_foundation.sql"));
-  const sessionFoundationSource = readNormalized(path.join(MIGRATIONS_DIR, "202608030004_client_share_session_foundation.sql"));
-  const integritySource = readNormalized(path.join(MIGRATIONS_DIR, "202608030005_client_share_integrity_and_security.sql"));
+  const ownerFoundationSource = readNormalized(
+    path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, "202608030003_client_share_owner_foundation.sql")
+  );
+  const sessionFoundationSource = readNormalized(
+    path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, "202608030004_client_share_session_foundation.sql")
+  );
+  const integritySource = readNormalized(
+    path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, "202608030005_client_share_integrity_and_security.sql")
+  );
 
   // TABLE | CONSTRAINT | WHERE IT IS ENFORCED (ground truth) | WHICH FIXTURE
   // WRITE SITE(S) IT GOVERNS | WHY THIS SUITE CONSIDERS IT SATISFIED.
@@ -1658,7 +1731,7 @@ describe("Phase 8 Access Epoch runtime package - Section C configuration_version
     path.join(REPO_ROOT, "docs", "client-share-phase8-access-epoch-runtime", "03_RUN_ACCESS_EPOCH_RUNTIME_TESTS.sql")
   );
   const saveConfigSource = readNormalized(
-    path.join(MIGRATIONS_DIR, "202608110001_client_share_publication_intent.sql")
+    path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, "202608110001_client_share_publication_intent.sql")
   );
 
   it("ground truth, re-derived from save_share_configuration's own CURRENT body: only the settings sub-operation ever assigns v_new_configuration_version / writes configuration_version -- the task-mapping, resource-mapping, and publish-update sub-operation blocks each contain zero references to it", () => {
@@ -1781,7 +1854,7 @@ describe("Phase 8 Access Epoch runtime package - public_id exact-24-character ru
     path.join(REPO_ROOT, "docs", "client-share-phase8-access-epoch-runtime", "03_RUN_ACCESS_EPOCH_RUNTIME_TESTS.sql")
   );
   const lifecycleSource = readNormalized(
-    path.join(MIGRATIONS_DIR, ACTIVATE_SHARE_LINK_MIGRATION)
+    path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, ACTIVATE_SHARE_LINK_MIGRATION)
   );
 
   it("ground truth, re-derived from create_share_link_draft's own current body: public_id must match EXACTLY ^[A-Za-z0-9_-]{24}$ -- STRICTER than the table's own project_share_links_public_id_format_check (16-64 chars). This is the rule the earlier, table-constraint-only static check (below) did not model, which is why a 23-character fixture passed static review but failed at runtime with INVALID_PUBLIC_ID.", () => {
@@ -1814,7 +1887,9 @@ describe("Phase 8 Access Epoch runtime package - J1 comment-vs-executable-logic 
   const testSource = readNormalized(
     path.join(REPO_ROOT, "docs", "client-share-phase8-access-epoch-runtime", "03_RUN_ACCESS_EPOCH_RUNTIME_TESTS.sql")
   );
-  const accessEpochSource = readNormalized(path.join(MIGRATIONS_DIR, "202608250001_client_share_access_epoch.sql"));
+  const accessEpochSource = readNormalized(
+    path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, "202608250001_client_share_access_epoch.sql")
+  );
 
   it("ground truth: 202608250001's replacement enforce_share_session_grant_integrity body contains no executable `raise exception ... message = 'SHARE_GRANT_EXPIRY_EXCEEDS_LINK'` branch -- only an explanatory comment naming the removed error code", () => {
     const startMarker = "create or replace function public.enforce_share_session_grant_integrity()";

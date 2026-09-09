@@ -12,13 +12,13 @@ Re-run the generator to reproduce it exactly, or to pick up source changes.
 | 1 | `TEXT2TASK_CLIENT_SHARE_LINK_PHASE_1B_RUNTIME_VERIFICATION_REPORT.md` | hand-authored | `b6b971ba709957a8128233067d7880eec685989ff98ad8fe79c40c7a99fb665d` |
 | 2 | `00_READ_ME_FIRST.md` | hand-authored | `e22c33c35702e4e3783df4f6600a2f51d8124a5b0391facca4b8234c5a0df4a9` |
 | 3 | `01_CREATE_TEMP_TEST_FIXTURE.sql` | hand-authored | `4c96570a32a498291ef2fa76c1c05ce150d00c2ac227a6629f6763559a9d6c7a` |
-| 4 | `02_APPLY_PHASE1A_AND_PHASE1B_TO_TEMP_PROJECT.sql` | **generated** (mechanically assembled from the seven source migrations below) | `dcf5ce9a5047b11323f9178dc4fed6c34c4d685a72c8aeaa13c0803efc3b9ced` |
+| 4 | `02_APPLY_PHASE1A_AND_PHASE1B_TO_TEMP_PROJECT.sql` | **generated** (mechanically assembled from the seven source migrations below) | `24f81f1a8a671905f36efdfe79d447ac3af75ac7df672f97a771c06e45ed42fd` |
 | 5 | `03_RUN_PHASE1B_RUNTIME_TESTS.sql` | hand-authored | `81c8d95c376c3921449891300feeac00b865e14f99bed447dbc2aa23f0054e74` |
 | 6 | `04_CAPTURE_RESULTS.md` | hand-authored | `e3f0fc776d05989f3aa7e0ad7d89c7e01697348aa7c41b553f3eb2d32e2368f3` |
 | 7 | `05_PRODUCTION_APPLICATION_NOT_AUTHORIZED.md` | hand-authored | `0f6387c3ea758027b2fa9e22f7b38ff59c2633b220c08e539df8f1d8dfcddbf5` |
 | 8 | `MANIFEST.md` | **generated** (this file) | *(intentionally not embedded -- see below)* |
-| 9 | `build-phase1b-runtime-package.ps1` | hand-authored (this generator) | `7566eaab7f20dffdd30fba21d5fa342577904b99605ea5c714b5d788691de450` |
-| 10 | `build-phase1b-runtime-package.test.ts` | hand-authored | `ef8f31ae8945fefb9f4d73fd0002eb497fadbfbb0e89251ccca04d572e8a2bd9` |
+| 9 | `build-phase1b-runtime-package.ps1` | hand-authored (this generator) | `0f0c0b502878325050d4d739b2af3f83eeb1a3db89a1a8f21c4244f4c51709ac` |
+| 10 | `build-phase1b-runtime-package.test.ts` | hand-authored | `37adae14c839dd4a60515dca1a898ed8e0a3cbf9f4ec014e11c446589c13a352` |
 
 ### Why row 8 has no embedded hash
 
@@ -38,13 +38,13 @@ each migration's BEGIN boundary marker inside file 02 itself.
 
 | # | Migration | SHA-256 |
 |---|---|---|
-| 1 | `supabase/migrations/202608030003_client_share_owner_foundation.sql` | `25720fbd366e726b4ae7859dd3fffea5ec21254a0588bdb0627a88db170735fb` |
-| 2 | `supabase/migrations/202608030004_client_share_session_foundation.sql` | `e0cfff71635e32968ee21b7470dafc8075b6ca5b271aaab352af26705a70cdb9` |
-| 3 | `supabase/migrations/202608030005_client_share_integrity_and_security.sql` | `1574b6ea45218219751e70fbbbe32ac8636e090f6955631449829a4ac1edc12d` |
-| 4 | `supabase/migrations/202608050001_client_share_owner_reads.sql` | `f5672a8991452730b1047ec9dca6da845e299375ce53029fc2872f5058e7c97a` |
-| 5 | `supabase/migrations/202608060001_client_share_lifecycle_operations.sql` | `bda56918076db0bf18ec4f9a50375300a232b25327f9a84894681cf23831ae74` |
-| 6 | `supabase/migrations/202608060002_client_share_access_operations.sql` | `35d3874c435792e91d375232b25fd238ad52b00cbd30436741da5be7b7327c58` |
-| 7 | `supabase/migrations/202608060003_client_share_configuration_save.sql` | `5745a7de8775197c41bd07a9d1a765012dce493c0de002923064d06e15f500ed` |
+| 1 | `docs/database/migration-archive/precanonical-2026-09-04/202608030003_client_share_owner_foundation.sql` | `25720fbd366e726b4ae7859dd3fffea5ec21254a0588bdb0627a88db170735fb` |
+| 2 | `docs/database/migration-archive/precanonical-2026-09-04/202608030004_client_share_session_foundation.sql` | `e0cfff71635e32968ee21b7470dafc8075b6ca5b271aaab352af26705a70cdb9` |
+| 3 | `docs/database/migration-archive/precanonical-2026-09-04/202608030005_client_share_integrity_and_security.sql` | `1574b6ea45218219751e70fbbbe32ac8636e090f6955631449829a4ac1edc12d` |
+| 4 | `docs/database/migration-archive/precanonical-2026-09-04/202608050001_client_share_owner_reads.sql` | `f5672a8991452730b1047ec9dca6da845e299375ce53029fc2872f5058e7c97a` |
+| 5 | `docs/database/migration-archive/precanonical-2026-09-04/202608060001_client_share_lifecycle_operations.sql` | `bda56918076db0bf18ec4f9a50375300a232b25327f9a84894681cf23831ae74` |
+| 6 | `docs/database/migration-archive/precanonical-2026-09-04/202608060002_client_share_access_operations.sql` | `35d3874c435792e91d375232b25fd238ad52b00cbd30436741da5be7b7327c58` |
+| 7 | `docs/database/migration-archive/precanonical-2026-09-04/202608060003_client_share_configuration_save.sql` | `5745a7de8775197c41bd07a9d1a765012dce493c0de002923064d06e15f500ed` |
 
 Hashes 1-3 are identical to the values already recorded in
 `docs/client-share-phase1a-sql-editor/MANIFEST.md` for the same three files
@@ -59,9 +59,9 @@ powershell -File scripts/client-share/build-phase1b-runtime-package.ps1
 
 ## Confirmations
 
-- The generator is read-only against `supabase/migrations/**` -- it only ever
+- The generator is read-only against `docs/database/migration-archive/precanonical-2026-09-04/**` -- it only ever
   calls `Get-Content -LiteralPath ... -Raw` there, and never writes to that
-  directory. Its only two write targets are this file and
+  archive. Its only two write targets are this file and
   `02_APPLY_PHASE1A_AND_PHASE1B_TO_TEMP_PROJECT.sql`, both guarded by an
   explicit path check that refuses to write anywhere else.
 - Both generated outputs are built and fully validated together in a

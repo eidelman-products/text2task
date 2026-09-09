@@ -6,11 +6,19 @@ import { describe, expect, it } from "vitest";
 // Static validation only -- this must never require a live database
 // connection, a running Supabase project, or Supabase CLI/Docker,
 // matching this repository's established migration-testing convention
-// exactly (see supabase/migrations/202608060003_client_share_configuration_save.test.ts).
+// exactly. Since canonical migration governance archived the pre-canonical
+// lineage, these package tests now read historical SQL from the migration
+// archive rather than from the active supabase/migrations replay chain.
 
 const REPO_ROOT = path.join(__dirname, "..", "..");
 const PACKAGE_DIR = path.join(REPO_ROOT, "docs", "client-share-phase1b-runtime");
-const MIGRATIONS_DIR = path.join(REPO_ROOT, "supabase", "migrations");
+const HISTORICAL_MIGRATION_ARCHIVE_DIR = path.join(
+  REPO_ROOT,
+  "docs",
+  "database",
+  "migration-archive",
+  "precanonical-2026-09-04"
+);
 const GENERATOR_PATH = path.join(__dirname, "build-phase1b-runtime-package.ps1");
 const REPORT_PATH = path.join(
   REPO_ROOT,
@@ -192,14 +200,16 @@ describe("generator script -- migration order and source references", () => {
     expect(listed).toEqual(EXPECTED_MIGRATION_ORDER);
   });
 
-  it("reads migrations from supabase/migrations via a relative path derived from the script's own location, never a hard-coded absolute or Production path", () => {
-    expect(generatorSource).toMatch(/\$migrationsDir\s*=\s*Join-Path\s+\$repoRoot\s+'supabase\\migrations'/);
+  it("reads historical migrations from the pre-canonical archive via a path derived from the script's own location, never a hard-coded absolute or Production path", () => {
+    expect(generatorSource).toMatch(
+      /\$historicalMigrationArchiveDir\s*=\s*Join-Path\s+\$repoRoot\s+'docs\\database\\migration-archive\\precanonical-2026-09-04'/
+    );
     expect(generatorSource).toContain("Get-Content -LiteralPath $Path -Raw -Encoding UTF8");
   });
 
-  it("every listed migration file actually exists in supabase/migrations", () => {
+  it("every listed historical migration file actually exists in the pre-canonical archive", () => {
     for (const name of EXPECTED_MIGRATION_ORDER) {
-      expect(existsSync(path.join(MIGRATIONS_DIR, name))).toBe(true);
+      expect(existsSync(path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, name))).toBe(true);
     }
   });
 
@@ -353,15 +363,17 @@ describe("generated apply bundle (file 02) -- fidelity, order, and safety", () =
       const beginMarker = `-- ===== BEGIN ${name} (verbatim, unmodified) =====`;
       const beginIndex = bundleSource.indexOf(beginMarker);
       expect(beginIndex).toBeGreaterThan(-1);
-      const preceding = bundleSource.slice(Math.max(0, beginIndex - 200), beginIndex);
-      expect(preceding).toContain(`-- Source: supabase/migrations/${name}`);
+      const preceding = bundleSource.slice(Math.max(0, beginIndex - 360), beginIndex);
+      expect(preceding).toContain(
+        `-- Source: docs/database/migration-archive/precanonical-2026-09-04/${name}`
+      );
       expect(preceding).toMatch(/-- SHA-256 \(normalized LF UTF-8\): [0-9a-f]{64}\n$/);
     }
   });
 
   it("the embedded source-hash comment for every migration exactly matches a freshly-computed SHA-256 of its actual current source content (LF-normalized)", () => {
     for (const name of EXPECTED_MIGRATION_ORDER) {
-      const sourceContent = readNormalized(path.join(MIGRATIONS_DIR, name));
+      const sourceContent = readNormalized(path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, name));
       const expectedHash = sha256(sourceContent);
       expect(bundleSource).toContain(`-- SHA-256 (normalized LF UTF-8): ${expectedHash}`);
     }
@@ -369,7 +381,7 @@ describe("generated apply bundle (file 02) -- fidelity, order, and safety", () =
 
   it("bundle is generated, not a manually re-typed duplicate -- each migration's body appears byte-identical to its source file", () => {
     for (const name of EXPECTED_MIGRATION_ORDER) {
-      const sourceContent = readNormalized(path.join(MIGRATIONS_DIR, name));
+      const sourceContent = readNormalized(path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, name));
       const beginMarker = `-- ===== BEGIN ${name} (verbatim, unmodified) =====`;
       const endMarker = `-- ===== END ${name} =====`;
       const startIndex = bundleSource.indexOf(beginMarker) + beginMarker.length;
@@ -1675,7 +1687,8 @@ describe("MANIFEST.md -- mechanically regenerated, covers every package file, no
 
   it("contains no wall-clock timestamp, build number, or 'Generated: <date>' line", () => {
     expect(manifestSource).not.toMatch(/Generated:\s*\d{4}-\d{2}-\d{2}/);
-    expect(manifestSource).not.toMatch(/\b\d{4}-\d{2}-\d{2}\b/);
+    expect(manifestSource).not.toMatch(/\b\d{4}-\d{2}-\d{2}[T ][0-9]{2}:[0-9]{2}/);
+    expect(manifestSource).not.toMatch(/\bbuild\s*(?:number|#)\s*[:=]\s*\d+/i);
     expect(manifestSource.toLowerCase()).toContain("no wall-clock");
   });
 
@@ -1689,7 +1702,7 @@ describe("MANIFEST.md -- mechanically regenerated, covers every package file, no
 
   it("the seven listed source migration hashes exactly match freshly-computed SHA-256 values of the actual current migration files", () => {
     for (const name of EXPECTED_MIGRATION_ORDER) {
-      const sourceContent = readNormalized(path.join(MIGRATIONS_DIR, name));
+      const sourceContent = readNormalized(path.join(HISTORICAL_MIGRATION_ARCHIVE_DIR, name));
       const expectedHash = sha256(sourceContent);
       expect(manifestSource).toContain(`\`${expectedHash}\``);
     }

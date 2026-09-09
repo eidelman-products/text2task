@@ -139,6 +139,18 @@ describe("canonical Supabase baseline evidence", () => {
     ).toHaveLength(22);
   });
 
+  it("keeps archived historical tests out of normal Vitest discovery", () => {
+    const vitestConfig = readText(repoRoot, "vitest.config.ts");
+    const archiveReadme = readText(archiveRoot, "README.md");
+    const archiveTestGlob =
+      "docs/database/migration-archive/precanonical-2026-09-04/tests/**";
+
+    expect(vitestConfig).toContain(archiveTestGlob);
+    expect(vitestConfig).not.toMatch(/["']docs\/\*\*["']/);
+    expect(archiveReadme).toContain(archiveTestGlob);
+    expect(archiveReadme).toContain("not active repository regression tests");
+  });
+
   it("keeps generated-column semantics canonical", () => {
     const closure = activeClosure();
 
