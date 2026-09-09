@@ -32,14 +32,35 @@ export const clientProjectStatusSchema = z.enum([
 ]);
 export type ClientProjectStatus = z.infer<typeof clientProjectStatusSchema>;
 
+/**
+ * Safe task-workflow vocabulary for the client-facing projection. Unlike
+ * `publicGroup`, this is derived from canonical `tasks.status` /
+ * `tasks.completed_at` on each server read and preserves Review/Urgent
+ * semantics without passing raw internal status text through.
+ */
+export const clientProjectTaskWorkflowStatusSchema = z.enum([
+  "not_started",
+  "in_progress",
+  "in_review",
+  "urgent",
+  "completed",
+  "unknown",
+]);
+export type ClientProjectTaskWorkflowStatus = z.infer<
+  typeof clientProjectTaskWorkflowStatusSchema
+>;
+
 /** Reuses the exact same closed task-visibility vocabulary the owner
  * read/write contracts already use (`sharePublicGroupSchema`,
  * lib/share/share-contracts.ts) -- a single source of truth, not a
- * re-declared duplicate. */
+ * re-declared duplicate. `publicGroup` is now a fresh derived display
+ * grouping in the projection, not authoritative persisted workflow
+ * state from share_link_tasks.public_group. */
 export const clientProjectTaskSchema = z
   .object({
     title: z.string(),
     publicGroup: sharePublicGroupSchema,
+    workflowStatus: clientProjectTaskWorkflowStatusSchema,
     waitingForClientFeedback: z.boolean(),
   })
   .strict();
@@ -91,11 +112,13 @@ export const clientProjectResourceSchema = z.discriminatedUnion("kind", [
 export type ClientProjectResource = z.infer<typeof clientProjectResourceSchema>;
 
 /**
- * Computed ONLY from the mapped/shared task set that actually resolved
- * to a real, non-deleted task -- never from internal project-wide task
- * counts. `null` (never a fabricated 0/0) when zero shared tasks
- * resolved, so the presentational component can hide the progress
- * affordance entirely rather than rendering a misleading "0 of 0".
+ * Computed from canonical task completion for the mapped/shared task set
+ * that actually resolved to a real, active task -- never from stale
+ * share_link_tasks.public_group values and never from unrelated
+ * project-wide task counts. `null` (never a fabricated 0/0) when zero
+ * shared tasks resolved, so the presentational component can hide the
+ * progress affordance entirely rather than rendering a misleading
+ * "0 of 0".
  */
 export const clientProjectProgressSchema = z
   .object({

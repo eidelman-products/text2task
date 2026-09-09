@@ -27,23 +27,46 @@ const STATUS_LABELS: Record<ClientProjectStatus, string> = {
   completed: "Completed",
 };
 
-// Objective B client-page redesign: In progress, then Waiting for client
-// feedback (only rendered when at least one task actually has it -- the
-// filter below already hides an empty group), then Completed, then
-// Coming up -- matching the redesign's target hierarchy exactly. Groups
-// with zero tasks are still skipped entirely (see the .filter below).
-const TASK_GROUP_ORDER: ClientProjectTask["publicGroup"][] = [
+const TASK_WORKFLOW_LABELS: Record<ClientProjectTask["workflowStatus"], string> = {
+  not_started: "Not started",
+  in_progress: "In progress",
+  in_review: "In review",
+  urgent: "Urgent",
+  completed: "Completed",
+  unknown: "Status unavailable",
+};
+
+// Client-visible task grouping comes from canonical workflow state plus
+// the explicit waiting-for-feedback overlay. It intentionally does not
+// read publicGroup, because persisted share_link_tasks.public_group can
+// be stale historical compatibility data.
+type TaskDisplayGroup =
+  | "urgent"
+  | "in_review"
+  | "in_progress"
+  | "waiting_for_feedback"
+  | "completed"
+  | "coming_up"
+  | "unknown";
+
+const TASK_DISPLAY_GROUP_ORDER: TaskDisplayGroup[] = [
+  "urgent",
+  "in_review",
   "in_progress",
   "waiting_for_feedback",
   "completed",
   "coming_up",
+  "unknown",
 ];
 
-const TASK_GROUP_LABELS: Record<ClientProjectTask["publicGroup"], string> = {
-  waiting_for_feedback: "Waiting for your feedback",
+const TASK_DISPLAY_GROUP_LABELS: Record<TaskDisplayGroup, string> = {
+  urgent: "Urgent",
+  in_review: "In review",
   in_progress: "In progress",
-  coming_up: "Coming up",
+  waiting_for_feedback: "Waiting for your feedback",
   completed: "Completed",
+  coming_up: "Coming up",
+  unknown: "Status unavailable",
 };
 
 export type ClientProjectViewProps = {
@@ -76,7 +99,7 @@ function buildShareFileUrl(publicId: string, fileRef: string): string {
 }
 
 export function ClientProjectView({ projection, publicId }: ClientProjectViewProps) {
-  const groupedTasks = groupTasksByPublicGroup(projection.tasks);
+  const groupedTasks = groupTasksByDisplayGroup(projection.tasks);
 
   return (
     // The projection's contentDirection ("auto" | "ltr" | "rtl") is passed
@@ -131,18 +154,23 @@ export function ClientProjectView({ projection, publicId }: ClientProjectViewPro
           <section style={sectionStyle} aria-label="Tasks">
             <h2 style={sectionLabelStyle}>Tasks</h2>
             <div style={{ display: "grid", gap: dashboardSpacing[4] }}>
-              {TASK_GROUP_ORDER.filter((group) => groupedTasks[group].length > 0).map((group) => (
+              {TASK_DISPLAY_GROUP_ORDER.filter((group) => groupedTasks[group].length > 0).map((group) => (
                 <div key={group} style={{ display: "grid", gap: dashboardSpacing[2] }}>
-                  <span style={groupLabelStyle}>{TASK_GROUP_LABELS[group]}</span>
+                  <span style={groupLabelStyle}>{TASK_DISPLAY_GROUP_LABELS[group]}</span>
                   <ul style={taskListStyle}>
                     {groupedTasks[group].map((task, index) => (
                       <li key={`${group}-${index}`} style={taskItemStyle}>
                         <span dir="auto" style={taskTitleStyle}>
                           {task.title}
                         </span>
-                        {task.waitingForClientFeedback ? (
-                          <span style={feedbackBadgeStyle}>Feedback needed</span>
-                        ) : null}
+                        <span style={taskBadgeRowStyle}>
+                          <span style={workflowBadgeStyle}>
+                            {TASK_WORKFLOW_LABELS[task.workflowStatus]}
+                          </span>
+                          {task.waitingForClientFeedback ? (
+                            <span style={feedbackBadgeStyle}>Feedback needed</span>
+                          ) : null}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -229,17 +257,27 @@ export function ClientProjectView({ projection, publicId }: ClientProjectViewPro
   );
 }
 
-function groupTasksByPublicGroup(
+function taskDisplayGroup(task: ClientProjectTask): TaskDisplayGroup {
+  if (task.workflowStatus === "completed") return "completed";
+  if (task.waitingForClientFeedback) return "waiting_for_feedback";
+  if (task.workflowStatus === "not_started") return "coming_up";
+  return task.workflowStatus;
+}
+
+function groupTasksByDisplayGroup(
   tasks: ClientProjectTask[]
-): Record<ClientProjectTask["publicGroup"], ClientProjectTask[]> {
-  const grouped: Record<ClientProjectTask["publicGroup"], ClientProjectTask[]> = {
-    coming_up: [],
+): Record<TaskDisplayGroup, ClientProjectTask[]> {
+  const grouped: Record<TaskDisplayGroup, ClientProjectTask[]> = {
+    urgent: [],
+    in_review: [],
     in_progress: [],
-    completed: [],
     waiting_for_feedback: [],
+    completed: [],
+    coming_up: [],
+    unknown: [],
   };
   for (const task of tasks) {
-    grouped[task.publicGroup].push(task);
+    grouped[taskDisplayGroup(task)].push(task);
   }
   return grouped;
 }
@@ -404,6 +442,20 @@ const feedbackBadgeStyle: CSSProperties = {
   fontSize: dashboardTypography.size.xs,
   fontWeight: dashboardTypography.weight.semibold,
   color: dashboardColors.status.amber,
+  whiteSpace: "nowrap",
+};
+
+const taskBadgeRowStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: dashboardSpacing[2],
+};
+
+const workflowBadgeStyle: CSSProperties = {
+  fontSize: dashboardTypography.size.xs,
+  fontWeight: dashboardTypography.weight.semibold,
+  color: dashboardColors.text.secondary,
   whiteSpace: "nowrap",
 };
 

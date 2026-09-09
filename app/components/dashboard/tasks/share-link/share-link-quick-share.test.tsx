@@ -139,13 +139,25 @@ describe("ShareLinkQuickShare - progress preview", () => {
     expect(screen.getByText(/this project has no tasks yet/i)).toBeInTheDocument();
   });
 
-  it("previews the persisted mapping once one exists, not a fresh automatic recompute", () => {
+  it("previews persisted mapping inclusion against fresh canonical task state", () => {
     renderQuickShare({
       project: project([subtask({ id: 1, status: "New" })]),
       mappedTasks: [{ subtaskId: "1", publicGroup: "completed", waitingForClientFeedback: false, displayOrder: 0 }],
     });
 
-    expect(screen.getByText("100% complete")).toBeInTheDocument();
+    expect(screen.getByText("0% complete")).toBeInTheDocument();
+    expect(screen.getByText(/1 coming up/)).toBeInTheDocument();
+  });
+
+  it("shows unknown task status as status unavailable, not in progress", () => {
+    renderQuickShare({
+      project: project([subtask({ id: 1, status: "Blocked" })]),
+      mappedTasks: [{ subtaskId: "1", publicGroup: "in_progress", waitingForClientFeedback: false, displayOrder: 0 }],
+    });
+
+    expect(screen.getByText("0% complete")).toBeInTheDocument();
+    expect(screen.getByText(/1 status unavailable/)).toBeInTheDocument();
+    expect(screen.queryByText(/1 in progress/)).not.toBeInTheDocument();
   });
 });
 

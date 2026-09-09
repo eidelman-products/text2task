@@ -15,10 +15,10 @@ import type {
   MappedShareLinkResource,
   MappedShareLinkTask,
   SaveShareConfigurationRequest,
-  SaveShareConfigurationResourceItem,
   SaveShareConfigurationTaskItem,
   ShareLinkManagementStateData,
 } from "@/lib/share/share-contracts";
+import { deriveClientShareTaskPublicGroup } from "@/lib/share/client-share-task-state";
 import type { TaskProjectGroup, TaskProjectSubtask } from "../task-types";
 
 // Kept as an inline shape rather than importing a new export from
@@ -119,8 +119,8 @@ const PUBLIC_GROUP_OPTIONS: { value: SaveShareConfigurationTaskItem["publicGroup
  * the client; this only picks a reasonable initial client-facing bucket
  * the owner can change before saving. */
 function suggestPublicGroup(internalStatus: string): SaveShareConfigurationTaskItem["publicGroup"] {
-  if (internalStatus === "Done") return "completed";
-  return "in_progress";
+  const group = deriveClientShareTaskPublicGroup({ status: internalStatus, completedAt: null });
+  return group === "waiting_for_feedback" ? "in_progress" : group;
 }
 
 /** Exported so the quick-share flow (quick-share-defaults.ts) can apply
@@ -293,7 +293,6 @@ export function ShareLinkConfigurationEditor({
   useEffect(() => {
     if (resourcesTouched) return;
     setResourceDrafts(buildInitialResourceDrafts(shareableResources, mappedResources));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shareableResources, mappedResources, resourcesTouched]);
 
   function toggleTask(id: string) {

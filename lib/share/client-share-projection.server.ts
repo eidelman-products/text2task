@@ -16,6 +16,11 @@ import {
   type ClientProjectStatus,
   type ClientProjectTask,
 } from "./client-share-projection-contracts";
+import {
+  calculateClientShareProgress,
+  deriveClientShareTaskPublicGroup,
+  deriveClientShareTaskWorkflowStatus,
+} from "./client-share-task-state";
 import { getShareLinkManagementState } from "./share-links-repository.server";
 
 /*
@@ -98,6 +103,12 @@ type ProjectRow = {
   deadline_date: string | null;
 };
 type TaskRow = { id: number; task_title: string | null };
+type CanonicalTaskRow = TaskRow & {
+  status?: string | null;
+  completed_at?: string | null;
+  is_archived?: boolean | null;
+  subtask_order?: number | null;
+};
 type ResourceRow = {
   id: string;
   url: string | null;
@@ -106,25 +117,30 @@ type ResourceRow = {
   resource_type: string | null;
 };
 
-/**
- * Small, closed, explicit mapping from the internal task/project status
- * vocabulary to the safe public vocabulary. Anything not listed here
- * (including any future internal status this map has not been updated
- * for) fails closed to `null` (omitted) rather than leaking a raw,
- * unmapped internal value -- "Urgent" is a *priority* value, never a
- * status value, and priority is never read by this module at all, so it
- * cannot reach this map regardless.
- */
-const PROJECT_STATUS_MAP: Record<string, ClientProjectStatus> = {
-  New: "not_started",
-  "In Progress": "in_progress",
-  Review: "in_progress",
-  Done: "completed",
-};
-
 function mapProjectStatusForClient(status: string | null): ClientProjectStatus | null {
   if (status === null) return null;
-  return PROJECT_STATUS_MAP[status] ?? null;
+
+  const normalized = status
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+  if (normalized === "not started" || normalized === "new") return "not_started";
+  if (
+    normalized === "in progress" ||
+    normalized === "working" ||
+    normalized === "review" ||
+    normalized === "in review" ||
+    normalized === "urgent"
+  ) {
+    return "in_progress";
+  }
+  if (normalized === "done" || normalized === "complete" || normalized === "completed") {
+    return "completed";
+  }
+
+  return null;
 }
 
 /**
@@ -173,10 +189,10 @@ function classifyResource(row: ResourceRow): "file" | "link" | "note" {
 /*
   Phase 3 refactor -- the shared strict-projection CORE, extracted
   unchanged in behavior from Phase 2D's single implementation. Every
-  privacy rule (visibility gating, progress-from-shared-tasks-only,
-  Note-Resource exclusion, http/https URL allowlist, fail-closed
-  disappearance for an unresolved mapped task/Resource) lives in exactly
-  ONE place, used by both callers below:
+  privacy rule (visibility gating, canonical task-state derivation for
+  shared tasks, Note-Resource exclusion, http/https URL allowlist,
+  fail-closed disappearance for an unresolved mapped task/Resource) lives
+  in exactly ONE place, used by both callers below:
 
     authorized owner Preview (buildClientShareProjection)
                     \
@@ -220,23 +236,42 @@ function assembleClientProjection(input: {
   mappedTasks: readonly MappedTaskInput[];
   mappedResources: readonly MappedResourceInput[];
   currentUpdate: CurrentUpdateInput;
-  taskTitleById: Map<number, string>;
+  taskRowById: Map<number, CanonicalTaskRow>;
   resourceRowById: Map<string, ResourceRow>;
 }): ClientSharePreviewResult {
-  // Only the mapped tasks' titles -- share_link_tasks itself never
-  // stores a copy of the title, only the subtask_id plus the
-  // owner-curated publicGroup/waitingForClientFeedback. A mapped task
-  // that no longer resolves (soft-deleted) is simply left out of
-  // taskTitleById by the caller and therefore disappears from the
+  // Only mapped tasks are considered share-visible, but their mutable
+  // workflow/completion state comes from the fresh canonical tasks row.
+  // share_link_tasks.public_group is retained for configuration
+  // compatibility, not used as workflow truth. A mapped task that no
+  // longer resolves, or is archived, simply disappears from the
   // projection here -- fail-closed disappearance, never a placeholder.
   const tasks: ClientProjectTask[] = [];
+  const projectedTaskStates: Array<{ status: string | null; completedAt: string | null }> = [];
+
   for (const mapped of input.mappedTasks) {
-    const title = input.taskTitleById.get(Number(mapped.subtaskId));
-    if (title === undefined) continue;
+    const row = input.taskRowById.get(Number(mapped.subtaskId));
+    if (!row || row.is_archived) continue;
+    const title =
+      typeof row.task_title === "string" && row.task_title.trim().length > 0
+        ? row.task_title
+        : null;
+    if (title === null) continue;
+
+    const stateInput = {
+      status: row.status ?? null,
+      completedAt: row.completed_at ?? null,
+      waitingForClientFeedback: mapped.waitingForClientFeedback,
+    };
+
     tasks.push({
       title,
-      publicGroup: mapped.publicGroup,
+      publicGroup: deriveClientShareTaskPublicGroup(stateInput),
+      workflowStatus: deriveClientShareTaskWorkflowStatus(stateInput),
       waitingForClientFeedback: mapped.waitingForClientFeedback,
+    });
+    projectedTaskStates.push({
+      status: stateInput.status,
+      completedAt: stateInput.completedAt,
     });
   }
 
@@ -275,18 +310,7 @@ function assembleClientProjection(input: {
     }
   }
 
-  // Progress computed ONLY from the shared tasks that actually resolved
-  // above -- never from any internal project-wide task count.
-  const progress =
-    tasks.length === 0
-      ? null
-      : {
-          completed: tasks.filter((t) => t.publicGroup === "completed").length,
-          total: tasks.length,
-          percent: Math.round(
-            (tasks.filter((t) => t.publicGroup === "completed").length / tasks.length) * 100
-          ),
-        };
+  const progress = calculateClientShareProgress(projectedTaskStates);
 
   const projection: ClientProjectProjection = {
     title: input.link.titleVisible ? input.project?.title ?? null : null,
@@ -375,11 +399,11 @@ export async function buildClientShareProjection<Client>(
     "mappedTasks" in managementState.data ? managementState.data.mappedTasks : [];
   const taskIds = mappedTasks.map((t) => Number(t.subtaskId)).filter((id) => Number.isFinite(id));
 
-  const taskTitleById = new Map<number, string>();
+  const taskRowById = new Map<number, CanonicalTaskRow>();
   if (taskIds.length > 0) {
     const { data: taskRows, error: taskError } = await client
       .from("tasks")
-      .select("id, task_title")
+      .select("id, task_title, status, completed_at, is_archived, subtask_order")
       .eq("project_id", projectId)
       .eq("user_id", input.userId)
       .is("deleted_at", null)
@@ -388,9 +412,9 @@ export async function buildClientShareProjection<Client>(
     if (taskError) {
       return { ok: false, error: { code: "UNEXPECTED" } };
     }
-    for (const row of (taskRows as unknown as TaskRow[] | null) ?? []) {
+    for (const row of (taskRows as unknown as CanonicalTaskRow[] | null) ?? []) {
       if (typeof row.task_title === "string" && row.task_title.trim().length > 0) {
-        taskTitleById.set(row.id, row.task_title);
+        taskRowById.set(row.id, row);
       }
     }
   }
@@ -429,7 +453,7 @@ export async function buildClientShareProjection<Client>(
             publishedAt: managementState.data.currentUpdate.publishedAt,
           }
         : null,
-    taskTitleById,
+    taskRowById,
     resourceRowById,
   });
 }
@@ -466,6 +490,7 @@ type TaskMappingRow = {
   subtask_id: string;
   public_group: string;
   waiting_for_client_feedback: boolean;
+  display_order?: number | null;
 };
 
 type ResourceMappingRow = {
@@ -516,7 +541,7 @@ export async function buildPublicClientShareProjection(
 
   const { data: taskMappingRows, error: taskMappingError } = await client
     .from("share_link_tasks")
-    .select("subtask_id, public_group, waiting_for_client_feedback")
+    .select("subtask_id, public_group, waiting_for_client_feedback, display_order")
     .eq("share_link_id", shareLinkId)
     .eq("user_id", input.userId);
 
@@ -525,11 +550,19 @@ export async function buildPublicClientShareProjection(
   }
   const mappedTasks: MappedTaskInput[] = (
     (taskMappingRows as unknown as TaskMappingRow[] | null) ?? []
-  ).map((row) => ({
-    subtaskId: String(row.subtask_id),
-    publicGroup: row.public_group as ClientProjectTask["publicGroup"],
-    waitingForClientFeedback: row.waiting_for_client_feedback,
-  }));
+  )
+    .slice()
+    .sort((a, b) => {
+      const orderA = typeof a.display_order === "number" ? a.display_order : Number.MAX_SAFE_INTEGER;
+      const orderB = typeof b.display_order === "number" ? b.display_order : Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
+      return Number(a.subtask_id) - Number(b.subtask_id);
+    })
+    .map((row) => ({
+      subtaskId: String(row.subtask_id),
+      publicGroup: row.public_group as ClientProjectTask["publicGroup"],
+      waitingForClientFeedback: row.waiting_for_client_feedback,
+    }));
 
   const { data: resourceMappingRows, error: resourceMappingError } = await client
     .from("share_link_resources")
@@ -580,11 +613,11 @@ export async function buildPublicClientShareProjection(
   const project = (projectRow as ProjectRow | null) ?? null;
 
   const taskIds = mappedTasks.map((t) => Number(t.subtaskId)).filter((id) => Number.isFinite(id));
-  const taskTitleById = new Map<number, string>();
+  const taskRowById = new Map<number, CanonicalTaskRow>();
   if (taskIds.length > 0) {
     const { data: taskRows, error: taskError } = await client
       .from("tasks")
-      .select("id, task_title")
+      .select("id, task_title, status, completed_at, is_archived, subtask_order")
       .eq("project_id", projectId)
       .eq("user_id", input.userId)
       .is("deleted_at", null)
@@ -593,9 +626,9 @@ export async function buildPublicClientShareProjection(
     if (taskError) {
       return { ok: false, error: { code: "UNEXPECTED" } };
     }
-    for (const row of (taskRows as unknown as TaskRow[] | null) ?? []) {
+    for (const row of (taskRows as unknown as CanonicalTaskRow[] | null) ?? []) {
       if (typeof row.task_title === "string" && row.task_title.trim().length > 0) {
-        taskTitleById.set(row.id, row.task_title);
+        taskRowById.set(row.id, row);
       }
     }
   }
@@ -625,7 +658,7 @@ export async function buildPublicClientShareProjection(
     mappedTasks,
     mappedResources,
     currentUpdate,
-    taskTitleById,
+    taskRowById,
     resourceRowById,
   });
 }
