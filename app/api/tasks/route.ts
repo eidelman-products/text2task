@@ -14,6 +14,10 @@ import {
   normalizeEmbeddedRelation,
   type EmbeddedClientRow,
 } from "@/lib/supabase/joined-row";
+import {
+  hasActiveProjectBeforeSave,
+  scheduleProjectSavedAnalytics,
+} from "@/lib/analytics/seo-funnel-events.server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -893,6 +897,7 @@ export async function POST(req: NextRequest) {
 
     if (isProjectCreateRequest(body)) {
       try {
+        const hadProjectBefore = await hasActiveProjectBeforeSave(user.id);
         const duplicate = await checkProjectDuplicateBeforeSave({
           supabase,
           userId: user.id,
@@ -916,6 +921,18 @@ export async function POST(req: NextRequest) {
           userId: user.id,
           body,
         });
+
+        try {
+          scheduleProjectSavedAnalytics({
+            request: req,
+            userId: user.id,
+            hadProjectBefore,
+            source: "tasks_project_create",
+            createdProjectCount: 1,
+          });
+        } catch {
+          // Measurement is best-effort and must not affect project creation.
+        }
 
         return NextResponse.json({
           project: result.project,

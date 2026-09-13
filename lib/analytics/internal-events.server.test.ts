@@ -144,4 +144,47 @@ describe("logAnalyticsEventSafe - page_view idempotency (Phase 4B)", () => {
     ];
     expect(row.idempotency_key).toBeNull();
   });
+
+  it("accepts the paid_conversion SEO funnel event name", async () => {
+    const result = await logAnalyticsEventSafe({
+      eventName: "paid_conversion",
+      userId: "11111111-1111-4111-8111-111111111111",
+      idempotencyKey: "paid_conversion:11111111-1111-4111-8111-111111111111",
+    });
+
+    expect(result).toBe(true);
+    const [, row] = insertMock.mock.calls[0] as [
+      string,
+      Record<string, unknown>,
+    ];
+    expect(row.event_name).toBe("paid_conversion");
+  });
+
+  it("treats a duplicate paid_conversion idempotency key as a safe no-op", async () => {
+    insertMock
+      .mockImplementationOnce(okInsertResponse)
+      .mockImplementationOnce(duplicateIdempotencyKeyErrorResponse);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const idempotencyKey =
+      "paid_conversion:11111111-1111-4111-8111-111111111111";
+
+    const first = await logAnalyticsEventSafe({
+      eventName: "paid_conversion",
+      userId: "11111111-1111-4111-8111-111111111111",
+      idempotencyKey,
+    });
+    const renewal = await logAnalyticsEventSafe({
+      eventName: "paid_conversion",
+      userId: "11111111-1111-4111-8111-111111111111",
+      metadata: { provider: "creem", event_type: "subscription.paid" },
+      idempotencyKey,
+    });
+
+    expect(first).toBe(true);
+    expect(renewal).toBe(false);
+    expect(insertMock).toHaveBeenCalledTimes(2);
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
 });

@@ -3,18 +3,18 @@
 **STATUS: ACTIVE**
 **RUN START DATE: 2026-09-09**
 **TIMEZONE: Asia/Jerusalem**
-**CURRENT PHASE: Phase 1 — PLANNING**
+**CURRENT PHASE: Phase 1 — IMPLEMENTATION**
 **PHASE 0A STATUS: COMPLETE / OWNER REVIEWED**
 **PHASE 0B STATUS: COMPLETE / OWNER REVIEWED**
 **PHASE 0 OVERALL: COMPLETE / OWNER REVIEWED**
-**PHASE 1 STATUS: PLANNING**
-**PHASE 1 IMPLEMENTATION: NOT STARTED**
+**PHASE 1 STATUS: IMPLEMENTATION IN PROGRESS**
+**PHASE 1 IMPLEMENTATION: MILESTONE 1 CORRECTION PASS COMPLETE / READY FOR COMMIT REVIEW**
 
 Companion file: `Text2Task_SEO_GEO_Run_2026-09-09.docx` (formatted, distributable Source of Truth — this Markdown file is the version-controllable editable source; both are maintained together for this run only).
 
 This document belongs only to the 2026-09-09 run. It does not overwrite or supersede `docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md` ("the Blueprint"), which remains the historical implementation record for the SEO package shipped 2026-08-26 → 2026-09-01. Where this run's fresh verification confirms, updates, or contradicts a Blueprint claim, that is recorded explicitly in §25 (Prior Audit Reconciliation) rather than silently assumed.
 
-No application code, configuration, environment, or migration was changed while producing this document. No commit, push, or deploy was performed. This is a read-only mapping and audit deliverable.
+Phase 1 Milestone 1 local implementation changed application code and tests only. No database schema, migration, configuration, environment, Google/Bing/Vercel/Supabase production setting, production service, push, deploy, merge, or commit was changed/performed.
 
 Owner-review update recorded 2026-09-10 00:38 Asia/Jerusalem: Phase 0A (Repository Mapping + Technical Audit) is complete and owner-reviewed, but Phase 0 overall is not complete. The current phase is Phase 0B (External Baseline Completion). Phase 1 implementation has not started. Historical `2026-09-09/10` timestamps in this document are retained as originally recorded; exact timestamp not captured.
 
@@ -32,6 +32,8 @@ Phase 0B completion update recorded 2026-09-13 13:17 Asia/Jerusalem: the externa
 
 Phase 1 planning update recorded 2026-09-13 13:26 Asia/Jerusalem: a Phase 1 Master Implementation Plan was added to this run document. Phase 0 remains complete / owner-reviewed. Phase 1 is now planning; implementation has not started.
 
+Phase 1 Milestone 1 update recorded 2026-09-13 15:12:33 Asia/Jerusalem and correction pass recorded 2026-09-13 16:55:06 Asia/Jerusalem: Measurement Foundation was implemented locally on branch `feat/seo-measurement-foundation` from baseline commit `92050bd1d21111192157bd3b8305861fb9208192`, then corrected after the pre-commit owner review gate. The local implementation adds production-grade, server-authoritative, idempotent `first_extract_created`, `project_saved`, and `paid_conversion` analytics using the existing `analytics_events` pipeline. No database migration was required. Local tests/typecheck/changed-file lint/build completed as recorded in §40. Production verification has not occurred; commit/deploy remains unauthorized.
+
 ---
 
 ## 1. Cover / Run Metadata
@@ -41,17 +43,17 @@ Phase 1 planning update recorded 2026-09-13 13:26 Asia/Jerusalem: a Phase 1 Mast
 | Product | Text2Task (www.text2task.com) — Next.js 16.1.6 App Router, Supabase, Vercel |
 | Run date | 2026-09-09 |
 | Timezone | Asia/Jerusalem |
-| Phase | Phase 1 — PLANNING |
+| Phase | Phase 1 — IMPLEMENTATION |
 | Phase 0A status | COMPLETE / OWNER REVIEWED |
 | Phase 0B status | COMPLETE / OWNER REVIEWED |
 | Phase 0 overall | COMPLETE / OWNER REVIEWED |
-| Phase 1 status | PLANNING |
-| Phase 1 implementation | NOT STARTED |
+| Phase 1 status | IMPLEMENTATION IN PROGRESS |
+| Phase 1 implementation | MILESTONE 1 CORRECTION PASS COMPLETE / READY FOR COMMIT REVIEW |
 | Author | Claude Code (Sonnet 5), directed by the site owner |
 | Repository | `C:\Users\Home\projects\inboxshaper` (git branch `main`, clean at run start) |
 | Prior internal reference | `docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md` (found in repo, read in full, used for reconciliation) |
 | Named prior audit files | `Text2Task_SEO_GEO_AEO_Master_Audit_2026-09-09_HE(1).docx` and `text2task_full_audit.docx` — **searched for and NOT FOUND** anywhere in the workspace or filesystem. Their claims could not be independently inspected in this run; see §25. |
-| Application code changed | NO |
+| Application code changed | YES — local Phase 1 Milestone 1 branch only |
 | Production changed | NO |
 | Commit/push/deploy performed | NO |
 
@@ -65,7 +67,7 @@ The real, evidence-backed problems are narrower and more specific than "the site
 
 1. **Two of the four newly-flagged Use Case pages are hub-only / contextually isolated, not literal orphan pages** (`freelance-developers`, `seo-freelancers`). They are linked from the real SSR `/use-cases` hub, but have zero additional contextual inbound links from the homepage, footer, Features, Solutions, Resources, or sibling use-case pages. They also have the thinnest content of any use case on the site (missing the "visual differentiation layer" — transformation example, signature module, proof, related-links — that 8 of 12 use cases have). This plausibly explains, at the level the repository can speak to, why Google discovered but did not prioritize crawling/indexing them.
 2. **No founder/Person entity exists anywhere** — no full name, no Person schema, no personal professional profile link. Given the confirmed unrelated Microsoft Marketplace product sharing the "Text2Task" name, this is a real, verified entity-disambiguation gap, not a hypothetical one.
-3. **The acquisition funnel has a real measurement blocker past signup, but not every missing event is equally urgent**: the P0 measurement items are `paid_conversion` from the authoritative Creem confirmed-payment webhook path, `first_extract_created`, and `project_saved`. `email_confirmed` is P1. `client_update_created` and `client_update_applied` are P2/product analytics. Phase 1 work aimed at increasing paying users cannot be measured properly until the P0 measurement gap is closed.
+3. **The acquisition funnel had a real measurement blocker past signup, and Phase 1 Milestone 1 has now closed the P0 portion locally**: the P0 measurement items are `paid_conversion` from the authoritative Creem confirmed-payment webhook path, `first_extract_created`, and `project_saved`. `email_confirmed` remains P1. `client_update_created` and `client_update_applied` remain P2/product analytics. Owner review and production row verification are still required before the new funnel data is trusted operationally.
 4. **GA4 live collection is now externally VERIFIED**: Google Analytics Admin evidence supplied by the owner showed the `Text2Task Website` web stream for `https://www.text2task.com` (Stream ID `14978713002`, Measurement ID `G-TP2F4HWZN4`) with "Data collection is active in the past 48 hours" and "Data flowing." Enhanced Measurement is enabled. The shared Google-tag architecture is also externally verified: Google tag `AW-670652067` sends data to both the Google Ads destination `AW-670652067` and the Google Analytics destination `Text2Task Website`, with tag quality `Good`. No GA4 application-code change is required.
 5. **Core Web Vitals field data is unavailable, and PageSpeed lab data shows no demonstrated site-wide SEO performance blocker**: GSC reported "Not enough usage data in the last 90 days for this device type" for both Mobile and Desktop. PageSpeed Insights homepage lab results are strong overall, with Desktop Performance 99 and Mobile Performance 88, but Mobile LCP is materially weaker at 3.8s and the approximately 15 MB homepage demo video is the dominant performance anomaly. This is a targeted P1 Performance/CRO candidate, not evidence of broken performance architecture and not enough to explain the current non-brand average position around 78 by itself.
 6. **GSC Links baseline now independently supports authority as a major constraint, but Text2Task does have an early external footprint**: Google Search Console currently reports 3 external link URLs from 2 linking domains, all pointing to the homepage, with no externally-linked Feature/Solution/Resource money page surfaced in this report. External research also verified current Text2Task surfaces across LinkedIn, GetApp, Capterra, Uneed, Peerlist, StartupFortune, SaaSHub, UIComet, and FounderDB / Peer Push discovery data. The problem is not total absence of mentions; the current weakness is limited referring-domain diversity, limited externally recognized link authority, almost no external links to high-value topic/money pages, and limited independent editorial/reference coverage.
@@ -75,7 +77,7 @@ The real, evidence-backed problems are narrower and more specific than "the site
 10. **The Text2Task name collision remains real and externally verified**: the unrelated older Microsoft Marketplace product named "Text2Task" by Target Energy Solutions remains live, is an Outlook/email assistant for enterprise employees, and is unrelated to `text2task.com`. This continues to support the existing HIGH/P0 entity-disambiguation priority.
 11. A set of smaller, real, low-risk consistency gaps remains, but owner review corrected their priority: contextual internal-link/content-depth strengthening and Bing/IndexNow foundation are P1; OG/Twitter image completion, homepage `FAQPage` schema consistency, breadcrumb/date consistency, billing API cache headers, robots.txt crawl-courtesy completeness, and client-update analytics are P2.
 
-No P0 finding in this audit is a live security breach, a broken redirect, or an actual indexing catastrophe — the sitemap/robots/canonical/admin-auth architecture is sound. The confirmed P0s are the founder/entity-disambiguation decision and the core measurement blockers (`paid_conversion`, `first_extract_created`, `project_saved`), rather than "the site is currently broken."
+No P0 finding in this audit is a live security breach, a broken redirect, or an actual indexing catastrophe — the sitemap/robots/canonical/admin-auth architecture is sound. At Phase 0, the confirmed P0s were the founder/entity-disambiguation decision and the core measurement blockers (`paid_conversion`, `first_extract_created`, `project_saved`), rather than "the site is currently broken." Phase 1 Milestone 1 has implemented the measurement blockers locally and awaits owner review / production verification.
 
 ---
 
@@ -478,16 +480,16 @@ Spot-checked the highest-priority commercial pages (`/solutions/freelancer-proje
 | Signup success | CONFIRMED EXISTS | `signup_success` |
 | Login success | CONFIRMED EXISTS | `login_success` |
 | Email confirmed | **NOT FOUND — allowlisted in code/DB, never emitted anywhere** | `email_confirmed` |
-| First extract/task created | **NOT FOUND — allowlisted, never emitted** | `first_extract_created` |
-| Project saved | **NOT FOUND — allowlisted, never emitted** | `project_saved` |
+| First extract/task created | Phase 0 finding: **NOT FOUND — allowlisted, never emitted**. Phase 1 Milestone 1: **IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW** (§40, D017). | `first_extract_created` |
+| Project saved | Phase 0 finding: **NOT FOUND — allowlisted, never emitted**. Phase 1 Milestone 1: **IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW** (§40, D017). | `project_saved` |
 | Client update created/applied | **NOT FOUND — allowlisted, never emitted** | `client_update_created` / `client_update_applied` |
-| Paid conversion | **NOT FOUND in the internal table at all** | No event exists; the Creem webhook (`app/api/webhooks/creem/route.ts`) writes no analytics row on confirmed payment |
+| Paid conversion | Phase 0 finding: **NOT FOUND in the internal table at all**. Phase 1 Milestone 1: **IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW** (§40, D017). | `paid_conversion` now emits from the verified Creem `subscription.paid` webhook path after authoritative processing; no production verification yet |
 
 **Attribution (CONFIRMED, real, end-to-end)**: first-touch UTM/referrer captured client-side (`app/components/analytics/attribution-capture.tsx`), dual-persisted to `localStorage` and a 180-day cookie so server routes can read it, and independently confirmed to thread through into both `signup_attribution_captured` and `signup_success` event payloads (`lib/analytics/signup-attribution.server.ts`).
 
 **Owner-traffic exclusion (CONFIRMED, real)**: a dedicated, httpOnly, 180-day cookie (`t2t_owner_analytics_excluded`), set only from a server-verified owner login, checked at every internal-analytics write path — explicitly documented as not an authorization mechanism, only a data-quality measure. It does not exclude the owner's traffic from Google Ads/GA4/Clarity — only from the internal `analytics_events` table.
 
-**Confirmed measurement priority classification (owner-reviewed)**: the acquisition funnel is real and complete through signup, but priority is not flat across all missing events. P0 measurement items are `paid_conversion` (from the authoritative Creem confirmed-payment webhook path, implemented production-grade and idempotently), `first_extract_created`, and `project_saved`. P1 is `email_confirmed`. P2/product analytics are `client_update_created` and `client_update_applied`. The business goal for this whole SEO/GEO program explicitly includes "paying users" — that outcome currently cannot be measured from the data this system actually writes until the P0 measurement items exist.
+**Confirmed measurement priority classification (owner-reviewed)**: the acquisition funnel is real and complete through signup, but priority is not flat across all missing events. P0 measurement items are `paid_conversion` (from the authoritative Creem confirmed-payment webhook path, implemented production-grade and idempotently), `first_extract_created`, and `project_saved`. P1 is `email_confirmed`. P2/product analytics are `client_update_created` and `client_update_applied`. Phase 1 Milestone 1 has implemented the P0 measurement items locally; the remaining gap is owner review, commit/deploy authorization, and production row verification.
 
 **GA4 external verification result (Phase 0B, owner-supplied evidence, 2026-09-10 00:57 Asia/Jerusalem)**: GA4 is actively receiving production traffic. Google Analytics Admin showed the `Text2Task Website` stream URL `https://www.text2task.com`, Stream ID `14978713002`, Measurement ID `G-TP2F4HWZN4`, "Data collection is active in the past 48 hours," and "Data flowing." Enhanced Measurement is enabled. Google tag `AW-670652067` is sending to multiple destinations: Google Ads destination `AW-670652067` and Google Analytics destination `Text2Task Website`; tag quality is `Good`. "Manage connected site tags: 0 connected" is not a defect because connected site tags and Google-tag destinations are different concepts. The prior GA4 status "external verification required / unknown" is now **RESOLVED and VERIFIED**.
 
@@ -926,7 +928,7 @@ The two prior-audit files named in this run's brief — `Text2Task_SEO_GEO_AEO_M
 Per the run's own priority definitions (correctness, security/privacy, indexability blocker, **serious entity ambiguity**, broken canonical/redirect, **measurement blocker required before implementation**):
 
 1. **No founder/Person entity exists on the Text2Task website** — no on-site published founder name, no `Person` schema, no personal profile link from `text2task.com` — against a confirmed, real, unrelated same-named product on the Microsoft Marketplace. Phase 0B external research now verifies that Yan Eidelman is publicly associated with Text2Task through indexed LinkedIn and Peerlist surfaces, strengthening the recommendation to consider truthful on-site entity disambiguation, but the owner decision remains open. (§16, §23A)
-2. **Core P0 measurement is incomplete**: no reliable `paid_conversion` signal exists from the authoritative Creem confirmed-payment webhook path, and `first_extract_created` / `project_saved` are allowlisted but never emitted. Phase 1 work explicitly aimed at growing "paying users" cannot be measured against this funnel as it stands. (§22)
+2. **Core P0 measurement was incomplete at Phase 0 and is now implemented locally in Phase 1 Milestone 1**: no reliable `paid_conversion` signal existed from the authoritative Creem confirmed-payment webhook path, and `first_extract_created` / `project_saved` were allowlisted but never emitted. Local implementation now exists and is awaiting owner review / future production verification. (§22, §40, D017)
 
 **Phase 0B external verification result**: GA4's actual live data-collection status has now been externally verified from owner-supplied Google Analytics Admin evidence. GA4 is actively receiving production traffic, and the repository's documented shared-Google-tag architecture is confirmed: GA4 is connected as a destination of the existing `AW-670652067` Google tag. No GA4 application-code change is required. (§22)
 
@@ -980,6 +982,9 @@ Resolved in Phase 0B:
 - IndexNow setup path is **VERIFIED** but application implementation is **NOT STARTED**; this remains a P1 Search/AI Discovery foundation candidate, with no Phase 0 implementation authorized. (§23.3, D014)
 - Bing Backlinks baseline is captured as **DATA NOT YET AVAILABLE / PENDING PROCESSING**, not as 0 backlinks and not as evidence Bing knows of no backlinks. (§23.5, D014)
 - External authority/profile/entity footprint baseline is **RESOLVED and VERIFIED** from owner-supplied external research on 2026-09-13. Current Text2Task surfaces verified: LinkedIn, GetApp, Capterra, Uneed, Peerlist, StartupFortune, SaaSHub, UIComet launch discovery, and FounderDB / Peer Push discovery data. G2 is ambiguous / requires identity verification; Product Hunt and BetaList were not externally verified in this search sweep. (§23A, D015)
+
+Resolved locally in Phase 1 Milestone 1, awaiting owner review / production verification:
+- P0 Measurement Foundation implementation is **IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW**: `first_extract_created`, `project_saved`, and `paid_conversion` now have server-authoritative local implementations using the existing `analytics_events` writer and existing database idempotency support. No production analytics rows have been verified yet because no deploy or production test was authorized. (§40, D017)
 
 Still unresolved:
 1. Is the owner willing to be publicly named (full name + a personal professional profile link) for entity-disambiguation purposes, and if so, what should the `Person`↔`Organization` schema relationship look like? This is an owner decision, not a technical one. (§16)
@@ -1073,6 +1078,8 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | SEO-2026-09-09-D014 | 2026-09-13 13:06 Asia/Jerusalem | Record Bing Webmaster Tools onboarding, Bing sitemap submission, IndexNow setup-path baseline, Bing AI Performance baseline, and Bing Backlinks pending-processing baseline as Phase 0B external verification. | Owner-supplied Bing Webmaster Tools evidence showed property `text2task.com` imported/connected successfully; Bing stated initial reports/data may take up to 48 hours; sitemap `https://www.text2task.com/sitemap.xml` was submitted successfully and initially showed Processing; IndexNow setup path was inspected and a key was generated during setup exploration, but no app implementation occurred; AI Performance selected 3-month period showed 0 reported citations / 0 cited pages; Backlinks showed "No data available." | Owner-supplied Bing Webmaster Tools onboarding, Sitemaps, IndexNow, AI Performance (Beta), and Backlinks screens recorded in §23. | Treating temporarily empty Bing reports as evidence of zero search/index/backlink activity — rejected because the property was newly onboarded and processing. Treating 0 discovered URLs immediately after sitemap submission as an indexing defect — rejected because the sitemap was Processing. Claiming Copilot has never mentioned Text2Task — rejected because Bing AI Performance is sampled and newly-processing. Recording Bing Backlinks as 0 backlinks — rejected because the status is data not yet available / pending processing. Implementing IndexNow during Phase 0 — rejected because no implementation was authorized. | Closed |
 | SEO-2026-09-09-D015 | 2026-09-13 13:17 Asia/Jerusalem | Close Phase 0B external baseline completion as COMPLETE / OWNER REVIEWED after recording the external authority/profile/entity footprint baseline. | Owner-supplied external research verified current Text2Task surfaces across LinkedIn, GetApp, Capterra, Uneed, Peerlist, StartupFortune, SaaSHub, UIComet launch discovery, and FounderDB / Peer Push discovery data. This establishes that Text2Task has a meaningful early external entity footprint while GSC still shows limited external-link diversity and no surfaced links to high-value Feature/Solution/Resource pages. Bing Backlinks/Search Performance/Site Explorer remain a scheduled processing follow-up, but this does not block Phase 0 completion. | Owner-supplied external authority/profile/entity sweep recorded in §23A, plus existing GSC Links baseline (§22B) and Bing baseline (§23). | Saying "Text2Task has no external presence" — rejected as false. Counting G2 as a verified current Text2Task authority asset — rejected because current externally visible G2 content does not clearly establish identity. Recording Product Hunt or BetaList as absent — rejected because they were only not externally verified in this search sweep. Starting Phase 1 implementation — rejected because only documentation update was authorized. | Closed |
 | SEO-2026-09-09-D016 | 2026-09-13 13:26 Asia/Jerusalem | Add the Phase 1 Master Implementation Plan and move the run into Phase 1 planning without starting implementation. | Phase 0 is complete / owner-reviewed and established the evidence base for the Phase 1 order: measurement foundation first, then entity disambiguation, internal authority for weak use cases, core non-brand ranking pages, Bing/IndexNow foundation, external authority program, and homepage performance/CRO investigation. The plan is documentation-only and intentionally preserves Phase 0 findings as historical evidence. | Current run document read in full; Phase 0 evidence in §§5-23A and backlog in §§26-30. | Starting implementation immediately — rejected because the owner requested planning only. Changing application code, database, environment, external consoles, Vercel, DNS, Google, Bing, or production — rejected because this update is documentation-only. Reordering the first milestone away from measurement — rejected because Phase 1 work aimed at paying users cannot be measured until the P0 measurement foundation is closed. | Closed |
+| SEO-2026-09-09-D017 | 2026-09-13 15:12:33 Asia/Jerusalem | Implement Phase 1 Milestone 1 Measurement Foundation locally without a database migration. | The existing `analytics_events` table already supports `event_name`, `user_id`, attribution fields, sanitized metadata, service-role-only inserts, and a unique partial `idempotency_key` index; `users.successful_extract_count` and `record_successful_extraction()` already support the first-extract boundary; Creem's verified webhook RPC already returns `result_resolved_user_id` after authoritative entitlement processing. | Direct inspection of `lib/analytics/internal-events.server.ts`, `lib/analytics/request-attribution.server.ts`, `app/api/extract/route.ts`, `app/api/extract-image/route.ts`, `app/api/projects/import/route.ts`, `app/api/homepage-demo/claim/save/route.ts`, `app/api/homepage-demo/claim/save-anyway/route.ts`, `app/api/webhooks/creem/route.ts`, and `supabase/migrations/202609040001_canonical_production_closure.sql`; targeted and relevant regression tests; local typecheck/build. | Creating a new analytics system — rejected because the existing server pipeline is sufficient. Adding a migration/RPC change — rejected because existing schema and RPCs are adequate. Emitting paid conversion from checkout/browser redirect — rejected because only verified Creem webhook processing is authoritative. Counting every save as `project_saved` — rejected because Phase 1 needs an activation/value milestone, so the event is first successful persisted project save per user. | Implemented locally / awaiting owner review |
+| SEO-2026-09-09-D018 | 2026-09-13 16:55:06 Asia/Jerusalem | Preserve normalized acquisition storage and resolve acquisition -> paid attribution through a tested `user_id` / linked `anonymous_id` reporting helper instead of copying UTM/source fields onto `paid_conversion`. | Owner-approved correction pass explicitly rejected duplicated attribution fields on revenue events when normalized attribution can reliably resolve them. `analytics_events` already stores user-linked signup/acquisition rows and anonymous browser identifiers; `paid_conversion` has the authenticated `user_id`, which is the stable join key. | `lib/analytics/acquisition-attribution-resolver.server.ts`; `lib/analytics/acquisition-attribution-resolver.server.test.ts`; `app/admin/analytics/page.tsx` existing signup-attribution query pattern; `lib/analytics/signup-attribution.server.ts`; existing `analytics_events` schema. | Copying UTM/source/medium/campaign/referrer fields into every `paid_conversion` row — rejected as duplicated attribution storage. Adding a database migration — rejected because the existing event table and indexes are sufficient. Building a new admin dashboard UI in this milestone — rejected because the milestone only requires a queryable/testable contract. | Implemented locally / awaiting owner review |
 
 ---
 
@@ -1100,8 +1107,10 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | 2026-09-13 13:06 Asia/Jerusalem | Phase 0B | Bing Webmaster Tools onboarding baseline recorded | Owner-verified Bing Webmaster Tools property, sitemap, IndexNow setup, AI Performance, and Backlinks evidence | Current run Markdown and DOCX | Current run Markdown and DOCX only | Bing Webmaster Tools property recorded as CONFIGURED / VERIFIED; Bing sitemap recorded as SUBMITTED / PROCESSING; Bing AI Performance baseline captured; IndexNow setup path verified but implementation not started; Bing Backlinks recorded as DATA NOT YET AVAILABLE / PENDING PROCESSING; Phase 0B checklist updated | DOCX regenerated from updated Markdown and inspected for D014 / Bing baseline text | Complete |
 | 2026-09-13 13:17 Asia/Jerusalem | Phase 0B | External authority/profile/entity footprint baseline recorded and Phase 0B closed | Owner-supplied external authority/profile/entity research | Current run Markdown and DOCX | Current run Markdown and DOCX only | Verified current Text2Task surfaces recorded; G2 marked ambiguous / requires identity verification; Product Hunt and BetaList marked not externally verified in this search sweep; Phase 0B marked COMPLETE / OWNER REVIEWED; Phase 0 overall marked COMPLETE / READY FOR PHASE 1 PLANNING; Bing processing recheck recorded as non-blocking scheduled follow-up | DOCX regenerated from updated Markdown and inspected for D015 / Phase 0 completion / external footprint text | Complete |
 | 2026-09-13 13:26 Asia/Jerusalem | Phase 1 Planning | Phase 1 Master Implementation Plan added | Owner request to create a detailed production-grade Phase 1 plan based on completed Phase 0 evidence | Current run Markdown and DOCX; full current run Markdown read before writing | Current run Markdown and DOCX only | Milestone order, dependencies, owner decisions, acceptance criteria, verification plan, measurable outcomes, rollback criteria, database/external-console requirements, and recommended first milestone recorded; Phase 1 marked PLANNING; implementation not started | DOCX regenerated from updated Markdown and inspected for D016 / Phase 1 Master Implementation Plan / Phase 1 Recommended First Milestone text | Complete |
+| 2026-09-13 15:12:33 Asia/Jerusalem | Phase 1 Milestone 1 | Measurement Foundation implemented locally | Owner-approved Phase 1 Milestone 1 request | Active run Markdown, analytics/event helpers, extraction routes, project import/demo save routes, Creem webhook route/RPC, tests, build/lint/typecheck outputs | Local application/test/docs changes only; no database/environment/production/external-console changes | Added server-authoritative `first_extract_created`, `project_saved`, and `paid_conversion` implementation using existing `analytics_events` pipeline and idempotency support; no DB migration required | Targeted tests 5 files / 26 tests passed; broader relevant regression set 16 files / 236 tests passed; `npx.cmd tsc --noEmit` passed; changed-file ESLint passed; full repo `npm.cmd run lint` failed only on pre-existing unrelated share-link lint error; `npm.cmd run build` passed after approved network access for Google Fonts | Implemented locally / awaiting owner review |
+| 2026-09-13 16:55:06 Asia/Jerusalem | Phase 1 Milestone 1 correction pass | Pre-commit owner-review gate corrections completed locally | Owner-review gate returned CHANGES REQUIRED BEFORE COMMIT | Active run Markdown/DOCX, analytics helpers, acquisition resolver, extraction routes/tests, project import/tests, tasks route/tests, homepage-demo claim/save tests, Creem webhook tests, project-persistence repo search | Local application/test/docs changes only; no database/migration/environment/configuration/production/external-console changes | Added missing distinct-renewal paid-conversion tests, completed `project_saved` coverage for `app/api/tasks/route.ts -> createProjectWithSubtasks`, added route-level image extraction tests, added analytics failure isolation tests across all seven requested paths, and added a tested acquisition -> paid attribution resolver contract | Targeted tests 10 files / 129 tests passed; relevant regression suite 21 files / 323 tests passed; `npx.cmd tsc --noEmit` passed; changed-file ESLint passed; full repo lint still failed only on unrelated pre-existing files; first `npm.cmd run build` failed on sandboxed Google Fonts fetch, network-enabled rerun passed | Correction pass complete / ready for commit review |
 
-No application/production code was inspected for the purpose of changing it, and none was changed. **Application code changed: NO. Database changed: NO. Environment changed: NO. Production changed: NO. Google configuration changed: NO. Bing application integration changed: NO. Commit/push/deploy performed: NO.**
+Phase 1 Milestone 1 has now changed application code and tests locally on `feat/seo-measurement-foundation`. **Application code changed: YES — local branch only. Database changed: NO. Migration required: NO. Environment changed: NO. Production changed: NO. Google configuration changed: NO. Bing application integration changed: NO. Commit/push/deploy performed: NO.**
 
 ---
 
@@ -1118,6 +1127,7 @@ Representative, non-exhaustive list by category (this audit does not claim a sin
 - **Private-route/auth**: `app/admin/layout.tsx`, `lib/auth/owner.server.ts`, all 3 `app/admin/**/page.tsx`, `app/dashboard/layout.tsx`, `app/dashboard/page.tsx`, `app/dashboard/billing/page.tsx`, `app/dashboard/profile/page.tsx`, `app/dashboard/calendar/page.tsx`, `lib/supabase/requireDashboardUser.ts`, `app/login/page.tsx`, `app/signup/layout.tsx`, `app/check-email/layout.tsx`, `app/forgot-password/page.tsx`, `app/reset-password/page.tsx`, `app/auth/confirm/route.ts`, `app/homepage-demo/review/page.tsx`, `app/homepage-demo/claim/continue/page.tsx`, `app/share/[publicId]/page.tsx`, `lib/share/share-session-grant.server.ts`
 - **API routes spot-checked**: `app/api/share/[publicId]/{projection,pin}/route.ts`, `app/api/share/session/route.ts`, `app/api/homepage-demo/{bootstrap,extract,review}/route.ts`, `app/api/billing/{subscription,portal}/route.ts`, `app/api/webhooks/creem/route.ts`, `app/api/auth/login/route.ts`, `app/api/analytics/event/route.ts`
 - **Analytics/measurement**: `app/components/analytics/{google-ads-tag,microsoft-clarity,consent-aware-vercel-analytics,attribution-capture,cookie-consent-banner,analytics-error-boundary}.tsx`, `lib/analytics/{events,internal-events.server,owner-exclusion.server,signup-attribution.server,request-attribution.server,analytics-consent,analytics-paths,live-demo-funnel,owner-analytics-window}.ts`, `app/admin/analytics/page.tsx`, `supabase/migrations/202609040001_canonical_production_closure.sql`
+- **Phase 1 Milestone 1 implementation mapping**: `app/api/extract/route.ts`, `app/api/extract-image/route.ts`, `app/api/projects/import/route.ts`, `app/api/homepage-demo/claim/save/route.ts`, `app/api/homepage-demo/claim/save-anyway/route.ts`, `app/api/webhooks/creem/route.ts`, `lib/analytics/internal-events.server.ts`, `lib/analytics/request-attribution.server.ts`, and `supabase/migrations/202609040001_canonical_production_closure.sql`
 - **Customer stories**: `app/api/customer-stories/{submit,public}/route.ts`, `lib/customer-stories/public-customer-stories.server.ts`
 - **Reference documentation**: `docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md` (read in full)
 - **Git history**: `git log`/`git diff` against commit `58cb7ef` and the repository's full recent commit history
@@ -1126,10 +1136,30 @@ Representative, non-exhaustive list by category (this audit does not claim a sin
 
 ## 36. Files Changed
 
-Current Codex update: only the active 2026-09-09 run documentation was edited. Per this phase's iron rules, no application code, configuration, environment, migration, production service, or dependency file was created, edited, or deleted.
+Current Codex update: Phase 1 Milestone 1 was implemented locally on feature branch `feat/seo-measurement-foundation`. No database schema/migration/configuration/environment/production/external-console change was made. No commit, push, merge, or deploy was performed.
 
-- `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.md` (updated with Phase 0B external baseline records, owner-review corrections, and the Phase 1 Master Implementation Plan)
-- `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.docx` (companion, regenerated from the updated Markdown)
+Application files changed:
+- `lib/analytics/internal-events.server.ts`
+- `lib/analytics/seo-funnel-events.server.ts`
+- `app/api/extract/route.ts`
+- `app/api/extract-image/route.ts`
+- `app/api/projects/import/route.ts`
+- `app/api/homepage-demo/claim/save/route.ts`
+- `app/api/homepage-demo/claim/save-anyway/route.ts`
+- `app/api/webhooks/creem/route.ts`
+
+Test files changed/added:
+- `lib/analytics/internal-events.server.test.ts`
+- `lib/analytics/seo-funnel-events.server.test.ts`
+- `app/api/extract/route.test.ts`
+- `app/api/projects/import/route.test.ts`
+- `app/api/webhooks/creem/route.test.ts`
+- `app/api/homepage-demo/claim/save/route.test.ts`
+- `app/api/homepage-demo/claim/save-anyway/route.test.ts`
+
+Documentation files changed:
+- `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.md`
+- `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.docx`
 
 ---
 
@@ -1139,14 +1169,14 @@ Current Codex update: only the active 2026-09-09 run documentation was edited. P
 **PHASE 0A — Repository Mapping + Technical Audit: COMPLETE / OWNER REVIEWED**
 **PHASE 0B — External Baseline Completion: COMPLETE / OWNER REVIEWED**
 **PHASE 0 OVERALL: COMPLETE / OWNER REVIEWED**
-**PHASE 1 STATUS: PLANNING**
-**PHASE 1 IMPLEMENTATION: NOT STARTED**
+**PHASE 1 STATUS: IMPLEMENTATION IN PROGRESS**
+**PHASE 1 IMPLEMENTATION: MILESTONE 1 IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW**
 
 Phase 0A exit criteria (per the run brief) are met and owner-reviewed: exact public route inventory (§9), exact sitemap logic (§12), exact robots policy (§10.1), exact private indexing protection map (§11), exact canonical/host logic (§13), exact metadata inventory (§14), exact structured-data inventory (§15), entity-disambiguation gap analysis (§16), content/intent map (§17), internal-link map (§19), analytics/measurement map (§22), prior-audit reconciliation (§25), confirmed P0/P1/P2 backlog (§26–§28), a proposed next plan (§30), and a verification plan (§32) all exist above.
 
-**No implementation has begun.** Phase 0B external baseline completion is complete / owner-reviewed. Recorded external baselines now include GA4 live collection, shared Google-tag destination architecture, GSC Search baseline, GSC non-brand baseline, GSC Generative AI baseline, GSC indexing baseline, GSC sitemap baseline, GSC Core Web Vitals baseline, PageSpeed lab baseline, GSC external links baseline, GSC internal links baseline, GSC Manual Actions, GSC Security Issues, Bing Webmaster Tools onboarding, Bing sitemap initial submission baseline, Bing AI Performance baseline, IndexNow setup-path assessment, and external authority/profile/entity footprint baseline. Bing Backlinks/Search Performance/Site Explorer remain a scheduled follow-up because Bing is still processing the newly onboarded property; this follow-up does not block Phase 0 completion. Phase 1 is now in planning. Phase 1 implementation should not start until the owner explicitly approves a Phase 1 scope.
+Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is implemented locally and awaits owner review. Production verification has not occurred.
 
-**Application code changed: NO. Database changed: NO. Environment changed: NO. Production changed: NO. Google configuration changed: NO. Bing application integration changed: NO. Commit/push/deploy performed: NO.**
+**Application code changed: YES — local branch only. Database changed: NO. Environment changed: NO. Production changed: NO. Google configuration changed: NO. Bing application integration changed: NO. Commit/push/deploy performed: NO.**
 
 ---
 
@@ -1880,13 +1910,93 @@ Reason: Phase 0 established that the business goal is not merely rankings; it is
 - Decide whether founder full name and professional profile may be published for Milestone 2.
 - Approve any external-console work for Bing/IndexNow or production verification.
 
-**Current status after this planning update**
+**Current status after the Phase 1 Milestone 1 local implementation update**
 
 - Phase 0: COMPLETE / OWNER REVIEWED.
-- Phase 1: PLANNING.
-- Phase 1 implementation: NOT STARTED.
-- Application code changed: NO.
+- Phase 1: IMPLEMENTATION IN PROGRESS.
+- Phase 1 implementation: MILESTONE 1 IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
+- Application code changed: YES — local branch only.
 - Database changed: NO.
 - Environment changed: NO.
 - Production changed: NO.
 - Commit/push/deploy performed: NO.
+
+---
+
+## 40. Phase 1 Milestone 1 — Measurement Foundation Local Implementation
+
+**Status:** CORRECTION PASS COMPLETE / READY FOR COMMIT REVIEW.
+
+**Implementation timestamp:** 2026-09-13 15:12:33 Asia/Jerusalem.
+
+**Correction-pass timestamp:** 2026-09-13 16:55:06 Asia/Jerusalem.
+
+**Starting branch / HEAD:** `main` at `92050bd1d21111192157bd3b8305861fb9208192`.
+
+**Feature branch:** `feat/seo-measurement-foundation`.
+
+### 40.1 Mapping Findings
+
+- Existing analytics writer: `lib/analytics/internal-events.server.ts` writes to `analytics_events` through `supabaseAdmin`, sanitizes metadata, clamps fields, validates event names through an allowlist, and treats duplicate idempotency-key collisions as expected no-ops.
+- Existing attribution: `lib/analytics/request-attribution.server.ts` reads accepted-consent first-party attribution/anonymous cookies and maps UTM/referrer/landing/page-path fields into the analytics writer format.
+- Existing storage: `analytics_events` already has `event_name`, `user_id`, attribution columns, sanitized JSON metadata, and `analytics_events_idempotency_key_unique_idx`; no enum/check constraint blocks the new `paid_conversion` name.
+- Existing first-extract backend state: `users.successful_extract_count` and `record_successful_extraction(p_user_id)` already provide an owner-analytics-only persisted extraction count separate from free-plan quota.
+- Existing Creem webhook idempotency: `process_creem_webhook_event(...)` already verifies/records provider event processing with replay protection and returns `result_resolved_user_id` after authoritative processing.
+
+### 40.2 Event Contracts
+
+| Event | Authoritative boundary | Dedupe/idempotency | Metadata policy |
+|---|---|---|---|
+| `first_extract_created` | Authenticated text/image extraction succeeds, free-plan quota update succeeds where applicable, and scheduled `record_successful_extraction()` returns without error. | `first_extract_created:{user_id}`; route passes prior `successful_extract_count`, so only count `0` can emit, with DB uniqueness protecting races/retries. | Only `source: text|image`; no raw prompt, task, project, screenshot, message, or private content. |
+| `project_saved` | First successful persisted project save per authenticated user from project import, homepage-demo claim save, homepage-demo save-anyway, or `app/api/tasks/route.ts -> createProjectWithSubtasks`. Replays, duplicate review, failed saves, update-only paths, and zero-project outcomes do not count. | `project_saved:{user_id}`; preflight checks whether the user already has an active project and fails closed if that check cannot be trusted; DB uniqueness protects races and cross-flow duplicate attempts. | Only source and created project count; no titles, task text, client names, notes, or free-form content. |
+| `paid_conversion` | Verified Creem webhook, normalized as `subscription.paid`, processed by `process_creem_webhook_event(...)` as `processed` / `creem_webhook_processed`, with a resolved user id. | `paid_conversion:{user_id}`; webhook replay/idempotency remains in the Creem ledger and analytics uniqueness prevents repeated conversion rows. Duplicate/pending/cancelled/unmatched events do not count. | Only provider/status labels and environment; no raw provider payload, customer id, subscription id, amount, email, or payment-sensitive data. |
+
+### 40.3 Project-Save Path Inventory
+
+| Authoritative path | Persistence boundary | Emits `project_saved` | Test coverage |
+|---|---|---:|---:|
+| `app/api/projects/import/route.ts` compatibility fallback | `createProjectGroup(...)` creates persisted project/task rows | Yes, after all requested project groups persist | Yes |
+| `app/api/projects/import/route.ts` transactional path | `executeClaimedProjectImport(...)` returns committed `kind: "saved"` result from `import_projects_transaction(...)` | Yes, only for `saved`, not replay | Yes |
+| `app/api/homepage-demo/claim/save/route.ts` | `claimHomepageDemoProject(...)` returns `outcome: "saved"` | Yes, only on genuine save | Yes |
+| `app/api/homepage-demo/claim/save-anyway/route.ts` | `claimHomepageDemoProjectWithDuplicateOverride(...)` returns `outcome: "saved"` | Yes, only on genuine save | Yes |
+| `app/api/tasks/route.ts` | `createProjectWithSubtasks(...)` inserts the `projects` row and related `tasks`/resources | Yes, after helper success, with `source: "tasks_project_create"` | Yes |
+
+Repository-wide persistence search did not identify another legitimate first-project-save boundary requiring this milestone event. Read/update/archive/delete/resource-only paths were intentionally not instrumented.
+
+### 40.4 Acquisition -> Paid Attribution Contract
+
+The milestone keeps `paid_conversion` lean and uses `user_id` as the stable reporting join key. `lib/analytics/acquisition-attribution-resolver.server.ts` resolves a paid user to acquisition evidence by first reading consented signup/acquisition rows with the same authenticated `user_id`; when needed, it follows the existing linked `anonymous_id` to earlier acquisition rows. It returns `unknown` safely when no consented acquisition row exists or a query fails. It does not fabricate source data and does not allow another user's attribution to bleed into the paid user.
+
+### 40.5 Local Verification
+
+Commands/results:
+- Correction pass: `npm.cmd test -- lib/analytics/internal-events.server.test.ts lib/analytics/seo-funnel-events.server.test.ts lib/analytics/acquisition-attribution-resolver.server.test.ts app/api/extract/route.test.ts app/api/extract-image/route.test.ts app/api/projects/import/route.test.ts app/api/tasks/route.test.ts app/api/homepage-demo/claim/save/route.test.ts app/api/homepage-demo/claim/save-anyway/route.test.ts app/api/webhooks/creem/route.test.ts` - PASSED, 10 files / 129 tests.
+- Correction pass: `npm.cmd test -- lib/analytics app/api/analytics/event/route.test.ts app/api/auth/signup/route.test.ts app/api/auth/login/route.test.ts app/auth/confirm/route.test.ts app/api/billing/portal/creem-response.test.ts app/api/homepage-demo/claim/save/route.test.ts app/api/homepage-demo/claim/save-anyway/route.test.ts app/api/homepage-demo/extract/route.test.ts app/api/homepage-demo/review/route.test.ts app/api/extract/route.test.ts app/api/extract-image/route.test.ts app/api/projects/import/route.test.ts app/api/tasks/route.test.ts app/api/webhooks/creem/route.test.ts` - PASSED, 21 files / 323 tests.
+- Correction pass: `npx.cmd tsc --noEmit` - PASSED.
+- Correction pass: `npx.cmd eslint [changed files]` - PASSED.
+- Correction pass: `npm.cmd run build` - first attempt FAILED because sandboxed network access prevented `next/font` from fetching Google Fonts (`DM Sans`, `Inter`); rerun with approved network access PASSED.
+- Correction pass: `npm.cmd run lint` - FAILED due to pre-existing unrelated lint issues: `app/components/dashboard/tasks/share-link/share-link-channels.tsx:160` (`react-hooks/set-state-in-effect`) plus unrelated warnings in share/project-update tests and share-link access controls. No changed-file lint errors were found.
+- `npm.cmd test -- lib/analytics/internal-events.server.test.ts lib/analytics/seo-funnel-events.server.test.ts app/api/extract/route.test.ts app/api/projects/import/route.test.ts app/api/webhooks/creem/route.test.ts` — PASSED, 5 files / 26 tests.
+- `npm.cmd test -- lib/analytics app/api/analytics/event/route.test.ts app/api/auth/signup/route.test.ts app/api/auth/login/route.test.ts app/auth/confirm/route.test.ts app/api/billing/portal/creem-response.test.ts app/api/homepage-demo/claim/save/route.test.ts app/api/homepage-demo/claim/save-anyway/route.test.ts app/api/extract/route.test.ts app/api/projects/import/route.test.ts app/api/webhooks/creem/route.test.ts` — PASSED, 16 files / 236 tests.
+- `npx.cmd tsc --noEmit` — PASSED.
+- `npx.cmd eslint [changed files]` — PASSED.
+- `npm.cmd run build` — first attempt FAILED because sandboxed network access prevented `next/font` from fetching Google Fonts; rerun with approved network access PASSED.
+- `npm.cmd run lint` — FAILED due to pre-existing unrelated lint issues, including `app/components/dashboard/tasks/share-link/share-link-channels.tsx:160` (`react-hooks/set-state-in-effect`) plus unrelated warnings. No changed file lint errors were found.
+
+### 40.6 Owner Review Gate Corrections
+
+- `paid_conversion` first-conversion semantics: PASS locally. Tests now prove a same-user distinct later `subscription.paid` renewal dedupes through `paid_conversion:{user_id}`, while a different user gets an independent conversion key.
+- Acquisition -> paid attribution contract: PASS locally. A tested resolver can deterministically resolve a paid user to consented acquisition evidence by `user_id` and linked `anonymous_id`; missing acquisition returns `unknown`.
+- `project_saved` coverage: PASS locally. All currently identified legitimate first-project-save paths are instrumented through the shared helper.
+- Image extraction route coverage: PASS locally. Route-level tests cover first success, repeat success, failed extraction, and analytics insertion failure.
+- Analytics write failure isolation: PASS locally for text extract, image extract, project import/save, tasks project creation, homepage-demo claim save, homepage-demo save-anyway, and Creem `subscription.paid`; Creem analytics helper calls are isolated so analytics failure cannot create a false webhook retry.
+- Idempotency/concurrency: PASS locally via stable DB-backed idempotency keys and tests for same-user dedupe / different-user independence.
+- Security/privacy: PASS locally. New metadata is limited to source/count/status labels and environment; no prompt/message text, task/project content, image content, client messages, payment amount, Creem customer/subscription IDs, webhook payload, email address, secrets, or tokens are intentionally written.
+- Database decision: no migration required.
+
+### 40.7 Remaining Verification / Owner Review
+
+- No production verification was performed because no deploy/production change was authorized.
+- After owner review and a future authorized deploy, verify real `analytics_events` rows for a test signup/extract/save and a Creem test-mode payment before trusting funnel reporting.
+- No database migration is required for this milestone.
+- No commit was created in this implementation pass.

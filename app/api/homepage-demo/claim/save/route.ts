@@ -4,6 +4,10 @@ import { logAnalyticsEventSafe } from "@/lib/analytics/internal-events.server";
 import { hasOwnerAnalyticsExclusionCookie } from "@/lib/analytics/owner-exclusion.server";
 import { readAnonymousIdCookie } from "@/lib/analytics/request-attribution.server";
 import {
+  hasActiveProjectBeforeSave,
+  scheduleProjectSavedAnalytics,
+} from "@/lib/analytics/seo-funnel-events.server";
+import {
   getHomepageDemoClaimContinuationCookieClearPolicy,
   readHomepageDemoClaimContinuationCookie,
 } from "@/lib/homepage-demo/claim-continuation-identity.server";
@@ -183,6 +187,8 @@ export async function POST(
       return createJsonResponse({ code: "unauthorized" }, 401);
     }
 
+    const hadProjectBefore = await hasActiveProjectBeforeSave(user.id);
+
     const source = await loadHomepageDemoClaimSaveSource({
       claimTokenHash: claimCookie?.tokenHash ?? null,
       continuationTokenHash,
@@ -246,10 +252,12 @@ export async function POST(
     });
 
     return mapClaimSaveResult(claimResult, {
+      request,
       claimId: source.claimId,
       userId: user.id,
       anonymousId,
       ownerFlagged,
+      hadProjectBefore,
     });
   } catch (error) {
     try {
@@ -370,10 +378,12 @@ function mapDuplicateOverridePreparationResult({
 function mapClaimSaveResult(
   result: ClaimHomepageDemoProjectResult,
   context: {
+    request: NextRequest;
     claimId: string;
     userId: string;
     anonymousId: string | null;
     ownerFlagged: boolean;
+    hadProjectBefore: boolean;
   }
 ): NextResponse<ClaimSaveJsonResponse> {
   switch (result.outcome) {
@@ -382,6 +392,17 @@ function mapClaimSaveResult(
         ...context,
         duplicateOverride: false,
       });
+      try {
+        scheduleProjectSavedAnalytics({
+          request: context.request,
+          userId: context.userId,
+          hadProjectBefore: context.hadProjectBefore,
+          source: "homepage_demo_claim",
+          createdProjectCount: 1,
+        });
+      } catch {
+        // Measurement is best-effort and must not affect claim saves.
+      }
 
       return createSuccessfulClaimSaveResponse({
         code: "saved",

@@ -12,6 +12,7 @@ const ALLOWED_EVENT_NAMES = new Set([
   "login_success",
   "first_extract_created",
   "project_saved",
+  "paid_conversion",
   "client_update_created",
   "client_update_applied",
   "homepage_demo_extract_attempt",
