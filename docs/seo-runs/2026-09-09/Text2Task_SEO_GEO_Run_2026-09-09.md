@@ -8,13 +8,13 @@
 **PHASE 0B STATUS: COMPLETE / OWNER REVIEWED**
 **PHASE 0 OVERALL: COMPLETE / OWNER REVIEWED**
 **PHASE 1 STATUS: IMPLEMENTATION IN PROGRESS**
-**PHASE 1 IMPLEMENTATION: MILESTONE 1 PREVIEW VERIFIED / OWNER APPROVED FOR MERGE**
+**PHASE 1 IMPLEMENTATION: MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**
 
 Companion file: `Text2Task_SEO_GEO_Run_2026-09-09.docx` (formatted, distributable Source of Truth — this Markdown file is the version-controllable editable source; both are maintained together for this run only).
 
 This document belongs only to the 2026-09-09 run. It does not overwrite or supersede `docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md` ("the Blueprint"), which remains the historical implementation record for the SEO package shipped 2026-08-26 → 2026-09-01. Where this run's fresh verification confirms, updates, or contradicts a Blueprint claim, that is recorded explicitly in §25 (Prior Audit Reconciliation) rather than silently assumed.
 
-Phase 1 Milestone 1 implementation changed application code and tests on branch `feat/seo-measurement-foundation`. The current pre-merge Preview verification gate records documentation-only evidence. No database schema, migration, environment variable, Vercel configuration, Google/Bing/Supabase production setting, production service, merge, manual production deploy, or production change was performed.
+Phase 1 Milestone 1 implementation changed application code and tests through PR #2. The implementation PR has now been merged to `main` and deployed by Vercel Production. The current closeout update records documentation-only evidence. No database schema, migration, environment variable, Vercel configuration, Google/Bing/Supabase production setting, manual production deploy, or production configuration change was performed by this documentation task.
 
 Owner-review update recorded 2026-09-10 00:38 Asia/Jerusalem: Phase 0A (Repository Mapping + Technical Audit) is complete and owner-reviewed, but Phase 0 overall is not complete. The current phase is Phase 0B (External Baseline Completion). Phase 1 implementation has not started. Historical `2026-09-09/10` timestamps in this document are retained as originally recorded; exact timestamp not captured.
 
@@ -32,9 +32,11 @@ Phase 0B completion update recorded 2026-09-13 13:17 Asia/Jerusalem: the externa
 
 Phase 1 planning update recorded 2026-09-13 13:26 Asia/Jerusalem: a Phase 1 Master Implementation Plan was added to this run document. Phase 0 remains complete / owner-reviewed. Phase 1 is now planning; implementation has not started.
 
-Phase 1 Milestone 1 update recorded 2026-09-13 15:12:33 Asia/Jerusalem and correction pass recorded 2026-09-13 16:55:06 Asia/Jerusalem: Measurement Foundation was implemented locally on branch `feat/seo-measurement-foundation` from baseline commit `92050bd1d21111192157bd3b8305861fb9208192`, then corrected after the pre-commit owner review gate. The local implementation adds production-grade, server-authoritative, idempotent `first_extract_created`, `project_saved`, and `paid_conversion` analytics using the existing `analytics_events` pipeline. No database migration was required. Local tests/typecheck/changed-file lint/build completed as recorded in §40. Production verification has not started.
+Phase 1 Milestone 1 update recorded 2026-09-13 15:12:33 Asia/Jerusalem and correction pass recorded 2026-09-13 16:55:06 Asia/Jerusalem: Measurement Foundation was implemented locally on branch `feat/seo-measurement-foundation` from baseline commit `92050bd1d21111192157bd3b8305861fb9208192`, then corrected after the pre-commit owner review gate. The local implementation added production-grade, server-authoritative, idempotent `first_extract_created`, `project_saved`, and `paid_conversion` analytics using the existing `analytics_events` pipeline. No database migration was required. Local tests/typecheck/changed-file lint/build completed as recorded in §40. At that time, production verification had not started.
 
-Pre-merge Preview verification update recorded 2026-09-13 18:59:27 Asia/Jerusalem: PR #2 (`Phase 1: add SEO funnel measurement foundation`) exists for implementation commit `10846aa0c9dfc7a2f6a2a215374d75eb6a5103f6`, and Vercel created a READY Preview deployment for branch `feat/seo-measurement-foundation`. Owner-verified Vercel environment isolation confirmed Preview uses the separate `text2task-staging` Supabase project, not Production Supabase. Preview/Staging runtime checks passed for first text extraction, `first_extract_created`, first project save / `project_saved`, and second-extraction deduplication. Manual image extraction runtime verification was deferred by owner as non-blocking. Manual `paid_conversion` runtime verification was deferred pending a safe Creem verification strategy. Milestone 1 is preview verified and owner approved for merge review; production verification has not started.
+Pre-merge Preview verification update recorded 2026-09-13 18:59:27 Asia/Jerusalem: PR #2 (`Phase 1: add SEO funnel measurement foundation`) existed for implementation commit `10846aa0c9dfc7a2f6a2a215374d75eb6a5103f6`, and Vercel created a READY Preview deployment for branch `feat/seo-measurement-foundation`. Owner-verified Vercel environment isolation confirmed Preview used the separate `text2task-staging` Supabase project, not Production Supabase. Preview/Staging runtime checks passed for first text extraction, `first_extract_created`, first project save / `project_saved`, and second-extraction deduplication. Manual image extraction runtime verification was deferred by owner as non-blocking. Manual `paid_conversion` runtime verification was deferred pending a safe Creem verification strategy. At that gate, Milestone 1 was preview verified and owner approved for merge review; production verification had not started.
+
+Production closeout update recorded 2026-09-14 11:58:23 Asia/Jerusalem: PR #2 (`Phase 1: add SEO funnel measurement foundation`) was merged successfully to `main` as merge commit `b3e372c`. Vercel Production deployment for environment `Production`, branch `main`, commit `b3e372c` reached READY. The owner manually performed a post-deployment production smoke test on `https://www.text2task.com/` and verified Homepage, Dashboard, Extract, Tasks, and Calendar load and function normally. Result: PASS — no user-visible regression observed. Manual Production Image Extract runtime verification, manual Production `paid_conversion` verification, production `paid_conversion` row verification, production `first_extract_created` re-verification, and production `project_saved` re-verification were not performed in this production gate. Image Extract manual runtime remains DEFERRED / NON-BLOCKING. `paid_conversion` manual runtime remains DEFERRED / SAFE VERIFICATION REQUIRED.
 
 ---
 
@@ -50,14 +52,14 @@ Pre-merge Preview verification update recorded 2026-09-13 18:59:27 Asia/Jerusale
 | Phase 0B status | COMPLETE / OWNER REVIEWED |
 | Phase 0 overall | COMPLETE / OWNER REVIEWED |
 | Phase 1 status | IMPLEMENTATION IN PROGRESS |
-| Phase 1 implementation | MILESTONE 1 PREVIEW VERIFIED / OWNER APPROVED FOR MERGE |
+| Phase 1 implementation | MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE |
 | Author | Claude Code (Sonnet 5), directed by the site owner |
 | Repository | `C:\Users\Home\projects\inboxshaper` (git branch `main`, clean at run start) |
 | Prior internal reference | `docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md` (found in repo, read in full, used for reconciliation) |
 | Named prior audit files | `Text2Task_SEO_GEO_AEO_Master_Audit_2026-09-09_HE(1).docx` and `text2task_full_audit.docx` — **searched for and NOT FOUND** anywhere in the workspace or filesystem. Their claims could not be independently inspected in this run; see §25. |
-| Application code changed | YES — local Phase 1 Milestone 1 branch only |
-| Production changed | NO |
-| Commit/push/deploy performed | Feature-branch commits/pushes only; no merge or Production deploy |
+| Application code changed | YES — Phase 1 Milestone 1 implementation |
+| Production changed | YES — PR #2 merged and Vercel Production deployed before this documentation closeout; this documentation task changed no Production configuration |
+| Commit/push/deploy performed | PR #2 merge and automatic Vercel Production deployment already occurred; this documentation task creates/pushes docs branch only and performs no manual deploy |
 
 ---
 
@@ -69,7 +71,7 @@ The real, evidence-backed problems are narrower and more specific than "the site
 
 1. **Two of the four newly-flagged Use Case pages are hub-only / contextually isolated, not literal orphan pages** (`freelance-developers`, `seo-freelancers`). They are linked from the real SSR `/use-cases` hub, but have zero additional contextual inbound links from the homepage, footer, Features, Solutions, Resources, or sibling use-case pages. They also have the thinnest content of any use case on the site (missing the "visual differentiation layer" — transformation example, signature module, proof, related-links — that 8 of 12 use cases have). This plausibly explains, at the level the repository can speak to, why Google discovered but did not prioritize crawling/indexing them.
 2. **No founder/Person entity exists anywhere** — no full name, no Person schema, no personal professional profile link. Given the confirmed unrelated Microsoft Marketplace product sharing the "Text2Task" name, this is a real, verified entity-disambiguation gap, not a hypothetical one.
-3. **The acquisition funnel had a real measurement blocker past signup, and Phase 1 Milestone 1 has now closed the P0 implementation portion through Preview/Staging verification**: the P0 measurement items are `paid_conversion` from the authoritative Creem confirmed-payment webhook path, `first_extract_created`, and `project_saved`. `email_confirmed` remains P1. `client_update_created` and `client_update_applied` remain P2/product analytics. Production row verification is still required before the new funnel data is trusted operationally.
+3. **The acquisition funnel had a real measurement blocker past signup, and Phase 1 Milestone 1 is now production deployed and production smoke verified**: the P0 measurement items are `paid_conversion` from the authoritative Creem confirmed-payment webhook path, `first_extract_created`, and `project_saved`. `email_confirmed` remains P1. `client_update_created` and `client_update_applied` remain P2/product analytics. Production event-row re-verification was not performed in the production smoke gate, and `paid_conversion` manual runtime verification still requires a safe Creem strategy.
 4. **GA4 live collection is now externally VERIFIED**: Google Analytics Admin evidence supplied by the owner showed the `Text2Task Website` web stream for `https://www.text2task.com` (Stream ID `14978713002`, Measurement ID `G-TP2F4HWZN4`) with "Data collection is active in the past 48 hours" and "Data flowing." Enhanced Measurement is enabled. The shared Google-tag architecture is also externally verified: Google tag `AW-670652067` sends data to both the Google Ads destination `AW-670652067` and the Google Analytics destination `Text2Task Website`, with tag quality `Good`. No GA4 application-code change is required.
 5. **Core Web Vitals field data is unavailable, and PageSpeed lab data shows no demonstrated site-wide SEO performance blocker**: GSC reported "Not enough usage data in the last 90 days for this device type" for both Mobile and Desktop. PageSpeed Insights homepage lab results are strong overall, with Desktop Performance 99 and Mobile Performance 88, but Mobile LCP is materially weaker at 3.8s and the approximately 15 MB homepage demo video is the dominant performance anomaly. This is a targeted P1 Performance/CRO candidate, not evidence of broken performance architecture and not enough to explain the current non-brand average position around 78 by itself.
 6. **GSC Links baseline now independently supports authority as a major constraint, but Text2Task does have an early external footprint**: Google Search Console currently reports 3 external link URLs from 2 linking domains, all pointing to the homepage, with no externally-linked Feature/Solution/Resource money page surfaced in this report. External research also verified current Text2Task surfaces across LinkedIn, GetApp, Capterra, Uneed, Peerlist, StartupFortune, SaaSHub, UIComet, and FounderDB / Peer Push discovery data. The problem is not total absence of mentions; the current weakness is limited referring-domain diversity, limited externally recognized link authority, almost no external links to high-value topic/money pages, and limited independent editorial/reference coverage.
@@ -79,7 +81,7 @@ The real, evidence-backed problems are narrower and more specific than "the site
 10. **The Text2Task name collision remains real and externally verified**: the unrelated older Microsoft Marketplace product named "Text2Task" by Target Energy Solutions remains live, is an Outlook/email assistant for enterprise employees, and is unrelated to `text2task.com`. This continues to support the existing HIGH/P0 entity-disambiguation priority.
 11. A set of smaller, real, low-risk consistency gaps remains, but owner review corrected their priority: contextual internal-link/content-depth strengthening and Bing/IndexNow foundation are P1; OG/Twitter image completion, homepage `FAQPage` schema consistency, breadcrumb/date consistency, billing API cache headers, robots.txt crawl-courtesy completeness, and client-update analytics are P2.
 
-No P0 finding in this audit is a live security breach, a broken redirect, or an actual indexing catastrophe — the sitemap/robots/canonical/admin-auth architecture is sound. At Phase 0, the confirmed P0s were the founder/entity-disambiguation decision and the core measurement blockers (`paid_conversion`, `first_extract_created`, `project_saved`), rather than "the site is currently broken." Phase 1 Milestone 1 is now preview verified and owner approved for merge review; production verification has not started.
+No P0 finding in this audit is a live security breach, a broken redirect, or an actual indexing catastrophe — the sitemap/robots/canonical/admin-auth architecture is sound. At Phase 0, the confirmed P0s were the founder/entity-disambiguation decision and the core measurement blockers (`paid_conversion`, `first_extract_created`, `project_saved`), rather than "the site is currently broken." Phase 1 Milestone 1 is now production deployed, production smoke verified, and complete, with the explicitly deferred runtime follow-ups preserved.
 
 ---
 
@@ -482,16 +484,16 @@ Spot-checked the highest-priority commercial pages (`/solutions/freelancer-proje
 | Signup success | CONFIRMED EXISTS | `signup_success` |
 | Login success | CONFIRMED EXISTS | `login_success` |
 | Email confirmed | **NOT FOUND — allowlisted in code/DB, never emitted anywhere** | `email_confirmed` |
-| First extract/task created | Phase 0 finding: **NOT FOUND — allowlisted, never emitted**. Phase 1 Milestone 1: **PREVIEW VERIFIED / OWNER APPROVED FOR MERGE** (§40, D019). | `first_extract_created` |
-| Project saved | Phase 0 finding: **NOT FOUND — allowlisted, never emitted**. Phase 1 Milestone 1: **PREVIEW VERIFIED / OWNER APPROVED FOR MERGE** (§40, D019). | `project_saved` |
+| First extract/task created | Phase 0 finding: **NOT FOUND — allowlisted, never emitted**. Phase 1 Milestone 1: **PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**; production event-row re-verification was not performed in this gate (§40, D020). | `first_extract_created` |
+| Project saved | Phase 0 finding: **NOT FOUND — allowlisted, never emitted**. Phase 1 Milestone 1: **PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**; production event-row re-verification was not performed in this gate (§40, D020). | `project_saved` |
 | Client update created/applied | **NOT FOUND — allowlisted, never emitted** | `client_update_created` / `client_update_applied` |
-| Paid conversion | Phase 0 finding: **NOT FOUND in the internal table at all**. Phase 1 Milestone 1: **IMPLEMENTED LOCALLY WITH AUTOMATED COVERAGE; MANUAL RUNTIME DEFERRED PENDING SAFE CREEM STRATEGY** (§40, D019). | `paid_conversion` now emits from the verified Creem `subscription.paid` webhook path after authoritative processing; no production verification yet |
+| Paid conversion | Phase 0 finding: **NOT FOUND in the internal table at all**. Phase 1 Milestone 1: **PRODUCTION DEPLOYED WITH AUTOMATED COVERAGE; MANUAL RUNTIME AND PRODUCTION ROW VERIFICATION DEFERRED PENDING SAFE CREEM STRATEGY** (§40, D020). | `paid_conversion` now emits from the verified Creem `subscription.paid` webhook path after authoritative processing; manual runtime/row verification remains deferred |
 
 **Attribution (CONFIRMED, real, end-to-end)**: first-touch UTM/referrer captured client-side (`app/components/analytics/attribution-capture.tsx`), dual-persisted to `localStorage` and a 180-day cookie so server routes can read it, and independently confirmed to thread through into both `signup_attribution_captured` and `signup_success` event payloads (`lib/analytics/signup-attribution.server.ts`).
 
 **Owner-traffic exclusion (CONFIRMED, real)**: a dedicated, httpOnly, 180-day cookie (`t2t_owner_analytics_excluded`), set only from a server-verified owner login, checked at every internal-analytics write path — explicitly documented as not an authorization mechanism, only a data-quality measure. It does not exclude the owner's traffic from Google Ads/GA4/Clarity — only from the internal `analytics_events` table.
 
-**Confirmed measurement priority classification (owner-reviewed)**: the acquisition funnel is real and complete through signup, but priority is not flat across all missing events. P0 measurement items are `paid_conversion` (from the authoritative Creem confirmed-payment webhook path, implemented production-grade and idempotently), `first_extract_created`, and `project_saved`. P1 is `email_confirmed`. P2/product analytics are `client_update_created` and `client_update_applied`. Phase 1 Milestone 1 is preview verified and owner approved for merge review; the remaining gap is production row verification after a future authorized merge/deploy.
+**Confirmed measurement priority classification (owner-reviewed)**: the acquisition funnel is real and complete through signup, but priority is not flat across all missing events. P0 measurement items are `paid_conversion` (from the authoritative Creem confirmed-payment webhook path, implemented production-grade and idempotently), `first_extract_created`, and `project_saved`. P1 is `email_confirmed`. P2/product analytics are `client_update_created` and `client_update_applied`. Phase 1 Milestone 1 is production deployed and production smoke verified; production event-row re-verification was not performed in this gate, and `paid_conversion` manual runtime verification remains deferred pending a safe Creem strategy.
 
 **GA4 external verification result (Phase 0B, owner-supplied evidence, 2026-09-10 00:57 Asia/Jerusalem)**: GA4 is actively receiving production traffic. Google Analytics Admin showed the `Text2Task Website` stream URL `https://www.text2task.com`, Stream ID `14978713002`, Measurement ID `G-TP2F4HWZN4`, "Data collection is active in the past 48 hours," and "Data flowing." Enhanced Measurement is enabled. Google tag `AW-670652067` is sending to multiple destinations: Google Ads destination `AW-670652067` and Google Analytics destination `Text2Task Website`; tag quality is `Good`. "Manage connected site tags: 0 connected" is not a defect because connected site tags and Google-tag destinations are different concepts. The prior GA4 status "external verification required / unknown" is now **RESOLVED and VERIFIED**.
 
@@ -930,7 +932,7 @@ The two prior-audit files named in this run's brief — `Text2Task_SEO_GEO_AEO_M
 Per the run's own priority definitions (correctness, security/privacy, indexability blocker, **serious entity ambiguity**, broken canonical/redirect, **measurement blocker required before implementation**):
 
 1. **No founder/Person entity exists on the Text2Task website** — no on-site published founder name, no `Person` schema, no personal profile link from `text2task.com` — against a confirmed, real, unrelated same-named product on the Microsoft Marketplace. Phase 0B external research now verifies that Yan Eidelman is publicly associated with Text2Task through indexed LinkedIn and Peerlist surfaces, strengthening the recommendation to consider truthful on-site entity disambiguation, but the owner decision remains open. (§16, §23A)
-2. **Core P0 measurement was incomplete at Phase 0 and is now preview verified in Phase 1 Milestone 1**: no reliable `paid_conversion` signal existed from the authoritative Creem confirmed-payment webhook path, and `first_extract_created` / `project_saved` were allowlisted but never emitted. The implementation now exists, Preview/Staging verification has passed for `first_extract_created` and `project_saved`, and manual `paid_conversion` runtime verification is deferred pending a safe Creem strategy. Future production verification is still required. (§22, §40, D019)
+2. **Core P0 measurement was incomplete at Phase 0 and is now production deployed / production smoke verified in Phase 1 Milestone 1**: no reliable `paid_conversion` signal existed from the authoritative Creem confirmed-payment webhook path, and `first_extract_created` / `project_saved` were allowlisted but never emitted. The implementation now exists, Preview/Staging verification passed for `first_extract_created` and `project_saved`, PR #2 was merged, and Vercel Production is READY at merge commit `b3e372c`. Manual Production Image Extract runtime verification, manual Production `paid_conversion` verification, and production event-row re-verification were not performed in this gate. (§22, §40, D020)
 
 **Phase 0B external verification result**: GA4's actual live data-collection status has now been externally verified from owner-supplied Google Analytics Admin evidence. GA4 is actively receiving production traffic, and the repository's documented shared-Google-tag architecture is confirmed: GA4 is connected as a destination of the existing `AW-670652067` Google tag. No GA4 application-code change is required. (§22)
 
@@ -985,8 +987,8 @@ Resolved in Phase 0B:
 - Bing Backlinks baseline is captured as **DATA NOT YET AVAILABLE / PENDING PROCESSING**, not as 0 backlinks and not as evidence Bing knows of no backlinks. (§23.5, D014)
 - External authority/profile/entity footprint baseline is **RESOLVED and VERIFIED** from owner-supplied external research on 2026-09-13. Current Text2Task surfaces verified: LinkedIn, GetApp, Capterra, Uneed, Peerlist, StartupFortune, SaaSHub, UIComet launch discovery, and FounderDB / Peer Push discovery data. G2 is ambiguous / requires identity verification; Product Hunt and BetaList were not externally verified in this search sweep. (§23A, D015)
 
-Resolved in Phase 1 Milestone 1 through Preview/Staging verification, awaiting production verification:
-- P0 Measurement Foundation implementation is **PREVIEW VERIFIED / OWNER APPROVED FOR MERGE** for `first_extract_created` and `project_saved`, with `paid_conversion` implemented and covered by automated tests but manual runtime verification deferred pending a safe Creem strategy. No production analytics rows have been verified yet because production verification has not started. (§40, D019)
+Resolved in Phase 1 Milestone 1 through production deployment and production smoke verification:
+- P0 Measurement Foundation implementation is **PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**. PR #2 was merged to `main` as `b3e372c`, Vercel Production is READY for `main` / `b3e372c`, and the owner smoke-tested Homepage, Dashboard, Extract, Tasks, and Calendar successfully. Manual Production Image Extract runtime verification, manual Production `paid_conversion` verification, production `paid_conversion` row verification, production `first_extract_created` re-verification, and production `project_saved` re-verification were not performed in this gate. (§40, D020)
 
 Still unresolved:
 1. Is the owner willing to be publicly named (full name + a personal professional profile link) for entity-disambiguation purposes, and if so, what should the `Person`↔`Organization` schema relationship look like? This is an owner decision, not a technical one. (§16)
@@ -1083,6 +1085,7 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | SEO-2026-09-09-D017 | 2026-09-13 15:12:33 Asia/Jerusalem | Implement Phase 1 Milestone 1 Measurement Foundation locally without a database migration. | The existing `analytics_events` table already supports `event_name`, `user_id`, attribution fields, sanitized metadata, service-role-only inserts, and a unique partial `idempotency_key` index; `users.successful_extract_count` and `record_successful_extraction()` already support the first-extract boundary; Creem's verified webhook RPC already returns `result_resolved_user_id` after authoritative entitlement processing. | Direct inspection of `lib/analytics/internal-events.server.ts`, `lib/analytics/request-attribution.server.ts`, `app/api/extract/route.ts`, `app/api/extract-image/route.ts`, `app/api/projects/import/route.ts`, `app/api/homepage-demo/claim/save/route.ts`, `app/api/homepage-demo/claim/save-anyway/route.ts`, `app/api/webhooks/creem/route.ts`, and `supabase/migrations/202609040001_canonical_production_closure.sql`; targeted and relevant regression tests; local typecheck/build. | Creating a new analytics system — rejected because the existing server pipeline is sufficient. Adding a migration/RPC change — rejected because existing schema and RPCs are adequate. Emitting paid conversion from checkout/browser redirect — rejected because only verified Creem webhook processing is authoritative. Counting every save as `project_saved` — rejected because Phase 1 needs an activation/value milestone, so the event is first successful persisted project save per user. | Implemented locally / awaiting owner review |
 | SEO-2026-09-09-D018 | 2026-09-13 16:55:06 Asia/Jerusalem | Preserve normalized acquisition storage and resolve acquisition -> paid attribution through a tested `user_id` / linked `anonymous_id` reporting helper instead of copying UTM/source fields onto `paid_conversion`. | Owner-approved correction pass explicitly rejected duplicated attribution fields on revenue events when normalized attribution can reliably resolve them. `analytics_events` already stores user-linked signup/acquisition rows and anonymous browser identifiers; `paid_conversion` has the authenticated `user_id`, which is the stable join key. | `lib/analytics/acquisition-attribution-resolver.server.ts`; `lib/analytics/acquisition-attribution-resolver.server.test.ts`; `app/admin/analytics/page.tsx` existing signup-attribution query pattern; `lib/analytics/signup-attribution.server.ts`; existing `analytics_events` schema. | Copying UTM/source/medium/campaign/referrer fields into every `paid_conversion` row — rejected as duplicated attribution storage. Adding a database migration — rejected because the existing event table and indexes are sufficient. Building a new admin dashboard UI in this milestone — rejected because the milestone only requires a queryable/testable contract. | Implemented locally / awaiting owner review |
 | SEO-2026-09-09-D019 | 2026-09-13 18:59:27 Asia/Jerusalem | Accept the Phase 1 Milestone 1 Preview/Staging runtime verification as sufficient for merge review, with image extraction and `paid_conversion` manual runtime checks explicitly deferred. | Owner-verified Vercel configuration showed Preview and Production use different Supabase project URLs, and Preview runtime was confirmed against `text2task-staging`. Vercel created a READY Preview deployment for PR #2 / implementation commit `10846aa0c9dfc7a2f6a2a215374d75eb6a5103f6`. Preview/Staging runtime checks passed for first authenticated text extraction, exactly-one `first_extract_created`, first project save / `project_saved`, and second-extraction deduplication. Route-level image extraction tests already pass, and paid-conversion semantics are covered by automated tests, but their manual runtime checks were intentionally deferred. | Owner-supplied Vercel/Supabase environment-isolation evidence; Preview/Staging test user `eidelman.yan+seo-m1-preview@gmail.com`; Staging `analytics_events` observations for `first_extract_created` and `project_saved`; persisted Staging project `Website Launch Updates and QA`; local automated test/build/typecheck/lint evidence recorded in §40.5. | Blocking merge review until manual image extraction runtime verification — rejected because the owner accepted it as a non-blocking follow-up after text extraction and deduplication runtime proof. Performing a Preview Creem payment/webhook mutation test during this gate — rejected because Creem environment variables require a separate safe verification strategy. Marking Milestone 1 production-verified — rejected because production verification has not started. | Preview verified / owner approved for merge review |
+| SEO-2026-09-09-D020 | 2026-09-14 11:58:23 Asia/Jerusalem | Close Phase 1 Milestone 1 as production deployed, production smoke verified, and complete, while preserving deferred Image Extract and `paid_conversion` runtime follow-ups. | PR #2 was merged successfully to `main` as merge commit `b3e372c`; Vercel Production deployment for environment `Production`, branch `main`, commit `b3e372c` reached READY; owner production smoke testing on `https://www.text2task.com/` passed for Homepage, Dashboard, Extract, Tasks, and Calendar with no user-visible regression observed. The production gate did not include manual Production Image Extract runtime verification, manual Production `paid_conversion` verification, production `paid_conversion` row verification, production `first_extract_created` re-verification, or production `project_saved` re-verification. | Owner-supplied merge/deployment facts; owner post-deployment smoke-test report; git reconciliation confirming `origin/main` and local `main` contain merge commit `b3e372c`, implementation commit `10846aa`, and preview-verification docs commit `b153e8a`. | Marking Image Extract manual runtime as verified — rejected because it was not performed. Marking `paid_conversion` runtime or row verification as complete — rejected because it was not performed and still requires a safe Creem strategy. Merging/deploying manually during this documentation task — rejected because the task is documentation-only and the production deployment already existed. | Production deployed / production smoke verified / complete |
 
 ---
 
@@ -1113,8 +1116,9 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | 2026-09-13 15:12:33 Asia/Jerusalem | Phase 1 Milestone 1 | Measurement Foundation implemented locally | Owner-approved Phase 1 Milestone 1 request | Active run Markdown, analytics/event helpers, extraction routes, project import/demo save routes, Creem webhook route/RPC, tests, build/lint/typecheck outputs | Local application/test/docs changes only; no database/environment/production/external-console changes | Added server-authoritative `first_extract_created`, `project_saved`, and `paid_conversion` implementation using existing `analytics_events` pipeline and idempotency support; no DB migration required | Targeted tests 5 files / 26 tests passed; broader relevant regression set 16 files / 236 tests passed; `npx.cmd tsc --noEmit` passed; changed-file ESLint passed; full repo `npm.cmd run lint` failed only on pre-existing unrelated share-link lint error; `npm.cmd run build` passed after approved network access for Google Fonts | Implemented locally / awaiting owner review |
 | 2026-09-13 16:55:06 Asia/Jerusalem | Phase 1 Milestone 1 correction pass | Pre-commit owner-review gate corrections completed locally | Owner-review gate returned CHANGES REQUIRED BEFORE COMMIT | Active run Markdown/DOCX, analytics helpers, acquisition resolver, extraction routes/tests, project import/tests, tasks route/tests, homepage-demo claim/save tests, Creem webhook tests, project-persistence repo search | Local application/test/docs changes only; no database/migration/environment/configuration/production/external-console changes | Added missing distinct-renewal paid-conversion tests, completed `project_saved` coverage for `app/api/tasks/route.ts -> createProjectWithSubtasks`, added route-level image extraction tests, added analytics failure isolation tests across all seven requested paths, and added a tested acquisition -> paid attribution resolver contract | Targeted tests 10 files / 129 tests passed; relevant regression suite 21 files / 323 tests passed; `npx.cmd tsc --noEmit` passed; changed-file ESLint passed; full repo lint still failed only on unrelated pre-existing files; first `npm.cmd run build` failed on sandboxed Google Fonts fetch, network-enabled rerun passed | Correction pass complete / ready for commit review |
 | 2026-09-13 18:59:27 Asia/Jerusalem | Phase 1 Milestone 1 pre-merge Preview gate | Preview deployment, Preview/Staging isolation, and core runtime measurement checks recorded | Owner-supplied Vercel Preview/Supabase/Staging runtime evidence for PR #2 and implementation commit `10846aa0c9dfc7a2f6a2a215374d75eb6a5103f6` | Active run Markdown/DOCX and current git status only | Current run Markdown and DOCX only | PR #2 opened; Vercel Preview READY; Preview/Staging Supabase isolation verified; first text extraction runtime PASS; `first_extract_created` runtime PASS; second extraction deduplication PASS; first project save / `project_saved` runtime PASS; image runtime manually deferred by owner; `paid_conversion` runtime deferred pending safe Creem strategy; owner approved Milestone 1 for merge review | Documentation-only update; application/test files unchanged by this task; no database/environment/Vercel configuration/production change; no merge or production deploy | Preview verified / owner approved for merge review |
+| 2026-09-14 11:58:23 Asia/Jerusalem | Phase 1 Milestone 1 production closeout | Merge, Production deployment, and owner production smoke verification recorded | Owner-supplied PR #2 merge/deployment facts and production smoke-test report | Active run Markdown/DOCX, git branch/status/history only | Current run Markdown and DOCX only | PR #2 merged successfully; merge commit `b3e372c`; Vercel Production deployment READY for environment `Production`, branch `main`, commit `b3e372c`; owner production smoke test PASS for Homepage, Dashboard, Extract, Tasks, and Calendar; no user-visible regression observed; Image Extract manual runtime remains deferred / non-blocking; `paid_conversion` manual runtime remains deferred / safe verification required | Git reconciliation confirmed local `main` fast-forwarded to `origin/main` at `b3e372c`; `10846aa` and `b153e8a` are ancestors of `main`; documentation-only branch used; no application/test/config/database files changed by this task; no manual deploy | Production deployed / production smoke verified / complete |
 
-Phase 1 Milestone 1 has changed application code and tests on `feat/seo-measurement-foundation`, and the pre-merge Preview verification gate changed only the current run documentation. **Application code changed: YES — Phase 1 Milestone 1 branch only. Application/test files changed by this documentation gate: NO. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed: NO. Production changed: NO. Google configuration changed: NO. Bing application integration changed: NO. Merge performed: NO. Deploy to Production performed: NO.**
+Phase 1 Milestone 1 has changed application code and tests through PR #2, and the production closeout update changed only the current run documentation. **Application code changed: YES — Phase 1 Milestone 1 implementation only. Application/test files changed by this documentation gate: NO. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production changed by this task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
 
 ---
 
@@ -1140,7 +1144,7 @@ Representative, non-exhaustive list by category (this audit does not claim a sin
 
 ## 36. Files Changed
 
-Current Codex update: Phase 1 Milestone 1 is preview verified and owner approved for merge review on feature branch `feat/seo-measurement-foundation`. The pre-merge Preview verification gate changed only this run documentation. No application/test file, database schema/migration, environment variable, Vercel configuration, Google/Bing/Supabase production setting, production service, merge, manual production deploy, or production change was performed.
+Current Codex update: Phase 1 Milestone 1 is production deployed, production smoke verified, and complete. The production closeout update changed only this run documentation. No application/test file, database schema/migration, environment variable, Vercel configuration, Google/Bing/Supabase production setting, production service, manual production deploy, or production configuration change was performed by this documentation task.
 
 Application files changed:
 - `lib/analytics/internal-events.server.ts`
@@ -1174,13 +1178,14 @@ Documentation files changed:
 **PHASE 0B — External Baseline Completion: COMPLETE / OWNER REVIEWED**
 **PHASE 0 OVERALL: COMPLETE / OWNER REVIEWED**
 **PHASE 1 STATUS: IMPLEMENTATION IN PROGRESS**
-**PHASE 1 IMPLEMENTATION: MILESTONE 1 PREVIEW VERIFIED / OWNER APPROVED FOR MERGE**
+**PHASE 1 IMPLEMENTATION: MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**
+**PHASE 1 MILESTONE 2: NOT STARTED**
 
 Phase 0A exit criteria (per the run brief) are met and owner-reviewed: exact public route inventory (§9), exact sitemap logic (§12), exact robots policy (§10.1), exact private indexing protection map (§11), exact canonical/host logic (§13), exact metadata inventory (§14), exact structured-data inventory (§15), entity-disambiguation gap analysis (§16), content/intent map (§17), internal-link map (§19), analytics/measurement map (§22), prior-audit reconciliation (§25), confirmed P0/P1/P2 backlog (§26–§28), a proposed next plan (§30), and a verification plan (§32) all exist above.
 
-Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is preview verified and owner approved for merge review. Production verification has not started.
+Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is production deployed, production smoke verified, and complete. Milestone 2 has not started.
 
-**Application code changed: YES — Phase 1 Milestone 1 branch only. Database changed: NO. Environment changed: NO. Production changed: NO. Google configuration changed: NO. Bing application integration changed: NO. Merge performed: NO. Deploy to Production performed: NO.**
+**Application code changed: YES — Phase 1 Milestone 1 implementation only. Database changed: NO. Environment changed: NO. Production changed by this documentation task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
 
 ---
 
@@ -1918,19 +1923,21 @@ Reason: Phase 0 established that the business goal is not merely rankings; it is
 
 - Phase 0: COMPLETE / OWNER REVIEWED.
 - Phase 1: IMPLEMENTATION IN PROGRESS.
-- Phase 1 implementation: MILESTONE 1 PREVIEW VERIFIED / OWNER APPROVED FOR MERGE.
-- Application code changed: YES — local branch only.
+- Phase 1 implementation: MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE.
+- Milestone 2: NOT STARTED.
+- Application code changed: YES — Phase 1 Milestone 1 implementation.
 - Database changed: NO.
 - Environment changed: NO.
-- Production changed: NO.
-- Production verification: NOT STARTED.
-- Merge/deploy to Production performed: NO.
+- Production deployment: READY at merge commit `b3e372c`.
+- Production smoke verification: PASS.
+- Production changed by this documentation task: NO.
+- Manual deployment performed by this task: NO.
 
 ---
 
 ## 40. Phase 1 Milestone 1 — Measurement Foundation Local Implementation
 
-**Status:** PREVIEW VERIFIED / OWNER APPROVED FOR MERGE.
+**Status:** PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE.
 
 **Implementation timestamp:** 2026-09-13 15:12:33 Asia/Jerusalem.
 
@@ -1943,6 +1950,10 @@ Reason: Phase 0 established that the business goal is not merely rankings; it is
 **Implementation commit:** `10846aa0c9dfc7a2f6a2a215374d75eb6a5103f6`.
 
 **PR:** #2, `Phase 1: add SEO funnel measurement foundation`.
+
+**Merge commit on `main`:** `b3e372c`.
+
+**Production deployment:** Vercel Production READY for branch `main` / commit `b3e372c`.
 
 ### 40.1 Mapping Findings
 
@@ -2026,10 +2037,36 @@ Commands/results:
 
 **Owner decision:** The owner accepts the remaining manual image extraction runtime verification as a non-blocking follow-up and accepts that `paid_conversion` runtime verification will occur separately through a safe strategy that does not risk false Production payments or conversions. These deferred checks do not invalidate the passing automated coverage. Milestone 1 is approved to proceed to merge review based on local implementation verification, automated test coverage, build/typecheck/lint verification, Preview deployment success, Preview/Staging isolation proof, `first_extract_created` runtime proof, `first_extract_created` deduplication runtime proof, and `project_saved` runtime proof.
 
-### 40.8 Remaining Verification / Owner Review
+### 40.8 Production Deployment / Smoke Verification
 
-- No production verification was performed because no deploy/production change was authorized.
-- After a future authorized merge/deploy, verify real production `analytics_events` rows for a test signup/extract/save and a safe Creem test-mode payment before trusting production funnel reporting.
+**Closeout timestamp:** 2026-09-14 11:58:23 Asia/Jerusalem.
+
+**Merge status:** VERIFIED. PR #2 (`Phase 1: add SEO funnel measurement foundation`) was merged successfully to `main` as merge commit `b3e372c`.
+
+**Production deployment:** VERIFIED. Vercel Production deployment was READY for environment `Production`, branch `main`, commit `b3e372c`.
+
+**Owner production smoke test:** PASS. The owner manually tested `https://www.text2task.com/` after deployment and verified:
+- Homepage: PASS.
+- Dashboard: PASS.
+- Extract: PASS.
+- Tasks: PASS.
+- Calendar: PASS.
+
+No user-visible regression was observed in this production smoke gate.
+
+**Accuracy limits for this gate:**
+- Manual Production Image Extract runtime verification was not performed.
+- Manual Production `paid_conversion` verification was not performed.
+- Production `paid_conversion` row verification was not performed.
+- Production `first_extract_created` re-verification was not performed.
+- Production `project_saved` re-verification was not performed.
+
+**Preserved follow-ups:**
+- Image Extract manual runtime: DEFERRED / NON-BLOCKING.
+- `paid_conversion` manual runtime: DEFERRED / SAFE VERIFICATION REQUIRED.
+
+### 40.9 Remaining Verification / Follow-Ups
+
 - No database migration is required for this milestone.
 - Manual image extraction runtime verification remains a non-blocking follow-up.
 - Manual `paid_conversion` runtime verification requires a safe Creem strategy before execution.
