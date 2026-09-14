@@ -218,6 +218,21 @@ const useCaseLinks = [
     text: "Separate WordPress maintenance requests from new paid work before it's scheduled.",
   },
   {
+    href: "/use-cases/freelance-developers",
+    title: "Freelance developers",
+    text: "Turn bug reports, feature requests, and supplied technical details into development tasks you can review.",
+  },
+  {
+    href: "/use-cases/seo-freelancers",
+    title: "SEO freelancers",
+    text: "Organize page URLs, metadata updates, redirects, and content notes before implementation.",
+  },
+  {
+    href: "/use-cases/shopify-freelancers",
+    title: "Shopify freelancers",
+    text: "Keep product, promotion, storefront, and launch requests clear before store work begins.",
+  },
+  {
     href: "/use-cases",
     title: "All use cases",
     text: "Explore more ways freelancers and service teams use Text2Task.",

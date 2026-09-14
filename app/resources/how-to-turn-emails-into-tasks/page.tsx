@@ -445,6 +445,19 @@ export default function HowToTurnEmailsIntoTasksPage() {
                 project managers
               </Link>{" "}
               juggling requests from several stakeholders at once.
+              They also show up in{" "}
+              <Link href="/use-cases/seo-freelancers">
+                client SEO changes
+              </Link>
+              ,{" "}
+              <Link href="/use-cases/freelance-developers">
+                development change requests
+              </Link>
+              , and{" "}
+              <Link href="/use-cases/shopify-freelancers">
+                Shopify launch updates
+              </Link>
+              .
             </p>
 
             <p className={styles.trustNote}>

@@ -251,8 +251,16 @@ export default function ArticlePage() {
               <Link href="/use-cases/wordpress-freelancers">
                 WordPress freelancers
               </Link>
-              , Webflow freelancers, and small agencies that
-              handle repeated client edits. See the full{" "}
+              , Webflow freelancers,{" "}
+              <Link href="/use-cases/freelance-developers">
+                freelance developers
+              </Link>
+              ,{" "}
+              <Link href="/use-cases/shopify-freelancers">
+                Shopify freelancers
+              </Link>
+              , and small agencies that handle repeated client edits. See
+              the full{" "}
               <Link href="/use-cases/web-designers">
                 web designers use case
               </Link>{" "}

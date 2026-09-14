@@ -10,7 +10,7 @@
 **PHASE 1 STATUS: IMPLEMENTATION IN PROGRESS**
 **PHASE 1 IMPLEMENTATION: MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**
 **PHASE 1 MILESTONE 2: PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**
-**PHASE 1 MILESTONE 3: NOT STARTED**
+**PHASE 1 MILESTONE 3: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW**
 
 Companion file: `Text2Task_SEO_GEO_Run_2026-09-09.docx` (formatted, distributable Source of Truth — this Markdown file is the version-controllable editable source; both are maintained together for this run only).
 
@@ -46,6 +46,10 @@ Phase 1 Milestone 2 implementation update recorded 2026-09-14 13:56:50 Asia/Jeru
 
 Phase 1 Milestone 2 production closeout update recorded 2026-09-14 18:08:27 Asia/Jerusalem: PR #4 was merged successfully to `main` as production merge commit `80b3318`. Vercel Production reached READY. Owner manual Production smoke verification passed: Homepage loads correctly; About page loads correctly; the new "ABOUT TEXT2TASK" eyebrow is live; the new About opening paragraph is live; existing About photos remain; founder personal name is not published; no `Person` schema was intentionally added; no personal social/profile links were introduced; no visible regression was observed in the reviewed About sections; and the owner privacy decision remains preserved. Milestone 2 is now production deployed, production smoke verified, and complete. Milestone 3 has not started.
 
+Phase 1 Milestone 3 mapping update recorded 2026-09-14 23:59:35 Asia/Jerusalem: Internal Authority / Weak Use Cases mapping started and the implementation plan was ready for owner review. This was a documentation-only audit/planning task. The repository confirmed a real SSR `/use-cases` hub, sitemap inclusion, canonical metadata, WebPage/Breadcrumb/FAQ schema, and crawlable page rendering for all 12 use-case pages. The weakness was not technical indexability; it was uneven contextual authority and content depth. `/use-cases/freelance-developers` and `/use-cases/seo-freelancers` were hub-only/contextually isolated, `/use-cases/shopify-freelancers` was weakly supported, and `/use-cases/video-editors` was comparatively adequate but still absent from high-authority contextual source pages. At that mapping checkpoint, Milestone 3 implementation had not started.
+
+Phase 1 Milestone 3 implementation update recorded 2026-09-15 00:36:13 Asia/Jerusalem: Internal Authority / Weak Use Cases was implemented locally on branch `feat/seo-internal-authority`. The implementation lightly strengthens the `/use-cases` hub, adds contextual links from relevant solution/feature/resource pages to weak or under-linked use cases, adds transformation and related-reading depth to SEO freelancers, freelance developers, and Shopify freelancers, and leaves video editors content unchanged while adding inbound support. No homepage, footer, sitemap, schema architecture, database, environment/configuration, Production, commit, push, or deploy change was performed.
+
 ---
 
 ## 1. Cover / Run Metadata
@@ -62,14 +66,14 @@ Phase 1 Milestone 2 production closeout update recorded 2026-09-14 18:08:27 Asia
 | Phase 1 status | IMPLEMENTATION IN PROGRESS |
 | Phase 1 implementation | MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE |
 | Phase 1 Milestone 2 | PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE |
-| Phase 1 Milestone 3 | NOT STARTED |
+| Phase 1 Milestone 3 | IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW |
 | Author | Claude Code (Sonnet 5), directed by the site owner |
 | Repository | `C:\Users\Home\projects\inboxshaper` (git branch `main`, clean at run start) |
 | Prior internal reference | `docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md` (found in repo, read in full, used for reconciliation) |
 | Named prior audit files | `Text2Task_SEO_GEO_AEO_Master_Audit_2026-09-09_HE(1).docx` and `text2task_full_audit.docx` — **searched for and NOT FOUND** anywhere in the workspace or filesystem. Their claims could not be independently inspected in this run; see §25. |
-| Application code changed | YES — Phase 1 Milestone 1 implementation and Phase 1 Milestone 2 implementation through merged PRs; this documentation closeout changed no application code |
-| Production changed | YES — PR #2 and PR #4 were merged and Vercel Production deployed before their respective documentation closeouts; this documentation task changed no Production configuration |
-| Commit/push/deploy performed | PR #4 merge and automatic Vercel Production deployment already occurred before this documentation closeout; this documentation task performs no commit, push, or deploy |
+| Application code changed | YES — Phase 1 Milestone 1 and Phase 1 Milestone 2 implementation through merged PRs, plus Phase 1 Milestone 3 local implementation awaiting owner review |
+| Production changed | YES — PR #2 and PR #4 were merged and Vercel Production deployed before their respective documentation closeouts; Milestone 3 has not changed Production |
+| Commit/push/deploy performed | PR #4 merge and automatic Vercel Production deployment occurred before the Milestone 2 documentation closeout; Milestone 3 has no commit, push, or deploy |
 
 ---
 
@@ -1099,6 +1103,8 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | SEO-2026-09-09-D021 | 2026-09-14 12:57:49 Asia/Jerusalem | Start Phase 1 Milestone 2 as mapping / audit / planning only, with implementation blocked on owner decisions for public founder identity and canonical external profile policy. | Milestone 2 is privacy- and reputation-sensitive: the strongest entity-disambiguation move would publish a founder/person identity and link it to the Organization, but the current website intentionally uses generic founder language and no `Person` schema. Existing source supports `Organization`, `WebSite`, `WebPage`, `AboutPage`, `CollectionPage`/`ItemList`, `BreadcrumbList`, `FAQPage`, and `Article`; it does not support hidden schema-only founder claims. External documentation verifies a real Text2Task footprint and external founder association, but owner approval is required before making that identity visible on-site. | Direct reads of `app/lib/site-config.ts`, `app/lib/schema.ts`, `app/page.tsx`, `app/about/page.tsx`, `app/contact/page.tsx`, `app/layout.tsx`, `app/components/landing/landing-footer.tsx`, `app/components/use-cases/use-case-detail-page.tsx`, `app/use-cases/page.tsx`, representative Feature/Solution/Resource pages, and §23A external-profile baseline. | Implementing `Person` schema before visible founder copy — rejected because structured data must reflect visible truth. Adding unverified directory/profile URLs to `Organization.sameAs` — rejected until exact current URLs are owner-verified. Adding `SoftwareApplication`/`Product` schema during this milestone — rejected unless a separate truthful, visible product-schema basis is approved. | Mapping / owner decisions required |
 | SEO-2026-09-09-D022 | 2026-09-14 13:56:50 Asia/Jerusalem | Implement Phase 1 Milestone 2 using Organization/product/domain/profile signals only, while keeping founder identity private. | The owner explicitly decided not to publish the founder's personal name at this time. Therefore the implementation must strengthen Text2Task's canonical entity without adding a `Person` node, founder metadata, `Organization.founder`, personal-profile `sameAs`, or personal social/profile links. Existing About-page photos may remain as unnamed human trust signals. | Owner instruction for Milestone 2 implementation; direct source reads of `app/lib/site-config.ts`, `app/lib/schema.ts`, `app/page.tsx`, `app/layout.tsx`, `app/about/page.tsx`, `app/components/landing/landing-footer.tsx`; existing external-profile inventory in §23A and §41. | Publishing the founder name — rejected by owner privacy decision. Adding `Person` schema or `Organization.founder` without visible named support — rejected. Adding founder/personal LinkedIn or Peerlist links — rejected. Expanding `Organization.sameAs` to GetApp/Capterra/Uneed/SaaSHub/Peerlist/UIComet/FounderDB without exact canonical URL verification from repo/current run evidence — rejected/deferred. Reintroducing `SoftwareApplication`/`Product` schema — rejected because no new truthful visible basis was approved. | Implemented locally / awaiting owner review |
 
+| SEO-2026-09-09-D023 | 2026-09-15 00:36:13 Asia/Jerusalem | Implement Phase 1 Milestone 3 without homepage changes, new pages, schema changes, or Resources-hub expansion. | Owner-approved Milestone 3 decisions set the implementation boundary: preserve homepage curation by default, lightly strengthen the existing `/use-cases` hub, keep `/resources` article-focused, prioritize SEO freelancers first, then freelance developers and Shopify freelancers, and give video editors linking support only. | Owner Milestone 3 continuation instruction; Section 43 mapping; direct implementation in `app/use-cases/page.tsx`, relevant Feature/Solution/Resource pages, and use-case data files. | Adding homepage links solely for SEO - rejected because homepage curation and CRO should not be changed without a natural UX reason. Creating new pages or hubs - rejected as out of scope. Expanding video editors content - rejected because the page was already adequate and needed inbound links only. Adding Product/SoftwareApplication schema - rejected/deferred outside Milestone 3. | Implemented locally / awaiting owner review |
+
 ---
 
 ## 34. Run Action Log
@@ -1132,8 +1138,10 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | 2026-09-14 12:57:49 Asia/Jerusalem | Phase 1 Milestone 2 mapping | Entity / Brand Disambiguation mapping and implementation plan recorded | Owner request to start Milestone 2 as mapping/audit/planning only; active run document; direct source reads | Current run Markdown/DOCX; `app/lib/site-config.ts`; `app/lib/schema.ts`; `app/page.tsx`; `app/about/page.tsx`; `app/contact/page.tsx`; `app/layout.tsx`; `app/components/landing/landing-footer.tsx`; `app/components/use-cases/use-case-detail-page.tsx`; `app/use-cases/page.tsx`; representative Feature/Solution/Resource pages | Current run Markdown and DOCX only | Current on-site entity graph inventoried; founder/person absence reconfirmed; brand disambiguation classified PARTIAL; external-profile baseline converted into sameAs suitability policy; canonical entity graph and owner-decision checklist recorded; implementation sequence proposed without code changes | Git status confirmed clean before documentation edit; no application/test/database/environment/config/production changes; DOCX synchronized from Markdown and validated for Milestone 2 markers | Mapping / owner decisions required |
 | 2026-09-14 13:56:50 Asia/Jerusalem | Phase 1 Milestone 2 implementation | Entity / Brand Disambiguation implemented locally without publishing founder identity | Owner privacy decision; current run Markdown; Blueprint; direct source reads; local verification | `app/lib/site-config.ts`; `app/page.tsx`; `app/layout.tsx`; `app/about/page.tsx`; `app/page.test.ts`; `app/about/page.test.ts`; `app/lib/schema-dangling-entity-references.test.ts`; current run Markdown/DOCX | `app/lib/site-config.ts`; `app/page.tsx`; `app/layout.tsx`; `app/about/page.tsx`; `app/page.test.ts`; `app/about/page.test.ts`; current run Markdown and DOCX | Canonical brand constants added; homepage Organization/WebSite schema normalized; root metadata aligned to canonical description; About copy strengthened as official product-site/entity copy; `Organization.sameAs` kept to company Facebook and LinkedIn only; no `Person`, founder metadata, founder name, personal-profile link, legalName, address, phone, Product, or SoftwareApplication schema added | Targeted tests: 3 files / 71 tests PASS; relevant regression: 9 files / 105 tests PASS; `npx tsc --noEmit` PASS; changed-file ESLint PASS; production build PASS after network-enabled rerun for Google Fonts; full lint still fails only on unrelated pre-existing share-link lint error plus warnings | Implemented locally / awaiting owner review |
 | 2026-09-14 18:08:27 Asia/Jerusalem | Phase 1 Milestone 2 production closeout | PR #4 merge, Production deployment, and owner Production smoke verification recorded | Owner-supplied PR #4 merge/deployment facts and Production smoke-test report | Active run Markdown/DOCX, git branch/status/history only | Current run Markdown and DOCX only | PR #4 merged successfully; production merge commit `80b3318`; Vercel Production READY; owner Production smoke test PASS for Homepage and About; new "ABOUT TEXT2TASK" eyebrow and opening paragraph verified live; existing About photos remain; founder personal name remains unpublished; `Person` schema remains intentionally absent; no personal-profile `sameAs` links introduced; no visible regression observed; privacy decision preserved | Git reconciliation confirmed local `main` fast-forwarded to `origin/main` at `80b3318`; documentation-only branch used; no application/test/config/database/environment files changed by this task; no deploy performed by this task | Production deployed / production smoke verified / complete |
+| 2026-09-14 23:59:35 Asia/Jerusalem | Phase 1 Milestone 3 mapping | Internal Authority / Weak Use Cases mapping and implementation plan recorded | Owner request to start Milestone 3 as mapping/audit/planning only; current run document; direct repository inspection | Current run Markdown/DOCX; historical Blueprint; `app/sitemap.ts`; `app/pricing/page.tsx`; `app/use-cases/page.tsx`; `app/use-cases/[slug]/page.tsx`; `app/lib/use-cases/index.ts`; `app/lib/use-cases/types.ts`; all 12 `app/lib/use-cases/cases/*.ts`; `app/components/use-cases/use-case-detail-page.tsx`; `use-case-hero.tsx`; `use-case-related.tsx`; `use-case-related-links.tsx`; `app/components/landing/landing-header.tsx`; `landing-footer.tsx`; `homepage-use-cases-section.tsx`; `homepage-post-extraction-section.tsx`; all 6 feature pages; all 7 resource article pages; resources hub; freelancer solution page; About page | Current run Markdown and DOCX only | Complete internal-link graph findings, weak-use-case assessment, use-case cluster map, internal-authority source pages, content-gap classifications, anchor-text plan, implementation plan, validation plan, and owner-decision notes recorded. `freelance-developers` and `seo-freelancers` classified as hub-only/contextually isolated; `shopify-freelancers` as weakly supported; `video-editors` as adequate but under-linked from authority pages. | Git status confirmed clean before documentation edit; mapping used read-only repository inspection only; no application/test/database/environment/configuration/production changes; no commit/push/deploy; no new Decision Log ID because no new owner/product/technical decision was made | Mapping / implementation plan ready |
+| 2026-09-15 00:36:13 Asia/Jerusalem | Phase 1 Milestone 3 implementation | Internal Authority / Weak Use Cases implemented locally | Owner-approved Milestone 3 implementation request and owner decisions; Section 43 mapping | Current run Markdown/DOCX; `app/use-cases/page.tsx`; `app/solutions/freelancer-project-management-software/page.tsx`; `app/features/email-to-tasks/page.tsx`; `app/features/screenshot-to-tasks/page.tsx`; `app/features/ai-task-extractor/page.tsx`; `app/features/client-feedback-to-tasks/page.tsx`; four resource article pages; `app/lib/use-cases/cases/seo-freelancers.ts`; `app/lib/use-cases/cases/freelance-developers.ts`; `app/lib/use-cases/cases/shopify-freelancers.ts`; `app/use-cases/internal-authority.test.tsx` | Local application/test/docs changes only; no database/environment/configuration/production/external-console changes | Added light `/use-cases` hub guidance; added contextual links from solution, feature, and resource pages to weak/under-linked use cases; added transformation and related-reading blocks for SEO freelancers, freelance developers, and Shopify freelancers; added focused internal-authority tests; homepage, footer, schema, sitemap route count, video editors content, and Resources hub remained unchanged | Focused tests 1 file / 10 tests PASS; targeted tests 7 files / 88 tests PASS; relevant regression 13 files / 191 tests PASS; typecheck PASS; changed-file ESLint PASS; production build PASS after network-enabled rerun for Google Fonts; `git diff --check` PASS with line-ending warnings only | Implemented locally / awaiting owner review |
 
-Phase 1 Milestone 1 changed application code and tests through PR #2. Phase 1 Milestone 2 changed application code, tests, and documentation through PR #4 and is now production deployed, production smoke verified, and complete. This closeout task changes documentation only. **Application code changed by this documentation task: NO. Test files changed by this documentation task: NO. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production changed by this task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
+Phase 1 Milestone 1 changed application code and tests through PR #2. Phase 1 Milestone 2 changed application code, tests, and documentation through PR #4 and is now production deployed, production smoke verified, and complete. This Milestone 3 mapping task changes documentation only. **Application code changed by this documentation task: NO. Test files changed by this documentation task: NO. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production changed by this task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
 
 ---
 
@@ -1159,7 +1167,31 @@ Representative, non-exhaustive list by category (this audit does not claim a sin
 
 ## 36. Files Changed
 
-Current Codex update: Phase 1 Milestone 2 Entity / Brand Disambiguation has been implemented locally and is awaiting owner review. The owner privacy decision is recorded: founder identity remains private for now, so no founder name, `Person` schema, founder metadata, personal-profile `sameAs`, or personal social/profile link was added. This local milestone changed only the application/test/documentation files listed below. No database schema/migration, environment variable, Vercel configuration, Google/Bing/Supabase production setting, production service, manual production deploy, push, or production configuration change was performed.
+Current Codex update: Phase 1 Milestone 3 Internal Authority / Weak Use Cases has been implemented locally and documented for owner review. No database schema/migration, package/lockfile, environment variable, Vercel configuration, Google/Bing/Supabase production setting, production service, manual production deploy, commit, or push was changed by this implementation task.
+
+Phase 1 Milestone 3 application files changed:
+- `app/use-cases/page.tsx`
+- `app/solutions/freelancer-project-management-software/page.tsx`
+- `app/features/email-to-tasks/page.tsx`
+- `app/features/screenshot-to-tasks/page.tsx`
+- `app/features/ai-task-extractor/page.tsx`
+- `app/features/client-feedback-to-tasks/page.tsx`
+- `app/resources/how-to-organize-client-requests-as-a-freelancer/page.tsx`
+- `app/resources/how-to-turn-emails-into-tasks/page.tsx`
+- `app/resources/how-to-turn-client-feedback-into-tasks/page.tsx`
+- `app/resources/manage-client-revisions-web-designers/page.tsx`
+- `app/lib/use-cases/cases/seo-freelancers.ts`
+- `app/lib/use-cases/cases/freelance-developers.ts`
+- `app/lib/use-cases/cases/shopify-freelancers.ts`
+
+Phase 1 Milestone 3 test files changed/added:
+- `app/use-cases/internal-authority.test.tsx`
+
+Phase 1 Milestone 3 documentation files changed:
+- `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.md`
+- `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.docx`
+
+Historical Phase 1 Milestone 2 application files changed:
 
 Phase 1 Milestone 2 application files changed:
 - `app/lib/site-config.ts`
@@ -1167,11 +1199,11 @@ Phase 1 Milestone 2 application files changed:
 - `app/layout.tsx`
 - `app/about/page.tsx`
 
-Phase 1 Milestone 2 test files changed/added:
+Historical Phase 1 Milestone 2 test files changed/added:
 - `app/page.test.ts`
 - `app/about/page.test.ts`
 
-Phase 1 Milestone 2 documentation files changed:
+Historical Phase 1 Milestone 2 documentation files changed:
 - `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.md`
 - `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.docx`
 
@@ -1209,19 +1241,19 @@ Documentation files changed:
 **PHASE 1 STATUS: IMPLEMENTATION IN PROGRESS**
 **PHASE 1 IMPLEMENTATION: MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**
 **PHASE 1 MILESTONE 2: PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**
-**PHASE 1 MILESTONE 3: NOT STARTED**
+**PHASE 1 MILESTONE 3: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW**
 
 Phase 0A exit criteria (per the run brief) are met and owner-reviewed: exact public route inventory (§9), exact sitemap logic (§12), exact robots policy (§10.1), exact private indexing protection map (§11), exact canonical/host logic (§13), exact metadata inventory (§14), exact structured-data inventory (§15), entity-disambiguation gap analysis (§16), content/intent map (§17), internal-link map (§19), analytics/measurement map (§22), prior-audit reconciliation (§25), confirmed P0/P1/P2 backlog (§26–§28), a proposed next plan (§30), and a verification plan (§32) all exist above.
 
-Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is production deployed, production smoke verified, and complete. Milestone 2 is production deployed, production smoke verified, and complete. The owner privacy decision remains preserved: founder identity remains private for now, so Milestone 2 deliberately excludes founder name publication, `Person` schema, founder metadata, personal-profile `sameAs`, and personal social/profile links. Milestone 3 has not started.
+Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is production deployed, production smoke verified, and complete. Milestone 2 is production deployed, production smoke verified, and complete. The owner privacy decision remains preserved: founder identity remains private for now, so Milestone 2 deliberately excludes founder name publication, `Person` schema, founder metadata, personal-profile `sameAs`, and personal social/profile links. Milestone 3 implementation is complete locally and awaiting owner review; it adds targeted internal authority and small content-depth improvements without homepage, footer, sitemap, schema, database, environment, or production changes.
 
-**Application code changed: YES — Phase 1 Milestone 1 and Phase 1 Milestone 2 implementation through merged PRs; this documentation task changed no application/test files. Database changed: NO. Environment changed: NO. Production changed by this documentation task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
+**Application code changed: YES — Phase 1 Milestone 1 and Phase 1 Milestone 2 implementation through merged PRs, plus Phase 1 Milestone 3 local implementation awaiting owner review. Database changed: NO. Environment changed: NO. Production changed by this Milestone 3 task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO. Commit/push/deploy performed: NO.**
 
 ---
 
 ## 38. Phase 1 Master Implementation Plan
 
-**Status:** IMPLEMENTATION IN PROGRESS. Milestone 1 is complete and production deployed. Milestone 2 is production deployed, production smoke verified, and complete. Milestone 3 has not started.
+**Status:** IMPLEMENTATION IN PROGRESS. Milestone 1 is complete and production deployed. Milestone 2 is production deployed, production smoke verified, and complete. Milestone 3 is implemented locally and awaiting owner review.
 
 **Planning timestamp:** 2026-09-13 13:26 Asia/Jerusalem.
 
@@ -1949,14 +1981,14 @@ Reason: Phase 0 established that the business goal is not merely rankings; it is
 - Decide whether founder full name and professional profile may be published for Milestone 2.
 - Approve any external-console work for Bing/IndexNow or production verification.
 
-**Current status after the Phase 1 Milestone 2 production closeout**
+**Current status after the Phase 1 Milestone 3 implementation update**
 
 - Phase 0: COMPLETE / OWNER REVIEWED.
 - Phase 1: IMPLEMENTATION IN PROGRESS.
-- Phase 1 implementation: MILESTONE 1 COMPLETE; MILESTONE 2 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE.
+- Phase 1 implementation: MILESTONE 1 COMPLETE; MILESTONE 2 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE; MILESTONE 3 IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
 - Milestone 2: PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE.
-- Milestone 3: NOT STARTED.
-- Application code changed: YES — Phase 1 Milestone 1 and Phase 1 Milestone 2 implementation through merged PRs; this documentation task changed no application code.
+- Milestone 3: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
+- Application code changed: YES - Phase 1 Milestone 1 and Phase 1 Milestone 2 implementation through merged PRs, plus Phase 1 Milestone 3 local implementation awaiting owner review.
 - Database changed: NO.
 - Environment changed: NO.
 - Production deployment: READY at merge commit `80b3318` for Milestone 2.
@@ -2362,7 +2394,7 @@ Result: PASS.
 - Phase 1: IMPLEMENTATION IN PROGRESS.
 - Milestone 1: COMPLETE.
 - Milestone 2: PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE.
-- Milestone 3: NOT STARTED.
+- Milestone 3: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
 - Production: Vercel Production READY; owner smoke verification PASS.
 - Database migration required: NO.
 - Database changed: NO.
@@ -2397,3 +2429,378 @@ Verified live in Production:
 - Owner privacy decision remains preserved: PASS.
 
 No new Decision Log ID was created for this closeout because no new product or technical decision was made; this entry records deployment and production verification evidence only.
+
+---
+
+## 43. Phase 1 Milestone 3 - Internal Authority / Weak Use Cases Mapping
+
+**Status:** MAPPING / IMPLEMENTATION PLAN READY.
+
+**Mapping timestamp:** 2026-09-14 23:59:35 Asia/Jerusalem.
+
+**Scope:** documentation-only mapping, audit, and planning. No Milestone 3 application implementation has started.
+
+**Branch / HEAD at mapping start:** `main` / `f97141031c697c768793fd2ae0c7bdacbe00550b`.
+
+### 43.1 Route And Architecture Facts
+
+The repository currently exposes 33 public sitemap URLs: homepage, `/use-cases`, 12 use-case detail pages, `/resources`, 7 resource articles, one freelancer solution page, 6 feature pages, `/about`, `/contact`, `/privacy`, and `/terms`.
+
+The task brief named several conceptual URLs that are not standalone indexable pages in the current repository:
+
+| Requested inspection target | Current repository state |
+|---|---|
+| `/features` | No standalone route. Feature navigation points to `/#features`; individual feature pages exist under `/features/*`. |
+| `/how-it-works` | No standalone route. Header/CTA links point to `/#how-it-works`. |
+| `/pricing` | Exists only as `permanentRedirect("/#pricing")`; correctly absent from sitemap. |
+| `/for-freelancers` | No standalone route. The closest current equivalent is `/solutions/freelancer-project-management-software`. |
+| `/email-to-tasks`, `/screenshot-to-tasks`, `/ai-task-extractor`, `/client-feedback-to-tasks`, `/client-project-tracker`, `/project-deadline-calendar` | No root-level routes. Current canonical routes are `/features/email-to-tasks`, `/features/screenshot-to-tasks`, `/features/ai-task-extractor`, `/features/client-feedback-to-tasks`, `/features/client-project-tracker`, and `/features/project-deadline-calendar`. |
+
+All 12 use-case pages are generated by `app/use-cases/[slug]/page.tsx`, `app/components/use-cases/use-case-detail-page.tsx`, and the static registry in `app/lib/use-cases/cases/*.ts`. Every use-case page has:
+
+- sitemap inclusion through `app/sitemap.ts`;
+- canonical metadata through `generateMetadata()`;
+- server-rendered WebPage JSON-LD;
+- server-rendered BreadcrumbList JSON-LD;
+- FAQPage JSON-LD when `faq` data is present;
+- crawlable Next `<Link>` internal links for related use cases and optional related reading.
+
+Therefore the four previously flagged pages are not blocked by noindex, canonical omission, sitemap omission, missing SSR rendering, or missing structured data. The Milestone 3 problem is internal authority and content support, not basic technical indexability.
+
+### 43.2 Internal Link Graph Inventory
+
+Header navigation is sitewide and crawlable on the public marketing pages using `LandingHeader`. It links to `/`, `/#how-it-works`, `/#features`, `/use-cases`, `/#pricing`, `/about`, `/login`, and `/signup`. This creates broad discovery of `/use-cases`, but it does not create page-specific topical authority for individual use-case spokes.
+
+Footer navigation is sitewide and crawlable on the public marketing pages using `LandingFooter`. It links to product anchors/pages, all six feature pages, `/resources`, `/solutions/freelancer-project-management-software`, `/about`, legal/contact/account pages, and only three individual use-case pages: `/use-cases/web-designers`, `/use-cases/wordpress-freelancers`, and `/use-cases/graphic-designers`. The four flagged pages receive no direct footer link.
+
+The homepage provides meaningful contextual authority through:
+
+- `HomepageUseCasesSection`: links to 6 selected use cases: `web-designers`, `wordpress-freelancers`, `graphic-designers`, `social-media-managers`, `project-managers`, and `small-agencies`, plus the `/use-cases` hub.
+- `HomepagePostExtractionSection`: links to `/features/project-deadline-calendar` and `/features/client-project-tracker`.
+- header/footer links to the hub, feature pages, solution page, resources, About, and legal/account pages.
+
+The `/use-cases` hub is a real SSR hub, not just a sitemap artifact. It lists all 12 use-case pages in three groups: Website & Development, Creative & Content, and Operations & Teams. It links to every spoke with crawlable anchors based on each use case's listing label/title/description. However, it acts more like a directory than a strong editorial hub: it does not yet introduce cluster-specific narratives, recommended paths, or contextual relationships between adjacent use cases.
+
+Use-case detail pages link back to `/use-cases`, link to three related use cases via `relatedSlugs`, and may link to feature/resource/solution pages through `relatedLinks`. The richer use-case pages use transformation/signature/proof/related-reading modules, while the weakest use cases currently rely on the default page model without that differentiation layer.
+
+The Resources hub links only to resource articles. It does not currently pass contextual authority to use-case pages, feature pages, or the freelancer solution page from the hub itself. Individual resource articles do pass useful contextual links, but mostly to features, resources, the solution page, and established use cases such as web designers, WordPress freelancers, project managers, and social media managers.
+
+The freelancer solution page is one of the strongest internal authority sources. It links contextually to `/use-cases/web-designers`, `/use-cases/project-managers`, `/use-cases/virtual-assistants`, `/use-cases/small-agencies`, `/use-cases/wordpress-freelancers`, the `/use-cases` hub, three resource pages, the resources hub, and all six feature pages. It does not currently link directly to freelance developers, SEO freelancers, Shopify freelancers, or video editors.
+
+Feature pages are strong contextual source pages:
+
+| Source page | Current contextual use-case links |
+|---|---|
+| `/features/email-to-tasks` | Project managers, virtual assistants, small agencies, `/use-cases` hub |
+| `/features/screenshot-to-tasks` | Web designers, graphic designers, social media managers |
+| `/features/ai-task-extractor` | Project managers, virtual assistants, small agencies |
+| `/features/client-feedback-to-tasks` | Web designers, project managers, small agencies, WordPress freelancers |
+| `/features/client-project-tracker` | No direct use-case links; links to related features/solution |
+| `/features/project-deadline-calendar` | Small agencies, project managers, web designers |
+
+### 43.3 Complete Use-Case Cluster Map
+
+| Cluster | Current pages | Strongest hub/source | Strongest supporting pages | Orphan/near-orphan risk | Natural missing relationships |
+|---|---|---|---|---|---|
+| Website / development | `web-designers`, `wordpress-freelancers`, `webflow-freelancers`, `shopify-freelancers`, `freelance-developers`, `seo-freelancers` | `/use-cases` hub; `/solutions/freelancer-project-management-software`; homepage for selected spokes | `web-designers`, `wordpress-freelancers`, `webflow-freelancers` | `freelance-developers` and `seo-freelancers` are hub-only/contextually isolated; `shopify-freelancers` is weakly supported | Developer/SEO/Shopify pages should receive contextual links from solution, relevant feature pages, and adjacent web/WordPress/Webflow pages where useful. |
+| Creative / content | `graphic-designers`, `social-media-managers`, `video-editors` | homepage and footer for graphic designers; homepage for social media managers; use-case related module for video editors | `graphic-designers`, `social-media-managers`, `video-editors` | `video-editors` has good page depth but weaker inbound authority than graphic/social pages | Add a natural contextual link from screenshot/client-feedback/resource content into video editors where revision/timecode work is discussed. |
+| Operations / teams | `project-managers`, `virtual-assistants`, `small-agencies` | homepage; freelancer solution page; email/AI/calendar/client-feedback feature pages | all three are comparatively well-supported | No current near-orphan among these three | Avoid over-linking these already-supported pages at the expense of weaker use cases. |
+| Freelancer operations / cross-cutting | all use cases plus `/solutions/freelancer-project-management-software` and freelancer resource articles | solution page and `/resources/how-to-organize-client-requests-as-a-freelancer` | solution page, email-to-tasks, AI task extractor, screenshot-to-tasks | weak pages are not represented in the cross-cutting freelancer authority sources | Add selective links from freelancer solution/resource pages to developer/SEO/Shopify use cases where the reader is choosing their freelancer role. |
+
+Pages that should not be linked just for SEO:
+
+- Legal pages should not link into use cases.
+- About should remain entity/trust-focused; only add use-case links if there is a clear user path, not for authority sculpting.
+- Login/signup/check-email/auth flows should not be used as SEO link sources.
+- Footer should not be expanded into a full use-case dump unless there is a product-navigation reason.
+
+### 43.4 Four Known Weak Page Audit
+
+| Page | Title / meta / H1 | Intent and topic | Content depth | Inbound support | Outbound support | Schema / canonical / sitemap | Classification |
+|---|---|---|---|---|---|---|---|
+| `/use-cases/freelance-developers` | Title: `Client Request Management for Freelance Developers`; meta describes feature changes, bug-fix notes, technical context, and screenshots; H1: `Stop typing client requests into task lists. Get back to building.` | Freelance developers converting client feature/fix/bug requests into development tasks | Adequate base template: hero, pain points, workflow, capabilities, Client Updates, FAQ, related use cases, final CTA. Missing transformation, signature module, proof, and related reading. | Linked from `/use-cases` hub. Not selected on homepage, not in footer, not linked from feature/resource/solution pages, and not linked by sibling relatedSlugs found in current data. | Links to web designers, WordPress freelancers, project managers, `/use-cases`, and signup. | Present and healthy: canonical, sitemap, WebPage, BreadcrumbList, FAQPage. | WEAK |
+| `/use-cases/seo-freelancers` | Title: `SEO Client Task Management for Freelancers`; meta describes page URLs, content notes, metadata changes, internal links, redirects, screenshots; H1: `Skip the SEO task setup. Start improving pages sooner.` | SEO freelancers organizing client page-change instructions into tasks | Adequate base template but thin versus stronger siblings. Missing transformation, signature module, proof, and related reading. | Linked from `/use-cases` hub. Not selected on homepage, not in footer, not linked from feature/resource/solution pages. Receives related-use-case support mainly from Shopify freelancers. | Links to WordPress freelancers, Shopify freelancers, web designers, `/use-cases`, and signup. | Present and healthy: canonical, sitemap, WebPage, BreadcrumbList, FAQPage. | VERY WEAK |
+| `/use-cases/shopify-freelancers` | Title: `Client Request Management for Shopify Freelancers`; meta describes store updates, product changes, promotions, screenshots; H1: `Spend less time copying store updates--and more time improving the storefront.` | Shopify freelancers organizing store update, product, promotion, mobile, cart, and launch tasks | Adequate base template but thin versus stronger web-development siblings. Missing transformation, signature module, proof, and related reading. | Linked from `/use-cases` hub and from SEO freelancers via relatedSlugs. Not selected on homepage, not in footer, not linked from feature/resource/solution pages. | Links to web designers, WordPress freelancers, Webflow freelancers, `/use-cases`, and signup. | Present and healthy: canonical, sitemap, WebPage, BreadcrumbList, FAQPage. | WEAK |
+| `/use-cases/video-editors` | Title: `Video Revision & Delivery Task Manager for Editors`; meta describes cuts, timecodes, exports, deadlines; H1: `Stop scrubbing through texts for timecodes. Keep every cut, format, and deadline together.` | Video editors turning revision/timecode/export messages into tasks | Stronger than the other three: has transformation, signature timeline, secondary checklist, Client Updates, FAQ, related reading, related use cases, and final CTA. | Linked from `/use-cases` hub and related by creative sibling pages; not selected on homepage, not in footer, and not linked from high-authority feature/solution pages. | Links to client-feedback feature/resource pages and creative sibling use cases. | Present and healthy: canonical, sitemap, WebPage, BreadcrumbList, FAQPage. | ADEQUATE, but under-linked from authority pages |
+
+All four pages deserve indexing if improved conservatively. None should be merged, removed, or noindexed based on repository evidence alone.
+
+### 43.5 Internal Authority Source Recommendations
+
+| Source page | Why useful to a human | Target page | Anchor concept | Placement | Direction |
+|---|---|---|---|---|---|
+| `/solutions/freelancer-project-management-software` | A freelancer choosing project-management workflows may identify by specialty. | Freelance developers, SEO freelancers, Shopify freelancers | specialty-specific freelancer workflows | Existing audience/use-case link section | One-way to weak spokes, with reciprocal only where the spoke already has a relevant solution link. |
+| `/features/client-feedback-to-tasks` | Follow-up edits and revision requests map naturally to developers, SEO, Shopify, and video editors. | Freelance developers, SEO freelancers, Shopify freelancers, video editors | turn follow-up change requests into reviewable tasks | Audience section or related-work section | One-way from feature to relevant use cases; reciprocals only from pages where related reading is added. |
+| `/features/screenshot-to-tasks` | Screenshots are central to bug reports, storefront updates, visual revisions, and video feedback screenshots. | Freelance developers, Shopify freelancers, video editors | organize screenshot-based client requests | Audience section or related links | One-way or reciprocal with related reading. |
+| `/features/email-to-tasks` | SEO/page-change requests, development briefs, and store requests often arrive by email. | Freelance developers, SEO freelancers, Shopify freelancers | client email requests for specialized work | Audience section | One-way. |
+| `/features/ai-task-extractor` | Broad extractor page can support specialized pages that start from unstructured text. | Freelance developers, SEO freelancers | extract client instructions into tasks | Audience section or related links | One-way. |
+| `/resources/how-to-organize-client-requests-as-a-freelancer` | Cross-cutting freelancer guide is a natural role-discovery page. | Freelance developers, SEO freelancers, Shopify freelancers | examples for developer/SEO/Shopify client requests | Existing related/next-step section | One-way to role pages. |
+| `/resources/how-to-turn-emails-into-tasks` | Email workflow directly matches SEO briefs, development requests, and Shopify store changes. | SEO freelancers, freelance developers, Shopify freelancers | turn page-change/store/dev emails into tasks | Example/next-step section | One-way. |
+| `/resources/how-to-turn-client-feedback-into-tasks` | Feedback/revision article already supports client-feedback feature and can naturally mention video editors. | Video editors, SEO freelancers | revision notes and page-change feedback | Existing related guide section | One-way. |
+| `/resources/manage-client-revisions-web-designers` | Web revision workflow overlaps naturally with developers, SEO, Shopify, WordPress, and Webflow. | Freelance developers, SEO freelancers, Shopify freelancers | related website-change workflows | Related links section | One-way, not all at once if the section becomes crowded. |
+| Strong sibling use cases | The related-use-case component is crawlable and user-useful when the relationship is real. | Weak pages | adjacent work roles | `relatedSlugs` and optional `relatedLinks` | Reciprocal only when both pages' user intent overlaps. |
+
+### 43.6 Content Gap Classifications
+
+| Page | Classification | Rationale |
+|---|---|---|
+| `/use-cases/freelance-developers` | LINKING + SMALL CONTENT IMPROVEMENT | Intent is commercially useful and distinct from web designers/WordPress. Internal linking alone would still leave it thinner than sibling pages. Add one concrete transformation example and/or signature module around client bug/feature requests, plus related reading. |
+| `/use-cases/seo-freelancers` | LINKING + SMALL CONTENT IMPROVEMENT | Intent is distinct but at greatest risk of looking generic without a page-level URL/metadata/internal-link example. Needs one specific SEO-request transformation module and contextual inbound links from email/client-feedback/resource pages. |
+| `/use-cases/shopify-freelancers` | LINKING + SMALL CONTENT IMPROVEMENT | Storefront/product/promotion request intent is distinct and commercially relevant. Needs one Shopify-specific transformation/signature module and inbound links from freelancer solution, screenshot/email, and freelancer resource content. |
+| `/use-cases/video-editors` | LINKING ONLY | Page already has strong unique modules and examples. Current gap is mainly missing contextual authority from high-authority feature/resource pages and homepage/footer selection. |
+
+No page currently meets the threshold for MAJOR CONTENT IMPROVEMENT REQUIRED or MERGE / REMOVE / NOINDEX SHOULD BE CONSIDERED.
+
+### 43.7 Hub / Spoke Architecture Assessment
+
+The current `/use-cases` architecture functions as a crawlable hub-and-spoke foundation, but not yet as a strong topical hub.
+
+Findings:
+
+- `/use-cases` links to all 12 spokes and groups them into three useful categories.
+- Category groupings are real but shallow; the hub does not yet explain how Website & Development, Creative & Content, and Operations & Teams relate to different workflows.
+- Spokes link back to the hub through final CTA and related-use-case component.
+- Spokes cross-link through `relatedSlugs`, but weaker pages do not receive enough support from stronger topical pages.
+- Breadcrumbs help hierarchy clarity but are not sufficient authority support on their own.
+- The Resources hub is mostly a directory and does not support use-case spokes directly.
+- There are no literal dead-end use-case pages, but there are near-dead-end authority patterns where a page is reachable mainly from the use-case directory and sitewide navigation.
+- A new hub is not required for Milestone 3. Strengthen the existing `/use-cases` hub, existing feature pages, existing resource pages, and existing solution page first.
+
+### 43.8 Anchor Text Policy
+
+Use varied, natural, human-readable anchors. Avoid repeated exact-match anchors such as "client request management for freelance developers" across the site.
+
+Recommended variants:
+
+| Target page | Natural anchor variants |
+|---|---|
+| `/use-cases/freelance-developers` | `client requests for freelance developers`; `development change requests`; `bug reports and feature requests`; `turn development requests into reviewable tasks`; `organize client development work`; `developer task setup` |
+| `/use-cases/seo-freelancers` | `SEO client task setup`; `page-change requests`; `metadata and content update requests`; `organize SEO instructions`; `turn SEO requests into reviewable tasks`; `client SEO changes` |
+| `/use-cases/shopify-freelancers` | `Shopify store update requests`; `storefront change requests`; `product and promotion tasks`; `organize Shopify client work`; `turn store requests into tasks`; `Shopify launch updates` |
+| `/use-cases/video-editors` | `video revision tasks`; `timecoded client feedback`; `editing notes and export requests`; `turn video feedback into tasks`; `organize revision rounds`; `client video edit requests` |
+
+Anchor rules:
+
+- Use each exact variant sparingly.
+- Prefer sentence-integrated anchors in articles.
+- Prefer role labels in cards and audience sections.
+- Do not turn every mention of a role into a link.
+- Keep anchors truthful to the target page's actual content.
+
+### 43.9 Milestone 3 Implementation Plan
+
+**A. Internal linking changes**
+
+| Priority | Source | Target | Section/component | Link intent | Suggested anchor | Copy change | New component | Benefit | Risk |
+|---|---|---|---|---|---|---|---|---|---|
+| P0 | `/solutions/freelancer-project-management-software` | freelance developers, SEO freelancers, Shopify freelancers | Existing use-case/audience link list | Help freelancer readers choose a specialty workflow | role labels plus short descriptions | Yes, add 2-3 role cards or rotate the list carefully | No | Strong authority from a core commercial page | Low/medium: avoid overloading the section. |
+| P0 | `/features/client-feedback-to-tasks` | video editors, freelance developers, SEO freelancers, Shopify freelancers | Audience section or related links | Show where follow-up client feedback creates role-specific tasks | natural role/task anchors | Yes | No | Strong contextual link from a feature page | Medium: choose only the most relevant targets if the section gets crowded. |
+| P0 | `/features/email-to-tasks` | SEO freelancers, freelance developers, Shopify freelancers | Audience section or related links | Connect email-based briefs to specialty use cases | `client SEO changes`, `development change requests`, `Shopify store update requests` | Yes | No | Supports three weak pages from a high-intent feature page | Low. |
+| P1 | `/features/screenshot-to-tasks` | freelance developers, Shopify freelancers, video editors | Audience section or related links | Connect screenshot-based requests to visual/debug/store/editing tasks | varied screenshot/request anchors | Yes | No | Relevant topical authority | Low. |
+| P1 | Freelancer resource articles | freelance developers, SEO freelancers, Shopify freelancers, video editors where relevant | Existing related/next-step sections | Let informational readers choose role-specific examples | sentence-integrated anchors | Yes | No | Strengthens resources-to-use-cases path | Low. |
+| P1 | Strong sibling use-case pages | weak pages | `relatedSlugs` and `relatedLinks` data | Improve cluster cross-linking where workflow overlap is real | role labels and adjacent-work anchors | Possibly | No | Closes near-orphan patterns inside clusters | Medium: avoid circular link stuffing. |
+| P2 | Homepage `HomepageUseCasesSection` | one or two currently excluded weak pages | selected use-case list | Surface a broader role set from homepage | role labels | Yes | No | High authority, but homepage UX sensitive | Medium; may be deferred if six-card layout is intentionally curated. |
+
+**B. Small content improvements**
+
+| Priority | Page | Change | Intent | New component needed | Benefit | Risk |
+|---|---|---|---|---|---|---|
+| P0 | `/use-cases/seo-freelancers` | Add a specific transformation example for URLs/title tags/meta/internal links/redirects and missing-decision outputs. | Prove the page is not a generic freelancer template. | No, existing `transformation` field supports it. | Highest content-depth lift. | Low. |
+| P0 | `/use-cases/freelance-developers` | Add a development-specific transformation or signature board for bug reports, feature requests, reproduction notes, browser/device details, and acceptance requirements. | Differentiate from web designers and project managers. | No. | Strong uniqueness and usefulness lift. | Low. |
+| P1 | `/use-cases/shopify-freelancers` | Add a Shopify storefront/product/promotion transformation or checklist module. | Clarify store-specific commercial value. | No. | Good uniqueness lift. | Low. |
+| P1 | Weak pages | Add `relatedLinks` to relevant feature/resource/solution pages. | Create outbound topical context and reciprocal usefulness. | No. | Better user paths and content support. | Low. |
+| P2 | `/use-cases/video-editors` | No content rewrite required; consider one additional inbound link only. | Preserve already-good differentiation. | No. | Avoid unnecessary churn. | Low. |
+
+**C. Structural / hub changes**
+
+| Priority | Area | Change | Benefit | Risk |
+|---|---|---|---|---|
+| P1 | `/use-cases` hub | Add light cluster introductions or "best for" cues under the existing category groups. | Makes hub more editorial and useful without creating new pages. | Low/medium; keep concise. |
+| P1 | Related-use-case data | Normalize cross-links inside Website & Development and Creative & Content clusters. | Reduces hub-only support. | Medium if reciprocal links are added mechanically. |
+| P2 | Resources hub | Add a small "popular workflows by role" section only if it improves reader navigation. | Opens resources-to-use-cases flow. | Medium; avoid turning the hub into a link farm. |
+
+**D. Deferred to Milestone 4**
+
+- Major rewrites of the highest non-brand opportunity pages.
+- Deep expansion of `/solutions/freelancer-project-management-software`.
+- New landing pages or new hubs.
+- External authority/link acquisition.
+- Homepage CRO/video-performance work.
+- Product/schema expansion such as `SoftwareApplication` or `Product`.
+
+### 43.10 Validation Plan For Later Implementation
+
+When Milestone 3 implementation is authorized, verify:
+
+- all new links render server-side in the HTML;
+- all target URLs are canonical public URLs and return 200;
+- no link points to a redirecting conceptual route such as `/pricing` when `/#pricing` is intended;
+- no broken internal links;
+- no accidental `noindex`;
+- sitemap count remains 33 unless an intentional route change is approved;
+- canonical paths and metadata remain unchanged unless explicitly part of the change;
+- BreadcrumbList remains valid for all use-case pages;
+- FAQPage remains present where use-case FAQ data exists;
+- no duplicate or over-optimized exact-match anchor patterns;
+- page-level tests cover newly expected links where tests already exist;
+- TypeScript passes for changed content data files;
+- changed-file lint passes;
+- crawl-style internal-link validation is run if practical.
+
+### 43.11 Owner Decisions Required
+
+No blocking product/privacy decision is required before Milestone 3 implementation. Recommended owner review items:
+
+- whether homepage use-case selection may be changed, or whether homepage curation should remain untouched;
+- whether `/use-cases` hub copy may be lightly expanded with cluster introductions;
+- which weak pages should receive the first P0 content modules if implementation must be split;
+- whether Resources hub should stay article-only or gain a small role-workflow navigation section.
+
+Blocking decisions: none, unless the owner does not want homepage or hub copy touched.
+
+### 43.12 Milestone 3 Current Conclusion
+
+Milestone 3 should proceed as a scoped internal-authority and small-content-depth implementation, not a broad content rewrite. The safest first implementation is:
+
+1. Add contextual links from the freelancer solution page and the email/client-feedback/screenshot feature pages to the weak use-case pages.
+2. Add transformation/signature/related-reading depth to SEO freelancers, freelance developers, and Shopify freelancers using existing data fields and components.
+3. Add one or two targeted inbound links for video editors without rewriting the page.
+4. Strengthen the existing `/use-cases` hub lightly, if owner approves.
+
+Milestone 3 status is **IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW**.
+
+---
+
+## 44. Phase 1 Milestone 3 - Internal Authority / Weak Use Cases Local Implementation
+
+**Status:** IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
+
+**Implementation timestamp:** 2026-09-15 00:36:13 Asia/Jerusalem.
+
+**Branch:** `feat/seo-internal-authority`.
+
+**Base main HEAD before branch creation:** `f97141031c697c768793fd2ae0c7bdacbe00550b`.
+
+**Decision Log ID:** `SEO-2026-09-09-D023`.
+
+### 44.1 Owner Decisions Applied
+
+Milestone 3 implemented the approved internal-authority plan with these boundaries:
+
+- founder identity remains private; no founder name, `Person` schema, or personal-profile links were added;
+- no homepage change was made merely for SEO;
+- no footer/global-navigation expansion was made;
+- no new pages, hubs, route rewrites, canonical changes, sitemap architecture changes, or schema architecture changes were made;
+- `/resources` remains article-focused; no Resources-hub role index was added;
+- `/use-cases` received only light cluster guidance;
+- video editors received contextual inbound links only; the page content was not expanded;
+- no performance/video optimization work was started;
+- no Product or `SoftwareApplication` schema work was started.
+
+### 44.2 Internal Links Added
+
+| Source | Target | Anchor text | Placement/context |
+|---|---|---|---|
+| `/solutions/freelancer-project-management-software` | `/use-cases/freelance-developers` | `Freelance developers` | Existing Use cases card grid for specialty freelancer workflows. |
+| `/solutions/freelancer-project-management-software` | `/use-cases/seo-freelancers` | `SEO freelancers` | Existing Use cases card grid for specialty freelancer workflows. |
+| `/solutions/freelancer-project-management-software` | `/use-cases/shopify-freelancers` | `Shopify freelancers` | Existing Use cases card grid for specialty freelancer workflows. |
+| `/features/email-to-tasks` | `/use-cases/seo-freelancers` | `SEO freelancers` | Existing audience grid for people who manage client work by email. |
+| `/features/email-to-tasks` | `/use-cases/freelance-developers` | `Freelance developers` | Existing audience grid for people who manage client work by email. |
+| `/features/email-to-tasks` | `/use-cases/shopify-freelancers` | `Shopify freelancers` | Existing audience grid for people who manage client work by email. |
+| `/features/screenshot-to-tasks` | `/use-cases/freelance-developers` | `Freelance developers` | Existing common screenshot workflows grid. |
+| `/features/screenshot-to-tasks` | `/use-cases/shopify-freelancers` | `Shopify freelancers` | Existing common screenshot workflows grid. |
+| `/features/screenshot-to-tasks` | `/use-cases/video-editors` | `Video editors` | Existing common screenshot workflows grid. |
+| `/features/ai-task-extractor` | `/use-cases/seo-freelancers` | `SEO freelancers` | Existing audience grid for detailed text instructions. |
+| `/features/ai-task-extractor` | `/use-cases/freelance-developers` | `Freelance developers` | Existing audience grid for detailed text instructions. |
+| `/features/client-feedback-to-tasks` | `/use-cases/video-editors` | `Video editors` | Existing audience grid for projects that continue to change. |
+| `/features/client-feedback-to-tasks` | `/use-cases/seo-freelancers` | `SEO freelancers` | Existing audience grid for projects that continue to change. |
+| `/resources/how-to-organize-client-requests-as-a-freelancer` | `/use-cases/freelance-developers` | `client requests for freelance developers` | Sentence-integrated role examples paragraph in article body. |
+| `/resources/how-to-organize-client-requests-as-a-freelancer` | `/use-cases/seo-freelancers` | `SEO client task setup` | Sentence-integrated role examples paragraph in article body. |
+| `/resources/how-to-organize-client-requests-as-a-freelancer` | `/use-cases/shopify-freelancers` | `Shopify store update requests` | Sentence-integrated role examples paragraph in article body. |
+| `/resources/how-to-turn-emails-into-tasks` | `/use-cases/seo-freelancers` | `client SEO changes` | Sentence-integrated examples paragraph in article body. |
+| `/resources/how-to-turn-emails-into-tasks` | `/use-cases/freelance-developers` | `development change requests` | Sentence-integrated examples paragraph in article body. |
+| `/resources/how-to-turn-emails-into-tasks` | `/use-cases/shopify-freelancers` | `Shopify launch updates` | Sentence-integrated examples paragraph in article body. |
+| `/resources/how-to-turn-client-feedback-into-tasks` | `/use-cases/video-editors` | `timecoded client feedback` | Sentence-integrated review-step paragraph in article body. |
+| `/resources/how-to-turn-client-feedback-into-tasks` | `/use-cases/seo-freelancers` | `metadata and content update requests` | Sentence-integrated review-step paragraph in article body. |
+| `/resources/manage-client-revisions-web-designers` | `/use-cases/freelance-developers` | `freelance developers` | Existing article paragraph about adjacent web-revision workflows. |
+| `/resources/manage-client-revisions-web-designers` | `/use-cases/shopify-freelancers` | `Shopify freelancers` | Existing article paragraph about adjacent web-revision workflows. |
+
+### 44.3 Use-Case Hub And Weak-Page Content Updates
+
+The `/use-cases` hub now adds concise category guidance beneath the existing Website & Development, Creative & Content, and Operations & Teams groups. It still links to all 12 use cases through the existing crawlable hub/spoke structure and does not add new routes.
+
+The three weakest use-case data files received small content-depth improvements using existing supported fields/components:
+
+- `/use-cases/seo-freelancers`: added a page-level SEO request transformation example and related workflow links to Email to Tasks, Client Feedback to Tasks, and the email-to-tasks resource.
+- `/use-cases/freelance-developers`: added a development request transformation example and related workflow links to Screenshot to Tasks, Email to Tasks, and the freelancer client-request resource.
+- `/use-cases/shopify-freelancers`: added a Shopify storefront request transformation example and related workflow links to Screenshot to Tasks, Email to Tasks, and the freelancer client-request resource.
+
+`/use-cases/video-editors` was left content-unchanged because Section 43 classified it as adequate but under-linked. It received contextual inbound links from relevant feature/resource content only.
+
+### 44.4 Files Changed
+
+Application/content files:
+
+- `app/use-cases/page.tsx`
+- `app/solutions/freelancer-project-management-software/page.tsx`
+- `app/features/email-to-tasks/page.tsx`
+- `app/features/screenshot-to-tasks/page.tsx`
+- `app/features/ai-task-extractor/page.tsx`
+- `app/features/client-feedback-to-tasks/page.tsx`
+- `app/resources/how-to-organize-client-requests-as-a-freelancer/page.tsx`
+- `app/resources/how-to-turn-emails-into-tasks/page.tsx`
+- `app/resources/how-to-turn-client-feedback-into-tasks/page.tsx`
+- `app/resources/manage-client-revisions-web-designers/page.tsx`
+- `app/lib/use-cases/cases/seo-freelancers.ts`
+- `app/lib/use-cases/cases/freelance-developers.ts`
+- `app/lib/use-cases/cases/shopify-freelancers.ts`
+
+Tests:
+
+- `app/use-cases/internal-authority.test.tsx`
+
+Documentation:
+
+- `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.md`
+- `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.docx`
+
+### 44.5 Explicit Non-Changes
+
+- Homepage changed: NO.
+- Footer changed: NO.
+- About page changed: NO.
+- Header/navigation changed: NO.
+- Sitemap changed: NO.
+- Canonicals changed: NO.
+- Robots/noindex changed: NO.
+- Organization/WebSite/WebPage/Breadcrumb/FAQ schema architecture changed: NO.
+- Product/SoftwareApplication schema added: NO.
+- Founder name or `Person` schema added: NO.
+- Personal-profile `sameAs` links added: NO.
+- Resources hub changed: NO.
+- Database changed: NO.
+- Migration added: NO.
+- Environment/configuration changed: NO.
+- Production changed: NO.
+- Commit/push/deploy performed: NO.
+
+### 44.6 Local Verification
+
+Local verification completed before owner review:
+
+- Focused Milestone 3 internal-authority tests: PASS, `npx.cmd vitest run app/use-cases/internal-authority.test.tsx` - 1 file / 10 tests.
+- Targeted Milestone 3 tests: PASS, 7 files / 88 tests.
+- Relevant public SEO regression tests: PASS, 13 files / 191 tests.
+- TypeScript typecheck: PASS, `npx.cmd tsc --noEmit`.
+- Changed-file ESLint: PASS, `npx.cmd eslint` on the Milestone 3 changed source/test files.
+- Production build: PASS after network-enabled rerun for Google Fonts; the first sandboxed run failed only because `next/font` could not fetch `DM Sans` and `Inter` from Google Fonts.
+- `git diff --check`: PASS with only line-ending normalization warnings.
+- Internal-link validation: PASS through focused tests confirming the new source-to-target links and sitemap inclusion for the strengthened use cases.
+- Privacy/schema invariants: PASS; homepage structured-data tests still confirm no `Person`, founder, or `SoftwareApplication` schema in the homepage entity graph.
+- Unexpected file review: PASS; only Milestone 3 application/content files, the new focused test file, and the two current run documentation files are modified/untracked.
+
+### 44.7 Milestone 3 Current Conclusion
+
+Milestone 3 is implemented locally as a scoped internal-authority and small-content-depth update. It strengthens crawlable contextual paths to previously weak use-case spokes while preserving homepage curation, privacy decisions, schema architecture, route architecture, and production safety.
+
+Final local status: **IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW**.

@@ -102,6 +102,21 @@ const audienceLinks = [
     text: "Turn screenshots of content approvals into clear tasks.",
   },
   {
+    href: "/use-cases/freelance-developers",
+    title: "Freelance developers",
+    text: "Keep bug reports, UI screenshots, and supplied device details with the right development task.",
+  },
+  {
+    href: "/use-cases/shopify-freelancers",
+    title: "Shopify freelancers",
+    text: "Organize storefront screenshots, product changes, and promotion notes before launch work begins.",
+  },
+  {
+    href: "/use-cases/video-editors",
+    title: "Video editors",
+    text: "Turn captured revision notes, export requirements, and timecoded feedback into reviewable editing tasks.",
+  },
+  {
     href: "/solutions/freelancer-project-management-software",
     title: "Freelancers",
     text: "Keep screenshot-based client requests organized alongside your other work.",

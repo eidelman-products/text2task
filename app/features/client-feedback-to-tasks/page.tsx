@@ -143,6 +143,16 @@ const audienceLinks = [
     text: "Check the next bug report or content request against maintenance work already tracked.",
   },
   {
+    href: "/use-cases/video-editors",
+    title: "Video editors",
+    text: "Compare a new round of edit notes with the video revision tasks already saved.",
+  },
+  {
+    href: "/use-cases/seo-freelancers",
+    title: "SEO freelancers",
+    text: "Review follow-up page-change feedback without duplicating SEO work already tracked.",
+  },
+  {
     href: "/solutions/freelancer-project-management-software",
     title: "Freelancers",
     text: "Keep client feedback connected to the project it changes.",
