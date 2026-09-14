@@ -17,7 +17,14 @@ import {
   SITE_SCHEMA_ENTITY_IDS,
   buildWebPageEntityId,
 } from "./lib/schema";
-import { SITE_ORGANIZATION_SAME_AS, absoluteUrl } from "./lib/site-config";
+import {
+  SITE_BRAND_NAME,
+  SITE_CANONICAL_DESCRIPTION,
+  SITE_CANONICAL_LOGO_URL,
+  SITE_CANONICAL_URL,
+  SITE_ORGANIZATION_SAME_AS,
+  absoluteUrl,
+} from "./lib/site-config";
 import { HOMEPAGE_DEMO_CONFIG } from "@/lib/homepage-demo/config.server";
 
 const homepageTitle = "Turn Client Messages Into Projects and Tasks";
@@ -64,19 +71,19 @@ export const metadata: Metadata = {
 export const organizationJsonLd = {
   "@type": "Organization",
   "@id": SITE_SCHEMA_ENTITY_IDS.organization,
-  name: "Text2Task",
-  url: absoluteUrl("/"),
-  logo: absoluteUrl("/text2task-logo.png"),
+  name: SITE_BRAND_NAME,
+  url: SITE_CANONICAL_URL,
+  logo: SITE_CANONICAL_LOGO_URL,
+  description: SITE_CANONICAL_DESCRIPTION,
   sameAs: SITE_ORGANIZATION_SAME_AS,
 } satisfies JsonLdObject;
 
 export const websiteJsonLd = {
   "@type": "WebSite",
   "@id": SITE_SCHEMA_ENTITY_IDS.website,
-  url: absoluteUrl("/"),
-  name: "Text2Task",
-  description:
-    "Text2Task turns messy client messages, emails, notes, and screenshots into organized work.",
+  url: SITE_CANONICAL_URL,
+  name: SITE_BRAND_NAME,
+  description: SITE_CANONICAL_DESCRIPTION,
   publisher: {
     "@id": SITE_SCHEMA_ENTITY_IDS.organization,
   },

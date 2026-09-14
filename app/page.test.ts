@@ -7,6 +7,14 @@ import {
   structuredData,
 } from "./page";
 import { SITE_SCHEMA_ENTITY_IDS } from "./lib/schema";
+import {
+  SITE_BRAND_NAME,
+  SITE_CANONICAL_DESCRIPTION,
+  SITE_CANONICAL_LOGO_URL,
+  SITE_CANONICAL_URL,
+  SITE_ORGANIZATION_SAME_AS,
+  SITE_SOCIAL_LINKS,
+} from "./lib/site-config";
 
 /*
   2026-08-26 structured-data fix -- regression coverage for SEMrush's
@@ -43,14 +51,35 @@ describe("Homepage structured data", () => {
   it("still emits a valid Organization entity", () => {
     expect(organizationJsonLd["@type"]).toBe("Organization");
     expect(organizationJsonLd["@id"]).toBe(SITE_SCHEMA_ENTITY_IDS.organization);
-    expect(organizationJsonLd.name).toBe("Text2Task");
-    expect(typeof organizationJsonLd.url).toBe("string");
+    expect(organizationJsonLd.name).toBe(SITE_BRAND_NAME);
+    expect(organizationJsonLd.url).toBe(SITE_CANONICAL_URL);
+    expect(organizationJsonLd.logo).toBe(SITE_CANONICAL_LOGO_URL);
+    expect(organizationJsonLd.description).toBe(SITE_CANONICAL_DESCRIPTION);
   });
 
   it("still emits a valid WebSite entity, publishing to the same Organization", () => {
     expect(websiteJsonLd["@type"]).toBe("WebSite");
     expect(websiteJsonLd["@id"]).toBe(SITE_SCHEMA_ENTITY_IDS.website);
+    expect(websiteJsonLd.url).toBe(SITE_CANONICAL_URL);
+    expect(websiteJsonLd.name).toBe(SITE_BRAND_NAME);
+    expect(websiteJsonLd.description).toBe(SITE_CANONICAL_DESCRIPTION);
     expect(websiteJsonLd.publisher).toEqual({ "@id": SITE_SCHEMA_ENTITY_IDS.organization });
+  });
+
+  it("uses only owner-approved company profile sameAs URLs for the Organization", () => {
+    expect(organizationJsonLd.sameAs).toEqual(SITE_ORGANIZATION_SAME_AS);
+    expect(organizationJsonLd.sameAs).toEqual([
+      SITE_SOCIAL_LINKS.facebook,
+      SITE_SOCIAL_LINKS.linkedin,
+    ]);
+  });
+
+  it("does not publish Person or founder fields in the homepage entity graph", () => {
+    const serialized = JSON.stringify(structuredData);
+
+    expect(serialized).not.toContain('"@type":"Person"');
+    expect(serialized).not.toContain('"founder"');
+    expect(serialized).not.toContain('"founders"');
   });
 
   it("still emits a valid WebPage entity, no longer referencing a mainEntity/about SoftwareApplication", () => {

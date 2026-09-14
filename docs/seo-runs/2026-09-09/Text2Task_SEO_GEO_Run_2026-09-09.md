@@ -9,6 +9,7 @@
 **PHASE 0 OVERALL: COMPLETE / OWNER REVIEWED**
 **PHASE 1 STATUS: IMPLEMENTATION IN PROGRESS**
 **PHASE 1 IMPLEMENTATION: MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**
+**PHASE 1 MILESTONE 2: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW**
 
 Companion file: `Text2Task_SEO_GEO_Run_2026-09-09.docx` (formatted, distributable Source of Truth — this Markdown file is the version-controllable editable source; both are maintained together for this run only).
 
@@ -38,6 +39,10 @@ Pre-merge Preview verification update recorded 2026-09-13 18:59:27 Asia/Jerusale
 
 Production closeout update recorded 2026-09-14 11:58:23 Asia/Jerusalem: PR #2 (`Phase 1: add SEO funnel measurement foundation`) was merged successfully to `main` as merge commit `b3e372c`. Vercel Production deployment for environment `Production`, branch `main`, commit `b3e372c` reached READY. The owner manually performed a post-deployment production smoke test on `https://www.text2task.com/` and verified Homepage, Dashboard, Extract, Tasks, and Calendar load and function normally. Result: PASS — no user-visible regression observed. Manual Production Image Extract runtime verification, manual Production `paid_conversion` verification, production `paid_conversion` row verification, production `first_extract_created` re-verification, and production `project_saved` re-verification were not performed in this production gate. Image Extract manual runtime remains DEFERRED / NON-BLOCKING. `paid_conversion` manual runtime remains DEFERRED / SAFE VERIFICATION REQUIRED.
 
+Phase 1 Milestone 2 mapping update recorded 2026-09-14 12:57:49 Asia/Jerusalem: Entity / Brand Disambiguation mapping has started as audit/planning only. Current source confirms strong product/category/domain signals and a meaningful external footprint, but on-site founder/person identity remains absent, `Person` schema remains absent, and `Organization.sameAs` currently includes only company Facebook and company LinkedIn. Brand disambiguation strength is **PARTIAL**: enough signals exist to understand `text2task.com` as a freelancer/small-team SaaS, but the founder/person relationship and expanded canonical external profile graph require owner decisions before implementation. Milestone 2 is not implemented.
+
+Phase 1 Milestone 2 implementation update recorded 2026-09-14 13:56:50 Asia/Jerusalem: the owner made a deliberate privacy decision to keep founder identity private for now. No founder name, no `Person` schema, no founder metadata, no personal-profile `sameAs`, and no personal social/profile link were added. Milestone 2 was implemented locally on branch `feat/seo-entity-disambiguation` by strengthening Text2Task's canonical Organization/product/domain signals only: shared site constants now define the canonical brand name, URL, logo, and description; homepage `Organization`/`WebSite` JSON-LD uses those constants; root metadata uses the canonical description and brand constants; the About page now visibly identifies `text2task.com` as the official Text2Task product site without naming the founder; and tests lock the allowed company-only `sameAs` inventory and the absence of `Person`/founder schema. Production remains unchanged.
+
 ---
 
 ## 1. Cover / Run Metadata
@@ -53,6 +58,7 @@ Production closeout update recorded 2026-09-14 11:58:23 Asia/Jerusalem: PR #2 (`
 | Phase 0 overall | COMPLETE / OWNER REVIEWED |
 | Phase 1 status | IMPLEMENTATION IN PROGRESS |
 | Phase 1 implementation | MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE |
+| Phase 1 Milestone 2 | IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW |
 | Author | Claude Code (Sonnet 5), directed by the site owner |
 | Repository | `C:\Users\Home\projects\inboxshaper` (git branch `main`, clean at run start) |
 | Prior internal reference | `docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md` (found in repo, read in full, used for reconciliation) |
@@ -77,7 +83,7 @@ The real, evidence-backed problems are narrower and more specific than "the site
 6. **GSC Links baseline now independently supports authority as a major constraint, but Text2Task does have an early external footprint**: Google Search Console currently reports 3 external link URLs from 2 linking domains, all pointing to the homepage, with no externally-linked Feature/Solution/Resource money page surfaced in this report. External research also verified current Text2Task surfaces across LinkedIn, GetApp, Capterra, Uneed, Peerlist, StartupFortune, SaaSHub, UIComet, and FounderDB / Peer Push discovery data. The problem is not total absence of mentions; the current weakness is limited referring-domain diversity, limited externally recognized link authority, almost no external links to high-value topic/money pages, and limited independent editorial/reference coverage.
 7. **GSC Manual Actions and Security Issues are now externally VERIFIED with no issues detected**: Google Search Console currently reports no manual action and no security issue for the Text2Task property. This should not be overstated as proof that every SEO issue is absent or as a complete security audit.
 8. **Bing Webmaster Tools onboarding is now configured/verified, with Bing data still processing**: Text2Task has been added to Bing Webmaster Tools as `text2task.com`; `https://www.text2task.com/sitemap.xml` was submitted successfully on 2026-09-13 and initially showed Processing. Initial 0 discovered URLs and no last crawl are expected at this stage and are not an indexing defect. IndexNow setup path was verified, but application implementation has not started. Bing AI Performance currently reports 0 citations and 0 cited pages for the selected 3-month period; do not claim Copilot has never mentioned Text2Task. Bing Backlinks shows data not yet available / pending processing; do not record this as 0 backlinks.
-9. **External founder/entity evidence now exists, while the on-site founder decision remains open**: indexed LinkedIn and Peerlist surfaces publicly associate Yan Eidelman with Text2Task, but the Text2Task website About page still does not publicly name the founder. This strengthens the prior recommendation to consider publishing a truthful founder identity on `text2task.com` itself, but implementation requires explicit owner approval.
+9. **External founder/entity evidence exists, and the owner privacy decision is now closed for this milestone**: indexed external surfaces associate the founder with Text2Task, but the Text2Task website intentionally does not publicly name the founder. The owner has decided not to publish founder identity at this time, so Milestone 2 strengthens Organization/product/domain/profile signals without adding `Person` schema, `Organization.founder`, founder metadata, or personal-profile links.
 10. **The Text2Task name collision remains real and externally verified**: the unrelated older Microsoft Marketplace product named "Text2Task" by Target Energy Solutions remains live, is an Outlook/email assistant for enterprise employees, and is unrelated to `text2task.com`. This continues to support the existing HIGH/P0 entity-disambiguation priority.
 11. A set of smaller, real, low-risk consistency gaps remains, but owner review corrected their priority: contextual internal-link/content-depth strengthening and Bing/IndexNow foundation are P1; OG/Twitter image completion, homepage `FAQPage` schema consistency, breadcrumb/date consistency, billing API cache headers, robots.txt crawl-courtesy completeness, and client-update analytics are P2.
 
@@ -832,7 +838,7 @@ Do not fabricate a future exact result.
 
 ### 23A.1 Verified Current Text2Task External Surfaces
 
-**LinkedIn:** a public indexed founder/profile result exists for Yan Eidelman and explicitly references `Text2Task.com`. Indexed LinkedIn posts also exist from the founder profile and the Text2Task company page. This means a public founder ↔ Text2Task association already exists externally. However, the Text2Task website About page still does not publicly name the founder.
+**LinkedIn:** a public indexed founder/profile result exists and explicitly references `Text2Task.com`. Indexed LinkedIn posts also exist from the founder profile and the Text2Task company page. This means a public founder ↔ Text2Task association already exists externally. However, the owner has decided not to publish founder identity on the Text2Task website at this time.
 
 **GetApp:** a current Text2Task listing was externally verified. It clearly matches the current `text2task.com` SaaS, including AI workflow positioning, freelancers/small teams, 30 free AI extracts, Pro price `$12.90/month`, and current project/task/workspace functionality.
 
@@ -840,7 +846,7 @@ Do not fabricate a future exact result.
 
 **Uneed:** current Text2Task listing verified. Observed signals: current positioning, 4 upvotes, 3 user reviews, and Project Management / Productivity / CRM classification.
 
-**Peerlist:** current Text2Task project page verified. The project is associated with Yan Eidelman and uses the current positioning: "Turn client messages into structured projects and tasks."
+**Peerlist:** current Text2Task project page verified. The project is associated with the founder and uses the current positioning: "Turn client messages into structured projects and tasks."
 
 **StartupFortune:** a standalone editorial article about the current Text2Task was verified: "Text2Task Turns Messy Client Messages Into Structured Projects and Tasks," published Aug 20, 2026. This is materially different from a basic directory listing and is recorded as a verified editorial mention.
 
@@ -931,7 +937,7 @@ The two prior-audit files named in this run's brief — `Text2Task_SEO_GEO_AEO_M
 
 Per the run's own priority definitions (correctness, security/privacy, indexability blocker, **serious entity ambiguity**, broken canonical/redirect, **measurement blocker required before implementation**):
 
-1. **No founder/Person entity exists on the Text2Task website** — no on-site published founder name, no `Person` schema, no personal profile link from `text2task.com` — against a confirmed, real, unrelated same-named product on the Microsoft Marketplace. Phase 0B external research now verifies that Yan Eidelman is publicly associated with Text2Task through indexed LinkedIn and Peerlist surfaces, strengthening the recommendation to consider truthful on-site entity disambiguation, but the owner decision remains open. (§16, §23A)
+1. **No founder/Person entity exists on the Text2Task website by owner privacy decision** — no on-site published founder name, no `Person` schema, no personal profile link from `text2task.com` — against a confirmed, real, unrelated same-named product on the Microsoft Marketplace. Phase 0B external research verified a public founder association through indexed external surfaces, but the owner has decided not to publish founder identity in this milestone. (§16, §23A, §42)
 2. **Core P0 measurement was incomplete at Phase 0 and is now production deployed / production smoke verified in Phase 1 Milestone 1**: no reliable `paid_conversion` signal existed from the authoritative Creem confirmed-payment webhook path, and `first_extract_created` / `project_saved` were allowlisted but never emitted. The implementation now exists, Preview/Staging verification passed for `first_extract_created` and `project_saved`, PR #2 was merged, and Vercel Production is READY at merge commit `b3e372c`. Manual Production Image Extract runtime verification, manual Production `paid_conversion` verification, and production event-row re-verification were not performed in this gate. (§22, §40, D020)
 
 **Phase 0B external verification result**: GA4's actual live data-collection status has now been externally verified from owner-supplied Google Analytics Admin evidence. GA4 is actively receiving production traffic, and the repository's documented shared-Google-tag architecture is confirmed: GA4 is connected as a destination of the existing `AW-670652067` Google tag. No GA4 application-code change is required. (§22)
@@ -1086,6 +1092,8 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | SEO-2026-09-09-D018 | 2026-09-13 16:55:06 Asia/Jerusalem | Preserve normalized acquisition storage and resolve acquisition -> paid attribution through a tested `user_id` / linked `anonymous_id` reporting helper instead of copying UTM/source fields onto `paid_conversion`. | Owner-approved correction pass explicitly rejected duplicated attribution fields on revenue events when normalized attribution can reliably resolve them. `analytics_events` already stores user-linked signup/acquisition rows and anonymous browser identifiers; `paid_conversion` has the authenticated `user_id`, which is the stable join key. | `lib/analytics/acquisition-attribution-resolver.server.ts`; `lib/analytics/acquisition-attribution-resolver.server.test.ts`; `app/admin/analytics/page.tsx` existing signup-attribution query pattern; `lib/analytics/signup-attribution.server.ts`; existing `analytics_events` schema. | Copying UTM/source/medium/campaign/referrer fields into every `paid_conversion` row — rejected as duplicated attribution storage. Adding a database migration — rejected because the existing event table and indexes are sufficient. Building a new admin dashboard UI in this milestone — rejected because the milestone only requires a queryable/testable contract. | Implemented locally / awaiting owner review |
 | SEO-2026-09-09-D019 | 2026-09-13 18:59:27 Asia/Jerusalem | Accept the Phase 1 Milestone 1 Preview/Staging runtime verification as sufficient for merge review, with image extraction and `paid_conversion` manual runtime checks explicitly deferred. | Owner-verified Vercel configuration showed Preview and Production use different Supabase project URLs, and Preview runtime was confirmed against `text2task-staging`. Vercel created a READY Preview deployment for PR #2 / implementation commit `10846aa0c9dfc7a2f6a2a215374d75eb6a5103f6`. Preview/Staging runtime checks passed for first authenticated text extraction, exactly-one `first_extract_created`, first project save / `project_saved`, and second-extraction deduplication. Route-level image extraction tests already pass, and paid-conversion semantics are covered by automated tests, but their manual runtime checks were intentionally deferred. | Owner-supplied Vercel/Supabase environment-isolation evidence; Preview/Staging test user `eidelman.yan+seo-m1-preview@gmail.com`; Staging `analytics_events` observations for `first_extract_created` and `project_saved`; persisted Staging project `Website Launch Updates and QA`; local automated test/build/typecheck/lint evidence recorded in §40.5. | Blocking merge review until manual image extraction runtime verification — rejected because the owner accepted it as a non-blocking follow-up after text extraction and deduplication runtime proof. Performing a Preview Creem payment/webhook mutation test during this gate — rejected because Creem environment variables require a separate safe verification strategy. Marking Milestone 1 production-verified — rejected because production verification has not started. | Preview verified / owner approved for merge review |
 | SEO-2026-09-09-D020 | 2026-09-14 11:58:23 Asia/Jerusalem | Close Phase 1 Milestone 1 as production deployed, production smoke verified, and complete, while preserving deferred Image Extract and `paid_conversion` runtime follow-ups. | PR #2 was merged successfully to `main` as merge commit `b3e372c`; Vercel Production deployment for environment `Production`, branch `main`, commit `b3e372c` reached READY; owner production smoke testing on `https://www.text2task.com/` passed for Homepage, Dashboard, Extract, Tasks, and Calendar with no user-visible regression observed. The production gate did not include manual Production Image Extract runtime verification, manual Production `paid_conversion` verification, production `paid_conversion` row verification, production `first_extract_created` re-verification, or production `project_saved` re-verification. | Owner-supplied merge/deployment facts; owner post-deployment smoke-test report; git reconciliation confirming `origin/main` and local `main` contain merge commit `b3e372c`, implementation commit `10846aa`, and preview-verification docs commit `b153e8a`. | Marking Image Extract manual runtime as verified — rejected because it was not performed. Marking `paid_conversion` runtime or row verification as complete — rejected because it was not performed and still requires a safe Creem strategy. Merging/deploying manually during this documentation task — rejected because the task is documentation-only and the production deployment already existed. | Production deployed / production smoke verified / complete |
+| SEO-2026-09-09-D021 | 2026-09-14 12:57:49 Asia/Jerusalem | Start Phase 1 Milestone 2 as mapping / audit / planning only, with implementation blocked on owner decisions for public founder identity and canonical external profile policy. | Milestone 2 is privacy- and reputation-sensitive: the strongest entity-disambiguation move would publish a founder/person identity and link it to the Organization, but the current website intentionally uses generic founder language and no `Person` schema. Existing source supports `Organization`, `WebSite`, `WebPage`, `AboutPage`, `CollectionPage`/`ItemList`, `BreadcrumbList`, `FAQPage`, and `Article`; it does not support hidden schema-only founder claims. External documentation verifies a real Text2Task footprint and external founder association, but owner approval is required before making that identity visible on-site. | Direct reads of `app/lib/site-config.ts`, `app/lib/schema.ts`, `app/page.tsx`, `app/about/page.tsx`, `app/contact/page.tsx`, `app/layout.tsx`, `app/components/landing/landing-footer.tsx`, `app/components/use-cases/use-case-detail-page.tsx`, `app/use-cases/page.tsx`, representative Feature/Solution/Resource pages, and §23A external-profile baseline. | Implementing `Person` schema before visible founder copy — rejected because structured data must reflect visible truth. Adding unverified directory/profile URLs to `Organization.sameAs` — rejected until exact current URLs are owner-verified. Adding `SoftwareApplication`/`Product` schema during this milestone — rejected unless a separate truthful, visible product-schema basis is approved. | Mapping / owner decisions required |
+| SEO-2026-09-09-D022 | 2026-09-14 13:56:50 Asia/Jerusalem | Implement Phase 1 Milestone 2 using Organization/product/domain/profile signals only, while keeping founder identity private. | The owner explicitly decided not to publish the founder's personal name at this time. Therefore the implementation must strengthen Text2Task's canonical entity without adding a `Person` node, founder metadata, `Organization.founder`, personal-profile `sameAs`, or personal social/profile links. Existing About-page photos may remain as unnamed human trust signals. | Owner instruction for Milestone 2 implementation; direct source reads of `app/lib/site-config.ts`, `app/lib/schema.ts`, `app/page.tsx`, `app/layout.tsx`, `app/about/page.tsx`, `app/components/landing/landing-footer.tsx`; existing external-profile inventory in §23A and §41. | Publishing the founder name — rejected by owner privacy decision. Adding `Person` schema or `Organization.founder` without visible named support — rejected. Adding founder/personal LinkedIn or Peerlist links — rejected. Expanding `Organization.sameAs` to GetApp/Capterra/Uneed/SaaSHub/Peerlist/UIComet/FounderDB without exact canonical URL verification from repo/current run evidence — rejected/deferred. Reintroducing `SoftwareApplication`/`Product` schema — rejected because no new truthful visible basis was approved. | Implemented locally / awaiting owner review |
 
 ---
 
@@ -1117,8 +1125,10 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | 2026-09-13 16:55:06 Asia/Jerusalem | Phase 1 Milestone 1 correction pass | Pre-commit owner-review gate corrections completed locally | Owner-review gate returned CHANGES REQUIRED BEFORE COMMIT | Active run Markdown/DOCX, analytics helpers, acquisition resolver, extraction routes/tests, project import/tests, tasks route/tests, homepage-demo claim/save tests, Creem webhook tests, project-persistence repo search | Local application/test/docs changes only; no database/migration/environment/configuration/production/external-console changes | Added missing distinct-renewal paid-conversion tests, completed `project_saved` coverage for `app/api/tasks/route.ts -> createProjectWithSubtasks`, added route-level image extraction tests, added analytics failure isolation tests across all seven requested paths, and added a tested acquisition -> paid attribution resolver contract | Targeted tests 10 files / 129 tests passed; relevant regression suite 21 files / 323 tests passed; `npx.cmd tsc --noEmit` passed; changed-file ESLint passed; full repo lint still failed only on unrelated pre-existing files; first `npm.cmd run build` failed on sandboxed Google Fonts fetch, network-enabled rerun passed | Correction pass complete / ready for commit review |
 | 2026-09-13 18:59:27 Asia/Jerusalem | Phase 1 Milestone 1 pre-merge Preview gate | Preview deployment, Preview/Staging isolation, and core runtime measurement checks recorded | Owner-supplied Vercel Preview/Supabase/Staging runtime evidence for PR #2 and implementation commit `10846aa0c9dfc7a2f6a2a215374d75eb6a5103f6` | Active run Markdown/DOCX and current git status only | Current run Markdown and DOCX only | PR #2 opened; Vercel Preview READY; Preview/Staging Supabase isolation verified; first text extraction runtime PASS; `first_extract_created` runtime PASS; second extraction deduplication PASS; first project save / `project_saved` runtime PASS; image runtime manually deferred by owner; `paid_conversion` runtime deferred pending safe Creem strategy; owner approved Milestone 1 for merge review | Documentation-only update; application/test files unchanged by this task; no database/environment/Vercel configuration/production change; no merge or production deploy | Preview verified / owner approved for merge review |
 | 2026-09-14 11:58:23 Asia/Jerusalem | Phase 1 Milestone 1 production closeout | Merge, Production deployment, and owner production smoke verification recorded | Owner-supplied PR #2 merge/deployment facts and production smoke-test report | Active run Markdown/DOCX, git branch/status/history only | Current run Markdown and DOCX only | PR #2 merged successfully; merge commit `b3e372c`; Vercel Production deployment READY for environment `Production`, branch `main`, commit `b3e372c`; owner production smoke test PASS for Homepage, Dashboard, Extract, Tasks, and Calendar; no user-visible regression observed; Image Extract manual runtime remains deferred / non-blocking; `paid_conversion` manual runtime remains deferred / safe verification required | Git reconciliation confirmed local `main` fast-forwarded to `origin/main` at `b3e372c`; `10846aa` and `b153e8a` are ancestors of `main`; documentation-only branch used; no application/test/config/database files changed by this task; no manual deploy | Production deployed / production smoke verified / complete |
+| 2026-09-14 12:57:49 Asia/Jerusalem | Phase 1 Milestone 2 mapping | Entity / Brand Disambiguation mapping and implementation plan recorded | Owner request to start Milestone 2 as mapping/audit/planning only; active run document; direct source reads | Current run Markdown/DOCX; `app/lib/site-config.ts`; `app/lib/schema.ts`; `app/page.tsx`; `app/about/page.tsx`; `app/contact/page.tsx`; `app/layout.tsx`; `app/components/landing/landing-footer.tsx`; `app/components/use-cases/use-case-detail-page.tsx`; `app/use-cases/page.tsx`; representative Feature/Solution/Resource pages | Current run Markdown and DOCX only | Current on-site entity graph inventoried; founder/person absence reconfirmed; brand disambiguation classified PARTIAL; external-profile baseline converted into sameAs suitability policy; canonical entity graph and owner-decision checklist recorded; implementation sequence proposed without code changes | Git status confirmed clean before documentation edit; no application/test/database/environment/config/production changes; DOCX synchronized from Markdown and validated for Milestone 2 markers | Mapping / owner decisions required |
+| 2026-09-14 13:56:50 Asia/Jerusalem | Phase 1 Milestone 2 implementation | Entity / Brand Disambiguation implemented locally without publishing founder identity | Owner privacy decision; current run Markdown; Blueprint; direct source reads; local verification | `app/lib/site-config.ts`; `app/page.tsx`; `app/layout.tsx`; `app/about/page.tsx`; `app/page.test.ts`; `app/about/page.test.ts`; `app/lib/schema-dangling-entity-references.test.ts`; current run Markdown/DOCX | `app/lib/site-config.ts`; `app/page.tsx`; `app/layout.tsx`; `app/about/page.tsx`; `app/page.test.ts`; `app/about/page.test.ts`; current run Markdown and DOCX | Canonical brand constants added; homepage Organization/WebSite schema normalized; root metadata aligned to canonical description; About copy strengthened as official product-site/entity copy; `Organization.sameAs` kept to company Facebook and LinkedIn only; no `Person`, founder metadata, founder name, personal-profile link, legalName, address, phone, Product, or SoftwareApplication schema added | Targeted tests: 3 files / 71 tests PASS; relevant regression: 9 files / 105 tests PASS; `npx tsc --noEmit` PASS; changed-file ESLint PASS; production build PASS after network-enabled rerun for Google Fonts; full lint still fails only on unrelated pre-existing share-link lint error plus warnings | Implemented locally / awaiting owner review |
 
-Phase 1 Milestone 1 has changed application code and tests through PR #2, and the production closeout update changed only the current run documentation. **Application code changed: YES — Phase 1 Milestone 1 implementation only. Application/test files changed by this documentation gate: NO. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production changed by this task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
+Phase 1 Milestone 1 changed application code and tests through PR #2. Phase 1 Milestone 2 now has local application/test/documentation changes on `feat/seo-entity-disambiguation`, awaiting owner review. **Application code changed: YES — Phase 1 Milestone 1 plus local Phase 1 Milestone 2 implementation. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production changed by this task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
 
 ---
 
@@ -1144,7 +1154,21 @@ Representative, non-exhaustive list by category (this audit does not claim a sin
 
 ## 36. Files Changed
 
-Current Codex update: Phase 1 Milestone 1 is production deployed, production smoke verified, and complete. The production closeout update changed only this run documentation. No application/test file, database schema/migration, environment variable, Vercel configuration, Google/Bing/Supabase production setting, production service, manual production deploy, or production configuration change was performed by this documentation task.
+Current Codex update: Phase 1 Milestone 2 Entity / Brand Disambiguation has been implemented locally and is awaiting owner review. The owner privacy decision is recorded: founder identity remains private for now, so no founder name, `Person` schema, founder metadata, personal-profile `sameAs`, or personal social/profile link was added. This local milestone changed only the application/test/documentation files listed below. No database schema/migration, environment variable, Vercel configuration, Google/Bing/Supabase production setting, production service, manual production deploy, push, or production configuration change was performed.
+
+Phase 1 Milestone 2 application files changed:
+- `app/lib/site-config.ts`
+- `app/page.tsx`
+- `app/layout.tsx`
+- `app/about/page.tsx`
+
+Phase 1 Milestone 2 test files changed/added:
+- `app/page.test.ts`
+- `app/about/page.test.ts`
+
+Phase 1 Milestone 2 documentation files changed:
+- `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.md`
+- `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.docx`
 
 Application files changed:
 - `lib/analytics/internal-events.server.ts`
@@ -1179,19 +1203,19 @@ Documentation files changed:
 **PHASE 0 OVERALL: COMPLETE / OWNER REVIEWED**
 **PHASE 1 STATUS: IMPLEMENTATION IN PROGRESS**
 **PHASE 1 IMPLEMENTATION: MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**
-**PHASE 1 MILESTONE 2: NOT STARTED**
+**PHASE 1 MILESTONE 2: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW**
 
 Phase 0A exit criteria (per the run brief) are met and owner-reviewed: exact public route inventory (§9), exact sitemap logic (§12), exact robots policy (§10.1), exact private indexing protection map (§11), exact canonical/host logic (§13), exact metadata inventory (§14), exact structured-data inventory (§15), entity-disambiguation gap analysis (§16), content/intent map (§17), internal-link map (§19), analytics/measurement map (§22), prior-audit reconciliation (§25), confirmed P0/P1/P2 backlog (§26–§28), a proposed next plan (§30), and a verification plan (§32) all exist above.
 
-Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is production deployed, production smoke verified, and complete. Milestone 2 has not started.
+Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is production deployed, production smoke verified, and complete. Milestone 2 is implemented locally and awaiting owner review. The owner has decided that founder identity remains private for now, so Milestone 2 implementation deliberately excludes founder name publication, `Person` schema, founder metadata, personal-profile `sameAs`, and personal social/profile links.
 
-**Application code changed: YES — Phase 1 Milestone 1 implementation only. Database changed: NO. Environment changed: NO. Production changed by this documentation task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
+**Application code changed: YES — Phase 1 Milestone 1 plus local Phase 1 Milestone 2 implementation. Database changed: NO. Environment changed: NO. Production changed by this task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
 
 ---
 
 ## 38. Phase 1 Master Implementation Plan
 
-**Status:** PLANNING ONLY. No Phase 1 implementation has started.
+**Status:** IMPLEMENTATION IN PROGRESS. Milestone 1 is complete and production deployed. Milestone 2 is implemented locally and awaiting owner review.
 
 **Planning timestamp:** 2026-09-13 13:26 Asia/Jerusalem.
 
@@ -1202,7 +1226,7 @@ Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Mile
 | Order | Milestone | Priority | Expected impact | Effort/risk | Depends on |
 |---:|---|---|---|---|---|
 | 1 | Measurement Foundation | P0 | Makes paying-user SEO/GEO growth measurable and prevents blind Phase 1 optimization | Medium/high because it touches analytics, Creem webhook semantics, and possible idempotency storage | Owner approval to implement; staging/test database workflow |
-| 2 | Entity / Brand Disambiguation | P0, owner decision required | Distinguishes current `text2task.com` from the unrelated Microsoft Marketplace product and strengthens E-E-A-T/GEO entity confidence | Low/medium if owner approves; privacy/reputation-sensitive | Owner approval to publish founder full name and professional profile |
+| 2 | Entity / Brand Disambiguation | P0 | Distinguishes current `text2task.com` from the unrelated Microsoft Marketplace product and strengthens E-E-A-T/GEO entity confidence | Low/medium; privacy/reputation-sensitive | Owner privacy decision recorded: no public founder identity, no `Person` schema, no personal-profile `sameAs` |
 | 3 | Internal Authority / Weak Use Cases | P1 | Improves crawl priority, topical support, and uniqueness for the weakest discovered-but-under-crawled use cases | Medium; content and linking quality risk if done mechanically | Milestone 1 preferred first for measurement; no database dependency |
 | 4 | Core Non-Brand Ranking Pages | P1 | Improves the pages with the largest current non-brand impression opportunity | Medium; cannibalization risk if intent boundaries are blurred | Milestone 1 preferred first; keep Feature vs Resource intent differentiated |
 | 5 | Bing / IndexNow Foundation | P1 | Adds faster Microsoft/Bing discovery for canonical public URLs | Medium; private URL leak risk if whitelist is wrong | Owner approval; stable key decision; staging verification |
@@ -1212,7 +1236,7 @@ Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Mile
 **Cross-milestone dependencies**
 
 - Milestone 1 should run first because Phase 1 work aimed at paying users cannot be evaluated until `paid_conversion`, `first_extract_created`, and `project_saved` are reliable.
-- Milestone 2 requires an explicit owner decision before any founder name, personal profile link, `Person` schema, or `Organization.founder` relation is implemented.
+- Milestone 2 owner decision is recorded: founder identity remains private for now, so entity disambiguation must rely on Organization/product/domain/profile signals and must not add founder name, personal profile link, `Person` schema, or `Organization.founder`.
 - Milestones 3, 4, 6, and 7 should be measured against the Milestone 1 funnel where possible; otherwise they risk optimizing impressions without knowing whether activation or paid conversion improved.
 - Milestone 5 must not submit private, dashboard, admin, token, or share URLs. URL eligibility must be code-reviewed before any external IndexNow submission goes live.
 - Bing Backlinks/Search Performance/Site Explorer should be rechecked after Bing finishes processing the newly onboarded property; this follow-up informs Milestones 5 and 6 but does not block Phase 1 planning.
@@ -1345,7 +1369,7 @@ Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Mile
 
 **Business objective:** clearly establish current `text2task.com` Text2Task as a distinct, trustworthy entity separate from the unrelated older Microsoft Marketplace Text2Task.
 
-**Evidence supporting the milestone:** Phase 0 confirmed no on-site founder full name, no `Person` schema, and no personal professional profile link (§16). Phase 0B externally verified that Yan Eidelman is already publicly associated with Text2Task through indexed LinkedIn and Peerlist surfaces (§23A). The unrelated Microsoft Marketplace Text2Task by Target Energy Solutions remains live and unrelated (§23A.4).
+**Evidence supporting the milestone:** Phase 0 confirmed no on-site founder full name, no `Person` schema, and no personal professional profile link (§16). Phase 0B externally verified that the founder is already publicly associated with Text2Task through indexed external surfaces (§23A). The unrelated Microsoft Marketplace Text2Task by Target Energy Solutions remains live and unrelated (§23A.4). The owner has now decided not to publish founder identity in this milestone.
 
 **Exact scope**
 
@@ -1924,7 +1948,7 @@ Reason: Phase 0 established that the business goal is not merely rankings; it is
 - Phase 0: COMPLETE / OWNER REVIEWED.
 - Phase 1: IMPLEMENTATION IN PROGRESS.
 - Phase 1 implementation: MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE.
-- Milestone 2: NOT STARTED.
+- Milestone 2: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
 - Application code changed: YES — Phase 1 Milestone 1 implementation.
 - Database changed: NO.
 - Environment changed: NO.
@@ -2070,3 +2094,271 @@ No user-visible regression was observed in this production smoke gate.
 - No database migration is required for this milestone.
 - Manual image extraction runtime verification remains a non-blocking follow-up.
 - Manual `paid_conversion` runtime verification requires a safe Creem strategy before execution.
+
+---
+
+## 41. Phase 1 Milestone 2 — Entity / Brand Disambiguation Mapping
+
+**Status:** HISTORICAL MAPPING SNAPSHOT / SUPERSEDED BY §42 LOCAL IMPLEMENTATION.
+
+**Mapping timestamp:** 2026-09-14 12:57:49 Asia/Jerusalem.
+
+**Branch / HEAD at mapping start:** `main` at `bb2dc2154562e3f1488c0e9bac28a49b09aa2973`.
+
+**Milestone objective:** build a truthful production-grade entity / brand disambiguation plan so search engines and AI systems can identify `text2task.com` Text2Task as the current freelancer/small-team SaaS, distinct from the unrelated Microsoft Marketplace / Target Energy Solutions product named Text2Task.
+
+### 41.1 On-Site Entity Inventory
+
+| Signal | Source | Component/function | Schema type | Entity name / URL / IDs | sameAs | Visible-content support | Consistency issues |
+|---|---|---|---|---|---|---|---|
+| Canonical origin | `app/lib/site-config.ts` | `SITE_ORIGIN`, `absoluteUrl()` | N/A | `https://www.text2task.com` | N/A | Supported by sitemap/canonical architecture. | Strong; all generated absolute URLs use www canonical origin. |
+| Organization social constants | `app/lib/site-config.ts` | `SITE_SOCIAL_LINKS`, `SITE_ORGANIZATION_SAME_AS` | N/A feeding Organization | Facebook company page; LinkedIn company page | Facebook business URL and LinkedIn company URL only | Footer visibly links the same two company profiles. | `sameAs` is narrow but truthful; does not include verified directories or founder profile. |
+| Site entity IDs | `app/lib/schema.ts` | `SITE_SCHEMA_ENTITY_IDS` | Organization, WebSite IDs | `https://www.text2task.com/#organization`, `https://www.text2task.com/#website` | N/A | Referenced by page schemas. | No `Person` ID and no `SoftwareApplication` ID by design. |
+| Breadcrumb helper | `app/lib/schema.ts` | `buildBreadcrumbListJsonLd()` | `BreadcrumbList` | Per-page `@id = {canonicalUrl}#breadcrumb` | N/A | Breadcrumb item names/URLs match visible navigation intent. | One known feature-page breadcrumb-depth inconsistency remains outside this milestone. |
+| Article helper | `app/lib/schema.ts` | `buildArticleJsonLd()` | `Article` | Per-article `@id = {url}#article`; `mainEntityOfPage.@id = {url}#webpage`; publisher `/#organization` | N/A | Supported by visible resource articles. | Some articles omit dates as already recorded in §15; not an entity-disambiguation blocker. |
+| Homepage Organization | `app/page.tsx` | `organizationJsonLd` rendered through `JsonLd` | `Organization` | Name `Text2Task`; `@id` `/#organization`; URL `/`; logo `/text2task-logo.png` | `SITE_ORGANIZATION_SAME_AS` only | Homepage visibly brands Text2Task, logo, product positioning. | No `founder`; no alternateName; `sameAs` omits verified directory/entity surfaces. |
+| Homepage WebSite | `app/page.tsx` | `websiteJsonLd` | `WebSite` | Name `Text2Task`; `@id` `/#website`; URL `/`; publisher `/#organization` | N/A | Supported by visible site and homepage copy. | Strong and stable. |
+| Homepage WebPage | `app/page.tsx` | `homepageWebPageJsonLd` | `WebPage` | `@id` `/#webpage`; name `Turn Client Messages Into Projects and Tasks`; publisher `/#organization`; isPartOf `/#website` | N/A | Supported by homepage title/hero/product copy. | No issue for entity work. |
+| About page | `app/about/page.tsx` | `aboutJsonLd` | `AboutPage` | `@id` `/about#webpage`; URL `/about`; publisher `/#organization`; isPartOf `/#website` | N/A | Visible copy says Text2Task is independently built, has product principles, and includes generic founder images/captions. | No named founder; AboutPage has no `about` or `mainEntity` after prior SoftwareApplication cleanup. |
+| Use Cases hub | `app/use-cases/page.tsx` | inline `collectionJsonLd`, `itemListJsonLd`, breadcrumb | `CollectionPage`, `ItemList`, `BreadcrumbList` | Name `Text2Task Use Cases`; item URLs under `/use-cases/*`; item-list `@id` `/use-cases#item-list` | N/A | Visible hub lists current use cases. | `CollectionPage` has no explicit `@id` and no publisher/isPartOf, but it is not the primary entity-disambiguation surface. |
+| Use Case details | `app/components/use-cases/use-case-detail-page.tsx` | `webPageJsonLd`, `faqJsonLd`, breadcrumb | `WebPage`, `FAQPage`, `BreadcrumbList` | Per-slug `@id = /use-cases/{slug}#webpage`; publisher `/#organization`; isPartOf `/#website` | N/A | Real visible page, FAQ, breadcrumbs. | `FAQPage` currently has no explicit `@id`; acceptable but less normalized than Feature/Solution FAQ schema. |
+| Solution page | `app/solutions/freelancer-project-management-software/page.tsx` | `webPageJsonLd`, `faqJsonLd`, breadcrumb | `WebPage`, `FAQPage`, `BreadcrumbList` | `@id = /solutions/freelancer-project-management-software#webpage`; publisher `/#organization`; FAQ `@id = #faq` | N/A | Visible commercial/product category copy and FAQ. | No SoftwareApplication mainEntity, intentionally. |
+| Feature pages | `app/features/*/page.tsx` | per-page `webPageJsonLd`, `faqJsonLd`, breadcrumb | `WebPage`, `FAQPage`, `BreadcrumbList` | Per-feature `#webpage`, `#faq`, breadcrumb IDs; publisher `/#organization` | N/A | Visible feature copy and FAQ. | Breadcrumb depth inconsistency on `client-feedback-to-tasks` remains P2; not blocking Milestone 2. |
+| Resource articles | `app/resources/*/page.tsx` | `buildArticleJsonLd()`, breadcrumb | `Article`, `BreadcrumbList` | Per-article `#article`; publisher `/#organization`; mainEntityOfPage `#webpage` | N/A | Visible long-form resource articles. | 3 of 7 articles lack published/modified dates; not blocking entity graph. |
+| Contact page | `app/contact/page.tsx` | page metadata only | None | Canonical `/contact`; support email `support@text2task.com` | N/A | Visible support/privacy/feedback email routes. | No Organization/ContactPoint JSON-LD. Do not invent address/phone. |
+| Footer | `app/components/landing/landing-footer.tsx` | `LandingFooter` | None | Visible logo alt `Text2Task`; support email; copyright `© 2026 Text2Task` | Company Facebook and LinkedIn links | Supports Organization name, logo, support email, company profiles. | No founder/person link; no legal company name beyond brand. |
+| Root metadata | `app/layout.tsx` | `metadata` | Metadata, not JSON-LD | `applicationName`, `authors`, `creator`, `publisher` all `Text2Task`; category `Productivity Software` | N/A | Brand/product category support. | No individual author/founder; correct until owner approves person identity. |
+| JSON-LD renderer | `app/components/JsonLd.tsx` | `JsonLd` | Renderer | Emits JSON-LD safely with `<` escaped | N/A | N/A | Safe shared renderer; no entity content itself. |
+
+### 41.2 Founder / Person Entity Mapping
+
+Current answers:
+
+1. Founder publicly named on-site: **NO**. The About page uses first-person founder narrative and generic captions such as "Founder and independent builder of Text2Task," but no full name is visible.
+2. `Person` schema present: **NO**. `app/lib/schema.ts` has no Person ID/builder and no page constructs an inline Person object.
+3. Founder name used in metadata/schema: **NO**. Metadata authors/creator/publisher are all `Text2Task`, not an individual.
+4. Founder identity linked to Organization: **NO**. Organization JSON-LD has no `founder` relationship.
+5. Founder identity linked to external profiles: **NO on-site**. Phase 0B documents external LinkedIn and Peerlist evidence associating the founder with Text2Task, but the website does not link a founder profile.
+6. Founder identity visible to users or schema-only: **neither**. It is visible externally in owner-supplied evidence, but not on the website.
+7. Would adding a founder entity currently be truthful and supported by visible content: **NO, not yet**. It may be truthful based on external evidence, but structured data must reflect visible on-site content. A schema-only founder claim would be the wrong order.
+8. Required visible content before Person schema: owner-approved full founder name on `/about`; a short factual founder role/bio; optionally an approved professional profile link; visible copy that explicitly states the founder relationship to Text2Task; and, if using a fragment URL, a stable visible section/anchor such as `/about#founder`.
+
+### 41.3 Brand Disambiguation Assessment
+
+**Classification:** PARTIAL.
+
+Current strong signals:
+- Canonical domain is consistently `https://www.text2task.com`.
+- Product category and copy consistently describe a SaaS for freelancers, agencies, and client-service teams that turns client messages/emails/notes/screenshots into reviewable projects and tasks.
+- Logo and brand name are consistent on homepage, footer, contact, About, metadata, and Organization schema.
+- Company LinkedIn and Facebook are in both footer links and `Organization.sameAs`.
+- External baseline verifies multiple current Text2Task surfaces and an unrelated older Microsoft Marketplace / Target Energy Solutions product.
+
+Current weak points:
+- No named founder/person identity appears on-site.
+- No `Person` schema or `Organization.founder` relationship exists.
+- Organization `sameAs` includes only two company social profiles, while the verified external footprint is broader.
+- Many verified external surfaces do not yet have exact canonical profile URLs recorded in the repository/run doc, so they cannot safely be added to schema without owner-supplied URLs.
+- Ambiguous/unverified profiles (G2, Product Hunt, BetaList) must remain excluded.
+
+Conclusion: search engines and AI systems can probably distinguish `text2task.com` from the unrelated Outlook/email-assistant product by domain, audience, category, and product copy, but the entity graph is not yet strong enough for high-confidence consolidation across founder, company, product, and external profiles. The next implementation should strengthen truthful on-site identity and canonical external references without inventing unsupported claims.
+
+### 41.4 External Profile / Entity Inventory
+
+| Surface | Current verification state | Refers clearly to this Text2Task? | Brand/domain/category match | Founder/company identity visible | Suitable for `sameAs`? |
+|---|---|---:|---|---|---|
+| LinkedIn company page | Verified in repo/source as current company social link; Phase 0B also notes indexed company posts | Yes | Company link uses Text2Task brand; domain/profile exactness should be owner-confirmed before any URL changes | Company identity visible; founder posts exist externally per run doc | YES, already in Organization `sameAs` as company profile |
+| Facebook business page | Present in source and footer | Likely yes based on source-owned link | Brand profile only; not independently enriched in Phase 0B external sweep | Company profile only | YES, already in Organization `sameAs` if owner still considers it canonical |
+| Founder LinkedIn profile | Phase 0B owner-supplied external evidence says an indexed founder/profile result exists and references `Text2Task.com` | Yes per run doc | Founder relationship matches external evidence | Founder identity visible externally, not on-site | Rejected for this milestone by owner privacy decision; future `Person.sameAs` only if founder is named visibly on-site and exact URL is owner-approved |
+| GetApp | Externally verified current listing | Yes | Matches current SaaS, AI workflow, freelancers/small teams, 30 free AI extracts, Pro `$12.90/month`, project/task/workspace functionality | Founder/company identity not recorded in run doc | Candidate Organization/Product profile `sameAs` after exact URL owner verification |
+| Capterra | Externally verified current pricing/listing page | Yes | Matches Free plan, 30 total AI extracts, Pro `$12.90/month`, feature set | Founder/company identity not recorded in run doc | Candidate Organization/Product profile `sameAs` after exact URL owner verification |
+| Uneed | Current listing verified | Yes | Current positioning; Project Management / Productivity / CRM classification | Founder/company identity not recorded in run doc | Candidate profile `sameAs` after exact URL owner verification |
+| Peerlist | Current project page verified | Yes | Uses positioning "Turn client messages into structured projects and tasks" | Associated with the founder | Deferred; exact URL and owner policy would be required, and no founder/person graph is allowed in this milestone |
+| StartupFortune | Verified standalone editorial article | Yes | Editorial title matches current positioning | Not a profile surface | Not recommended for `sameAs`; cite/authority asset, not identity-equivalent profile |
+| SaaSHub | Externally surfaced as recently verified product | Yes per run doc | Current product positioning | Founder/company identity not recorded | Candidate profile `sameAs` after exact URL/currentness verification |
+| UIComet | Surfaced in launch discovery | Likely, but lower-authority discovery surface | Launch/discovery match only | Not recorded | Usually exclude from initial canonical `sameAs` unless exact URL is stable and owner wants a broad profile graph |
+| FounderDB / Peer Push | Surfaced in discovery data | Likely | Discovery data, not full profile detail in run doc | May relate to founder/entity but details are not recorded | Exclude until exact current public URLs and identity details are owner-verified |
+| Product Hunt | Not externally verified in Phase 0B sweep | Unknown | Unknown | Unknown | NO; do not include unless verified later |
+| BetaList | Not externally verified in Phase 0B sweep | Unknown | Unknown | Unknown | NO; do not include unless verified later |
+| G2 | Ambiguous / requires identity verification | Unknown | Current visible G2 result does not clearly establish current `text2task.com` identity | Unknown | NO; explicitly exclude until verified |
+
+### 41.5 Recommended Canonical Entity Graph
+
+Recommended nodes:
+
+| Node | Canonical `@id` | Canonical URL | Name | Description / role | Relationships |
+|---|---|---|---|---|---|
+| Organization | `https://www.text2task.com/#organization` | `https://www.text2task.com/` | `Text2Task` | Company/product organization behind the Text2Task SaaS | `url`, `logo`, conservative `sameAs`; future `founder` only after owner approval |
+| WebSite | `https://www.text2task.com/#website` | `https://www.text2task.com/` | `Text2Task` | Website for the Text2Task SaaS | `publisher` -> Organization |
+| Homepage WebPage | `https://www.text2task.com/#webpage` | `https://www.text2task.com/` | `Turn Client Messages Into Projects and Tasks` | Primary product landing page | `isPartOf` -> WebSite; `publisher` -> Organization |
+| AboutPage | `https://www.text2task.com/about#webpage` | `https://www.text2task.com/about` | `About Text2Task | Our Story and Product Principles` | Trust/entity page | `isPartOf` -> WebSite; `publisher` -> Organization; future `mainEntity` or visible founder section only if approved |
+| Person, if approved | Recommended `https://www.text2task.com/about#founder` | `https://www.text2task.com/about#founder` | Owner-approved founder full name | Founder of Text2Task | `sameAs` -> approved founder profile(s); Organization `founder` -> Person `@id` |
+| WebPage pages | `{canonicalUrl}#webpage` | Each canonical route | Page-specific title | Public content/product/use-case/resource page | `isPartOf` -> WebSite; `publisher` -> Organization |
+| Article pages | `{articleUrl}#article` | Resource article URL | Article headline | Resource article | `mainEntityOfPage` -> `{articleUrl}#webpage`; `publisher` -> Organization |
+
+`sameAs` policy:
+- Keep only exact, current, public profiles that clearly identify this `text2task.com` entity.
+- Use Organization `sameAs` for official company/product profiles and reputable directory/product profiles after exact URL verification.
+- Use Person `sameAs` only for the founder's personal profiles after the founder is visibly named on-site and owner approves.
+- Exclude ambiguous, unverified, scraped, stale, or name-collision-prone profiles.
+- Do not use editorial articles as `sameAs`; they are citations/mentions, not identity-equivalent profiles.
+
+SoftwareApplication/Product policy:
+- Do not add `SoftwareApplication` or `Product` schema in Milestone 2 by default. The current owner-reviewed decision remains valid: prior `SoftwareApplication` schema was removed because rating/review requirements could not be truthfully met with visible public content.
+- Reconsider only in a separate P2 schema-normalization task if the implementation uses truthful visible offers/features and no fabricated ratings/reviews.
+
+### 41.6 Owner Decisions Required
+
+| Decision | Consequence | Recommended choice | Blocking? |
+|---|---|---|---|
+| Publicly name the founder on Text2Task? | Enables truthful `Person` schema and `Organization.founder`; improves disambiguation; creates privacy/reputation exposure. | YES if the owner is comfortable being publicly associated; otherwise do not add Person schema. | BLOCKING for Person/founder implementation |
+| Where should founder identity be visible? | Determines whether schema has visible support. | Add a concise `/about` founder section with stable anchor `/about#founder`; optionally mention in footer only if desired. | BLOCKING for Person schema |
+| Link founder social/profile URLs? | Enables `Person.sameAs`; exposes personal profile(s). | Use only owner-approved professional profile URLs, likely the externally verified LinkedIn profile first. | BLOCKING for Person `sameAs`; non-blocking for Organization work |
+| Organization `sameAs` breadth? | More profiles can strengthen consolidation but stale/weak/ambiguous URLs can confuse entity identity. | Start conservative: company LinkedIn, company Facebook, plus owner-verified high-trust product/directory profiles with exact URLs (GetApp/Capterra/Uneed/SaaSHub/Peerlist as appropriate). | BLOCKING for `sameAs` expansion |
+| Strengthen About page copy? | Visible copy supports schema and improves user trust. | YES: add factual founder/company identity and entity-disambiguating product description if owner approves. | BLOCKING for founder schema; P1 for copy quality |
+| Use `alternateName` or tagline? | Can help distinguish "Text2Task" from similarly named products. | Consider Organization `alternateName` such as `Text2Task.com` or a visible tagline only if the same phrase appears in copy/metadata. | NON-BLOCKING |
+| Exclude ambiguous profiles? | Avoids contaminating the canonical entity graph. | YES: exclude G2, Product Hunt, BetaList, and any profile without exact current identity verification. | BLOCKING for safe `sameAs` policy |
+
+### 41.7 Implementation Plan
+
+| Priority | Step | Scope | Acceptance criteria |
+|---|---|---|---|
+| P0 | Entity source-of-truth definition | Define constants for Organization, WebSite, optional Person IDs, approved profile URLs, logo, and descriptions. | One canonical source in `site-config`/schema helpers; no duplicated profile URLs. |
+| P0 | Owner founder decision | Owner approves or rejects public founder name/profile publication. | Written owner decision recorded before code. |
+| P0 | About visible-entity reinforcement | If approved, add visible founder name, role, concise bio, and optional professional profile link on `/about`. | Visible content supports all future Person fields. |
+| P0 | Organization schema normalization | Keep stable Organization/WebSite IDs; add `founder` only if Person is approved and visible. | Organization remains truthful; no hidden-only claims. |
+| P0 | Person schema, if approved | Add `Person` node with stable `@id`, name, URL, role, approved `sameAs`; link Organization `founder` to it. | Schema validates and matches visible About content exactly. |
+| P1 | `sameAs` normalization | Expand Organization `sameAs` only with exact owner-verified profile URLs. | Ambiguous/unverified profiles excluded; high-trust current profiles included according to owner policy. |
+| P1 | Metadata consistency | Ensure titles/descriptions/OG naming still use consistent Text2Task positioning and do not overuse founder identity. | No duplicate title suffix; brand/category language stays consistent. |
+| P1 | Schema graph consistency tests | Add focused tests for Organization/WebSite/About/Person links once implementation is authorized. | Tests prove stable IDs and no dangling entity references. |
+| P1 HIGH | External profile consistency work | Update external profiles manually where needed so name, domain, category, logo, description, and founder/company identity align. | Profiles match `text2task.com` canonical entity; no fake reviews/claims. |
+| P2 | Optional product schema revisit | Separate task only if owner wants it and visible product/offer data supports it. | No ratings/reviews unless publicly visible and legitimate. |
+| P2 | Search/AI follow-up measurement | Recheck branded/entity SERP, GSC/Bing visibility, AI citations, and external profile indexing after implementation. | Changes tracked over time; no immediate ranking claims fabricated. |
+
+### 41.8 Milestone 2 Current Conclusion
+
+This mapping snapshot has been superseded by the owner privacy decision and local implementation recorded in §42. The owner decided not to publish founder identity in this milestone, so no `Person`, `Organization.founder`, founder metadata, personal-profile link, or expanded unverified `sameAs` implementation shipped locally.
+
+---
+
+## 42. Phase 1 Milestone 2 — Entity / Brand Disambiguation Local Implementation
+
+**Status:** IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
+
+**Implementation timestamp:** 2026-09-14 13:56:50 Asia/Jerusalem.
+
+**Branch:** `feat/seo-entity-disambiguation`.
+
+**Owner privacy decision:** founder identity remains private for now. Do not publish a founder name, do not add `Person` schema, do not add founder metadata, do not add founder `sameAs`, do not add personal social/profile links, and do not infer or expose owner identity from repository/internal documentation. Existing unnamed About-page photos may remain as human trust signals.
+
+### 42.1 Implemented Canonical Entity Graph
+
+| Entity | Current implementation |
+|---|---|
+| Organization `@id` | `https://www.text2task.com/#organization` |
+| WebSite `@id` | `https://www.text2task.com/#website` |
+| Homepage WebPage `@id` | `https://www.text2task.com/#webpage` |
+| AboutPage `@id` | `https://www.text2task.com/about#webpage` |
+| Organization name | `Text2Task` |
+| Organization URL | `https://www.text2task.com/` |
+| Organization logo | `https://www.text2task.com/text2task-logo.png` |
+| Organization description | `Text2Task turns client messages, emails, WhatsApp messages, notes, and supported screenshots into reviewable projects and tasks for freelancers, small agencies, and client-service teams.` |
+| WebSite publisher | `https://www.text2task.com/#organization` |
+| Homepage WebPage `isPartOf` | `https://www.text2task.com/#website` |
+| Homepage WebPage publisher | `https://www.text2task.com/#organization` |
+| AboutPage `isPartOf` | `https://www.text2task.com/#website` |
+| AboutPage publisher | `https://www.text2task.com/#organization` |
+| Person entity | Not present by owner privacy decision |
+| `Organization.founder` | Not present by owner privacy decision |
+| `SoftwareApplication` / `Product` | Not present; prior owner-reviewed no-fabricated-schema decision preserved |
+
+### 42.2 Final `sameAs` Inventory
+
+Accepted in `Organization.sameAs`:
+
+| URL | Reason |
+|---|---|
+| `https://www.facebook.com/profile.php?id=61588954785433` | Existing source-owned company profile, also visible in footer. |
+| `https://www.linkedin.com/company/text2task/` | Existing source-owned company profile, also visible in footer. |
+
+Rejected or deferred:
+
+| Candidate | Status | Reason |
+|---|---|---|
+| Founder/personal profiles | Rejected | Owner privacy decision: no founder name, no personal-profile link, no `Person.sameAs`. |
+| GetApp | Deferred | Current listing verified in run evidence, but exact canonical URL is not recorded in the repository/current run evidence. |
+| Capterra | Deferred | Current listing verified in run evidence, but exact canonical URL is not recorded in the repository/current run evidence. |
+| Uneed | Deferred | Current listing verified in run evidence, but exact canonical URL is not recorded in the repository/current run evidence. |
+| SaaSHub | Deferred | Current product surface verified in run evidence, but exact canonical URL/currentness is not recorded in the repository/current run evidence. |
+| Peerlist | Deferred | Current project surface verified, but personal/founder exposure is privacy-sensitive and exact canonical Organization/Product use is not owner-approved. |
+| StartupFortune | Rejected for `sameAs` | Editorial mention/article, not an identity-equivalent profile. |
+| UIComet | Deferred | Discovery/listing surface only; exact stable canonical URL and owner policy not verified. |
+| FounderDB / Peer Push | Deferred | Discovery data only; exact URLs and identity details not verified for safe public schema use. |
+| G2 | Rejected | Ambiguous identity; do not include until current `text2task.com` identity is clearly verified. |
+| Product Hunt | Rejected/deferred | Not externally verified in this search sweep. |
+| BetaList | Rejected/deferred | Not externally verified in this search sweep. |
+
+### 42.3 About Page Changes
+
+The About page now more clearly establishes that:
+
+- `text2task.com` is the official Text2Task product site.
+- Text2Task is the SaaS product at `text2task.com`.
+- Text2Task turns client messages, emails, WhatsApp messages, notes, and supported screenshots into reviewable projects and tasks.
+- The product is for freelancers, small agencies, and client-service teams.
+- Existing unnamed founder/owner photos remain unchanged.
+
+No founder name, personal profile, phone number, location, legal entity name, address, or personal email was added.
+
+### 42.4 Source / Schema Normalization
+
+Implemented source-of-truth constants in `app/lib/site-config.ts`:
+
+- `SITE_BRAND_NAME`
+- `SITE_CANONICAL_DESCRIPTION`
+- `SITE_CANONICAL_LOGO_PATH`
+- `SITE_CANONICAL_LOGO_URL`
+- `SITE_CANONICAL_URL`
+- existing `SITE_ORIGIN`, `SITE_SOCIAL_LINKS`, and `SITE_ORGANIZATION_SAME_AS`
+
+Homepage `Organization` and `WebSite` JSON-LD now consume these canonical constants for name, URL, logo, and description. Root metadata now uses the canonical brand/description constants. Entity IDs remain stable and unchanged.
+
+### 42.5 Verification Results
+
+| Check | Result |
+|---|---|
+| Targeted schema/SEO tests | PASS — 3 files / 71 tests (`app/page.test.ts`, `app/about/page.test.ts`, `app/lib/schema-dangling-entity-references.test.ts`) |
+| Relevant regression tests | PASS — 9 files / 105 tests across public page/schema/footer regressions |
+| TypeScript typecheck | PASS — `npx tsc --noEmit` |
+| Changed-file ESLint | PASS — `app/lib/site-config.ts`, `app/page.tsx`, `app/layout.tsx`, `app/about/page.tsx`, `app/page.test.ts`, `app/about/page.test.ts` |
+| Production build | PASS after network-enabled rerun for Google Fonts; first sandboxed run failed only because Next could not fetch Google Fonts |
+| Full lint | FAILS on unrelated pre-existing lint issue in `app/components/dashboard/tasks/share-link/share-link-channels.tsx` (`react-hooks/set-state-in-effect`) plus unrelated warnings; not changed in this milestone |
+
+### 42.6 Privacy Review
+
+Result: PASS.
+
+- Founder name introduced: NO.
+- `Person` schema introduced: NO.
+- `Organization.founder` introduced: NO.
+- Founder metadata introduced: NO.
+- Personal email introduced: NO.
+- Phone introduced: NO.
+- Home/location details introduced: NO.
+- Personal social/profile links introduced: NO.
+- Repository/internal owner identity leaked into public metadata or schema: NO.
+- Existing About-page photos changed: NO.
+
+### 42.7 Final Milestone 2 State
+
+- Phase 0: COMPLETE / OWNER REVIEWED.
+- Phase 1: IMPLEMENTATION IN PROGRESS.
+- Milestone 1: COMPLETE.
+- Milestone 2: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
+- Production: UNCHANGED.
+- Database migration required: NO.
+- Database changed: NO.
+- Environment/config changed: NO.
+- Commit created: NO.
+- Push performed: NO.
+- Deploy performed: NO.

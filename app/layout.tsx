@@ -8,7 +8,12 @@ import { ConsentAwareVercelAnalytics } from "./components/analytics/consent-awar
 import { CookieConsentBanner } from "./components/analytics/cookie-consent-banner";
 import { GoogleAdsTag } from "./components/analytics/google-ads-tag";
 import { MicrosoftClarity } from "./components/analytics/microsoft-clarity";
-import { SITE_ORIGIN } from "./lib/site-config";
+import {
+  SITE_BRAND_NAME,
+  SITE_CANONICAL_DESCRIPTION,
+  SITE_CANONICAL_URL,
+  SITE_ORIGIN,
+} from "./lib/site-config";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -30,8 +35,7 @@ export const metadata: Metadata = {
     template: "%s | Text2Task",
   },
 
-  description:
-    "Text2Task turns messy client messages, emails, notes, and screenshots into organized tasks with deadlines, budgets, client details, phone numbers, emails, and priorities.",
+  description: SITE_CANONICAL_DESCRIPTION,
 
   keywords: [
     "AI CRM",
@@ -54,19 +58,19 @@ export const metadata: Metadata = {
     "Webflow freelancer task manager",
   ],
 
-  applicationName: "Text2Task",
-  authors: [{ name: "Text2Task" }],
-  creator: "Text2Task",
-  publisher: "Text2Task",
+  applicationName: SITE_BRAND_NAME,
+  authors: [{ name: SITE_BRAND_NAME }],
+  creator: SITE_BRAND_NAME,
+  publisher: SITE_BRAND_NAME,
 
   category: "Productivity Software",
 
   openGraph: {
     title: "Text2Task | Turn Client Messages Into Tasks",
     description:
-      "Turn messy client messages, emails, notes, and screenshots into clean structured tasks with deadlines, budgets, client details, and priorities.",
-    url: SITE_ORIGIN,
-    siteName: "Text2Task",
+      SITE_CANONICAL_DESCRIPTION,
+    url: SITE_CANONICAL_URL,
+    siteName: SITE_BRAND_NAME,
     type: "website",
     locale: "en_US",
   },
@@ -75,7 +79,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Text2Task | Turn Client Messages Into Tasks",
     description:
-      "AI CRM for freelancers and small teams. Turn messy client messages, emails, notes, and screenshots into structured tasks in seconds.",
+      SITE_CANONICAL_DESCRIPTION,
   },
 
   robots: {
