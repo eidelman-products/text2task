@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { schedulePaidConversionAnalytics } from "@/lib/analytics/seo-funnel-events.server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -58,6 +59,7 @@ type NormalizedCreemWebhook = {
 type CreemWebhookRpcResult = {
   processingStatus: string;
   reasonCode: string;
+  resolvedUserId: string | null;
 };
 
 const MAX_WEBHOOK_BODY_BYTES = 256 * 1024;
@@ -733,10 +735,21 @@ function normalizeRpcResult(data: unknown): CreemWebhookRpcResult | null {
     row.result_reason_code,
     row.reason_code
   );
+  const resolvedUserId = firstBoundedString(
+    80,
+    row.result_resolved_user_id,
+    row.resolved_user_id
+  );
 
   if (!processingStatus || !reasonCode) return null;
 
-  return { processingStatus, reasonCode };
+  return {
+    processingStatus,
+    reasonCode,
+    resolvedUserId: resolvedUserId && UUID_PATTERN.test(resolvedUserId)
+      ? resolvedUserId
+      : null,
+  };
 }
 
 function logWebhookResult({
@@ -868,6 +881,19 @@ export async function POST(req: NextRequest) {
       processingStatus: result.processingStatus,
       reasonCode: result.reasonCode,
     });
+
+    try {
+      await schedulePaidConversionAnalytics({
+        userId: result.resolvedUserId,
+        provider: "creem",
+        eventType: normalized.webhook.eventType,
+        processingStatus: result.processingStatus,
+        reasonCode: result.reasonCode,
+        environment: normalized.webhook.environment,
+      });
+    } catch {
+      // Measurement is best-effort and must not trigger webhook retries.
+    }
 
     if (
       result.processingStatus === "pending_unmatched" ||

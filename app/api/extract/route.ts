@@ -1,4 +1,4 @@
-import { after, NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { z } from "zod";
@@ -6,6 +6,7 @@ import {
   extractProjectFromText,
   TextExtractionError,
 } from "@/lib/extraction/text-extraction.server";
+import { scheduleSuccessfulExtractionActivityAndFirstExtractAnalytics } from "@/lib/analytics/seo-funnel-events.server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const FREE_EXTRACT_LIMIT = 30;
@@ -21,6 +22,7 @@ type UsageProfile = {
   email: string;
   plan: UserPlan;
   extractCount: number;
+  successfulExtractCount: number;
 };
 
 async function getAuthenticatedUser() {
@@ -68,7 +70,7 @@ async function getOrCreateUsageProfile(): Promise<UsageProfile | null> {
 
   const { data, error } = await supabaseAdmin
     .from("users")
-    .select("id,email,plan,extract_count,subscription_status")
+    .select("id,email,plan,extract_count,subscription_status,successful_extract_count")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -87,7 +89,7 @@ async function getOrCreateUsageProfile(): Promise<UsageProfile | null> {
         extract_count: 0,
         subscription_status: "free",
       })
-      .select("id,email,plan,extract_count,subscription_status")
+      .select("id,email,plan,extract_count,subscription_status,successful_extract_count")
       .single();
 
     if (insertError || !insertedUser) {
@@ -100,6 +102,7 @@ async function getOrCreateUsageProfile(): Promise<UsageProfile | null> {
       email: insertedUser.email,
       plan: "free",
       extractCount: insertedUser.extract_count ?? 0,
+      successfulExtractCount: insertedUser.successful_extract_count ?? 0,
     };
   }
 
@@ -110,6 +113,7 @@ async function getOrCreateUsageProfile(): Promise<UsageProfile | null> {
     email: data.email,
     plan: isPro ? "pro" : "free",
     extractCount: data.extract_count ?? 0,
+    successfulExtractCount: data.successful_extract_count ?? 0,
   };
 }
 
@@ -181,36 +185,6 @@ async function incrementExtractCount(profile: UsageProfile) {
   return nextCount;
 }
 
-/**
- * Owner-analytics only. Scheduled AFTER the extraction response has already
- * been prepared, via next/server after(). Applies to both Free and Pro
- * users. Must never affect the extraction response, and must never touch
- * extract_count or Free-plan quota state -- see
- * public.record_successful_extraction() (migration
- * 202607210002_user_activity_write_rpcs.sql).
- */
-function scheduleSuccessfulExtractionActivity(userId: string): void {
-  try {
-    after(async () => {
-      try {
-        await supabaseAdmin.rpc("record_successful_extraction", {
-          p_user_id: userId,
-        });
-      } catch (error) {
-        console.warn("Owner activity tracking (text extraction) failed:", {
-          message:
-            error instanceof Error ? error.message : "Unknown activity error",
-        });
-      }
-    });
-  } catch (error) {
-    console.warn("Owner activity tracking scheduling failed:", {
-      message:
-        error instanceof Error ? error.message : "Unknown activity error",
-    });
-  }
-}
-
 export async function POST(req: NextRequest) {
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -263,7 +237,16 @@ export async function POST(req: NextRequest) {
         ? null
         : Math.max(FREE_EXTRACT_LIMIT - nextExtractCount, 0);
 
-    scheduleSuccessfulExtractionActivity(profile.userId);
+    try {
+      scheduleSuccessfulExtractionActivityAndFirstExtractAnalytics({
+        request: req,
+        userId: profile.userId,
+        successfulExtractCountBefore: profile.successfulExtractCount,
+        source: "text",
+      });
+    } catch {
+      // Measurement is best-effort and must not affect extraction success.
+    }
 
     return NextResponse.json({
       success: true,

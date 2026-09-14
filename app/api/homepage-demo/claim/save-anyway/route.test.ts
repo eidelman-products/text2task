@@ -32,10 +32,19 @@ vi.mock("next/server", async () => {
 });
 
 const logAnalyticsEventSafeMock = vi.fn();
+const hasActiveProjectBeforeSaveMock = vi.fn();
+const scheduleProjectSavedAnalyticsMock = vi.fn();
 
 vi.mock("@/lib/analytics/internal-events.server", () => ({
   logAnalyticsEventSafe: (...args: unknown[]) =>
     logAnalyticsEventSafeMock(...args),
+}));
+
+vi.mock("@/lib/analytics/seo-funnel-events.server", () => ({
+  hasActiveProjectBeforeSave: (...args: unknown[]) =>
+    hasActiveProjectBeforeSaveMock(...args),
+  scheduleProjectSavedAnalytics: (...args: unknown[]) =>
+    scheduleProjectSavedAnalyticsMock(...args),
 }));
 
 const assertEnabledMock = vi.fn();
@@ -185,6 +194,8 @@ beforeEach(() => {
   });
   claimWithOverrideMock.mockReset();
   logAnalyticsEventSafeMock.mockReset().mockResolvedValue(true);
+  hasActiveProjectBeforeSaveMock.mockReset().mockResolvedValue(false);
+  scheduleProjectSavedAnalyticsMock.mockReset();
   validateProjectImportGroupsMock.mockReset().mockReturnValue([]);
   prepareProjectImportPersistenceInputMock
     .mockReset()
@@ -639,5 +650,76 @@ describe("POST /api/homepage-demo/claim/save-anyway - owner_flagged tagging (Pha
         metadata: { duplicate_override: true, owner_flagged: false },
       })
     );
+  });
+});
+
+describe("POST /api/homepage-demo/claim/save-anyway - project_saved measurement", () => {
+  it("schedules project_saved after a successful duplicate-override claim save", async () => {
+    claimWithOverrideMock.mockResolvedValueOnce({
+      outcome: "saved",
+      created: true,
+    });
+
+    const request = buildRequest();
+    const response = await POST(request);
+
+    expect(response.status).toBe(200);
+    expect(scheduleProjectSavedAnalyticsMock).toHaveBeenCalledWith({
+      request,
+      userId: VALID_USER_ID,
+      hadProjectBefore: false,
+      source: "homepage_demo_claim",
+      createdProjectCount: 1,
+    });
+  });
+
+  it("passes prior-project state so the central helper can suppress repeat project_saved", async () => {
+    hasActiveProjectBeforeSaveMock.mockResolvedValueOnce(true);
+    claimWithOverrideMock.mockResolvedValueOnce({
+      outcome: "saved",
+      created: true,
+    });
+
+    const response = await POST(buildRequest());
+
+    expect(response.status).toBe(200);
+    expect(scheduleProjectSavedAnalyticsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hadProjectBefore: true,
+        source: "homepage_demo_claim",
+      })
+    );
+  });
+
+  it("does not schedule project_saved for an already-claimed replay", async () => {
+    claimWithOverrideMock.mockResolvedValueOnce({
+      outcome: "already_claimed",
+      created: false,
+    });
+
+    const response = await POST(buildRequest());
+
+    expect(response.status).toBe(200);
+    expect(scheduleProjectSavedAnalyticsMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps a successful save-anyway claim successful when project_saved scheduling fails", async () => {
+    claimWithOverrideMock.mockResolvedValueOnce({
+      outcome: "saved",
+      created: true,
+    });
+    scheduleProjectSavedAnalyticsMock.mockImplementationOnce(() => {
+      throw new Error("analytics unavailable");
+    });
+
+    const response = await POST(buildRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      code: "saved",
+      destination: "/dashboard",
+      created: true,
+    });
   });
 });

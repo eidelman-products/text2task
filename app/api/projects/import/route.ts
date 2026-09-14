@@ -17,6 +17,10 @@ import {
   type ProjectImportPersistenceOptions,
   type TransactionalImportFailureCategory,
 } from "@/lib/projects/import-persistence.server";
+import {
+  hasActiveProjectBeforeSave,
+  scheduleProjectSavedAnalytics,
+} from "@/lib/analytics/seo-funnel-events.server";
 import { createClient } from "@/lib/supabase/server";
 
 const MAX_PROJECTS = PROJECT_IMPORT_MAX_PROJECTS;
@@ -155,6 +159,8 @@ export async function POST(req: NextRequest) {
       return errorResponse("UNAUTHORIZED", "Unauthorized", 401);
     }
 
+    const hadProjectBefore = await hasActiveProjectBeforeSave(user.id);
+
     if (idempotencyKey) {
       const claim = await claimProjectImportAttempt({
         userId: user.id,
@@ -265,6 +271,20 @@ export async function POST(req: NextRequest) {
       claimedAttempt = null;
 
       if (importResult.kind === "saved" || importResult.kind === "replay") {
+        if (importResult.kind === "saved") {
+          try {
+            scheduleProjectSavedAnalytics({
+              request: req,
+              userId: user.id,
+              hadProjectBefore,
+              source: "project_import",
+              createdProjectCount: importResult.result.createdProjects.length,
+            });
+          } catch {
+            // Measurement is best-effort and must not affect imports.
+          }
+        }
+
         return NextResponse.json(importResult.result);
       }
 
@@ -336,6 +356,18 @@ export async function POST(req: NextRequest) {
       duplicates: [],
       failedGroups: [],
     };
+
+    try {
+      scheduleProjectSavedAnalytics({
+        request: req,
+        userId: user.id,
+        hadProjectBefore,
+        source: "project_import",
+        createdProjectCount: createdProjects.length,
+      });
+    } catch {
+      // Measurement is best-effort and must not affect imports.
+    }
 
     return NextResponse.json(successResult);
   } catch {
