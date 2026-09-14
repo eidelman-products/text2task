@@ -9,12 +9,12 @@ import {
   SITE_SCHEMA_ENTITY_IDS,
   buildWebPageEntityId,
 } from "../lib/schema";
-import { absoluteUrl } from "../lib/site-config";
+import { SITE_CANONICAL_DESCRIPTION, absoluteUrl } from "../lib/site-config";
 import AboutReturnLink from "./about-return-link";
 
 const pageTitle = "About Text2Task | Our Story and Product Principles";
 const pageDescription =
-  "Learn why Text2Task was built, the product principles behind its review-first workflow, and the independent story shaping its development.";
+  "Learn about the official Text2Task product, why it was built, and the product principles behind its review-first workflow for turning client communication into structured projects and tasks.";
 
 export const metadata: Metadata = {
   title: {
@@ -165,7 +165,7 @@ export default function AboutPage() {
               </Suspense>
 
               <p className="mt-6 text-sm font-black uppercase tracking-[0.16em] text-blue-700 first:mt-0">
-                About Text2Task
+                Official Text2Task product site
               </p>
 
               <h1 className="mt-5 text-5xl font-black tracking-tight text-slate-950 sm:text-6xl lg:text-[4.75rem] lg:leading-[0.96]">
@@ -173,10 +173,11 @@ export default function AboutPage() {
               </h1>
 
               <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-                Text2Task is an independently built SaaS product that turns
-                scattered client communication into clear, reviewable projects
-                and tasks—so less time is spent copying details and more time
-                can go into the work itself.
+                Text2Task is the SaaS product at text2task.com. It turns
+                scattered client messages, emails, WhatsApp messages, notes,
+                and supported screenshots into clear, reviewable projects and
+                tasks so less time is spent copying details and more time can
+                go into the work itself.
               </p>
 
               <p className="mt-7 border-l-2 border-blue-600 pl-5 text-base font-black text-slate-950">
@@ -218,10 +219,10 @@ export default function AboutPage() {
               </h2>
               <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-slate-600">
                 The problem is not that the work is missing. It is that the work
-                is buried inside messages, screenshots, revisions, links,
-                deadlines, and follow-ups. Text2Task exists to turn that noise
-                into a clear starting point without rebuilding every project and
-                task list by hand.
+                is buried inside messages, emails, WhatsApp threads,
+                screenshots, revisions, links, deadlines, and follow-ups.
+                Text2Task exists to turn that noise into a clear starting point
+                without rebuilding every project and task list by hand.
               </p>
 
               <div className="mx-auto my-10 h-px w-24 bg-blue-600" />
@@ -230,8 +231,8 @@ export default function AboutPage() {
                 Clarity before automation.
               </p>
               <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-                AI should help structure the work. The final decision should
-                remain with the user.
+                {SITE_CANONICAL_DESCRIPTION} The final decision should remain
+                with the user.
               </p>
             </div>
           </div>
