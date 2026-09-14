@@ -9,7 +9,8 @@
 **PHASE 0 OVERALL: COMPLETE / OWNER REVIEWED**
 **PHASE 1 STATUS: IMPLEMENTATION IN PROGRESS**
 **PHASE 1 IMPLEMENTATION: MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**
-**PHASE 1 MILESTONE 2: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW**
+**PHASE 1 MILESTONE 2: PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**
+**PHASE 1 MILESTONE 3: NOT STARTED**
 
 Companion file: `Text2Task_SEO_GEO_Run_2026-09-09.docx` (formatted, distributable Source of Truth — this Markdown file is the version-controllable editable source; both are maintained together for this run only).
 
@@ -43,6 +44,8 @@ Phase 1 Milestone 2 mapping update recorded 2026-09-14 12:57:49 Asia/Jerusalem: 
 
 Phase 1 Milestone 2 implementation update recorded 2026-09-14 13:56:50 Asia/Jerusalem: the owner made a deliberate privacy decision to keep founder identity private for now. No founder name, no `Person` schema, no founder metadata, no personal-profile `sameAs`, and no personal social/profile link were added. Milestone 2 was implemented locally on branch `feat/seo-entity-disambiguation` by strengthening Text2Task's canonical Organization/product/domain signals only: shared site constants now define the canonical brand name, URL, logo, and description; homepage `Organization`/`WebSite` JSON-LD uses those constants; root metadata uses the canonical description and brand constants; the About page now visibly identifies `text2task.com` as the official Text2Task product site without naming the founder; and tests lock the allowed company-only `sameAs` inventory and the absence of `Person`/founder schema. Production remains unchanged.
 
+Phase 1 Milestone 2 production closeout update recorded 2026-09-14 18:08:27 Asia/Jerusalem: PR #4 was merged successfully to `main` as production merge commit `80b3318`. Vercel Production reached READY. Owner manual Production smoke verification passed: Homepage loads correctly; About page loads correctly; the new "ABOUT TEXT2TASK" eyebrow is live; the new About opening paragraph is live; existing About photos remain; founder personal name is not published; no `Person` schema was intentionally added; no personal social/profile links were introduced; no visible regression was observed in the reviewed About sections; and the owner privacy decision remains preserved. Milestone 2 is now production deployed, production smoke verified, and complete. Milestone 3 has not started.
+
 ---
 
 ## 1. Cover / Run Metadata
@@ -58,14 +61,15 @@ Phase 1 Milestone 2 implementation update recorded 2026-09-14 13:56:50 Asia/Jeru
 | Phase 0 overall | COMPLETE / OWNER REVIEWED |
 | Phase 1 status | IMPLEMENTATION IN PROGRESS |
 | Phase 1 implementation | MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE |
-| Phase 1 Milestone 2 | IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW |
+| Phase 1 Milestone 2 | PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE |
+| Phase 1 Milestone 3 | NOT STARTED |
 | Author | Claude Code (Sonnet 5), directed by the site owner |
 | Repository | `C:\Users\Home\projects\inboxshaper` (git branch `main`, clean at run start) |
 | Prior internal reference | `docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md` (found in repo, read in full, used for reconciliation) |
 | Named prior audit files | `Text2Task_SEO_GEO_AEO_Master_Audit_2026-09-09_HE(1).docx` and `text2task_full_audit.docx` — **searched for and NOT FOUND** anywhere in the workspace or filesystem. Their claims could not be independently inspected in this run; see §25. |
-| Application code changed | YES — Phase 1 Milestone 1 implementation |
-| Production changed | YES — PR #2 merged and Vercel Production deployed before this documentation closeout; this documentation task changed no Production configuration |
-| Commit/push/deploy performed | PR #2 merge and automatic Vercel Production deployment already occurred; this documentation task creates/pushes docs branch only and performs no manual deploy |
+| Application code changed | YES — Phase 1 Milestone 1 implementation and Phase 1 Milestone 2 implementation through merged PRs; this documentation closeout changed no application code |
+| Production changed | YES — PR #2 and PR #4 were merged and Vercel Production deployed before their respective documentation closeouts; this documentation task changed no Production configuration |
+| Commit/push/deploy performed | PR #4 merge and automatic Vercel Production deployment already occurred before this documentation closeout; this documentation task performs no commit, push, or deploy |
 
 ---
 
@@ -1127,8 +1131,9 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | 2026-09-14 11:58:23 Asia/Jerusalem | Phase 1 Milestone 1 production closeout | Merge, Production deployment, and owner production smoke verification recorded | Owner-supplied PR #2 merge/deployment facts and production smoke-test report | Active run Markdown/DOCX, git branch/status/history only | Current run Markdown and DOCX only | PR #2 merged successfully; merge commit `b3e372c`; Vercel Production deployment READY for environment `Production`, branch `main`, commit `b3e372c`; owner production smoke test PASS for Homepage, Dashboard, Extract, Tasks, and Calendar; no user-visible regression observed; Image Extract manual runtime remains deferred / non-blocking; `paid_conversion` manual runtime remains deferred / safe verification required | Git reconciliation confirmed local `main` fast-forwarded to `origin/main` at `b3e372c`; `10846aa` and `b153e8a` are ancestors of `main`; documentation-only branch used; no application/test/config/database files changed by this task; no manual deploy | Production deployed / production smoke verified / complete |
 | 2026-09-14 12:57:49 Asia/Jerusalem | Phase 1 Milestone 2 mapping | Entity / Brand Disambiguation mapping and implementation plan recorded | Owner request to start Milestone 2 as mapping/audit/planning only; active run document; direct source reads | Current run Markdown/DOCX; `app/lib/site-config.ts`; `app/lib/schema.ts`; `app/page.tsx`; `app/about/page.tsx`; `app/contact/page.tsx`; `app/layout.tsx`; `app/components/landing/landing-footer.tsx`; `app/components/use-cases/use-case-detail-page.tsx`; `app/use-cases/page.tsx`; representative Feature/Solution/Resource pages | Current run Markdown and DOCX only | Current on-site entity graph inventoried; founder/person absence reconfirmed; brand disambiguation classified PARTIAL; external-profile baseline converted into sameAs suitability policy; canonical entity graph and owner-decision checklist recorded; implementation sequence proposed without code changes | Git status confirmed clean before documentation edit; no application/test/database/environment/config/production changes; DOCX synchronized from Markdown and validated for Milestone 2 markers | Mapping / owner decisions required |
 | 2026-09-14 13:56:50 Asia/Jerusalem | Phase 1 Milestone 2 implementation | Entity / Brand Disambiguation implemented locally without publishing founder identity | Owner privacy decision; current run Markdown; Blueprint; direct source reads; local verification | `app/lib/site-config.ts`; `app/page.tsx`; `app/layout.tsx`; `app/about/page.tsx`; `app/page.test.ts`; `app/about/page.test.ts`; `app/lib/schema-dangling-entity-references.test.ts`; current run Markdown/DOCX | `app/lib/site-config.ts`; `app/page.tsx`; `app/layout.tsx`; `app/about/page.tsx`; `app/page.test.ts`; `app/about/page.test.ts`; current run Markdown and DOCX | Canonical brand constants added; homepage Organization/WebSite schema normalized; root metadata aligned to canonical description; About copy strengthened as official product-site/entity copy; `Organization.sameAs` kept to company Facebook and LinkedIn only; no `Person`, founder metadata, founder name, personal-profile link, legalName, address, phone, Product, or SoftwareApplication schema added | Targeted tests: 3 files / 71 tests PASS; relevant regression: 9 files / 105 tests PASS; `npx tsc --noEmit` PASS; changed-file ESLint PASS; production build PASS after network-enabled rerun for Google Fonts; full lint still fails only on unrelated pre-existing share-link lint error plus warnings | Implemented locally / awaiting owner review |
+| 2026-09-14 18:08:27 Asia/Jerusalem | Phase 1 Milestone 2 production closeout | PR #4 merge, Production deployment, and owner Production smoke verification recorded | Owner-supplied PR #4 merge/deployment facts and Production smoke-test report | Active run Markdown/DOCX, git branch/status/history only | Current run Markdown and DOCX only | PR #4 merged successfully; production merge commit `80b3318`; Vercel Production READY; owner Production smoke test PASS for Homepage and About; new "ABOUT TEXT2TASK" eyebrow and opening paragraph verified live; existing About photos remain; founder personal name remains unpublished; `Person` schema remains intentionally absent; no personal-profile `sameAs` links introduced; no visible regression observed; privacy decision preserved | Git reconciliation confirmed local `main` fast-forwarded to `origin/main` at `80b3318`; documentation-only branch used; no application/test/config/database/environment files changed by this task; no deploy performed by this task | Production deployed / production smoke verified / complete |
 
-Phase 1 Milestone 1 changed application code and tests through PR #2. Phase 1 Milestone 2 now has local application/test/documentation changes on `feat/seo-entity-disambiguation`, awaiting owner review. **Application code changed: YES — Phase 1 Milestone 1 plus local Phase 1 Milestone 2 implementation. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production changed by this task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
+Phase 1 Milestone 1 changed application code and tests through PR #2. Phase 1 Milestone 2 changed application code, tests, and documentation through PR #4 and is now production deployed, production smoke verified, and complete. This closeout task changes documentation only. **Application code changed by this documentation task: NO. Test files changed by this documentation task: NO. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production changed by this task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
 
 ---
 
@@ -1203,19 +1208,20 @@ Documentation files changed:
 **PHASE 0 OVERALL: COMPLETE / OWNER REVIEWED**
 **PHASE 1 STATUS: IMPLEMENTATION IN PROGRESS**
 **PHASE 1 IMPLEMENTATION: MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**
-**PHASE 1 MILESTONE 2: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW**
+**PHASE 1 MILESTONE 2: PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE**
+**PHASE 1 MILESTONE 3: NOT STARTED**
 
 Phase 0A exit criteria (per the run brief) are met and owner-reviewed: exact public route inventory (§9), exact sitemap logic (§12), exact robots policy (§10.1), exact private indexing protection map (§11), exact canonical/host logic (§13), exact metadata inventory (§14), exact structured-data inventory (§15), entity-disambiguation gap analysis (§16), content/intent map (§17), internal-link map (§19), analytics/measurement map (§22), prior-audit reconciliation (§25), confirmed P0/P1/P2 backlog (§26–§28), a proposed next plan (§30), and a verification plan (§32) all exist above.
 
-Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is production deployed, production smoke verified, and complete. Milestone 2 is implemented locally and awaiting owner review. The owner has decided that founder identity remains private for now, so Milestone 2 implementation deliberately excludes founder name publication, `Person` schema, founder metadata, personal-profile `sameAs`, and personal social/profile links.
+Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is production deployed, production smoke verified, and complete. Milestone 2 is production deployed, production smoke verified, and complete. The owner privacy decision remains preserved: founder identity remains private for now, so Milestone 2 deliberately excludes founder name publication, `Person` schema, founder metadata, personal-profile `sameAs`, and personal social/profile links. Milestone 3 has not started.
 
-**Application code changed: YES — Phase 1 Milestone 1 plus local Phase 1 Milestone 2 implementation. Database changed: NO. Environment changed: NO. Production changed by this task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
+**Application code changed: YES — Phase 1 Milestone 1 and Phase 1 Milestone 2 implementation through merged PRs; this documentation task changed no application/test files. Database changed: NO. Environment changed: NO. Production changed by this documentation task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
 
 ---
 
 ## 38. Phase 1 Master Implementation Plan
 
-**Status:** IMPLEMENTATION IN PROGRESS. Milestone 1 is complete and production deployed. Milestone 2 is implemented locally and awaiting owner review.
+**Status:** IMPLEMENTATION IN PROGRESS. Milestone 1 is complete and production deployed. Milestone 2 is production deployed, production smoke verified, and complete. Milestone 3 has not started.
 
 **Planning timestamp:** 2026-09-13 13:26 Asia/Jerusalem.
 
@@ -1943,16 +1949,17 @@ Reason: Phase 0 established that the business goal is not merely rankings; it is
 - Decide whether founder full name and professional profile may be published for Milestone 2.
 - Approve any external-console work for Bing/IndexNow or production verification.
 
-**Current status after the Phase 1 Milestone 1 local implementation update**
+**Current status after the Phase 1 Milestone 2 production closeout**
 
 - Phase 0: COMPLETE / OWNER REVIEWED.
 - Phase 1: IMPLEMENTATION IN PROGRESS.
-- Phase 1 implementation: MILESTONE 1 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE.
-- Milestone 2: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
-- Application code changed: YES — Phase 1 Milestone 1 implementation.
+- Phase 1 implementation: MILESTONE 1 COMPLETE; MILESTONE 2 PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE.
+- Milestone 2: PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE.
+- Milestone 3: NOT STARTED.
+- Application code changed: YES — Phase 1 Milestone 1 and Phase 1 Milestone 2 implementation through merged PRs; this documentation task changed no application code.
 - Database changed: NO.
 - Environment changed: NO.
-- Production deployment: READY at merge commit `b3e372c`.
+- Production deployment: READY at merge commit `80b3318` for Milestone 2.
 - Production smoke verification: PASS.
 - Production changed by this documentation task: NO.
 - Manual deployment performed by this task: NO.
@@ -2243,7 +2250,7 @@ This mapping snapshot has been superseded by the owner privacy decision and loca
 
 ## 42. Phase 1 Milestone 2 — Entity / Brand Disambiguation Local Implementation
 
-**Status:** IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
+**Status:** PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE.
 
 **Implementation timestamp:** 2026-09-14 13:56:50 Asia/Jerusalem.
 
@@ -2354,11 +2361,39 @@ Result: PASS.
 - Phase 0: COMPLETE / OWNER REVIEWED.
 - Phase 1: IMPLEMENTATION IN PROGRESS.
 - Milestone 1: COMPLETE.
-- Milestone 2: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
-- Production: UNCHANGED.
+- Milestone 2: PRODUCTION DEPLOYED / PRODUCTION SMOKE VERIFIED / COMPLETE.
+- Milestone 3: NOT STARTED.
+- Production: Vercel Production READY; owner smoke verification PASS.
 - Database migration required: NO.
 - Database changed: NO.
 - Environment/config changed: NO.
-- Commit created: NO.
-- Push performed: NO.
-- Deploy performed: NO.
+- Commit created by this documentation task: NO.
+- Push performed by this documentation task: NO.
+- Deploy performed by this documentation task: NO.
+
+### 42.8 Production Verification Closeout
+
+**Closeout timestamp:** 2026-09-14 18:08:27 Asia/Jerusalem.
+
+**Production merge:** PR #4 merged successfully to `main`.
+
+**Production merge commit:** `80b3318`.
+
+**Vercel Production status:** READY.
+
+**Owner Production smoke verification:** PASS.
+
+Verified live in Production:
+
+- Homepage loads correctly: PASS.
+- About page loads correctly: PASS.
+- New "ABOUT TEXT2TASK" eyebrow is live: PASS.
+- New About opening paragraph is live: PASS.
+- Existing About photos remain: PASS.
+- Founder personal name is not published: PASS.
+- `Person` schema remains intentionally absent: PASS.
+- Personal social/profile links were not introduced: PASS.
+- No visible regression observed in reviewed About sections: PASS.
+- Owner privacy decision remains preserved: PASS.
+
+No new Decision Log ID was created for this closeout because no new product or technical decision was made; this entry records deployment and production verification evidence only.
