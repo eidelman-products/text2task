@@ -298,6 +298,22 @@ export default function ArticlePage() {
               connected after intake.
             </p>
             <p>
+              If your client requests are more specialized, compare the role
+              examples for{" "}
+              <Link href="/use-cases/freelance-developers">
+                client requests for freelance developers
+              </Link>
+              ,{" "}
+              <Link href="/use-cases/seo-freelancers">
+                SEO client task setup
+              </Link>
+              , or{" "}
+              <Link href="/use-cases/shopify-freelancers">
+                Shopify store update requests
+              </Link>
+              .
+            </p>
+            <p>
               Already have one specific message to work from instead of a
               backlog of requests?{" "}
               <Link href="/resources/turn-client-messages-into-tasks">

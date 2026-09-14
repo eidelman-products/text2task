@@ -101,6 +101,16 @@ const audienceLinks = [
     text: "Turn stakeholder notes into a project and task draft you can review.",
   },
   {
+    href: "/use-cases/seo-freelancers",
+    title: "SEO freelancers",
+    text: "Extract page-change requests, metadata notes, and redirect instructions from client text.",
+  },
+  {
+    href: "/use-cases/freelance-developers",
+    title: "Freelance developers",
+    text: "Turn feature requests and supplied bug details into development work you can approve.",
+  },
+  {
     href: "/use-cases/virtual-assistants",
     title: "Virtual assistants",
     text: "Organize detailed instructions without rebuilding every task by hand.",

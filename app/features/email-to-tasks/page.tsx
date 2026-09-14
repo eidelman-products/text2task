@@ -146,6 +146,21 @@ const audienceLinks = [
     text: "Keep related requests, dates, and priorities together under the right project.",
   },
   {
+    href: "/use-cases/seo-freelancers",
+    title: "SEO freelancers",
+    text: "Turn client SEO changes from long emails into page-level work you can review.",
+  },
+  {
+    href: "/use-cases/freelance-developers",
+    title: "Freelance developers",
+    text: "Organize development change requests from email before bug fixes or feature work starts.",
+  },
+  {
+    href: "/use-cases/shopify-freelancers",
+    title: "Shopify freelancers",
+    text: "Keep Shopify store update requests, product notes, and launch dates together.",
+  },
+  {
     href: "/use-cases/virtual-assistants",
     title: "Virtual assistants",
     text: "Organize detailed email instructions without manually rebuilding every task.",

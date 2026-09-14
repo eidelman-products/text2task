@@ -347,6 +347,17 @@ export default function HowToTurnClientFeedbackIntoTasksPage() {
                 </Link>
                 .
               </p>
+              <p>
+                The same review step helps when{" "}
+                <Link href="/use-cases/video-editors">
+                  timecoded client feedback
+                </Link>{" "}
+                or{" "}
+                <Link href="/use-cases/seo-freelancers">
+                  metadata and content update requests
+                </Link>{" "}
+                arrive after the project already has saved work.
+              </p>
 
               <p className={styles.trustNote}>
                 Text2Task does not monitor messaging or email accounts, and

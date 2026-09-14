@@ -42,6 +42,27 @@ export const shopifyFreelancersUseCase = {
       "priority": true
     }
   },
+  "transformation": {
+    "title": "From scattered store requests to Shopify tasks.",
+    "description": "Example: a client sends product edits, promotion timing, banner notes, and mobile feedback together before a launch.",
+    "beforeLabel": "Client Shopify request",
+    "beforeText": "\"Please update the winter collection prices, swap the homepage banner, add the 20% discount note to the product pages, fix the mobile product image crop, and make sure it is live before Thursday's campaign.\"",
+    "inputTitle": "What Text2Task can organize",
+    "inputs": [
+      "Product, collection, pricing, and promotion requests",
+      "Banner, image, navigation, mobile, cart, and checkout notes",
+      "Supplied product links, asset references, and campaign details",
+      "Launch dates, priorities, budgets, and approval requirements"
+    ],
+    "outputTitle": "What still needs your Shopify judgment",
+    "outputs": [
+      "Whether the store change is technically safe to publish",
+      "Whether pricing, discounts, and campaign rules are correct",
+      "Which Shopify theme, app, or admin workflow should handle the request",
+      "Final storefront testing, launch timing, and client approval"
+    ],
+    "value": "The storefront brief becomes organized task drafts, while Shopify implementation, testing, and publishing decisions stay with the freelancer."
+  },
   "painPoints": {
     "title": "Store update briefs turn into hours of manual task entry.",
     "description": "One Shopify client message can combine product-page changes, collection updates, supplied pricing and promotion details, banners, images, navigation, mobile fixes, cart notes, links, assets, deadlines, priorities, and budgets.",
@@ -132,6 +153,26 @@ export const shopifyFreelancersUseCase = {
     "wordpress-freelancers",
     "webflow-freelancers"
   ],
+  "relatedLinks": {
+    "title": "Related workflows for Shopify requests",
+    "links": [
+      {
+        "label": "Screenshot to Tasks",
+        "href": "/features/screenshot-to-tasks",
+        "description": "Organize storefront screenshots and mobile feedback before store work begins."
+      },
+      {
+        "label": "Email to Tasks",
+        "href": "/features/email-to-tasks",
+        "description": "Turn launch, product, and promotion emails into reviewable project tasks."
+      },
+      {
+        "label": "How to organize client requests",
+        "href": "/resources/how-to-organize-client-requests-as-a-freelancer",
+        "description": "Separate scattered client updates into an approved work plan."
+      }
+    ]
+  },
   "finalCta": {
     "title": "Skip the manual task setup on your next Shopify request.",
     "description": "Paste the store brief, review the proposed project and store tasks, and save only the work you approve.",

@@ -42,6 +42,27 @@ export const freelanceDevelopersUseCase = {
       "priority": true
     }
   },
+  "transformation": {
+    "title": "From mixed client notes to development tasks.",
+    "description": "Example: a client sends a feature idea, a mobile issue, browser details, and a deadline in one message.",
+    "beforeLabel": "Client development request",
+    "beforeText": "\"Can you add the pricing toggle, fix the mobile nav on the services page, check the checkout error Sarah saw in Chrome, and have it ready before Monday's client review?\"",
+    "inputTitle": "What Text2Task can organize",
+    "inputs": [
+      "Feature requests and UI changes",
+      "Client-reported bugs and supplied reproduction notes",
+      "Browser, device, URL, and screenshot details",
+      "Priorities, deadlines, and acceptance notes"
+    ],
+    "outputTitle": "What still needs your developer judgment",
+    "outputs": [
+      "Whether the reported bug is reproducible",
+      "Which implementation approach is technically appropriate",
+      "Whether the request needs code, design, or product clarification",
+      "Testing, deployment, and code review decisions"
+    ],
+    "value": "The request becomes reviewable development work, while debugging, implementation, testing, and deployment stay with the freelance developer."
+  },
   "painPoints": {
     "title": "Manual task entry steals time from the actual development work.",
     "description": "A client message can combine feature requests, UI changes, mobile fixes, client-reported bugs, screenshots, browser or device details, priorities, and deadlines.",
@@ -132,6 +153,26 @@ export const freelanceDevelopersUseCase = {
     "wordpress-freelancers",
     "project-managers"
   ],
+  "relatedLinks": {
+    "title": "Related workflows for development requests",
+    "links": [
+      {
+        "label": "Screenshot to Tasks",
+        "href": "/features/screenshot-to-tasks",
+        "description": "Keep UI screenshots, bug reports, and supplied details with the right task."
+      },
+      {
+        "label": "Email to Tasks",
+        "href": "/features/email-to-tasks",
+        "description": "Turn long development request emails into proposed project work."
+      },
+      {
+        "label": "How to organize client requests",
+        "href": "/resources/how-to-organize-client-requests-as-a-freelancer",
+        "description": "Use a repeatable workflow for separating client messages into clear work."
+      }
+    ]
+  },
   "finalCta": {
     "title": "Skip the task setup. Spend more time on the project.",
     "description": "Paste the client request, review the proposed project and tasks, and save only the development work you approve.",

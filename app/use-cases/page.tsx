@@ -12,6 +12,39 @@ import {
   getUseCaseCategoryGroups,
 } from "@/app/lib/use-cases";
 
+const categoryGuidance = {
+  "website-development": {
+    intro:
+      "Choose this cluster when the client request is about a site, store, bug report, SEO update, CMS change, or launch task.",
+    examples: [
+      "website edits",
+      "development fixes",
+      "SEO updates",
+      "storefront changes",
+    ],
+  },
+  "creative-content": {
+    intro:
+      "Use this cluster for visual, social, and production feedback where revisions, formats, approvals, and delivery details can get separated.",
+    examples: [
+      "design revisions",
+      "content approvals",
+      "video edits",
+      "delivery requirements",
+    ],
+  },
+  "operations-teams": {
+    intro:
+      "Start here when the work is about keeping multi-step client operations, stakeholder requests, deadlines, and handoffs organized.",
+    examples: [
+      "project handoffs",
+      "admin requests",
+      "multi-client work",
+      "deadlines",
+    ],
+  },
+} as const;
+
 export const metadata: Metadata = {
   title: "Use Cases for Freelancers & Agencies",
   description:
@@ -206,6 +239,19 @@ export default function UseCasesPage() {
                   <p className="mt-4 max-w-md leading-7 text-slate-600">
                     {category.description}
                   </p>
+                  <p className="mt-4 max-w-md text-sm leading-6 text-slate-600">
+                    {categoryGuidance[category.id].intro}
+                  </p>
+                  <ul className="mt-5 flex max-w-md flex-wrap gap-2">
+                    {categoryGuidance[category.id].examples.map((example) => (
+                      <li
+                        key={example}
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-600"
+                      >
+                        {example}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
                 <div className="divide-y divide-slate-200 border-y border-slate-200">

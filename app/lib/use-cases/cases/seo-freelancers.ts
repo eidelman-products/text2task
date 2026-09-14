@@ -42,6 +42,27 @@ export const seoFreelancersUseCase = {
       "priority": true
     }
   },
+  "transformation": {
+    "title": "From scattered SEO notes to page-level tasks.",
+    "description": "Example: a client sends several URLs with title tag, meta description, redirect, and internal-link requests in one message.",
+    "beforeLabel": "Client SEO request",
+    "beforeText": "\"Can you update the title on /services, rewrite the meta description for /pricing, redirect the old /consulting URL, add links from the blog post to the new landing page, and check alt text on the screenshots before Friday?\"",
+    "inputTitle": "What Text2Task can organize",
+    "inputs": [
+      "Page URLs and the requested change for each page",
+      "Title tag and meta description updates supplied by the client",
+      "Redirect and internal-link instructions",
+      "Image alt text notes, priority, and deadline"
+    ],
+    "outputTitle": "What still needs your SEO judgment",
+    "outputs": [
+      "Whether the supplied metadata is strategically strong enough",
+      "Whether the redirect target is technically correct",
+      "Which internal links are genuinely useful to visitors",
+      "Any keyword research or crawl findings not included in the message"
+    ],
+    "value": "The page changes become separate reviewable tasks, while strategy, research, crawling, and implementation stay with the SEO freelancer."
+  },
   "painPoints": {
     "title": "SEO work stalls when every page change has to be typed out by hand.",
     "description": "One client request can combine several URLs, title tags, meta descriptions, internal links, headings, content notes, redirects, alt text requests, approvals, priorities, and deadlines.",
@@ -132,6 +153,26 @@ export const seoFreelancersUseCase = {
     "shopify-freelancers",
     "web-designers"
   ],
+  "relatedLinks": {
+    "title": "Related workflows for SEO requests",
+    "links": [
+      {
+        "label": "Email to Tasks",
+        "href": "/features/email-to-tasks",
+        "description": "Turn long client SEO emails into project and task drafts you can review."
+      },
+      {
+        "label": "Client Feedback to Tasks",
+        "href": "/features/client-feedback-to-tasks",
+        "description": "Compare follow-up page-change feedback with SEO work already saved."
+      },
+      {
+        "label": "How to turn emails into tasks",
+        "href": "/resources/how-to-turn-emails-into-tasks",
+        "description": "Use an email workflow to separate URLs, requests, dates, and missing details."
+      }
+    ]
+  },
   "finalCta": {
     "title": "Skip the SEO admin work. Spend more time improving pages.",
     "description": "Paste the client instructions, review the proposed project and page-level tasks, and save only the work you approve.",
