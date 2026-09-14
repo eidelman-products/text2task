@@ -165,7 +165,7 @@ export default function AboutPage() {
               </Suspense>
 
               <p className="mt-6 text-sm font-black uppercase tracking-[0.16em] text-blue-700 first:mt-0">
-                Official Text2Task product site
+                About Text2Task
               </p>
 
               <h1 className="mt-5 text-5xl font-black tracking-tight text-slate-950 sm:text-6xl lg:text-[4.75rem] lg:leading-[0.96]">
@@ -173,11 +173,11 @@ export default function AboutPage() {
               </h1>
 
               <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-                Text2Task is the SaaS product at text2task.com. It turns
-                scattered client messages, emails, WhatsApp messages, notes,
-                and supported screenshots into clear, reviewable projects and
-                tasks so less time is spent copying details and more time can
-                go into the work itself.
+                Text2Task helps turn scattered client messages, emails,
+                WhatsApp messages, notes, and supported screenshots into clear,
+                reviewable projects and tasks. text2task.com is the official
+                home of the product, built to reduce manual copying and make
+                client work easier to organize.
               </p>
 
               <p className="mt-7 border-l-2 border-blue-600 pl-5 text-base font-black text-slate-950">
