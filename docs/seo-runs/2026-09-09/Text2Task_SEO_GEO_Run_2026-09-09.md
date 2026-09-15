@@ -12,7 +12,8 @@
 **PHASE 1 MILESTONE 2: COMPLETE**
 **PHASE 1 MILESTONE 3: COMPLETE**
 **PHASE 1 MILESTONE 4: PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE**
-**PHASE 1 MILESTONE 5: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW**
+**PHASE 1 MILESTONE 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING**
+**PHASE 1 MILESTONE 6: NOT STARTED**
 
 Companion file: `Text2Task_SEO_GEO_Run_2026-09-09.docx` (formatted, distributable Source of Truth — this Markdown file is the version-controllable editable source; both are maintained together for this run only).
 
@@ -64,6 +65,8 @@ Phase 1 Milestone 5 mapping update recorded 2026-09-15 15:51:06 Asia/Jerusalem: 
 
 Phase 1 Milestone 5 implementation update recorded 2026-09-15 16:49:12 Asia/Jerusalem: Bing / IndexNow Foundation was implemented locally on branch `feat/seo-indexnow-foundation` under Decision `SEO-2026-09-09-D025`. A new stable public IndexNow verification key was generated and committed-ready as a root `public/{key}.txt` verification file. A dry-run-first controlled CLI now derives eligibility from the existing sitemap/source architecture, validates canonical `https://www.text2task.com` URLs with allowlist-first plus denylist defense-in-depth, maps changed source files to candidate public URLs, refuses ambiguous/global changes without review, supports deleted/renamed candidates only as review-required, builds the official IndexNow POST body, and sends no external request unless `--submit` is explicitly provided and environment/canonical guards pass. No IndexNow request was sent, no Bing Webmaster Tools setting was changed, no database/environment/Vercel/Production change was made, and no commit/push/deploy was performed.
 
+Phase 1 Milestone 5 production verification update recorded 2026-09-15 18:08:15 Asia/Jerusalem: PR #10 (`Phase 1: add Bing IndexNow foundation`) was merged successfully to `main`; implementation commit `8e63c0affe09ce3acb49e1da748e9b3c65b5799d` and merge commit `8e1adf480d78c385f6f7515b2b82c7090a10be97` are present on `main`; Vercel Production is READY. Owner manual Preview verification confirmed the public key file returned only the expected key and Preview build logs showed no automatic `npm run indexnow`, `--submit`, or `api.indexnow.org` execution. Owner manual Production verification confirmed the key file is live at `https://www.text2task.com/bfc07a49eb3f8529250cbcf7e23cce46febab912744d05dd172331de6fc230c6.txt` and returns only the expected public key. The first controlled real IndexNow submission sent exactly two approved canonical URLs, received HTTP 202 from `https://api.indexnow.org/indexnow`, and was classified by the implementation as `SUBMISSION_ACCEPTED` with retry count 0. Bing Webmaster Tools still showed the Get Started screen immediately afterward, so Bing UI propagation / verification remains pending. No duplicate resubmission was performed, no additional/private/Preview URL was submitted, no Bing setting was changed, and Milestone 5 is not complete yet.
+
 ---
 
 ## 1. Cover / Run Metadata
@@ -82,14 +85,15 @@ Phase 1 Milestone 5 implementation update recorded 2026-09-15 16:49:12 Asia/Jeru
 | Phase 1 Milestone 2 | COMPLETE |
 | Phase 1 Milestone 3 | COMPLETE |
 | Phase 1 Milestone 4 | COMPLETE |
-| Phase 1 Milestone 5 | IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW |
+| Phase 1 Milestone 5 | PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING |
+| Phase 1 Milestone 6 | NOT STARTED |
 | Author | Claude Code (Sonnet 5), directed by the site owner |
 | Repository | `C:\Users\Home\projects\inboxshaper` (git branch `main`, clean at run start) |
 | Prior internal reference | `docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md` (found in repo, read in full, used for reconciliation) |
 | Named prior audit files | `Text2Task_SEO_GEO_AEO_Master_Audit_2026-09-09_HE(1).docx` and `text2task_full_audit.docx` — **searched for and NOT FOUND** anywhere in the workspace or filesystem. Their claims could not be independently inspected in this run; see §25. |
 | Application code changed | YES — Phase 1 Milestones 1, 2, 3, and 4 changed application code through merged PRs; this Milestone 5 implementation task adds local IndexNow repository tooling, a public verification key file, tests, package script, and run documentation but does not change runtime application pages/routes |
-| Production changed | YES — PR #2, PR #4, PR #6, PR #7, PR #8, and PR #9 were merged and Vercel Production deployed before this implementation task; this Milestone 5 implementation task changes no Production configuration |
-| Commit/push/deploy performed | No commit, push, or deploy performed by this Milestone 5 implementation task |
+| Production changed | YES — PR #2, PR #4, PR #6, PR #7, PR #8, PR #9, and PR #10 were merged and Vercel Production deployed before this documentation task; this documentation task changes no Production configuration |
+| Commit/push/deploy performed | No commit, push, or deploy performed by this Milestone 5 documentation task |
 
 ---
 
@@ -106,7 +110,7 @@ The real, evidence-backed problems are narrower and more specific than "the site
 5. **Core Web Vitals field data is unavailable, and PageSpeed lab data shows no demonstrated site-wide SEO performance blocker**: GSC reported "Not enough usage data in the last 90 days for this device type" for both Mobile and Desktop. PageSpeed Insights homepage lab results are strong overall, with Desktop Performance 99 and Mobile Performance 88, but Mobile LCP is materially weaker at 3.8s and the approximately 15 MB homepage demo video is the dominant performance anomaly. This is a targeted P1 Performance/CRO candidate, not evidence of broken performance architecture and not enough to explain the current non-brand average position around 78 by itself.
 6. **GSC Links baseline now independently supports authority as a major constraint, but Text2Task does have an early external footprint**: Google Search Console currently reports 3 external link URLs from 2 linking domains, all pointing to the homepage, with no externally-linked Feature/Solution/Resource money page surfaced in this report. External research also verified current Text2Task surfaces across LinkedIn, GetApp, Capterra, Uneed, Peerlist, StartupFortune, SaaSHub, UIComet, and FounderDB / Peer Push discovery data. The problem is not total absence of mentions; the current weakness is limited referring-domain diversity, limited externally recognized link authority, almost no external links to high-value topic/money pages, and limited independent editorial/reference coverage.
 7. **GSC Manual Actions and Security Issues are now externally VERIFIED with no issues detected**: Google Search Console currently reports no manual action and no security issue for the Text2Task property. This should not be overstated as proof that every SEO issue is absent or as a complete security audit.
-8. **Bing Webmaster Tools onboarding is now configured/verified, with Bing data still processing**: Text2Task has been added to Bing Webmaster Tools as `text2task.com`; `https://www.text2task.com/sitemap.xml` was submitted successfully on 2026-09-13 and initially showed Processing. Initial 0 discovered URLs and no last crawl are expected at this stage and are not an indexing defect. IndexNow setup path was verified, but application implementation has not started. Bing AI Performance currently reports 0 citations and 0 cited pages for the selected 3-month period; do not claim Copilot has never mentioned Text2Task. Bing Backlinks shows data not yet available / pending processing; do not record this as 0 backlinks.
+8. **Bing Webmaster Tools onboarding and IndexNow foundation are now configured/verified through the first controlled submission**: Text2Task has been added to Bing Webmaster Tools as `text2task.com`; `https://www.text2task.com/sitemap.xml` remains owner-verified as Success with 33 discovered URLs, 0 errors, 0 warnings, last submitted 2026-09-13, and last crawl 2026-09-13. PR #10 deployed the static public IndexNow key file and controlled dry-run-first CLI. The owner verified Preview no-submit safety and the live Production key file, then the first controlled real IndexNow submission sent exactly two approved canonical URLs and received HTTP 202 / `SUBMISSION_ACCEPTED`. This is not evidence of indexing, crawling, ranking, Bing visibility, or Copilot visibility. Bing Webmaster Tools IndexNow UI still showed Get Started immediately afterward, so Bing UI propagation / verification remains pending. Bing AI Performance currently reports 0 citations and 0 cited pages for the selected 3-month period; do not claim Copilot has never mentioned Text2Task. Bing Backlinks shows data not yet available / pending processing; do not record this as 0 backlinks.
 9. **External founder/entity evidence exists, and the owner privacy decision is now closed for this milestone**: indexed external surfaces associate the founder with Text2Task, but the Text2Task website intentionally does not publicly name the founder. The owner has decided not to publish founder identity at this time, so Milestone 2 strengthens Organization/product/domain/profile signals without adding `Person` schema, `Organization.founder`, founder metadata, or personal-profile links.
 10. **The Text2Task name collision remains real and externally verified**: the unrelated older Microsoft Marketplace product named "Text2Task" by Target Energy Solutions remains live, is an Outlook/email assistant for enterprise employees, and is unrelated to `text2task.com`. This continues to support the existing HIGH/P0 entity-disambiguation priority.
 11. A set of smaller, real, low-risk consistency gaps remains, but owner review corrected their priority: contextual internal-link/content-depth strengthening and Bing/IndexNow foundation are P1; OG/Twitter image completion, homepage `FAQPage` schema consistency, breadcrumb/date consistency, billing API cache headers, robots.txt crawl-courtesy completeness, and client-update analytics are P2.
@@ -1166,8 +1170,9 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | 2026-09-15 14:34:35 Asia/Jerusalem | Phase 1 Milestone 4 production closeout | PR #8 merge, Preview visual review, Production deployment, and owner Production route/content smoke verification recorded | Owner-supplied PR #8 merge/deployment facts, Preview visual review, and Production manual smoke/content verification report | Active run Markdown/DOCX, git branch/status/history only | Current run Markdown and DOCX only | PR #8 merged successfully; production merge commit `faebce0094f2cc4d5ba4e663bdaa7a127bd15533`; implementation commit `40468c8d296e6283157072ba2c31e7e68cf52c30` present in main history; Vercel Production READY; Preview visual review PASS for all four Milestone 4 pages; Production route/content/manual smoke verification PASS for `/solutions/freelancer-project-management-software`, `/features/email-to-tasks`, `/resources/how-to-turn-emails-into-tasks`, and `/use-cases/wordpress-freelancers`; D024 deployed; final query ownership recorded; internal-link changes NONE; cannibalization risk LOW | Git reconciliation confirmed local `main` fast-forwarded to `origin/main` at `faebce0094f2cc4d5ba4e663bdaa7a127bd15533`; documentation-only branch used; no application/test/config/database/environment files changed by this task; no commit/push/deploy; no comprehensive pixel-level Production review claimed | Production deployed / production verified / complete |
 | 2026-09-15 15:51:06 Asia/Jerusalem | Phase 1 Milestone 5 mapping | Bing / IndexNow Foundation repository audit, architecture plan, eligibility model, safety model, owner checks, rollout plan, and success criteria recorded | Owner request to start Milestone 5 as mapping/audit/architecture planning only; current run document; historical Blueprint; official IndexNow documentation; direct repository inspection | Current run Markdown/DOCX; `app/lib/site-config.ts`; `app/sitemap.ts`; `app/robots.ts`; `app/layout.tsx`; `next.config.ts`; `package.json`; `proxy.ts`; public route files; no `.github` directory; no `vercel.json`; `public/` inventory; environment-guard search | Current run Markdown and DOCX only | Confirmed IndexNow implementation absent in application code; no repository-hosted IndexNow key file; Bing property/sitemap/IndexNow setup baseline preserved from Section 23; canonical host is `https://www.text2task.com`; sitemap remains the primary public URL inventory; recommended static root UTF-8 key file plus production-only controlled submission script/workflow using allowlist validation and changed URL mapping; Preview/Staging/private URL submissions must be impossible | Mapping only; no IndexNow key generated; no public key file created; no IndexNow API called; no Bing/Vercel/database/environment/Production change; no commit/push/deploy; no new Decision Log ID because owner has not yet approved implementation architecture | Mapping / implementation plan ready |
 | 2026-09-15 16:49:12 Asia/Jerusalem | Phase 1 Milestone 5 implementation | Bing / IndexNow Foundation implemented locally for owner review | Owner-approved D025 implementation request; owner-supplied Bing Webmaster Tools baseline; Section 49 mapping; official IndexNow and Bing Webmaster Tools documentation | Current run Markdown/DOCX; `app/lib/site-config.ts`; `app/sitemap.ts`; `app/robots.ts`; `package.json`; `public/`; `scripts/indexnow/`; focused tests and verification outputs | `public/bfc07a49eb3f8529250cbcf7e23cce46febab912744d05dd172331de6fc230c6.txt`; `scripts/indexnow/changed-file-mapper.mjs`; `scripts/indexnow/indexnow-config.mjs`; `scripts/indexnow/indexnow-submitter.mjs`; `scripts/indexnow/indexnow.test.ts`; `scripts/indexnow/public-url-inventory.mjs`; `scripts/indexnow/submit-indexnow.mjs`; `scripts/indexnow/url-validator.mjs`; `package.json`; current run Markdown/DOCX | Generated a new stable public IndexNow verification key; added the static root key file; added dry-run-first CLI; added sitemap-derived public URL inventory; added canonical-host allowlist validation and private/asset/noncanonical denylist protections; added changed-file mapper with review-required handling for shared/global and deleted/renamed cases; added official POST-body builder and structured dry-run output; no real request was sent | Focused IndexNow tests 1 file / 32 tests PASS; relevant regression 6 files / 120 tests PASS; typecheck PASS; changed-file ESLint PASS; production build PASS after network-enabled Google Fonts fetch; full lint failed only on unrelated pre-existing Client Share lint error/warnings; `git diff --check` PASS with line-ending warning only; dry-run examples PASS; sitemap inventory remains 33 canonical URLs; private URL redaction tests PASS | Implemented locally / awaiting owner review |
+| 2026-09-15 18:08:15 Asia/Jerusalem | Phase 1 Milestone 5 production verification | PR #10 merge, Preview key-file/no-submit verification, Production key-file verification, and first controlled IndexNow submission recorded | Owner-supplied PR #10 merge/deployment facts, owner Preview and Production key-file verification, owner Preview build-log verification, and first controlled IndexNow submission result | Active run Markdown/DOCX; git branch/status/history; committed IndexNow CLI dry-run/submission output | Current run Markdown and DOCX only | PR #10 merged successfully; implementation commit `8e63c0affe09ce3acb49e1da748e9b3c65b5799d` and merge commit `8e1adf480d78c385f6f7515b2b82c7090a10be97` present on main; Vercel Production READY; Preview key file returned only expected key; Preview build logs showed no automatic `npm run indexnow`, `--submit`, or `api.indexnow.org`; Production key file returned only expected key; first controlled IndexNow request submitted exactly `/solutions/freelancer-project-management-software` and `/features/email-to-tasks`; endpoint returned HTTP 202 and implementation classified `SUBMISSION_ACCEPTED`; retry count 0; elapsed time 1069 ms | Dry-run candidate count 2, accepted count 2, rejected count 0, canonical host `www.text2task.com`, keyLocation exact; no additional URL, Preview URL, private URL, homepage URL, key-file URL, all-site URL, deleted URL, or redirect URL submitted; Bing Webmaster Tools IndexNow still showed Get Started immediately afterward, so Bing UI propagation / verification remains pending; no duplicate resubmission performed | Production deployed / first controlled submission accepted / Bing UI verification pending |
 
-Phase 1 Milestone 1 changed application code and tests through PR #2. Phase 1 Milestone 2 changed application code, tests, and documentation through PR #4. Phase 1 Milestone 3 changed application code, tests, and documentation through PR #6 and is now production deployed, production content verified, and complete. Phase 1 Milestone 4 changed application code, tests, and documentation through PR #8 and is now production deployed, production verified, and complete. Phase 1 Milestone 5 is implemented locally and awaiting owner review. **Milestone 5 added local IndexNow tooling, a public key file, tests, package script, and run documentation. Runtime application pages/routes changed by this task: NO. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production changed by this implementation task: NO. Google configuration changed: NO. Bing Webmaster Tools setting changed: NO. IndexNow API called: NO. Manual deploy performed by this task: NO. Commit/push/deploy performed by this task: NO.**
+Phase 1 Milestone 1 changed application code and tests through PR #2. Phase 1 Milestone 2 changed application code, tests, and documentation through PR #4. Phase 1 Milestone 3 changed application code, tests, and documentation through PR #6 and is now production deployed, production content verified, and complete. Phase 1 Milestone 4 changed application code, tests, and documentation through PR #8 and is now production deployed, production verified, and complete. Phase 1 Milestone 5 is production deployed with the first controlled IndexNow submission accepted, and Bing UI verification pending. **Milestone 5 added local IndexNow tooling, a public key file, tests, package script, and run documentation through PR #10. This documentation task changed only the current run Markdown/DOCX. Runtime application pages/routes changed by this task: NO. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production application changed by this documentation task: NO. Google configuration changed: NO. Bing Webmaster Tools setting changed: NO. Duplicate IndexNow resubmission performed by this task: NO. Manual deploy performed by this task: NO. Commit/push/deploy performed by this task: NO.**
 
 ---
 
@@ -1285,13 +1290,14 @@ Documentation files changed:
 **PHASE 1 MILESTONE 2: COMPLETE**
 **PHASE 1 MILESTONE 3: COMPLETE**
 **PHASE 1 MILESTONE 4: COMPLETE**
-**PHASE 1 MILESTONE 5: MAPPING / IMPLEMENTATION PLAN READY**
+**PHASE 1 MILESTONE 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING**
+**PHASE 1 MILESTONE 6: NOT STARTED**
 
 Phase 0A exit criteria (per the run brief) are met and owner-reviewed: exact public route inventory (§9), exact sitemap logic (§12), exact robots policy (§10.1), exact private indexing protection map (§11), exact canonical/host logic (§13), exact metadata inventory (§14), exact structured-data inventory (§15), entity-disambiguation gap analysis (§16), content/intent map (§17), internal-link map (§19), analytics/measurement map (§22), prior-audit reconciliation (§25), confirmed P0/P1/P2 backlog (§26–§28), a proposed next plan (§30), and a verification plan (§32) all exist above.
 
-Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is complete. Milestone 2 is complete. Milestone 3 is complete. Milestone 4 is complete. Milestone 5 mapping / implementation planning is ready for owner review. The owner privacy decision remains preserved: founder identity remains private for now, so Milestone 2 deliberately excludes founder name publication, `Person` schema, founder metadata, personal-profile `sameAs`, and personal social/profile links.
+Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is complete. Milestone 2 is complete. Milestone 3 is complete. Milestone 4 is complete. Milestone 5 is production deployed with the first controlled IndexNow submission accepted, and Bing UI verification pending. Milestone 6 has not started. The owner privacy decision remains preserved: founder identity remains private for now, so Milestone 2 deliberately excludes founder name publication, `Person` schema, founder metadata, personal-profile `sameAs`, and personal social/profile links.
 
-**Application code changed: YES — Phase 1 Milestones 1, 2, 3, and 4 changed application code through merged PRs; this Milestone 5 mapping task changed no application/test files. Database changed: NO. Environment changed: NO. Production changed by this mapping task: NO. Google configuration changed: NO. Bing application integration changed: NO. IndexNow API called: NO. Manual deploy performed by this task: NO. Commit/push/deploy performed by this task: NO.**
+**Application code changed: YES â€” Phase 1 Milestones 1, 2, 3, 4, and 5 changed application/repository behavior through merged PRs; this documentation task changed no application/test/IndexNow implementation files. Database changed: NO. Environment changed: NO. Production application changed by this documentation task: NO. Google configuration changed: NO. Bing Webmaster Tools setting changed: NO. First controlled IndexNow API request was accepted with HTTP 202; Bing UI verification remains pending. Manual deploy performed by this task: NO. Commit/push/deploy performed by this task: NO.**
 
 ---
 
@@ -2025,21 +2031,25 @@ Reason: Phase 0 established that the business goal is not merely rankings; it is
 - Decide whether founder full name and professional profile may be published for Milestone 2.
 - Approve any external-console work for Bing/IndexNow or production verification.
 
-**Current status after the Phase 1 Milestone 5 implementation update**
+**Current status after the Phase 1 Milestone 5 production verification update**
 
 - Phase 0: COMPLETE / OWNER REVIEWED.
 - Phase 1: IMPLEMENTATION IN PROGRESS.
-- Phase 1 implementation: MILESTONE 1 COMPLETE; MILESTONE 2 COMPLETE; MILESTONE 3 COMPLETE; MILESTONE 4 COMPLETE; MILESTONE 5 IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
+- Phase 1 implementation: MILESTONE 1 COMPLETE; MILESTONE 2 COMPLETE; MILESTONE 3 COMPLETE; MILESTONE 4 COMPLETE; MILESTONE 5 PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING.
 - Milestone 2: COMPLETE.
 - Milestone 3: COMPLETE.
 - Milestone 4: COMPLETE.
-- Milestone 5: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
-- Application code changed: YES - Phase 1 Milestones 1, 2, 3, and 4 changed application code through merged PRs; this Milestone 5 implementation task added local IndexNow tooling, a public key file, tests, package script, and run documentation but did not change runtime application pages/routes.
+- Milestone 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING.
+- Milestone 6: NOT STARTED.
+- Remaining Milestone 5 closure gate: Bing Webmaster Tools IndexNow post-submission verification.
+- Application code changed: YES - Phase 1 Milestones 1, 2, 3, 4, and 5 changed application/repository behavior through merged PRs; this Milestone 5 documentation task changed no application/test/IndexNow implementation files.
 - Database changed: NO.
 - Environment changed: NO.
-- Production deployment: READY at merge commit `faebce0094f2cc4d5ba4e663bdaa7a127bd15533` for Milestone 4.
-- Production route/content verification: PASS.
-- Production changed by this implementation task: NO.
+- Production deployment: READY at merge commit `8e1adf480d78c385f6f7515b2b82c7090a10be97` for Milestone 5.
+- Production key-file verification: PASS.
+- First controlled IndexNow submission: HTTP 202 / `SUBMISSION_ACCEPTED`.
+- Bing UI propagation / verification: PENDING.
+- Production application changed by this documentation task: NO.
 - Manual deployment performed by this task: NO.
 
 ---
@@ -3274,7 +3284,7 @@ Observation windows:
 
 **Decision Log ID:** `SEO-2026-09-09-D025`.
 
-**Status:** IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
+**Status:** PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING.
 
 ### 50.1 Owner Decisions Applied
 
@@ -3326,11 +3336,11 @@ Repository key file:
 
 `public/bfc07a49eb3f8529250cbcf7e23cce46febab912744d05dd172331de6fc230c6.txt`
 
-Future Production verification URL after deployment:
+Production verification URL:
 
 `https://www.text2task.com/bfc07a49eb3f8529250cbcf7e23cce46febab912744d05dd172331de6fc230c6.txt`
 
-The key file contains only the key text. It is public protocol verification material, not an application secret.
+The owner manually verified that the Production URL returns only the expected public IndexNow key. The key file contains only the key text. It is public protocol verification material, not an application secret.
 
 ### 50.4 Implementation Files
 
@@ -3368,9 +3378,7 @@ The implementation is a local repository-native IndexNow foundation:
 - IndexNow failures are treated as non-blocking operational failures, not build/runtime blockers.
 - Private or sensitive rejected URLs are redacted in structured output.
 
-### 50.6 Submission Policy
-
-No real IndexNow request was sent during local implementation.
+### 50.6 Submission Policy and First Controlled Submission
 
 Real submission remains explicitly gated:
 
@@ -3378,8 +3386,15 @@ Real submission remains explicitly gated:
 - The URL must validate against canonical Production host and sitemap-derived eligibility.
 - Vercel Preview or development environments are refused if `VERCEL_ENV` is present and not `production`.
 - Shared/global changes and deleted/renamed candidates remain review-required.
-- The first controlled Production submission set is not approved yet.
+- No all-site submission is allowed without explicit review.
 - CI/deployment automation is deferred.
+
+After PR #10 was merged and Vercel Production reached READY, the owner manually verified the Production key file and approved the first controlled submission set. The first controlled real IndexNow submission sent exactly:
+
+- `https://www.text2task.com/solutions/freelancer-project-management-software`.
+- `https://www.text2task.com/features/email-to-tasks`.
+
+No homepage URL, key-file URL, Preview URL, private URL, deleted URL, redirect URL, or additional sitemap URL was submitted.
 
 ### 50.7 Verification Results
 
@@ -3403,22 +3418,50 @@ Local verification results:
 - Real IndexNow API call: NO.
 - Bing Webmaster Tools setting changed: NO.
 
-### 50.8 Deferred Production Verification
+### 50.8 Production Verification and IndexNow Response
 
-After owner review, PR approval, merge, and Vercel Production READY, the Production verification gate should:
+Production verification recorded 2026-09-15 18:08:15 Asia/Jerusalem:
 
-1. Fetch the public key file from `https://www.text2task.com/bfc07a49eb3f8529250cbcf7e23cce46febab912744d05dd172331de6fc230c6.txt`.
-2. Confirm the response body contains exactly the key.
-3. Run a dry-run for the owner-approved first URL set.
-4. Submit only the owner-approved small canonical URL set with `--submit`.
-5. Record the endpoint response.
-6. Verify Bing Webmaster Tools IndexNow reporting/status where available.
-7. Confirm sitemap remains healthy.
-8. Document the Production outcome.
+- PR #10 (`Phase 1: add Bing IndexNow foundation`) merged successfully.
+- Implementation commit: `8e63c0affe09ce3acb49e1da748e9b3c65b5799d`.
+- Merge commit: `8e1adf480d78c385f6f7515b2b82c7090a10be97`.
+- Vercel Production: READY.
+- Preview key-file verification: PASS.
+- Preview no-submit verification: PASS; Preview build logs showed no automatic `npm run indexnow`, no `--submit`, and no `api.indexnow.org` request.
+- Production key-file verification: PASS.
+- Dry-run candidate count: 2.
+- Dry-run accepted count: 2.
+- Dry-run rejected count: 0.
+- Dry-run canonical host: `www.text2task.com`.
+- Dry-run keyLocation: `https://www.text2task.com/bfc07a49eb3f8529250cbcf7e23cce46febab912744d05dd172331de6fc230c6.txt`.
+- Endpoint: `https://api.indexnow.org/indexnow`.
+- HTTP response status: 202.
+- Implementation classification: `SUBMISSION_ACCEPTED`.
+- Submitted URL count: 2.
+- Retry count: 0.
+- Elapsed time: 1069 ms.
+- Additional URL submitted: NO.
+- Preview URL submitted: NO.
+- Private URL submitted: NO.
+- All-site submission: NO.
+- Duplicate resubmission: NO.
 
-Do not submit all 33 sitemap URLs blindly.
+HTTP 202 is recorded conservatively as endpoint acceptance for further processing. It is not evidence that the submitted URLs are indexed, crawled, ranking, visible in Bing, visible in Copilot, or guaranteed to enter the search index.
 
-### 50.9 Final Milestone 5 Local State
+Immediately after the accepted submission, the owner manually checked Bing Webmaster Tools -> IndexNow. The Bing UI still showed the Get Started screen and no submission dashboard was visible yet. This is classified as **BING UI PROPAGATION / VERIFICATION PENDING**, not as a submission failure. Do not resubmit the same two URLs merely because the Bing UI has not updated yet.
+
+The current Bing sitemap baseline remains:
+
+- Sitemap: `https://www.text2task.com/sitemap.xml`.
+- Status: Success.
+- Known sitemaps: 1.
+- Errors: 0.
+- Warnings: 0.
+- URLs discovered: 33.
+- Last submit shown by Bing: 2026-09-13.
+- Last crawl shown by Bing: 2026-09-13.
+
+### 50.9 Current Milestone 5 Production State
 
 - Phase 0: COMPLETE / OWNER REVIEWED.
 - Phase 1: IMPLEMENTATION IN PROGRESS.
@@ -3426,21 +3469,23 @@ Do not submit all 33 sitemap URLs blindly.
 - Milestone 2: COMPLETE.
 - Milestone 3: COMPLETE.
 - Milestone 4: COMPLETE.
-- Milestone 5: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
+- Milestone 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING.
+- Milestone 6: NOT STARTED.
+- Remaining Milestone 5 closure gate: Bing Webmaster Tools IndexNow post-submission verification.
 - Homepage changed: NO.
 - Global navigation/footer changed: NO.
 - Canonical/indexability/sitemap/robots/schema architecture changed: NO.
 - Database changed: NO.
 - Environment/config changed: NO.
 - Vercel changed: NO.
-- Bing Webmaster Tools changed: NO.
-- IndexNow API request sent: NO.
+- Bing Webmaster Tools settings changed: NO.
+- IndexNow API request sent: YES - exactly the two owner-approved canonical URLs above.
 - Commit created: NO.
 - Push performed: NO.
 - Deploy performed: NO.
-- Production changed: NO.
+- Production application changed by this documentation task: NO.
 
-No new Decision Log ID was created because this mapping task records analysis and recommendations only. The owner still needs to approve the implementation boundary and P0/P1 direction before Milestone 4 implementation begins.
+No new Decision Log ID was created for this production verification documentation task because no new architecture or product decision was made. Decision `SEO-2026-09-09-D025` remains the controlling Milestone 5 decision.
 
 ---
 
