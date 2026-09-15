@@ -23,9 +23,12 @@ describe("HowToTurnEmailsIntoTasksPage - informational identity unchanged", () =
     );
   });
 
-  it("title and canonical are unchanged", () => {
+  it("title/meta reflect the approved Milestone 4 guide positioning while canonical is unchanged", () => {
     expect(metadata.title).toBe(
-      "How to Turn Emails Into Tasks: A Practical Workflow"
+      "How to Turn Emails Into Tasks Without Losing Context"
+    );
+    expect(metadata.description).toBe(
+      "Learn when to create one task or a full project from an email, how to capture action items and dates, and how to review the structure before saving."
     );
     expect(metadata.alternates?.canonical).toBe(
       "/resources/how-to-turn-emails-into-tasks"

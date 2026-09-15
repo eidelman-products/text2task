@@ -18,6 +18,7 @@ import { getAllUseCases } from "@/app/lib/use-cases";
 import { freelanceDevelopersUseCase } from "@/app/lib/use-cases/cases/freelance-developers";
 import { seoFreelancersUseCase } from "@/app/lib/use-cases/cases/seo-freelancers";
 import { shopifyFreelancersUseCase } from "@/app/lib/use-cases/cases/shopify-freelancers";
+import { wordpressFreelancersUseCase } from "@/app/lib/use-cases/cases/wordpress-freelancers";
 import UseCasesPage from "./page";
 
 function hrefs(container: HTMLElement) {
@@ -213,5 +214,24 @@ describe("Milestone 3 discovery boundaries", () => {
     expect(serialized).not.toContain('"@type":"Person"');
     expect(serialized).not.toContain('"founder"');
     expect(serialized).not.toContain("SoftwareApplication");
+  });
+});
+
+describe("Milestone 4 WordPress use-case intent", () => {
+  it("keeps the WordPress page on maintenance request intent with the approved H1", () => {
+    const { container } = render(
+      <UseCaseDetailPage useCase={wordpressFreelancersUseCase} />
+    );
+    const h1 = container.querySelector("h1");
+
+    expect(wordpressFreelancersUseCase.seo.title).toBe(
+      "WordPress Maintenance Task Organizer for Freelancers"
+    );
+    expect(wordpressFreelancersUseCase.seo.description).toBe(
+      "Turn WordPress client messages about plugin bugs, content changes, and new requests into organized tasks, split from retainer work and reviewed before saving."
+    );
+    expect(h1?.textContent).toBe(
+      "Turn WordPress client requests into reviewable maintenance tasks"
+    );
   });
 });

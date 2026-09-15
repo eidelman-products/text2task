@@ -11,15 +11,16 @@ import {
 import { absoluteUrl } from "@/app/lib/site-config";
 import styles from "./page.module.css";
 
-const pageTitle = "How to Turn Emails Into Tasks: A Practical Workflow";
+const pageTitle = "How to Turn Emails Into Tasks Without Losing Context";
 const pageDescription =
-  "Learn a practical workflow for turning client emails into organized tasks, deadlines, priorities, and a reviewable project before saving.";
+  "Learn when to create one task or a full project from an email, how to capture action items and dates, and how to review the structure before saving.";
 const pagePath = "/resources/how-to-turn-emails-into-tasks";
 const pageUrl = absoluteUrl(pagePath);
 const heroImagePath = "/landing/text2task-turn-emails-into-tasks-hero.png";
 const ogImagePath = heroImagePath;
 const ogImageUrl = absoluteUrl(ogImagePath);
-const ogTitle = "How to Turn Emails Into Tasks: A Practical Workflow | Text2Task";
+const ogTitle =
+  "How to Turn Emails Into Tasks Without Losing Context | Text2Task";
 const ogDescription =
   "Learn how to separate project context, action items, deadlines, priorities, and supporting details from a client email before saving the work.";
 const ogImageAlt =
