@@ -48,7 +48,12 @@ describe("FreelancerProjectManagementSoftwarePage - identity unchanged by P1B", 
     expect(metadata.alternates?.canonical).toBe(
       "/solutions/freelancer-project-management-software"
     );
-    expect(metadata.title).toBe("Freelancer Project Management Software");
+    expect(metadata.title).toBe(
+      "Freelancer Project Management Software for Client Work"
+    );
+    expect(metadata.description).toBe(
+      "Turn client emails, messages, notes, briefs, and supported screenshots into reviewable projects and tasks, then manage deadlines, updates, and progress."
+    );
   });
 
   it("H1 still leads with the locked primary keyword, not repositioned around Client Project Tracker", () => {
@@ -57,6 +62,9 @@ describe("FreelancerProjectManagementSoftwarePage - identity unchanged by P1B", 
 
     expect(h1).not.toBeNull();
     expect(h1!.textContent).toMatch(/freelancer project management software/i);
+    expect(h1!.textContent).toBe(
+      "Freelancer project management software for client requests"
+    );
   });
 
   it("\"client project tracker\" is not keyword-stuffed within this page's own content (the site-wide footer, rendered on every page since P1A, is excluded from this count)", () => {
@@ -66,5 +74,15 @@ describe("FreelancerProjectManagementSoftwarePage - identity unchanged by P1B", 
     const occurrences = text.split("client project tracker").length - 1;
 
     expect(occurrences).toBe(1);
+  });
+
+  it("differentiates Text2Task from generic business software while preserving review-before-save", () => {
+    const { container } = render(<FreelancerProjectManagementSoftwarePage />);
+    const text = (container.textContent ?? "").toLowerCase();
+
+    expect(text).toContain("narrower than a generic enterprise");
+    expect(text).toContain("review the draft");
+    expect(text).toContain("start free");
+    expect(text).toContain("try the live demo");
   });
 });

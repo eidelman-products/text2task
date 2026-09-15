@@ -21,8 +21,8 @@ export const wordpressFreelancersUseCase = {
     ]
   },
   "hero": {
-    "title": "Stop retyping WhatsApp bug reports into a task list.",
-    "highlight": "Keep maintenance and project work apart.",
+    "title": "Turn WordPress client requests into",
+    "highlight": "reviewable maintenance tasks",
     "description": "Paste a client's WhatsApp message, email, or screenshot about a broken page, a plugin issue, or a new request. Text2Task organizes it into tasks, separating routine maintenance from new paid work, that you review before saving.",
     "primaryCta": {
       "label": "Try Text2Task",

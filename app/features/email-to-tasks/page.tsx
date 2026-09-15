@@ -12,15 +12,15 @@ import {
 import { absoluteUrl } from "@/app/lib/site-config";
 import styles from "./page.module.css";
 
-const pageTitle = "Email to Tasks: Turn Emails Into Projects";
+const pageTitle = "Email to Tasks: Turn Client Emails Into Projects";
 const pageDescription =
-  "Paste an email into Text2Task to extract a reviewable project, tasks, deadlines, priorities, budget details, and client information before saving.";
+  "Paste selected email text into Text2Task to create a reviewable project and task draft with deadlines, priorities, budget details, and client info.";
 const pagePath = "/features/email-to-tasks";
 const pageUrl = absoluteUrl(pagePath);
 const ogImagePath =
   "/landing/use-cases/project-managers/project-manager-stakeholder-request-project-flow.png";
 const ogImageUrl = absoluteUrl(ogImagePath);
-const ogTitle = "Email to Tasks: Turn Emails Into Projects | Text2Task";
+const ogTitle = "Email to Tasks: Turn Client Emails Into Projects | Text2Task";
 const ogDescription =
   "Turn selected email text into a reviewable project and organized tasks, then edit the details before saving them to your Text2Task workspace.";
 const ogImageAlt =
@@ -82,7 +82,7 @@ const problemTopics = [
 const workflowSteps = [
   {
     title: "Paste the email",
-    text: "Copy the email text you want to organize and paste it into Text2Task.",
+    text: "Copy the selected email text you want to organize and paste it into Text2Task.",
   },
   {
     title: "Review the structured draft",
@@ -278,11 +278,11 @@ export default function EmailToTasksPage() {
           <div className={styles.heroInner}>
             <div className={styles.heroCopy}>
               <p className={styles.eyebrow}>Email to Tasks</p>
-              <h1>Paste an email. Get an organized project and tasks.</h1>
+              <h1>Turn client emails into reviewable projects and tasks</h1>
               <p className={styles.heroLead}>
-                Paste email text into Text2Task and turn it into a reviewable
-                project with organized tasks, deadlines, priorities, budget
-                details, and client information.
+                Paste selected email text into Text2Task and turn the client
+                request into a reviewable project and task draft with deadlines,
+                priorities, budget details, and client information.
               </p>
 
               <div className={styles.heroActions}>
@@ -296,7 +296,8 @@ export default function EmailToTasksPage() {
 
               <p className={styles.ctaNote}>
                 No inbox connection. Nothing is saved until you review the
-                draft.
+                draft. Start free when you want to save approved email-based
+                work in your workspace.
               </p>
             </div>
           </div>
@@ -344,8 +345,8 @@ export default function EmailToTasksPage() {
             <p>
               Client emails rarely contain one clean action. They mix project
               context, requests, dates, urgency, budget details, and client
-              information&mdash;details that are easy to lose when you retype
-              the work manually.
+              information&mdash;details that are easy to lose when you manually
+              convert email into tasks or a larger project.
             </p>
           </div>
 
@@ -443,8 +444,10 @@ export default function EmailToTasksPage() {
             <h2>More than a simple email-to-task list</h2>
             <p>
               Many client emails describe a complete piece of work, not one
-              isolated action. Text2Task keeps the project context together
-              and organizes the related requests under it.
+              isolated action. The Email to Tasks feature keeps the project
+              context together and organizes the related requests under it; the
+              how-to guide explains the manual workflow when you want a
+              step-by-step method first.
             </p>
           </div>
 

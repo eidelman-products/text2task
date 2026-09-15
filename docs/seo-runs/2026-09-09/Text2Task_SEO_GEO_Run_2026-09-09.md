@@ -10,8 +10,8 @@
 **PHASE 1 STATUS: IMPLEMENTATION IN PROGRESS**
 **PHASE 1 MILESTONE 1: COMPLETE**
 **PHASE 1 MILESTONE 2: COMPLETE**
-**PHASE 1 MILESTONE 3: PRODUCTION DEPLOYED / PRODUCTION CONTENT VERIFIED / COMPLETE**
-**PHASE 1 MILESTONE 4: NOT STARTED**
+**PHASE 1 MILESTONE 3: COMPLETE**
+**PHASE 1 MILESTONE 4: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW**
 
 Companion file: `Text2Task_SEO_GEO_Run_2026-09-09.docx` (formatted, distributable Source of Truth — this Markdown file is the version-controllable editable source; both are maintained together for this run only).
 
@@ -53,6 +53,10 @@ Phase 1 Milestone 3 implementation update recorded 2026-09-15 00:36:13 Asia/Jeru
 
 Phase 1 Milestone 3 production verification update recorded 2026-09-15 01:32:29 Asia/Jerusalem: PR #6 was merged successfully to `main` as production merge commit `5cd1bf5`. Vercel Production reached READY. Live public route/content verification passed for `/use-cases`, `/use-cases/seo-freelancers`, `/use-cases/freelance-developers`, and `/use-cases/shopify-freelancers`. The hub clustering, small content improvements, and intended related-workflow links are live. Video Editors remained linking-only by design, the homepage remained unchanged, header/footer/global navigation remained unchanged, and the Resources policy remained article-focused. This was public route/content verification only; no complete pixel-level visual inspection of every affected page/viewport is claimed.
 
+Phase 1 Milestone 4 mapping update recorded 2026-09-15 12:22:55 Asia/Jerusalem: Core Non-Brand Ranking Pages mapping started as audit/planning only. The strongest evidenced candidates are `/solutions/freelancer-project-management-software`, `/features/email-to-tasks`, `/resources/how-to-turn-emails-into-tasks`, and `/use-cases/wordpress-freelancers`, because they are the only non-brand page opportunities with owner-supplied GSC impressions in this run baseline. Milestone 4 implementation had not started at that mapping checkpoint. No application code, tests, database, environment/configuration, Production, commit, push, deploy, or external-console setting was changed by this mapping task.
+
+Phase 1 Milestone 4 implementation update recorded 2026-09-15 13:05:14 Asia/Jerusalem: Core Non-Brand Ranking Pages was implemented locally on branch `feat/seo-core-nonbrand-pages` from base `ddffee7570de5f0540aee55187c15c20a555458a`. The owner-approved D024 page set and title/meta/H1 decisions were applied for the P0 solution and Email to Tasks pages, the P1 email how-to resource metadata, and the WordPress freelancers H1. The implementation preserves homepage, global navigation/footer, sitemap, canonical architecture, schema architecture, owner privacy decisions, database, environment/configuration, Production, commit, push, and deploy boundaries. Milestone 4 is implemented locally and awaiting owner review.
+
 ---
 
 ## 1. Cover / Run Metadata
@@ -69,15 +73,15 @@ Phase 1 Milestone 3 production verification update recorded 2026-09-15 01:32:29 
 | Phase 1 status | IMPLEMENTATION IN PROGRESS |
 | Phase 1 Milestone 1 | COMPLETE |
 | Phase 1 Milestone 2 | COMPLETE |
-| Phase 1 Milestone 3 | PRODUCTION DEPLOYED / PRODUCTION CONTENT VERIFIED / COMPLETE |
-| Phase 1 Milestone 4 | NOT STARTED |
+| Phase 1 Milestone 3 | COMPLETE |
+| Phase 1 Milestone 4 | IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW |
 | Author | Claude Code (Sonnet 5), directed by the site owner |
 | Repository | `C:\Users\Home\projects\inboxshaper` (git branch `main`, clean at run start) |
 | Prior internal reference | `docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md` (found in repo, read in full, used for reconciliation) |
 | Named prior audit files | `Text2Task_SEO_GEO_AEO_Master_Audit_2026-09-09_HE(1).docx` and `text2task_full_audit.docx` — **searched for and NOT FOUND** anywhere in the workspace or filesystem. Their claims could not be independently inspected in this run; see §25. |
-| Application code changed | YES — Phase 1 Milestones 1, 2, and 3 changed application code through merged PRs; this production-verification documentation task changes no application code |
-| Production changed | YES — PR #2, PR #4, and PR #6 were merged and Vercel Production deployed before their respective documentation closeouts; this documentation task changes no Production configuration |
-| Commit/push/deploy performed | PR #6 merge and automatic Vercel Production deployment occurred before this documentation closeout; this documentation task performs no commit, push, or deploy |
+| Application code changed | YES — Phase 1 Milestones 1, 2, and 3 changed application code through merged PRs; Milestone 4 is now implemented locally on a feature branch and changes application/test files for owner review |
+| Production changed | YES — PR #2, PR #4, PR #6, and PR #7 were merged and Vercel Production deployed before this Milestone 4 implementation task; this Milestone 4 local task changes no Production configuration |
+| Commit/push/deploy performed | No commit, push, or deploy performed by this Milestone 4 local implementation task |
 
 ---
 
@@ -1109,6 +1113,8 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 
 | SEO-2026-09-09-D023 | 2026-09-15 00:36:13 Asia/Jerusalem | Implement Phase 1 Milestone 3 without homepage changes, new pages, schema changes, or Resources-hub expansion. | Owner-approved Milestone 3 decisions set the implementation boundary: preserve homepage curation by default, lightly strengthen the existing `/use-cases` hub, keep `/resources` article-focused, prioritize SEO freelancers first, then freelance developers and Shopify freelancers, and give video editors linking support only. | Owner Milestone 3 continuation instruction; Section 43 mapping; direct implementation in `app/use-cases/page.tsx`, relevant Feature/Solution/Resource pages, and use-case data files. | Adding homepage links solely for SEO - rejected because homepage curation and CRO should not be changed without a natural UX reason. Creating new pages or hubs - rejected as out of scope. Expanding video editors content - rejected because the page was already adequate and needed inbound links only. Adding Product/SoftwareApplication schema - rejected/deferred outside Milestone 3. | Implemented locally / awaiting owner review |
 
+| SEO-2026-09-09-D024 | 2026-09-15 13:05:14 Asia/Jerusalem | Implement Phase 1 Milestone 4 against the owner-approved P0/P1 non-brand page set and title/meta/H1 decisions. | Owner approved the Milestone 4 mapping boundary: P0 pages are `/solutions/freelancer-project-management-software` and `/features/email-to-tasks`; P1 pages are `/resources/how-to-turn-emails-into-tasks` and `/use-cases/wordpress-freelancers`. The goal is to improve existing URLs as better answers for evidenced non-brand intent, not add broad SEO text or create new pages. | Owner Milestone 4 implementation instruction; Section 46 mapping; direct implementation in the four target page/source files and focused page tests. | Creating `/for-freelancers` - rejected/deferred because the existing solution page owns broad freelancer project-management intent and the route is absent. Repeating Milestone 3 broad internal linking - rejected. Homepage/global nav/footer/sitemap/schema architecture changes - rejected. Product/SoftwareApplication schema - rejected/deferred. Aggressive CTAs or unsupported automation claims - rejected. | Implemented locally / awaiting owner review |
+
 ---
 
 ## 34. Run Action Log
@@ -1145,8 +1151,10 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | 2026-09-14 23:59:35 Asia/Jerusalem | Phase 1 Milestone 3 mapping | Internal Authority / Weak Use Cases mapping and implementation plan recorded | Owner request to start Milestone 3 as mapping/audit/planning only; current run document; direct repository inspection | Current run Markdown/DOCX; historical Blueprint; `app/sitemap.ts`; `app/pricing/page.tsx`; `app/use-cases/page.tsx`; `app/use-cases/[slug]/page.tsx`; `app/lib/use-cases/index.ts`; `app/lib/use-cases/types.ts`; all 12 `app/lib/use-cases/cases/*.ts`; `app/components/use-cases/use-case-detail-page.tsx`; `use-case-hero.tsx`; `use-case-related.tsx`; `use-case-related-links.tsx`; `app/components/landing/landing-header.tsx`; `landing-footer.tsx`; `homepage-use-cases-section.tsx`; `homepage-post-extraction-section.tsx`; all 6 feature pages; all 7 resource article pages; resources hub; freelancer solution page; About page | Current run Markdown and DOCX only | Complete internal-link graph findings, weak-use-case assessment, use-case cluster map, internal-authority source pages, content-gap classifications, anchor-text plan, implementation plan, validation plan, and owner-decision notes recorded. `freelance-developers` and `seo-freelancers` classified as hub-only/contextually isolated; `shopify-freelancers` as weakly supported; `video-editors` as adequate but under-linked from authority pages. | Git status confirmed clean before documentation edit; mapping used read-only repository inspection only; no application/test/database/environment/configuration/production changes; no commit/push/deploy; no new Decision Log ID because no new owner/product/technical decision was made | Mapping / implementation plan ready |
 | 2026-09-15 00:36:13 Asia/Jerusalem | Phase 1 Milestone 3 implementation | Internal Authority / Weak Use Cases implemented locally | Owner-approved Milestone 3 implementation request and owner decisions; Section 43 mapping | Current run Markdown/DOCX; `app/use-cases/page.tsx`; `app/solutions/freelancer-project-management-software/page.tsx`; `app/features/email-to-tasks/page.tsx`; `app/features/screenshot-to-tasks/page.tsx`; `app/features/ai-task-extractor/page.tsx`; `app/features/client-feedback-to-tasks/page.tsx`; four resource article pages; `app/lib/use-cases/cases/seo-freelancers.ts`; `app/lib/use-cases/cases/freelance-developers.ts`; `app/lib/use-cases/cases/shopify-freelancers.ts`; `app/use-cases/internal-authority.test.tsx` | Local application/test/docs changes only; no database/environment/configuration/production/external-console changes | Added light `/use-cases` hub guidance; added contextual links from solution, feature, and resource pages to weak/under-linked use cases; added transformation and related-reading blocks for SEO freelancers, freelance developers, and Shopify freelancers; added focused internal-authority tests; homepage, footer, schema, sitemap route count, video editors content, and Resources hub remained unchanged | Focused tests 1 file / 10 tests PASS; targeted tests 7 files / 88 tests PASS; relevant regression 13 files / 191 tests PASS; typecheck PASS; changed-file ESLint PASS; production build PASS after network-enabled rerun for Google Fonts; `git diff --check` PASS with line-ending warnings only | Implemented locally / awaiting owner review |
 | 2026-09-15 01:32:29 Asia/Jerusalem | Phase 1 Milestone 3 production closeout | PR #6 merge, Production deployment, and live public route/content verification recorded | Owner-supplied PR #6 merge/deployment facts and live Production verification report | Active run Markdown/DOCX, git branch/status/history only | Current run Markdown and DOCX only | PR #6 merged successfully; production merge commit `5cd1bf5`; Vercel Production READY; live public route/content verification PASS for `/use-cases`, `/use-cases/seo-freelancers`, `/use-cases/freelance-developers`, and `/use-cases/shopify-freelancers`; hub clustering, small content improvements, and intended related-workflow links verified live; Video Editors remained linking-only by design; homepage and header/footer/global nav remained unchanged; Resources policy remained article-focused; no complete pixel-level visual review claimed | Git reconciliation confirmed local `main` fast-forwarded to `origin/main` at `5cd1bf5`; implementation commit `7edaf7a` is present in main history; documentation-only branch used; no application/test/config/database/environment files changed by this task; no commit/push/deploy | Production deployed / production content verified / complete |
+| 2026-09-15 12:22:55 Asia/Jerusalem | Phase 1 Milestone 4 mapping | Core Non-Brand Ranking Pages candidate inventory, query/intent map, cannibalization analysis, content-gap plan, implementation boundary, validation plan, and success metrics recorded | Owner request to start Milestone 4 as mapping/audit/planning only; current run document; documented GSC baseline; direct repository inspection of public SEO pages | Current run Markdown/DOCX; `app/solutions/freelancer-project-management-software/page.tsx`; all six `app/features/*/page.tsx` files; relevant resource pages; `app/use-cases/page.tsx`; use-case data files; `app/sitemap.ts`; existing public-page tests and internal-authority test references | Current run Markdown and DOCX only | Evaluated the existing commercial/resource/use-case ranking candidates without inventing search volume or GSC data. Selected `/solutions/freelancer-project-management-software` and `/features/email-to-tasks` as P0, `/resources/how-to-turn-emails-into-tasks` and `/use-cases/wordpress-freelancers` as P1, and deferred unsupported/new-page work. Query-family to canonical-page mapping, overlap risks, title/meta/H1 recommendations, content architecture, CRO alignment, GEO/AEO gaps, internal-authority findings, and owner decisions required were recorded. | Git status confirmed clean before documentation edit; mapping used read-only repository inspection; no application/test/database/environment/configuration/production changes; no commit/push/deploy; no new Decision Log ID because no new owner/product/technical decision was made | Mapping / implementation plan ready |
+| 2026-09-15 13:05:14 Asia/Jerusalem | Phase 1 Milestone 4 implementation | Core Non-Brand Ranking Pages implemented locally for owner review | Owner-approved Milestone 4 implementation request and D024 decisions; Section 46 mapping | Current run Markdown/DOCX; `app/solutions/freelancer-project-management-software/page.tsx`; `app/features/email-to-tasks/page.tsx`; `app/resources/how-to-turn-emails-into-tasks/page.tsx`; `app/lib/use-cases/cases/wordpress-freelancers.ts`; focused page/use-case tests; Blueprint references | Local application/test/docs changes only; no database/environment/configuration/production/external-console changes | Applied approved title/meta/H1 decisions; strengthened solution and Email feature visible copy for clearer input/output/review-before-save/free-entry intent; updated email resource title/meta while keeping the H1 and guide-first structure; changed WordPress hero title/highlight to render the approved maintenance-task H1; no new internal links were added | Focused tests 4 files / 26 tests PASS; relevant regression 13 files / 194 tests PASS; typecheck PASS; changed-file ESLint PASS; production build PASS after network-enabled rerun for Google Fonts; full lint still fails only on unrelated pre-existing share-link lint error plus warnings; `git diff --check` PASS with line-ending warnings only | Implemented locally / awaiting owner review |
 
-Phase 1 Milestone 1 changed application code and tests through PR #2. Phase 1 Milestone 2 changed application code, tests, and documentation through PR #4. Phase 1 Milestone 3 changed application code, tests, and documentation through PR #6 and is now production deployed, production content verified, and complete. This closeout task changes documentation only. **Application code changed by this documentation task: NO. Test files changed by this documentation task: NO. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production changed by this documentation task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO.**
+Phase 1 Milestone 1 changed application code and tests through PR #2. Phase 1 Milestone 2 changed application code, tests, and documentation through PR #4. Phase 1 Milestone 3 changed application code, tests, and documentation through PR #6 and is now production deployed, production content verified, and complete. Phase 1 Milestone 4 is implemented locally on `feat/seo-core-nonbrand-pages` and awaiting owner review. **Application code changed by this Milestone 4 local task: YES. Test files changed by this Milestone 4 local task: YES. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production changed by this Milestone 4 local task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed: NO. Commit/push/deploy performed: NO.**
 
 ---
 
@@ -1172,9 +1180,9 @@ Representative, non-exhaustive list by category (this audit does not claim a sin
 
 ## 36. Files Changed
 
-Current Codex update: Phase 1 Milestone 3 Internal Authority / Weak Use Cases production verification has been recorded as documentation-only closeout work. PR #6 was already merged and Vercel Production was already READY before this documentation task. No application code, tests, database schema/migration, package/lockfile, environment variable, Vercel configuration, Google/Bing/Supabase production setting, production service, manual production deploy, commit, or push was changed by this documentation task.
+Current Codex update: Phase 1 Milestone 4 Core Non-Brand Ranking Pages has been implemented locally for owner review after the prior mapping documentation was preserved and restored onto the feature branch. No database schema/migration, package/lockfile, environment variable, Vercel configuration, Google/Bing/Supabase production setting, production service, manual production deploy, commit, push, or deploy was changed by this local implementation task.
 
-Phase 1 Milestone 3 production verification documentation files changed:
+Phase 1 Milestone 4 mapping documentation files changed:
 - `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.md`
 - `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.docx`
 
@@ -1250,20 +1258,20 @@ Documentation files changed:
 **PHASE 1 STATUS: IMPLEMENTATION IN PROGRESS**
 **PHASE 1 MILESTONE 1: COMPLETE**
 **PHASE 1 MILESTONE 2: COMPLETE**
-**PHASE 1 MILESTONE 3: PRODUCTION DEPLOYED / PRODUCTION CONTENT VERIFIED / COMPLETE**
-**PHASE 1 MILESTONE 4: NOT STARTED**
+**PHASE 1 MILESTONE 3: COMPLETE**
+**PHASE 1 MILESTONE 4: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW**
 
 Phase 0A exit criteria (per the run brief) are met and owner-reviewed: exact public route inventory (§9), exact sitemap logic (§12), exact robots policy (§10.1), exact private indexing protection map (§11), exact canonical/host logic (§13), exact metadata inventory (§14), exact structured-data inventory (§15), entity-disambiguation gap analysis (§16), content/intent map (§17), internal-link map (§19), analytics/measurement map (§22), prior-audit reconciliation (§25), confirmed P0/P1/P2 backlog (§26–§28), a proposed next plan (§30), and a verification plan (§32) all exist above.
 
-Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is complete. Milestone 2 is complete. Milestone 3 is production deployed, production content verified, and complete. The owner privacy decision remains preserved: founder identity remains private for now, so Milestone 2 deliberately excludes founder name publication, `Person` schema, founder metadata, personal-profile `sameAs`, and personal social/profile links. Milestone 4 has not started.
+Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is complete. Milestone 2 is complete. Milestone 3 is complete. The owner privacy decision remains preserved: founder identity remains private for now, so Milestone 2 deliberately excludes founder name publication, `Person` schema, founder metadata, personal-profile `sameAs`, and personal social/profile links. Milestone 4 is implemented locally and awaiting owner review.
 
-**Application code changed: YES — Phase 1 Milestones 1, 2, and 3 changed application code through merged PRs; this documentation task changed no application/test files. Database changed: NO. Environment changed: NO. Production changed by this documentation task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed by this task: NO. Commit/push/deploy performed by this task: NO.**
+**Application code changed: YES — Phase 1 Milestones 1, 2, and 3 changed application code through merged PRs; this Milestone 4 mapping task changed no application/test files. Database changed: NO. Environment changed: NO. Production changed by this documentation task: NO. Google configuration changed: NO. Bing application integration changed: NO. Manual deploy performed by this task: NO. Commit/push/deploy performed by this task: NO.**
 
 ---
 
 ## 38. Phase 1 Master Implementation Plan
 
-**Status:** IMPLEMENTATION IN PROGRESS. Milestone 1 is complete. Milestone 2 is complete. Milestone 3 is production deployed, production content verified, and complete. Milestone 4 has not started.
+**Status:** IMPLEMENTATION IN PROGRESS. Milestone 1 is complete. Milestone 2 is complete. Milestone 3 is complete. Milestone 4 is implemented locally and awaiting owner review.
 
 **Planning timestamp:** 2026-09-13 13:26 Asia/Jerusalem.
 
@@ -1991,15 +1999,15 @@ Reason: Phase 0 established that the business goal is not merely rankings; it is
 - Decide whether founder full name and professional profile may be published for Milestone 2.
 - Approve any external-console work for Bing/IndexNow or production verification.
 
-**Current status after the Phase 1 Milestone 3 production verification update**
+**Current status after the Phase 1 Milestone 4 mapping update**
 
 - Phase 0: COMPLETE / OWNER REVIEWED.
 - Phase 1: IMPLEMENTATION IN PROGRESS.
-- Phase 1 implementation: MILESTONE 1 COMPLETE; MILESTONE 2 COMPLETE; MILESTONE 3 PRODUCTION DEPLOYED / PRODUCTION CONTENT VERIFIED / COMPLETE; MILESTONE 4 NOT STARTED.
+- Phase 1 implementation: MILESTONE 1 COMPLETE; MILESTONE 2 COMPLETE; MILESTONE 3 COMPLETE; MILESTONE 4 IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
 - Milestone 2: COMPLETE.
-- Milestone 3: PRODUCTION DEPLOYED / PRODUCTION CONTENT VERIFIED / COMPLETE.
-- Milestone 4: NOT STARTED.
-- Application code changed: YES - Phase 1 Milestones 1, 2, and 3 changed application code through merged PRs; this documentation task changed no application/test files.
+- Milestone 3: COMPLETE.
+- Milestone 4: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
+- Application code changed: YES - Phase 1 Milestones 1, 2, and 3 changed application code through merged PRs; this Milestone 4 mapping task changed no application/test files.
 - Database changed: NO.
 - Environment changed: NO.
 - Production deployment: READY at merge commit `5cd1bf5` for Milestone 3.
@@ -2895,3 +2903,499 @@ No new Decision Log ID was created for this closeout because no new product or t
 - Push performed by this documentation task: NO.
 - Deploy performed by this documentation task: NO.
 - Production changed by this documentation task: NO.
+
+---
+
+## 46. Phase 1 Milestone 4 - Core Non-Brand Ranking Pages Mapping
+
+**Status:** MAPPING / IMPLEMENTATION PLAN READY.
+
+**Mapping timestamp:** 2026-09-15 12:22:55 Asia/Jerusalem.
+
+**Implementation status:** NOT STARTED.
+
+**Branch / HEAD inspected:** `main` / `ddffee7570de5f0540aee55187c15c20a555458a`.
+
+**Scope:** Documentation-only mapping, audit, and planning for the strongest existing Text2Task pages with realistic non-brand ranking potential.
+
+**Source rules:** Use only the documented GSC/Search Console evidence already recorded in this run, plus direct source inspection of current public page content. Do not invent search volume, query volume, clicks, rankings, or impression data.
+
+### 46.1 Evidence Base And Candidate Set
+
+The only page-level non-brand GSC opportunities with owner-supplied impressions in this run are:
+
+| URL | Documented non-brand impressions | Documented avg. position | Baseline source |
+|---|---:|---:|---|
+| `/solutions/freelancer-project-management-software` | 171 | ~81.1 | Section 5 |
+| `/features/email-to-tasks` | 94 | ~79.5 | Section 5 |
+| `/resources/how-to-turn-emails-into-tasks` | 31 | ~77.6 | Section 5 |
+| `/use-cases/wordpress-freelancers` | 27 | ~74.0 | Section 5 |
+
+This mapping evaluated the current non-brand ranking candidate set across:
+
+- 1 Solution page.
+- 6 Feature pages.
+- 1 Use Cases hub.
+- 12 Use Case detail pages.
+- 1 Resources hub.
+- 7 Resource articles.
+
+Total existing candidate ranking pages evaluated: **28**.
+
+The requested `/for-freelancers` path is **ABSENT** in this repository. It is not in the sitemap and has no `app/for-freelancers` route. This mapping does not recommend creating it for Milestone 4 without stronger evidence because the existing freelancer solution page already owns that broad intent.
+
+The homepage, About, Contact, Terms, and Privacy were not treated as non-brand ranking candidates for Milestone 4 because their primary role is brand/entity/legal/contact trust rather than the non-brand topic families under review.
+
+### 46.2 Core Candidate Inventory
+
+| URL | Current title | Current meta / description basis | H1 | Primary topic | Intent | GSC evidence | Internal authority | Content depth | Differentiation | Conversion relevance | Cannibalization risk | Opportunity | Priority |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `/solutions/freelancer-project-management-software` | `Freelancer Project Management Software` | Turns client messages, emails, notes, and supported screenshots into reviewable projects and tasks | `Freelancer project management software that starts with the client message.` | Freelancer project/task management for client requests | Commercial / mixed | 171 impressions, ~81.1 avg. position | Strong after Milestone 3: footer, feature pages, resource pages, use-case support | High, but broad | Strong if positioned around client request intake plus workspace | Very high | Partial overlap with `/features/email-to-tasks`, freelancer resources, and freelancer use cases | HIGH | P0 |
+| `/features/email-to-tasks` | `Email to Tasks: Turn Emails Into Projects` | Paste email into Text2Task to extract reviewable project/tasks, deadlines, priorities, budget, client info | `Paste an email. Get an organized project and tasks.` | Product feature for converting email text into projects/tasks | Commercial / consideration | 94 impressions, ~79.5 avg. position | Strong: footer, solution page, resource article, AI feature, relevant use cases | Medium/high | Strong no-inbox-connection and review-before-save positioning | Very high | Partial overlap with email how-to resource and AI task extractor | HIGH | P0 |
+| `/resources/how-to-turn-emails-into-tasks` | `How to Turn Emails Into Tasks: A Practical Workflow` | Practical workflow for turning client emails into tasks, deadlines, priorities, and reviewable project before saving | `How to turn emails into tasks without losing project context` | Informational email-to-task workflow | Informational / awareness | 31 impressions, ~77.6 avg. position | Medium: resources hub, email feature, action-items resource, SEO use case | High | Stronger guide intent than the feature page | Medium/high | Partial overlap with `/features/email-to-tasks`; must remain guide-first | MEDIUM | P1 |
+| `/use-cases/wordpress-freelancers` | `WordPress Maintenance Task Organizer for Freelancers` | Turn WordPress client messages about plugin bugs, content changes, and requests into organized tasks | `Stop retyping WhatsApp bug reports into a task list.` | WordPress maintenance task organization | Commercial / role-specific consideration | 27 impressions, ~74.0 avg. position | Medium: footer, solution page, revisions resource, client-feedback feature | High | Strong role-specific examples and no direct WordPress integration claim | High | Low/medium overlap with web designer and freelancer solution pages | MEDIUM | P1 |
+| `/features/screenshot-to-tasks` | `Screenshot to Tasks: Turn Screenshots Into Organized Tasks` | Supported screenshot to reviewable task draft | `Turn screenshots into organized tasks` | Screenshot/image request extraction | Commercial / consideration | No page-level non-brand GSC data recorded in this run | Strong: footer, solution, resources, AI feature, use cases | Medium/high | Clear feature intent | High | Partial overlap with screenshots resource and AI extractor | MEDIUM | P2 |
+| `/features/ai-task-extractor` | `AI Task Extractor: Extract Tasks and Action Items From Text` | Paste notes/messages/text into reviewable project/task draft | `Extract tasks and action items from text` | Generic text/action-item extraction engine | Commercial / broad consideration | No page-level non-brand GSC data recorded in this run | Strong: footer, solution, screenshot/client-feedback features, resources | Medium/high | Broadest feature page; risk of generic AI-tool competition | High | Partial overlap with email/screenshot/client-feedback features | MEDIUM | P2 |
+| `/features/client-feedback-to-tasks` | `Client Feedback to Tasks: Review Project Updates` | Add follow-up client message/screenshot to existing project and review proposed changes | `Turn client feedback into reviewable project updates` | Follow-up feedback and revision updates | Commercial / consideration | No page-level non-brand GSC data recorded in this run | Strong after Milestone 3 | High | Distinct update-against-existing-project workflow | High | Supportive overlap with client-feedback resource and revisions article | MEDIUM | P2 |
+| `/features/client-project-tracker` | `Client Project Tracker: Share Project Progress With Clients` | Share selected project status/tasks/updates with clients through controlled links | `Share project status and progress with your client.` | Client-visible project tracking/share links | Commercial / consideration | No page-level non-brand GSC data recorded in this run | Medium/high: footer, homepage post-extraction, solution, client-feedback feature | Medium/high | Strong distinct post-save/client-share workflow | Medium/high | Low overlap with intake/extraction pages | MEDIUM | DEFER |
+| `/features/project-deadline-calendar` | `Project Deadline Calendar for Freelancers & Small Teams` | Plan project deadlines, client work, and manual events | `A Project Deadline Calendar Built for Client Work` | Deadline calendar for client work | Commercial / consideration | No page-level non-brand GSC data recorded in this run | Medium: homepage post-extraction, footer, solution, some use cases | Medium | Distinct calendar workflow but narrower | Medium | Low overlap with core intake pages | LOW/MEDIUM | DEFER |
+| `/use-cases/*` other than WordPress | Page-specific use-case SEO titles | Page-specific role descriptions | Page-specific H1s | Role-specific client request workflows | Role-specific consideration | No page-level non-brand GSC data recorded here except WordPress and the four prior indexing pages | Improved by Milestone 3 | Varies; weak pages improved in Milestone 3 | Mostly distinct by audience | Medium/high | Supportive to solution/features; do not make them broad category pages | LOW/MEDIUM | DEFER except current support links |
+| `/resources/*` other than email how-to | Article-specific titles/descriptions | Article-specific guide descriptions | Article-specific H1s | Informational workflow guides | Informational | No page-level non-brand GSC data recorded here except email how-to | Varies by hub, feature, and related article links | Medium/high | Strong guide intent where article-specific | Medium | Supportive to feature/solution pages | LOW/MEDIUM | DEFER except contextual support |
+
+### 46.3 P0/P1 Selection
+
+**P0 pages selected**
+
+| Priority | Page | Reason |
+|---|---|---|
+| P0 | `/solutions/freelancer-project-management-software` | Highest documented non-brand impression opportunity, strongest commercial fit, broadest freelancer project-management intent, and strong internal authority after Milestone 3. |
+| P0 | `/features/email-to-tasks` | Second-highest documented non-brand impression opportunity, clear product-fit query family, direct Live Demo/signup relevance, and enough existing structure to improve without a major rebuild. |
+
+**P1 pages selected**
+
+| Priority | Page | Reason |
+|---|---|---|
+| P1 | `/resources/how-to-turn-emails-into-tasks` | Documented non-brand impressions and clear informational support role for the Email to Tasks feature; must remain guide-first to avoid cannibalization. |
+| P1 | `/use-cases/wordpress-freelancers` | Documented non-brand impressions, strong role-specific content, and useful support for freelancer/WordPress maintenance intent. Requires only targeted optimization unless new GSC data expands its role. |
+
+**Deferred pages**
+
+- `/features/screenshot-to-tasks`, `/features/ai-task-extractor`, `/features/client-feedback-to-tasks`: keep as P2/support candidates until GSC shows comparable non-brand opportunity or owner chooses to widen Milestone 4.
+- `/features/client-project-tracker`, `/features/project-deadline-calendar`: defer because they are narrower post-save workflow pages with no documented page-level non-brand baseline in this run.
+- Other `/use-cases/*`: defer broad rewrites; Milestone 3 already addressed the weak-use-case authority/content gap.
+- Other `/resources/*`: use as support pages only unless future GSC data shows a stronger page-level opportunity.
+- `/for-freelancers`: absent; do not create without new evidence.
+
+### 46.4 Query / Intent Mapping
+
+No query volume is invented here. Mapping is based on documented GSC page evidence plus current page content.
+
+| Query family / topic | Preferred canonical ranking page | Secondary support pages | Competition / cannibalization note |
+|---|---|---|---|
+| freelancer project management software | `/solutions/freelancer-project-management-software` | `/resources/how-to-organize-client-requests-as-a-freelancer`, relevant freelancer use cases, `/features/client-project-tracker`, `/features/project-deadline-calendar` | Keep solution page as the broad commercial page. Do not create `/for-freelancers` or duplicate solution copy. |
+| project management for freelancers | `/solutions/freelancer-project-management-software` | `/use-cases/web-designers`, `/use-cases/wordpress-freelancers`, `/use-cases/freelance-developers`, `/use-cases/seo-freelancers`, `/use-cases/shopify-freelancers` | Use cases should support role specificity, not compete for the broad category. |
+| organize client requests | `/resources/how-to-organize-client-requests-as-a-freelancer` for informational intent; `/solutions/freelancer-project-management-software` for commercial intent | `/features/ai-task-extractor`, `/resources/turn-client-messages-into-tasks`, relevant use cases | Intent split is acceptable; anchors should clarify guide vs product page. |
+| turn email into tasks / turn emails into tasks | `/resources/how-to-turn-emails-into-tasks` for how-to intent | `/features/email-to-tasks`, `/resources/how-to-extract-action-items-from-text` | Resource and feature partially overlap; resource must teach the workflow before pitching product. |
+| email to task / email to tasks app | `/features/email-to-tasks` | `/resources/how-to-turn-emails-into-tasks`, `/solutions/freelancer-project-management-software`, role use cases | Feature page owns product/tool intent. |
+| extract tasks from email | `/features/email-to-tasks` | `/resources/how-to-turn-emails-into-tasks`, `/features/ai-task-extractor` | Keep email feature primary; AI extractor supports broader text extraction. |
+| screenshot to tasks | `/features/screenshot-to-tasks` | `/resources/how-to-turn-screenshots-into-tasks`, screenshot-heavy use cases | Deferred for Milestone 4 unless owner expands scope. |
+| image to tasks | `/features/screenshot-to-tasks` | `/features/ai-task-extractor`, screenshots resource | Must be truthful: supported screenshots, not all images. |
+| AI task extractor | `/features/ai-task-extractor` | `/resources/how-to-extract-action-items-from-text`, `/features/email-to-tasks`, `/features/screenshot-to-tasks` | Broad feature page should not swallow email/screenshot-specific intents. |
+| client feedback to tasks | `/features/client-feedback-to-tasks` | `/resources/how-to-turn-client-feedback-into-tasks`, revisions article, video/SEO use cases | Supportive, but deferred from P0/P1 due no documented page-level GSC evidence. |
+| client revision tracking | `/resources/manage-client-revisions-web-designers` for guide intent; `/features/client-feedback-to-tasks` for product intent | Web designer and video editor use cases | Keep web-designer article specific; avoid making it a broad project tracker page. |
+| client project tracker | `/features/client-project-tracker` | `/solutions/freelancer-project-management-software`, `/features/client-feedback-to-tasks` | Distinct post-save/share-link intent. |
+| deadline/calendar workflow | `/features/project-deadline-calendar` | `/solutions/freelancer-project-management-software`, WordPress/project-manager/small-agency use cases | Distinct calendar intent; defer pending GSC evidence. |
+| WordPress maintenance task organizer | `/use-cases/wordpress-freelancers` | `/solutions/freelancer-project-management-software`, screenshot feature, revisions article | Role page owns WordPress-specific task organization; solution page owns broad freelancer software. |
+
+### 46.5 Deep Audit - P0/P1 Pages
+
+#### `/solutions/freelancer-project-management-software`
+
+- Search intent: commercial/mixed. Searchers are likely comparing freelancer-friendly project/task management tools and need to know whether Text2Task handles the messy intake layer, not only project tracking after setup.
+- Above the fold: title and H1 answer the category, but the H1 could be sharper around "client requests" and the product-specific workflow. CTA is appropriate.
+- Content: strong workflow, screenshots, review-before-save, workspace features, comparison table, "not replacement" positioning, use-case/resource/feature links, and FAQ. The main gap is tighter differentiation versus generic project-management tools and a clearer free-entry/trial path.
+- Trust: strong product screenshots, no-inbox-connection messaging, review-before-save controls, and practical limitations. Missing only support/pricing clarity in page body beyond CTA/pricing link.
+- SEO: canonical, metadata, OG/Twitter image, WebPage, Breadcrumb, and FAQ schema are present. Title is concise but could include "for client work" or "client requests" for intent clarity.
+- GEO/AEO: good at explaining what Text2Task is and how it works, but should more directly answer what it is not: not invoicing, accounting, contracts, time tracking, inbox monitoring, or automatic AI task saving.
+- Content-gap classification: **MEDIUM CONTENT UPGRADE**.
+
+#### `/features/email-to-tasks`
+
+- Search intent: commercial/tool-specific. Searchers likely want a product that turns email text into tasks or projects, while preserving control and avoiding inbox access.
+- Above the fold: strong no-inbox and review-before-save promise. H1 is clear but could align more directly with "client emails" and "reviewable projects and tasks."
+- Content: strong workflow, field list, control messaging, transformation rows, audience links, related links, FAQ, and CTA. The gap is a more concrete before/after example and clearer differentiation from the informational article.
+- Trust: strong no Gmail/Outlook connection messaging and no automatic save. Could add support/pricing/free-start clarity without turning the page into aggressive CRO.
+- SEO: canonical, metadata, WebPage, Breadcrumb, FAQ schema, and image assets are present. Title could target "client emails" more directly.
+- GEO/AEO: strong answerability for what it does and does not do; could more explicitly state that Text2Task works from selected pasted email text rather than direct email automation.
+- Content-gap classification: **MEDIUM CONTENT UPGRADE**.
+
+#### `/resources/how-to-turn-emails-into-tasks`
+
+- Search intent: informational/how-to. Searchers want a practical method, not necessarily a product pitch immediately.
+- Above the fold: H1 and lead match the guide intent well. CTA is not above-fold, which is appropriate.
+- Content: strong guide structure: approaches, example email, structured project output, five-step workflow, one-task vs project decision, mistakes, Text2Task support, related guides, final CTA. The gap is mostly sharpening the title/meta for "without losing context" and ensuring the product section stays clearly secondary.
+- Trust: honest limitations and no-inbox/no-monitoring note are present. Good human-review positioning.
+- SEO: canonical, Article, Breadcrumb, metadata, OG/Twitter image, and internal links are present. Date modified may need updating only if implementation materially changes visible article content.
+- GEO/AEO: very strong for steps, problem, output, limitations, and human review.
+- Content-gap classification: **SMALL OPTIMIZATION**.
+
+#### `/use-cases/wordpress-freelancers`
+
+- Search intent: role-specific commercial consideration. Searchers likely want help organizing WordPress maintenance/client requests, not a generic task manager.
+- Above the fold: strong role-specific story and visual. The H1 is vivid but less keyword-clear than the SEO title; a small H1 adjustment may improve clarity if owner approves.
+- Content: strong signature board, missing-details checklist, transformation example, pain points, workflow, capabilities, Client Updates, FAQ, related links, and CTA.
+- Trust: clear no direct WordPress/Elementor/WooCommerce integration claim; human review is explicit.
+- SEO: use-case template provides canonical, sitemap inclusion, WebPage, BreadcrumbList, and FAQPage. Metadata is page-specific.
+- GEO/AEO: strong role/entity clarity, exact problem, workflow, limitations, and examples.
+- Content-gap classification: **SMALL OPTIMIZATION**.
+
+### 46.6 Competition / Cannibalization Map
+
+| Overlap pair | Classification | Preferred ranking page | Support role | Recommendation |
+|---|---|---|---|---|
+| Solution page vs `/features/email-to-tasks` | PARTIAL OVERLAP | Solution for broad freelancer project management; Email feature for email-to-task product intent | Cross-link both directions with clear anchors | Differentiate "project management software for client work" from "turn selected email text into project/tasks." |
+| `/features/email-to-tasks` vs email how-to resource | CANNIBALIZATION RISK if both target the same query phrasing | Feature for tool/app intent; resource for workflow/how-to intent | Resource supports feature after teaching method | Keep resource title/H1 guide-first; keep feature title/H1 product-first. |
+| Solution page vs freelancer resource article | SUPPORTIVE | Solution for commercial category | Resource educates "organize client requests" | Use natural CTA to solution after workflow guidance. |
+| Solution page vs freelancer use cases | SUPPORTIVE / PARTIAL OVERLAP | Solution for broad category | Use cases prove role-specific applications | Use-case titles should stay role-specific, not broad project-management software pages. |
+| Email feature vs AI task extractor | PARTIAL OVERLAP | Email feature for email-specific queries; AI extractor for generic text/action-item queries | Each links to the other where input type changes | Keep "email" and "generic text" boundaries explicit. |
+| Screenshot feature vs AI task extractor | PARTIAL OVERLAP | Screenshot feature for screenshot/image queries; AI extractor for text queries | Screenshot page can support AI extractor for broader extraction | Keep "supported screenshots" wording, avoid broad "image to anything" claims. |
+| Client feedback feature vs feedback resource | SUPPORTIVE | Feature for product/update workflow | Resource for how-to method | Keep feedback feature anchored to existing saved projects and review/apply flow. |
+| Client project tracker vs solution page | DISTINCT / SUPPORTIVE | Client tracker for share-progress queries | Solution page as broader workspace overview | No merge/redirect recommended. |
+| Project deadline calendar vs solution page | DISTINCT / SUPPORTIVE | Calendar feature for deadline/calendar queries | Solution page as broader workspace overview | No Milestone 4 work unless data emerges. |
+
+No redirects, merges, canonical consolidation, or new pages are recommended for Milestone 4.
+
+### 46.7 Title / Meta / H1 Recommendations
+
+| Page | Current title | Recommended title | Current H1 | Recommended H1 | Recommended meta |
+|---|---|---|---|---|---|
+| `/solutions/freelancer-project-management-software` | `Freelancer Project Management Software` | `Freelancer Project Management Software for Client Work` | `Freelancer project management software that starts with the client message.` | `Freelancer project management software for client requests` | `Turn client emails, messages, notes, briefs, and supported screenshots into reviewable projects and tasks, then manage deadlines, updates, resources, and progress.` |
+| `/features/email-to-tasks` | `Email to Tasks: Turn Emails Into Projects` | `Email to Tasks: Turn Client Emails Into Projects` | `Paste an email. Get an organized project and tasks.` | `Turn client emails into reviewable projects and tasks` | `Paste selected email text into Text2Task to create a reviewable project and task draft with deadlines, priorities, budget details, and client info before saving.` |
+| `/resources/how-to-turn-emails-into-tasks` | `How to Turn Emails Into Tasks: A Practical Workflow` | `How to Turn Emails Into Tasks Without Losing Context` | `How to turn emails into tasks without losing project context` | Keep current H1 | `Learn when to create one task or a full project from an email, how to capture action items and dates, and how to review the structure before saving.` |
+| `/use-cases/wordpress-freelancers` | `WordPress Maintenance Task Organizer for Freelancers` | Keep current title | `Stop retyping WhatsApp bug reports into a task list.` | `Turn WordPress client requests into reviewable maintenance tasks` | Keep current meta unless owner wants a small CTR test; current description is specific and truthful. |
+
+### 46.8 Content Architecture Plan
+
+| Page | Keep | Rewrite / strengthen | Add | Remove / move |
+|---|---|---|---|---|
+| Solution page | Hero, intake problem, workflow, screenshots, review-before-save, workspace capabilities, comparison, best suited/not replacement, use-case/resource/feature links, FAQ, CTA | Hero title/H1/meta; "not intended to replace" section can become a clearer trust/comparison block | Short "who this is for / not for" decision block; stronger free-entry/pricing clarity; optional guide link to email how-to if natural | Do not remove broad feature/use-case sections; avoid adding fake proof or ratings |
+| Email feature | Hero, image flow, how-it-works, what gets organized, control/no-inbox section, audience links, related links, FAQ, CTA | H1/title/meta; transformation rows into a more concrete email example if implementation budget allows | Small "use this page vs the how-to guide" distinction; clearer free-start note near final CTA | Do not make it a long how-to article |
+| Email resource | Guide structure, example email, structured output, five-step workflow, one-task vs project choice, mistakes, Text2Task support, related guides, CTA | Title/meta only, plus any stale dateModified if content changes | Optional short table comparing one task vs project if current copy needs tighter scanning | Do not turn it into product landing-page copy |
+| WordPress use case | Signature board, checklist, transformation, pain points, workflow, capabilities, Client Updates, FAQ, related links, CTA | H1 only if owner approves; small above-fold wording for query clarity | Optional natural inbound link from an email/client-request context if implementation review finds one genuinely useful | Do not broaden into a generic WordPress project management page |
+
+### 46.9 Conversion / CRO Alignment
+
+| Page | Product fit | CTA / Live Demo fit | Free Workspace clarity | CRO finding |
+|---|---|---|---|---|
+| Solution page | Very high | Signup and Live Demo are relevant | Present through "Start for free"; can be clearer in body | Enough information exists before CTA, but the page should better explain free entry and where Text2Task stops short of all-in-one freelancer business management. |
+| Email feature | Very high | Signup is relevant; "See how it works" is useful | Present; can be repeated near final CTA | Strong fit; keep product-led, not overly aggressive. |
+| Email resource | Medium/high | CTA to feature then signup is appropriate after guide value | Present at final CTA | Keep guide-first. Conversion should happen after reader understands the workflow. |
+| WordPress use case | High | Signup and use-case exploration are relevant | Present as "Start free" | Small clarity lift possible; no aggressive CRO needed. |
+
+### 46.10 Internal Authority After Milestone 3
+
+- `/solutions/freelancer-project-management-software`: enough contextual internal authority for Milestone 4. It is linked from the footer, feature pages, resource pages, and role/use-case contexts.
+- `/features/email-to-tasks`: enough contextual internal authority. It is linked from footer, solution page, email resource, AI extractor, client-project tracker, and several use-case pages.
+- `/resources/how-to-turn-emails-into-tasks`: moderate but relevant authority. It is linked from the Resources hub, Email feature, action-items resource, and SEO freelancers use case. Consider one natural additional link from the solution page or AI extractor only if it helps the reader.
+- `/use-cases/wordpress-freelancers`: adequate role-specific authority for now. It is linked from footer, solution page, client-feedback feature, and revisions article. Optional additional support from Email to Tasks or the email resource may be useful only if copy naturally discusses WordPress maintenance emails.
+
+Do not repeat Milestone 3 with broad link additions. Milestone 4 should add only targeted links needed for P0/P1 intent boundaries.
+
+### 46.11 Implementation Boundary
+
+**A. P0 ranking-page improvements**
+
+- Update `/solutions/freelancer-project-management-software` title/meta/H1 and targeted body copy for client-request-centered freelancer project management.
+- Update `/features/email-to-tasks` title/meta/H1 and strengthen its product-led email-to-project example.
+
+**B. P1 ranking-page improvements**
+
+- Optimize `/resources/how-to-turn-emails-into-tasks` title/meta and small guide clarity only.
+- Consider a small `/use-cases/wordpress-freelancers` H1 clarity update and/or one natural inbound support link, subject to owner approval.
+
+**C. Metadata/title/H1 changes**
+
+- Apply only the recommendations in Section 46.7 if owner approves.
+- Preserve unique page intent: solution = broad commercial; feature = product/tool; resource = how-to; use case = role-specific.
+
+**D. Content architecture changes**
+
+- Reuse existing page sections/components where possible.
+- Prefer targeted rewrites/additions over new components.
+- Unique copy is mandatory for the solution hero, Email feature example, email guide framing, and WordPress H1 if changed.
+
+**E. Internal-link adjustments**
+
+- Add at most a small number of natural links among P0/P1 pages where they help users choose the right workflow.
+- Avoid sitewide footer/nav changes unless separately approved.
+
+**F. CRO alignment**
+
+- Clarify the free entry point and Live Demo/Signup choice on P0 pages.
+- Preserve a non-aggressive guide CTA on the email resource.
+
+**G. GEO/AEO clarity improvements**
+
+- Add or sharpen plain-language answers to: what Text2Task is, who each page is for, what problem it solves, how the workflow works, what it does not do, and why review-before-save matters.
+
+### 46.12 Explicitly Deferred Work
+
+- IndexNow/Bing work -> Milestone 5.
+- External backlinks/authority -> Milestone 6.
+- Homepage video/performance -> Milestone 7.
+- Broad unrelated use-case rewrites.
+- New pages without strong justification, including `/for-freelancers`.
+- SoftwareApplication/Product schema unless separately approved and grounded in visible content.
+- Redirects, merges, canonical consolidation, fake ratings/reviews/testimonials, or invented market proof.
+
+### 46.13 Implementation Risk
+
+| Proposed change | SEO benefit | User benefit | Cannibalization risk | Conversion risk | Visual/layout risk | Regression risk | Complexity |
+|---|---|---|---|---|---|---|---|
+| Solution title/meta/H1 and focused copy update | HIGH | HIGH | MEDIUM | LOW/MEDIUM | LOW/MEDIUM | LOW | MEDIUM |
+| Email feature title/meta/H1 and concrete example | HIGH | HIGH | MEDIUM | LOW | LOW/MEDIUM | LOW | MEDIUM |
+| Email resource title/meta and guide clarity | MEDIUM | MEDIUM | MEDIUM | LOW | LOW | LOW | SMALL |
+| WordPress use-case H1 clarity | MEDIUM | MEDIUM | LOW/MEDIUM | LOW | LOW | LOW | SMALL |
+| Targeted P0/P1 internal links | MEDIUM | MEDIUM | LOW/MEDIUM | LOW | LOW | LOW | SMALL |
+| Free-entry / CTA clarity on P0 pages | MEDIUM | HIGH | LOW | LOW/MEDIUM | LOW | LOW | SMALL |
+
+### 46.14 Validation Plan
+
+Later implementation should validate:
+
+- Focused page tests for changed pages.
+- Metadata assertions for titles/descriptions/canonicals.
+- Internal-link assertions for any new support links.
+- Canonical and indexability assertions.
+- Structured-data regression checks: WebPage/Article/Breadcrumb/FAQ remain truthful and visible-content-aligned.
+- Privacy/entity regression: no founder name, no `Person` schema, no unsupported `SoftwareApplication`/`Product` schema unless separately approved.
+- `npx.cmd tsc --noEmit`.
+- Changed-file ESLint.
+- Production build.
+- `git diff --check`.
+- Preview desktop/mobile visual and content review for changed P0/P1 pages.
+- Production verification after merge: fetch live pages and verify title, meta description, canonical, JSON-LD, internal links, CTA paths, and visible copy.
+- Post-deploy GSC tracking on 7/14/30/60/90-day windows.
+
+### 46.15 Success Metrics And Observation Windows
+
+Milestone 4 success must be measured against the existing baseline, not promised as guaranteed ranking movement.
+
+Baseline:
+
+- Overall visible non-brand baseline: 361 impressions, 0 clicks, 0% CTR, average position 78.1.
+- P0/P1 page baselines: 171 / ~81.1 for the solution page; 94 / ~79.5 for Email to Tasks; 31 / ~77.6 for the email resource; 27 / ~74.0 for WordPress freelancers.
+
+Metrics:
+
+- Page-level non-brand impressions.
+- Page-level clicks.
+- CTR.
+- Average position.
+- Query diversity.
+- Organic landing-page sessions where available.
+- `first_extract_created`.
+- `project_saved`.
+- `paid_conversion` where meaningful and safely attributable.
+
+Observation windows:
+
+- Early crawl/index check: 7-14 days after production deployment.
+- Directional comparison: around 2 weeks after deployment.
+- Meaningful comparison: around 4-6 weeks after deployment.
+- Longer trend review: 60-90 days after deployment, especially for low-volume pages.
+
+### 46.16 Owner Decisions Required
+
+- Approve P0 pages: solution page and Email to Tasks feature.
+- Approve P1 pages: email how-to resource and WordPress freelancers use case.
+- Approve whether `/use-cases/wordpress-freelancers` H1 may become more literal/keyword-clear.
+- Approve whether the solution page title should include "for client work" or "for client requests."
+- Approve whether Email to Tasks should explicitly say "client emails" in title/H1.
+- Approve whether to add a small number of targeted internal links to the email resource and WordPress use case.
+- Approve whether build/Preview visual review should be required before owner merge review for Milestone 4.
+
+**Blocking decisions before implementation:** P0/P1 page selection and title/H1 direction. Without those approvals, implementation should not start.
+
+### 46.17 Final Milestone 4 Mapping State
+
+- Phase 0: COMPLETE / OWNER REVIEWED.
+- Phase 1: IMPLEMENTATION IN PROGRESS.
+- Milestone 1: COMPLETE.
+- Milestone 2: COMPLETE.
+- Milestone 3: COMPLETE.
+- Milestone 4: MAPPING / IMPLEMENTATION PLAN READY.
+- Implementation started: NO.
+- Application files changed by this mapping task: NO.
+- Test files changed by this mapping task: NO.
+- Database changed: NO.
+- Environment/config changed: NO.
+- Production changed by this mapping task: NO.
+- Commit created by this mapping task: NO.
+- Push performed by this mapping task: NO.
+- Deploy performed by this mapping task: NO.
+
+No new Decision Log ID was created because this mapping task records analysis and recommendations only. The owner still needs to approve the implementation boundary and P0/P1 direction before Milestone 4 implementation begins.
+
+---
+
+## 47. Phase 1 Milestone 4 - Core Non-Brand Ranking Pages Local Implementation
+
+**Status:** IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
+
+**Implementation timestamp:** 2026-09-15 13:05:14 Asia/Jerusalem.
+
+**Branch:** `feat/seo-core-nonbrand-pages`.
+
+**Base main HEAD before branch creation:** `ddffee7570de5f0540aee55187c15c20a555458a`.
+
+**Decision Log ID:** `SEO-2026-09-09-D024`.
+
+### 47.1 Owner Decisions Applied
+
+Milestone 4 implemented the owner-approved non-brand ranking-page boundary:
+
+- P0 pages: `/solutions/freelancer-project-management-software` and `/features/email-to-tasks`.
+- P1 pages: `/resources/how-to-turn-emails-into-tasks` and `/use-cases/wordpress-freelancers`.
+- No `/for-freelancers` page was created.
+- No homepage, global navigation, footer, sitemap, robots, hreflang, canonical architecture, Organization schema, WebSite schema, Product schema, or `SoftwareApplication` schema change was made.
+- No founder name, `Person` schema, founder metadata, personal-profile `sameAs`, or personal social/profile link was added.
+- No database, migration, package/lockfile, environment/configuration, Vercel, Google, Bing, or Production change was made.
+
+### 47.2 Final Title / Meta / H1 Decisions
+
+| Page | Priority | Final title | Final meta description | Final H1 | Intent ownership |
+|---|---|---|---|---|---|
+| `/solutions/freelancer-project-management-software` | P0 | `Freelancer Project Management Software for Client Work` | `Turn client emails, messages, notes, briefs, and supported screenshots into reviewable projects and tasks, then manage deadlines, updates, and progress.` | `Freelancer project management software for client requests` | Broad commercial freelancer/project-management intent. |
+| `/features/email-to-tasks` | P0 | `Email to Tasks: Turn Client Emails Into Projects` | `Paste selected email text into Text2Task to create a reviewable project and task draft with deadlines, priorities, budget details, and client info.` | `Turn client emails into reviewable projects and tasks` | Product/tool intent for email-to-task and email-to-project workflows. |
+| `/resources/how-to-turn-emails-into-tasks` | P1 | `How to Turn Emails Into Tasks Without Losing Context` | `Learn when to create one task or a full project from an email, how to capture action items and dates, and how to review the structure before saving.` | `How to turn emails into tasks without losing project context` | Informational/how-to email-to-task workflow intent. |
+| `/use-cases/wordpress-freelancers` | P1 | `WordPress Maintenance Task Organizer for Freelancers` | `Turn WordPress client messages about plugin bugs, content changes, and new requests into organized tasks, split from retainer work and reviewed before saving.` | `Turn WordPress client requests into reviewable maintenance tasks` | WordPress-specific maintenance/client-request workflow intent. |
+
+### 47.3 Implemented Content Changes
+
+Freelancer solution (`/solutions/freelancer-project-management-software`):
+
+- Updated page title, meta description, Open Graph title, and H1 to the approved broader commercial freelancer/project-management positioning.
+- Rewrote the hero lead to explicitly state the inputs (emails, messages, notes, briefs, supported screenshots), the output (reviewable project/task draft), and the preserved workspace outcome (deadlines, priorities, client information, approved work).
+- Clarified CTA choice: live demo for sample intake; free workspace for saving approved client work.
+- Tightened workflow language around raw client communication becoming a structured draft.
+- Strengthened differentiation from generic enterprise project-management software.
+- Strengthened the "not intended to replace" section to preserve the existing trust boundary around financial, legal, sales, and time-tracking tools.
+- Strengthened the final CTA body with a free-entry note without making the page aggressively sales-oriented.
+
+Email feature (`/features/email-to-tasks`):
+
+- Kept the approved title and updated the meta description.
+- Updated the H1 to `Turn client emails into reviewable projects and tasks`.
+- Repeated the product truth that the user pastes selected email text; no Gmail/Outlook connection, automatic inbox reading, or inbox monitoring is implied.
+- Clarified the email-to-project/task transformation with deadlines, priorities, budget details, and client information.
+- Added light free-start clarity in the existing CTA note.
+- Added a natural distinction between the Email to Tasks feature and the informational how-to guide.
+
+Email resource (`/resources/how-to-turn-emails-into-tasks`):
+
+- Updated title, meta description, and Open Graph title to the approved "without losing context" framing.
+- Kept the existing H1 exactly unchanged.
+- Preserved the guide-first article structure, examples, mistakes section, Text2Task support section, related guides, and non-aggressive final CTA.
+
+WordPress freelancers (`/use-cases/wordpress-freelancers`):
+
+- Kept the existing SEO title and meta description.
+- Updated only the hero title/highlight pair so the rendered H1 becomes `Turn WordPress client requests into reviewable maintenance tasks`.
+- Preserved WordPress maintenance/client-request specificity and did not broaden the page into generic freelancer software, generic web development, generic web design, or WordPress SEO.
+
+CTA changes:
+
+- Freelancer solution: kept `Start for free` and `Try the live demo`; clarified when each path is useful.
+- Email feature: kept `Start for free` and `See how it works`; added restrained free-start clarity.
+- Email resource: kept guide-first behavior and kept product CTA after instructional content.
+- WordPress: kept existing restrained use-case CTA behavior.
+
+Internal-link changes:
+
+- No new internal links were added in this implementation. Existing P0/P1 relationships were preserved, including Email feature -> Email resource, Email resource -> Email feature, Solution -> Email feature, Solution -> WordPress, and Milestone 3 use-case support links.
+
+GEO/AEO clarity changes:
+
+- The two P0 pages now answer more directly what Text2Task is, who the workflow is for, what input the user provides, what output Text2Task creates, what remains under user review, what Text2Task does not do, and the next step.
+- No artificial FAQ-only content or schema type was added for AI engines.
+
+### 47.4 Files Changed
+
+Application/content files:
+
+- `app/solutions/freelancer-project-management-software/page.tsx`
+- `app/features/email-to-tasks/page.tsx`
+- `app/resources/how-to-turn-emails-into-tasks/page.tsx`
+- `app/lib/use-cases/cases/wordpress-freelancers.ts`
+
+Tests:
+
+- `app/solutions/freelancer-project-management-software/page.test.tsx`
+- `app/features/email-to-tasks/page.test.tsx`
+- `app/resources/how-to-turn-emails-into-tasks/page.test.tsx`
+- `app/use-cases/internal-authority.test.tsx`
+
+Documentation:
+
+- `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.md`
+- `docs/seo-runs/2026-09-09/Text2Task_SEO_GEO_Run_2026-09-09.docx`
+
+Unexpected files changed: NONE.
+
+### 47.5 Local Verification
+
+Local verification completed before owner review:
+
+- Focused Milestone 4 tests: PASS, `npx.cmd vitest run app/solutions/freelancer-project-management-software/page.test.tsx app/features/email-to-tasks/page.test.tsx app/resources/how-to-turn-emails-into-tasks/page.test.tsx app/use-cases/internal-authority.test.tsx` - 4 files / 26 tests.
+- Relevant public SEO regression tests: PASS, 13 files / 194 tests.
+- TypeScript typecheck: PASS, `npx.cmd tsc --noEmit`.
+- Changed-file ESLint: PASS, `npx.cmd eslint` on the Milestone 4 changed source/test files.
+- Full repo lint: FAIL only on unrelated pre-existing files: `app/components/dashboard/tasks/share-link/share-link-channels.tsx` has `react-hooks/set-state-in-effect`; eight unrelated warnings also remain. No Milestone 4 changed file failed lint.
+- Production build: PASS after network-enabled rerun for Google Fonts. The first sandboxed run failed only because `next/font` could not fetch `DM Sans` and `Inter` from Google Fonts.
+- `git diff --check`: PASS with line-ending normalization warnings only.
+- Canonical/indexability review: PASS. The changed routes retain their existing canonical metadata paths and no noindex/robots/sitemap/indexability architecture was changed.
+- Sitemap/breadcrumb/hreflang review: PASS. No sitemap, breadcrumb helper, route set, or hreflang architecture change was made.
+- Schema regression review: PASS. Existing WebPage/Article/Breadcrumb/FAQ schema usage remains; no Product, `SoftwareApplication`, `Person`, founder, or new schema type was added.
+- Cannibalization review: PASS. Solution, Email feature, Email resource, and WordPress use-case ownership boundaries remain distinct.
+- CTA/navigation regression review: PASS. Homepage, global header/navigation, footer, and CTA destinations were not changed; page-local CTA copy remains restrained and accurate.
+
+### 47.6 Deferred Work And Validation Plan
+
+Deferred work:
+
+- No `/for-freelancers` route creation.
+- No broad feature/use-case/resource rewrites.
+- No Milestone 3-style internal-link expansion.
+- No sitemap/robots/hreflang/canonical/schema architecture work.
+- No Product or `SoftwareApplication` schema.
+- No homepage video/performance work.
+- No IndexNow/Bing work.
+- No external authority/backlink work.
+- No fake ratings, reviews, market proof, or unsupported automation claims.
+
+Post-deploy validation plan if this implementation is approved, committed, merged, and deployed:
+
+- Preview review should verify the four changed public pages for desktop/mobile visual health, exact titles/meta descriptions/canonicals, rendered H1s, visible copy, CTA destinations, JSON-LD validity, and internal links.
+- Production verification should confirm the same items live after merge.
+- GSC observation should track the P0/P1 pages at 7/14/30/60/90-day windows for non-brand impressions, clicks, CTR, average position, query diversity, and any indexing/crawl anomalies.
+- Organic sessions and internal funnel events (`first_extract_created`, `project_saved`, `paid_conversion`) should be monitored where attribution is available and safe to interpret.
+
+### 47.7 Final Milestone 4 Local State
+
+- Phase 0: COMPLETE / OWNER REVIEWED.
+- Phase 1: IMPLEMENTATION IN PROGRESS.
+- Milestone 1: COMPLETE.
+- Milestone 2: COMPLETE.
+- Milestone 3: COMPLETE.
+- Milestone 4: IMPLEMENTED LOCALLY / AWAITING OWNER REVIEW.
+- Homepage changed: NO.
+- Global nav/footer changed: NO.
+- Database changed: NO.
+- Environment/config changed: NO.
+- Production changed: NO.
+- Commit created: NO.
+- Push performed: NO.
+- Deploy performed: NO.
+
+Milestone 4 is implemented locally as a scoped ranking-page intent/content update. Final recommendation before commit/PR: **APPROVE FOR OWNER REVIEW**.

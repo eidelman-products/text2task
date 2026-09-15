@@ -12,15 +12,16 @@ import {
 import { absoluteUrl } from "@/app/lib/site-config";
 import styles from "./page.module.css";
 
-const pageTitle = "Freelancer Project Management Software";
+const pageTitle = "Freelancer Project Management Software for Client Work";
 const pageDescription =
-  "Freelancer project management software that turns client messages, emails, notes, and supported screenshots into reviewable projects and tasks.";
+  "Turn client emails, messages, notes, briefs, and supported screenshots into reviewable projects and tasks, then manage deadlines, updates, and progress.";
 const pagePath = "/solutions/freelancer-project-management-software";
 const pageUrl = absoluteUrl(pagePath);
 const ogImagePath =
   "/landing/use-cases/project-managers/project-manager-stakeholder-request-project-flow.png";
 const ogImageUrl = absoluteUrl(ogImagePath);
-const ogTitle = "Freelancer Project Management Software | Text2Task";
+const ogTitle =
+  "Freelancer Project Management Software for Client Work | Text2Task";
 const ogDescription =
   "Turn scattered client requests into reviewable projects and tasks, then manage deadlines, priorities, budgets, updates, history, and resources in one workspace.";
 const ogImageAlt =
@@ -402,16 +403,13 @@ export default function FreelancerProjectManagementSoftwarePage() {
           <div className={styles.heroInner}>
             <div className={styles.heroCopy}>
               <p className={styles.eyebrow}>Freelancer Project Management Software</p>
-              <h1>
-                Freelancer project management software that starts with the
-                client message.
-              </h1>
+              <h1>Freelancer project management software for client requests</h1>
               <p className={styles.heroLead}>
-                Freelancers already receive project details through messages,
-                emails, notes, briefs, and screenshots. Text2Task turns those
-                details into a reviewable project and task draft, so you can
-                review, edit, and save organized client work instead of keeping
-                another unstructured message.
+                Freelancers already receive project details through emails,
+                messages, notes, briefs, and supported screenshots. Text2Task
+                turns that client context into a reviewable project and task
+                draft with deadlines, priorities, and client information, then
+                keeps approved work organized in a focused workspace.
               </p>
 
               <div className={styles.heroActions}>
@@ -424,7 +422,8 @@ export default function FreelancerProjectManagementSoftwarePage() {
               </div>
 
               <p className={styles.ctaNote}>
-                AI-generated drafts stay reviewable before you save them.
+                Try the live demo with sample intake first, or start free when
+                you want to save approved client work in your workspace.
               </p>
             </div>
 
@@ -471,8 +470,8 @@ export default function FreelancerProjectManagementSoftwarePage() {
             <h2>Turn an incoming client request into organized work.</h2>
             <p>
               Text2Task supports project management for freelancers by helping
-              you move from raw client context to a structured draft you can
-              approve before it becomes saved work.
+              you move from raw client communication to a structured draft you
+              can approve before it becomes saved work.
             </p>
           </div>
 
@@ -527,8 +526,10 @@ export default function FreelancerProjectManagementSoftwarePage() {
             </h2>
             <p>
               Text2Task is client project management software for freelancers
-              who need to keep client requests, tasks, and follow-ups organized
-              after the first message is reviewed.
+              who need intake, tasks, deadlines, updates, history, and resources
+              connected after the first message is reviewed. It is narrower
+              than a generic enterprise project-management suite and tuned for
+              turning client requests into work you can act on.
             </p>
           </div>
 
@@ -628,8 +629,8 @@ export default function FreelancerProjectManagementSoftwarePage() {
             <p>
               Text2Task is focused on freelance workflow management around
               client requests, projects, and tasks. It is not trying to replace
-              the financial, legal, or time-tracking tools that many freelancers
-              already use.
+              the financial, legal, sales, or time-tracking tools that many
+              freelancers already use.
             </p>
           </div>
 
@@ -733,7 +734,8 @@ export default function FreelancerProjectManagementSoftwarePage() {
             <h2>Turn the next client request into an organized project.</h2>
             <p>
               Paste the request, review the draft, and save organized work with
-              the project details already structured.
+              the project details already structured. Start free when you are
+              ready to keep real client projects in a workspace.
             </p>
           </div>
 

@@ -19,13 +19,13 @@ import EmailToTasksPage, { metadata } from "./page";
 */
 
 describe("EmailToTasksPage - H1 commercial-framing differentiation", () => {
-  it("H1 no longer duplicates the Resource's informational phrase \"turn emails into tasks\"", () => {
+  it("H1 uses the approved commercial email-to-project framing", () => {
     const { container } = render(<EmailToTasksPage />);
     const h1 = container.querySelector("h1");
 
     expect(h1).not.toBeNull();
-    expect(h1!.textContent?.toLowerCase()).not.toContain(
-      "turn emails into tasks"
+    expect(h1!.textContent).toBe(
+      "Turn client emails into reviewable projects and tasks"
     );
   });
 
@@ -37,8 +37,13 @@ describe("EmailToTasksPage - H1 commercial-framing differentiation", () => {
     expect(h1!.textContent).toMatch(/project|task/i);
   });
 
-  it("title and canonical are unchanged (no evidence justified a metadata change)", () => {
-    expect(metadata.title).toBe("Email to Tasks: Turn Emails Into Projects");
+  it("title, meta, and canonical reflect the approved commercial page identity", () => {
+    expect(metadata.title).toBe(
+      "Email to Tasks: Turn Client Emails Into Projects"
+    );
+    expect(metadata.description).toBe(
+      "Paste selected email text into Text2Task to create a reviewable project and task draft with deadlines, priorities, budget details, and client info."
+    );
     expect(metadata.alternates?.canonical).toBe("/features/email-to-tasks");
   });
 
@@ -47,6 +52,8 @@ describe("EmailToTasksPage - H1 commercial-framing differentiation", () => {
     const text = (container.textContent ?? "").toLowerCase();
 
     expect(text).toMatch(/paste/);
+    expect(text).toContain("selected email text");
+    expect(text).toContain("nothing is saved until you review");
     for (const forbidden of [
       "connects to gmail",
       "connects to outlook",
@@ -65,5 +72,13 @@ describe("EmailToTasksPage - H1 commercial-framing differentiation", () => {
     );
 
     expect(link).not.toBeNull();
+  });
+
+  it("distinguishes the product feature from the informational how-to guide", () => {
+    const { container } = render(<EmailToTasksPage />);
+    const text = container.textContent ?? "";
+
+    expect(text).toContain("The Email to Tasks feature keeps the project");
+    expect(text).toContain("the how-to guide explains the manual workflow");
   });
 });
