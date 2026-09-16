@@ -13,7 +13,8 @@
 **PHASE 1 MILESTONE 3: COMPLETE**
 **PHASE 1 MILESTONE 4: PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE**
 **PHASE 1 MILESTONE 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING**
-**PHASE 1 MILESTONE 6: NOT STARTED**
+**PHASE 1 MILESTONE 6: COMPLETE FOR CURRENT RUN / ONGOING AUTHORITY OPS DEFERRED**
+**PHASE 1 MILESTONE 7: NOT STARTED**
 
 Companion file: `Text2Task_SEO_GEO_Run_2026-09-09.docx` (formatted, distributable Source of Truth — this Markdown file is the version-controllable editable source; both are maintained together for this run only).
 
@@ -67,6 +68,28 @@ Phase 1 Milestone 5 implementation update recorded 2026-09-15 16:49:12 Asia/Jeru
 
 Phase 1 Milestone 5 production verification update recorded 2026-09-15 18:08:15 Asia/Jerusalem: PR #10 (`Phase 1: add Bing IndexNow foundation`) was merged successfully to `main`; implementation commit `8e63c0affe09ce3acb49e1da748e9b3c65b5799d` and merge commit `8e1adf480d78c385f6f7515b2b82c7090a10be97` are present on `main`; Vercel Production is READY. Owner manual Preview verification confirmed the public key file returned only the expected key and Preview build logs showed no automatic `npm run indexnow`, `--submit`, or `api.indexnow.org` execution. Owner manual Production verification confirmed the key file is live at `https://www.text2task.com/bfc07a49eb3f8529250cbcf7e23cce46febab912744d05dd172331de6fc230c6.txt` and returns only the expected public key. The first controlled real IndexNow submission sent exactly two approved canonical URLs, received HTTP 202 from `https://api.indexnow.org/indexnow`, and was classified by the implementation as `SUBMISSION_ACCEPTED` with retry count 0. Bing Webmaster Tools still showed the Get Started screen immediately afterward, so Bing UI propagation / verification remains pending. No duplicate resubmission was performed, no additional/private/Preview URL was submitted, no Bing setting was changed, and Milestone 5 is not complete yet.
 
+Documentation-only local cleanup update recorded 2026-09-15 Asia/Jerusalem: local Git state was verified and synchronized following PR #11 (`Docs: record IndexNow production verification`, merge commit `f3937cac004eb4a659129408c95440192cf60ea4`). Local `main` matches `origin/main`; the two now-merged feature/docs branches were confirmed absent both remotely (pruned) and locally (never checked out in this workspace). Milestone 5 status is unchanged: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING. No files were modified, no commit was created, and no push was performed by this cleanup task.
+
+Phase 1 Milestone 6 mapping update recorded 2026-09-15 Asia/Jerusalem: External Authority Program mapping/audit started at owner request, as audit/strategy work only. This task built a verified external-footprint inventory (reconciling the Phase 0B baseline in §23A/§41.4/§42.2 with a fresh read-only external verification sweep), an entity-consistency audit, an authority-gap analysis, a qualitative Google/GEO/AEO opportunity matrix, four opportunity tiers, an existing-listing optimization queue, a sustainable backlink strategy, a GEO/AEO authority map, community-participation rules, and a 30/60/90-day roadmap with a KPI framework. See §51 for the full mapping. No application code, tests, database, environment/configuration, Production, Bing/Google setting, external profile, outreach, backlink, or IndexNow action was performed or changed by this task. Milestone 6 is not implemented and remains MAPPING / AUDIT IN PROGRESS.
+
+Phase 1 Milestone 6 owner review correction update recorded 2026-09-15 Asia/Jerusalem under Decision `SEO-2026-09-09-D026`: the owner reviewed and broadly approved the Milestone 6 mapping, then supplied corrected external-verification evidence. The most significant correction: surfaces previously flagged as a possible thin mirror/scraper of `www.text2task.com` (`text2task.workspace.fluxble.com`) were reclassified as an unrelated name collision belonging to the older "Text2Task" product tied to Target Energy Solutions / Fluxble, alongside `https://fluxble.com/` and the already-known Microsoft Marketplace listing — not our listing, backlink, mirror, or profile. G2 remains AMBIGUOUS / INVESTIGATE, sharpened by the finding that Fluxble/Target Energy Solutions has its own separate G2 profile. Exact URLs were recorded for GetApp, Capterra (product ID `10054810`), Uneed, Peerlist, StartupFortune, and UIComet; two concrete listing-accuracy defects were identified but not yet corrected (GetApp platform-support field, Capterra free-plan pricing display); Product Hunt/BetaList handling was corrected to require status verification before any submission, preventing a duplicate. The owner approved the Milestone 6 strategy direction and authorized **M6.1 — External Footprint Cleanup & Canonical Inventory** as the first execution step, with a defined 22-field inventory schema and P0/P1/P2 priority order, and approved the community posture SELECTIVE / TRANSPARENT / PROBLEM-LED. Several owner decisions (original asset investment, founder-story outreach, Product Hunt relaunch, broader directory expansion, editorial campaign) were explicitly deferred until M6.1 completes. See §51.17 for the full correction log. No application code, tests, database, environment/configuration, Production, Bing/Google setting, external profile, outreach, backlink, directory submission, or IndexNow action was performed or changed by this task; no contact was made with any external party including Target Energy Solutions/Fluxble. Milestone 6 is not implemented and is now MAPPING / AUDIT OWNER REVIEWED — M6.1 APPROVED.
+
+Phase 1 Milestone 6, M6.1 execution update recorded 2026-09-15 Asia/Jerusalem: External Footprint Cleanup & Canonical Inventory was executed as a research/verification/documentation task only, per the approved D026 scope. A read-only public web-verification sweep (WebSearch/WebFetch, no login, no unsafe certificate bypass) directly re-confirmed GetApp and Capterra live with their previously-flagged issues reproduced verbatim (GetApp's platform-support field still lists Android/iPhone/iPad for a web-only product; Capterra's free-plan pricing still displays as "$0.00, Flat Rate, One Time"), re-confirmed PitchWall and the `github.com/text2task` organization profile live and on-brand, and found new corroborating evidence for the G2 ambiguity (a separate Fluxble G2 profile exists, and independent sources describe Fluxble's own product feature as itself called "Text2Task," which increases but does not prove the likelihood that the ambiguous G2 page belongs to Fluxble rather than to `www.text2task.com`). Two further Fluxble/Target Energy Solutions name-collision surfaces were discovered and documented (`target.fluxble.com`, a "WORKSPACE" portal, and `text2task.test.meeraspace.com`, an apparent Fluxble/Target Energy test deployment on third-party dev-hosting infrastructure), correcting and completing the disambiguation already started in the prior owner-review pass. The Uneed listing could not be independently re-confirmed this session (the exact URL returned Uneed's generic category page rather than Text2Task-specific content in two attempts) and is recorded as INCONCLUSIVE, not as removed. SaaSHub, FounderDB, Peer Push, Product Hunt, and BetaList remain UNKNOWN; per instruction, Product Hunt/BetaList are explicitly not treated as missing opportunities and no submission was created. Peerlist, StartupFortune, and UIComet could not be independently re-fetched this session (HTTP 403 on each) and are recorded per owner attestation from the prior pass, with tooling re-confirmation still outstanding. The full canonical inventory, entity-collision inventory, issue severity list, and M6.1 action queue are recorded in §52. No external profile was logged into, claimed, edited, created, or contacted; no outreach, backlink, directory submission, or community post was made; no application code, tests, database, environment/configuration, or Production file was changed; no commit, push, or deploy was performed. Milestone 6 is now M6.1 INVENTORY COMPLETE / AWAITING OWNER REVIEW; M6.2 has not started.
+
+Phase 1 Milestone 6, M6.1 normalization update recorded 2026-09-15 Asia/Jerusalem: the owner reviewed the M6.1 inventory and found counting/classification inconsistencies (the reported totals of 12 verified-ours + 1 ambiguous + 6 collision + 9 unknown did not reconcile against the stated total of 24). This task replaced the informal groupings with one authoritative, row-level inventory: every distinct surface received a stable `EXT-###` ID, exactly one Relationship Class (OUR CONTROLLED SURFACE / THIRD-PARTY PROFILE FOR OUR PRODUCT / THIRD-PARTY EDITORIAL-INDEPENDENT MENTION / AMBIGUOUS IDENTITY / UNRELATED NAME COLLISION / UNKNOWN RELATIONSHIP), and exactly one Verification Status (VERIFIED LIVE / OWNER-ATTESTED / INCONCLUSIVE / UNKNOWN / UNAVAILABLE-NOT SAFELY VERIFIABLE), deliberately separating "is this ours" from "how do we know." The normalized total is 28 rows, with both the relationship breakdown (4/12/2/1/7/2) and the verification breakdown (7/10/4/6/1) independently reconciling to 28. Uneed was corrected out of any "verified" bucket into THIRD-PARTY PROFILE FOR OUR PRODUCT / INCONCLUSIVE with a REVERIFY DIRECTLY action, not IGNORE and not removed. Product Hunt and BetaList were corrected into THIRD-PARTY PROFILE FOR OUR PRODUCT / UNKNOWN with a VERIFY EXISTING SUBMISSION action and an explicit duplicate-submission prohibition, not IGNORE and not NEW OPPORTUNITY. The seven Fluxble/Target Energy Solutions/Microsoft Marketplace/AppSource surfaces were placed in a dedicated ENTITY COLLISION MONITORING queue, explicitly separated from the ordinary KEEP/MONITOR queue for genuine footprint. G2 remains AMBIGUOUS IDENTITY / INCONCLUSIVE, not claimed as ours and not asserted as Fluxble's with certainty. A normalized seven-queue action list (A-G) and a recommended first small M6.2 batch (GetApp platform-support correction, Capterra pricing-display correction, Uneed re-verification, Product Hunt/BetaList status verification) were recorded, with execution explicitly not approved by this task. Decision `SEO-2026-09-09-D026` is preserved unchanged; no new Decision Log ID was created, as this was a data-normalization pass rather than a new strategy or architecture decision. The full normalized inventory is recorded in §52.11. No external profile was logged into, claimed, edited, or contacted; no outreach, backlink, directory submission, or community post was made; no application code, tests, database, environment/configuration, or Production file was changed; no commit, push, or deploy was performed. Milestone 6 is now M6.1 INVENTORY NORMALIZED / AWAITING FINAL OWNER APPROVAL; M6.1 is not yet owner-approved and M6.2 has not started.
+
+Phase 1 Milestone 6, M6.1 owner-approval update recorded 2026-09-16 Asia/Jerusalem: the owner reviewed the normalized inventory (§52.11) and approved it as final. The accepted totals are unchanged from the normalization pass: 28 total inventory rows; relationship totals OUR CONTROLLED SURFACE 4, THIRD-PARTY PROFILE FOR OUR PRODUCT 12, THIRD-PARTY EDITORIAL/INDEPENDENT MENTION 2, AMBIGUOUS IDENTITY 1, UNRELATED NAME COLLISION 7, UNKNOWN RELATIONSHIP 2; verification totals VERIFIED LIVE 7, OWNER-ATTESTED 10, INCONCLUSIVE 4, UNKNOWN 6, UNAVAILABLE/NOT SAFELY VERIFIABLE 1; both breakdowns independently reconcile to 28. M6.1 is now COMPLETE / OWNER APPROVED. The owner also approved the first controlled M6.2 batch, recorded as **M6.2A — Existing Profile Correction / Verification**, covering exactly five items: two correction candidates (GetApp platform/device-support accuracy; Capterra free-plan pricing representation, with the explicit constraint that no billing-frequency value may be invented and actual vendor-console fields must be inspected first) and three verification-only candidates (Uneed re-verification; Product Hunt existing-submission status check; BetaList existing-submission status check), each with no duplicate submission permitted. G2 claiming/editing, SaaSHub/FounderDB/Peer Push submissions, new directory expansion, backlink outreach, editorial outreach, Product Hunt relaunch, BetaList resubmission, review solicitation, community promotion, original content assets, and any Fluxble/Target Energy/Microsoft collision edits remain explicitly deferred and are not part of M6.2A. Decision `SEO-2026-09-09-D026` is preserved unchanged; no new Decision Log ID was created, as this task records an approval rather than a new strategy or architecture decision. This is an approval record only: no external profile was logged into, claimed, edited, or contacted; no listing was submitted; no application code, tests, database, environment/configuration, or Production file was changed; no commit, push, or deploy was performed. Milestone 6 is now M6.1 OWNER APPROVED / M6.2A READY FOR CONTROLLED EXECUTION; M6.2A has not been executed and Milestone 6 overall remains incomplete.
+
+EXT-006 Uneed correction recorded 2026-09-16 Asia/Jerusalem: the owner supplied direct email evidence from Uneed dated 2026-08-19 confirming that Text2Task's free launch finished below Uneed's score-of-10 threshold and was removed approximately 48 hours after launch, with no automatic return to a waiting queue, and separately confirmed by direct browser check that the previously-recorded Uneed URL now returns a 500 error / generic category-page context rather than an active Text2Task product page. Uneed's email also offered a paid relaunch ($15 instead of $29.99 for a chosen date, or $14.99 Fast Track) explicitly advertising guaranteed publication, a guaranteed backlink, a permanent do-follow backlink, and no upvote threshold. EXT-006 was updated from INCONCLUSIVE to a new **HISTORICALLY VERIFIED / REMOVED AFTER LAUNCH** verification status with current public status **REMOVED / NO ACTIVE PRODUCT PAGE CONFIRMED**, moved in the M6.1 action queue from Group B (Verify Before Any Edit) to Group F (Low Value / Defer) with recommended action **DEFER / DO NOT PAY FOR RELAUNCH FOR SEO PURPOSES**, and downgraded from P1 to P3 severity, because the paid offer's bundled guaranteed publication and permanent do-follow backlink does not fit the owner-approved quality-first External Authority Program (D026). Uneed is not classified as an active profile, a current backlink, a missing opportunity, or Tier 1 authority, and no claim is made that the paid offer itself is a search-engine penalty or violation. The M6.2A batch's Uneed verification item is marked resolved/closed; the batch's active remaining scope is GetApp, Capterra, Product Hunt, and BetaList. See §52.15 for the full correction record. Decision `SEO-2026-09-09-D026` is preserved unchanged; no new Decision Log ID was created. No external party was contacted, no paid relaunch was pursued, no listing was submitted or edited, no application code was changed, and no commit/push/deploy was performed by this task.
+
+EXT-016 Product Hunt correction recorded 2026-09-16 Asia/Jerusalem: the owner directly opened the authenticated Product Hunt account and supplied screenshots confirming Text2Task exists under My products & launches with status LIVE / POSTED, exactly one Posted launch (launch date 2026-05-17) with no In Progress, Draft, or Scheduled launches, a public product page at `https://www.producthunt.com/products/text2task`, official website `text2task.com`, category AI Workflow Automation, a description consistent with the current product, forum `p/text2task`, a Facebook social link, and an owner maker comment; launch dashboard evidence showed Position #201, Points 0, Comments 1. EXT-016 was updated from UNKNOWN to **VERIFIED LIVE** with current public status **LIVE / POSTED** and launch date **2026-05-17**, moved in the M6.1 action queue from Group B (Verify Before Any Edit) to Group C (Keep / Monitor — Our Valid Footprint), with recommended action **KEEP / MONITOR** and duplicate submission **PROHIBITED**, and severity recorded as P2 (a future-optimization review note only, not a defect: review existing listing content before any future relaunch strategy, with no relaunch recommended now). Product Hunt is not classified as a missing opportunity, pending, removed, or a new-submission candidate. Value assessment recorded conservatively: SEO authority value MEDIUM, Entity/GEO/AEO value MEDIUM-HIGH, referral/discovery value LOW CURRENTLY given the weak launch engagement; Product Hunt presence supports external entity/discovery signals but does not guarantee rankings, backlinks of material SEO value, or AI citations. The M6.2A batch's Product Hunt verification item is marked resolved/closed; the batch's active remaining scope is now GetApp, Capterra, and BetaList. See §52.17 for the full correction record. Decision `SEO-2026-09-09-D026` is preserved unchanged; no new Decision Log ID was created. No external party was contacted, no listing was submitted, claimed, or edited, no application code was changed, and no commit/push/deploy was performed by this task.
+
+EXT-017 BetaList correction recorded 2026-09-16 Asia/Jerusalem: the owner directly opened the authenticated BetaList dashboard and confirmed Text2Task exists in the account with submission ID `#168594` in state DRAFT, submission started June 1, 2026, not submitted (progress indicator shows "Continue submission" available), no Reviewed or Featured state reached, no public BetaList product page confirmed, and no completed submission existing; BetaList currently requires payment to complete a startup submission. EXT-017 was updated from UNKNOWN to a new **OWNER-VERIFIED** verification status with current status **DRAFT — NOT SUBMITTED**, submission started 2026-06-01, submission ID 168594, and public listing **NONE CONFIRMED**, moved in the M6.1 action queue from Group B (Verify Before Any Edit) to Group F (Low Value / Defer), with recommended action **DEFER — DO NOT PAY / COMPLETE SUBMISSION YET** and duplicate submission **DO NOT CREATE A NEW SUBMISSION**, and severity recorded as P2 (a deliberate deferral, not a defect). BetaList is not classified as LIVE, PUBLISHED, PENDING REVIEW, APPROVED, REJECTED, a current backlink, or an active authority source; the existing draft is preserved and not deleted. Reason: Milestone 6 prioritizes existing-authority cleanup and high-quality earned authority before paid listing submissions (D026). The M6.2A batch's BetaList verification item is marked resolved/closed; the batch's active remaining scope is now GetApp and Capterra only. See §52.19 for the full correction record. Decision `SEO-2026-09-09-D026` is preserved unchanged; no new Decision Log ID was created. No external party was contacted, no submission was completed, paid for, deleted, or newly created, no application code was changed, and no commit/push/deploy was performed by this task.
+
+EXT-021 G2 correction recorded 2026-09-16 Asia/Jerusalem: the owner directly opened the authenticated G2 Text2Task profile as an administrator and supplied screenshots confirming public URL `https://www.g2.com/products/text2task/reviews`, profile marked Claimed with a MyG2 Dashboard management link available, description/tagline "Text2Task — Turn Messy Client Messages Into Organized Projects," a pricing section present, 0 reviews, 40% profile completeness, and completed items (Update Logo, Product description, Update Screenshot, Update Pricing) with additional features available under paid Starter-level functionality. EXT-021 was moved from **AMBIGUOUS IDENTITY** to **THIRD-PARTY PROFILE FOR OUR PRODUCT**, with ownership recorded as **CLAIMED / ADMIN ACCESS CONFIRMED**, verification status updated from INCONCLUSIVE/INVESTIGATE to **VERIFIED LIVE / OWNER-CONTROLLED**, current status **LIVE**, moved in the M6.1 action queue from Group B (Verify Before Any Edit) to Group C (Keep / Monitor — Our Valid Footprint), with recommended action **KEEP / OPTIMIZE LATER** and severity downgraded from P0 to P2 (an optimization opportunity, not a defect or risk). G2 is not classified as ambiguous, the unrelated Fluxble/Target Energy product, unclaimed, or a missing opportunity; the separate Fluxble G2 profile (EXT-028) remains independently classified as UNRELATED NAME COLLISION / ENTITY COLLISION MONITORING and was not merged with EXT-021. Inventory totals were recalculated and reconcile to 28: relationship totals 4/13/2/0/7/2 (AMBIGUOUS IDENTITY now 0, THIRD-PARTY PROFILE FOR OUR PRODUCT now 13), verification totals 9/10/2/4/1/1/1 (VERIFIED LIVE now 9, INCONCLUSIVE now 2). G2 was never part of the approved M6.2A batch, so no M6.2A batch item required updating. See §52.21 for the full correction record. Decision `SEO-2026-09-09-D026` is preserved unchanged; no new Decision Log ID was created. No external party was contacted, no profile field was edited or claimed by this task, no application code was changed, and no commit/push/deploy was performed by this task.
+
+Milestone 6 closure recorded 2026-09-16 Asia/Jerusalem under Decision `SEO-2026-09-09-D027`: the owner made a deliberate scope decision to close Milestone 6 (External Authority Program) for the current run after canonical external-footprint inventory, high-value profile verification (G2, Product Hunt, BetaList, Uneed), major entity-disambiguation work (the Fluxble/Target Energy Solutions/Microsoft Marketplace collision cluster), correction/verification attempts on important existing profiles (Capterra pricing correction attempted and blocked by a vendor portal bug with a support ticket pending; GetApp identified as a public/vendor data mismatch not attributable to an owner-side field), and documentation of unresolved external dependencies. New evidence recorded this update: EXT-005 Capterra's status changed to CORRECTION ATTEMPTED — BLOCKED BY VENDOR PORTAL BUG — SUPPORT TICKET PENDING (owner attempted the fix via the G2 Digital Markets vendor portal and hit a "Currency is required" validation bug while USD was already selected); EXT-004 GetApp's status changed to PUBLIC/VENDOR DATA MISMATCH (the vendor console already correctly shows Web-only, but the public listing previously showed mobile-platform support), moved from Group A to Group C with a MONITOR / REVISIT LATER action and an explicit instruction not to blindly edit an already-correct field. The owner-previously-purchased Fiverr directory-submission batch (~22 rows, including G2, GitHub, Viesearch, Product Hunt, PitchWall, Stackovery, FreeListingUSA, 10words, SiteLike, SoloLaunches, InventList, LA Chief, Twelve Tools, Startup Grind, LaunchIt, DirectorySection, Wakelet, PromptZone, Open Launch, Launch.cab, LaunchVibe, and Indie Hackers) was recorded as a HISTORICAL SUBMISSION BATCH in a separate tracking table (§52.23), explicitly not added to the 28-row canonical inventory and explicitly not counted as 22 verified backlinks, live listings, indexed pages, or authority domains; public/live status is recorded as NOT INDIVIDUALLY VERIFIED IN THIS RUN, authority value UNKNOWN BY DEFAULT, and recommended action DEFER / REVISIT ONLY IF NEEDED, with no resubmission recommended. Milestone 6 is now COMPLETE FOR CURRENT RUN / ONGOING AUTHORITY OPS DEFERRED; M6.1 remains COMPLETE / OWNER APPROVED; M6.2 is now HIGH-VALUE EXISTING PROFILE VERIFICATION COMPLETE FOR CURRENT RUN. This does not mean all directory submissions were verified, all backlinks were audited, all external profiles were optimized, outreach is complete, or authority growth is finished — external authority remains an ongoing operational program, and the remaining backlog (Capterra support response, GetApp follow-up, optional G2/Product Hunt optimization, Fiverr batch verification if later justified, editorial outreach, review acquisition, an original authority asset, community participation, and KPI monitoring) is explicitly non-blocking for Phase 1. Milestone 7 (Homepage Performance / CRO) is recorded as the next planned work and has NOT started in this task; the existing Phase 1 Master Implementation Plan entry for Milestone 7 (§38.7) and the known homepage-video performance baseline remain authoritative. See §52.24 for the full closure record. Decision `SEO-2026-09-09-D026` is preserved unchanged; no application code, tests, database, environment/configuration, or Production file was changed; no external profile was logged into, claimed, edited, or contacted; no directory was resubmitted; no deploy was performed by this task.
+
 ---
 
 ## 1. Cover / Run Metadata
@@ -86,7 +109,8 @@ Phase 1 Milestone 5 production verification update recorded 2026-09-15 18:08:15 
 | Phase 1 Milestone 3 | COMPLETE |
 | Phase 1 Milestone 4 | COMPLETE |
 | Phase 1 Milestone 5 | PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING |
-| Phase 1 Milestone 6 | NOT STARTED |
+| Phase 1 Milestone 6 | COMPLETE FOR CURRENT RUN / ONGOING AUTHORITY OPS DEFERRED |
+| Phase 1 Milestone 7 | NOT STARTED |
 | Author | Claude Code (Sonnet 5), directed by the site owner |
 | Repository | `C:\Users\Home\projects\inboxshaper` (git branch `main`, clean at run start) |
 | Prior internal reference | `docs/Text2Task_SEO_Master_Blueprint_2026-08-29.md` (found in repo, read in full, used for reconciliation) |
@@ -1128,6 +1152,8 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | SEO-2026-09-09-D024 | 2026-09-15 13:05:14 Asia/Jerusalem | Implement Phase 1 Milestone 4 against the owner-approved P0/P1 non-brand page set and title/meta/H1 decisions. | Owner approved the Milestone 4 mapping boundary: P0 pages are `/solutions/freelancer-project-management-software` and `/features/email-to-tasks`; P1 pages are `/resources/how-to-turn-emails-into-tasks` and `/use-cases/wordpress-freelancers`. The goal is to improve existing URLs as better answers for evidenced non-brand intent, not add broad SEO text or create new pages. | Owner Milestone 4 implementation instruction; Section 46 mapping; direct implementation in the four target page/source files and focused page tests; PR #8 production merge and owner Production verification recorded in Section 48. | Creating `/for-freelancers` - rejected/deferred because the existing solution page owns broad freelancer project-management intent and the route is absent. Repeating Milestone 3 broad internal linking - rejected. Homepage/global nav/footer/sitemap/schema architecture changes - rejected. Product/SoftwareApplication schema - rejected/deferred. Aggressive CTAs or unsupported automation claims - rejected. | Production deployed / production verified / complete |
 
 | SEO-2026-09-09-D025 | 2026-09-15 16:49:12 Asia/Jerusalem | Implement Phase 1 Milestone 5 Bing / IndexNow Foundation with a new stable public verification key, static root key file, dry-run-first controlled CLI, sitemap-derived allowlist, denylist defense-in-depth, changed-file mapper, and explicit-submit-only request path. | Owner approved the D025 implementation boundary: do not reuse the exploration key; generate a new protocol-valid key; treat the key as public verification material that may be committed; host it under `public/` so Production can serve `https://www.text2task.com/{KEY}.txt`; default every run to dry-run; require `--submit` for any real request; do not submit all 33 sitemap URLs blindly; do not submit automatically on build, Preview, deploy, or file changes; reuse the same validator/mapper/submitter for possible future CI; use only canonical Production `https://www.text2task.com`; require review for shared/global and deleted/renamed cases. | Owner Milestone 5 implementation instruction; Section 49 mapping; owner-supplied Bing baseline; official IndexNow and Bing Webmaster Tools documentation; implementation in `public/`, `scripts/indexnow/`, `package.json`, and current run Markdown/DOCX; local dry-runs and tests. | Reusing the external exploration key - rejected. Treating the IndexNow key as an application secret - rejected because protocol key files are public verification material. Runtime request-time submission - rejected. Preview/staging/localhost/noncanonical submissions - rejected. Blind full-site submission - rejected. Automatic CI/deploy submission - deferred until controlled Production verification proves the architecture. | Implemented locally / awaiting owner review |
+| SEO-2026-09-09-D026 | 2026-09-15 Asia/Jerusalem | Approve the Milestone 6 External Authority Program strategy direction and begin with M6.1 — External Footprint Cleanup & Canonical Inventory before any new backlink acquisition, outreach, directory expansion, review campaign, or launch activity. Governing principles: quality over backlink quantity; existing-profile correctness before expansion; canonical entity consistency first; no mass directory submissions; no paid backlink packages; no fake/incentivized reviews; no manipulative link exchanges; no automated mass outreach; no disguised community promotion. | Owner review of the initial Milestone 6 mapping (§51) found the direction broadly correct but surfaced a critical correction (Fluxble/Target Energy Solutions surfaces mis-classified as a possible Text2Task mirror; corrected to name collision, §51.2/§51.3), a sharpened G2 ambiguity (Fluxble has its own separate G2 profile), several newly owner-confirmed exact URLs (GetApp, Capterra, Uneed, Peerlist, StartupFortune, UIComet), two concrete listing-accuracy defects (GetApp platform support, Capterra pricing display), and a correction to Product Hunt/BetaList handling (verify status, prevent duplicate submission, do not treat as missing). Community posture is approved as SELECTIVE / TRANSPARENT / PROBLEM-LED. Several owner decisions (original asset investment, founder-story outreach, Product Hunt relaunch, broader directory expansion, editorial campaign) are explicitly deferred until M6.1 is complete. | Owner review correction instructions; initial Milestone 6 mapping in §51 (as it stood before this pass); §51.2/§51.3/§51.7/§51.8/§51.11/§51.14/§51.15 corrected in place; §51.17 correction log. | Classifying Fluxble surfaces as our own mirror/listing requiring disavow — rejected/corrected, they are an unrelated name collision, not ours to act on. Treating G2 as a verified Text2Task asset — rejected, remains AMBIGUOUS / INVESTIGATE. Submitting to Product Hunt/BetaList as if absent — rejected, must verify status first to avoid duplicate submission. Beginning M6.2 (correct/claim profiles) or any outreach/directory/review/launch activity in this task — rejected; only M6.1 is authorized to begin, and only as a future execution task, not in this documentation-only pass. Requiring the deferred owner decisions now — rejected per explicit owner instruction. | M6.1 approved / ready for execution as a future task |
+| SEO-2026-09-09-D027 | 2026-09-16 Asia/Jerusalem | Close Milestone 6 (External Authority Program) for the current SEO/GEO/AEO run after canonical external-footprint inventory, high-value profile verification, major entity-disambiguation work, correction/verification of important existing profiles, and documentation of unresolved external dependencies. The remaining ~22-row Fiverr directory-submission batch will NOT be individually audited, edited, or optimized in this run. | Time/value tradeoff: the remaining directory-by-directory verification work has lower expected value than continuing to the next SEO milestone. This is a deliberate prioritization decision, not an assumption that all submitted directories are live or valuable — the Fiverr batch is recorded as a historical submission batch with public/live status NOT INDIVIDUALLY VERIFIED IN THIS RUN and authority value UNKNOWN BY DEFAULT. | Owner closure instruction; the full canonical inventory in §52.11 (28 rows, high-value surfaces individually verified: G2, Product Hunt, BetaList, Uneed, GetApp, Capterra, plus the pre-existing verified/owner-attested set); the Fiverr submission spreadsheet (~22 rows) recorded in §52.23; the Milestone 6 closure record in §52.24. | Treating the Fiverr batch's ~22 rows as 22 verified backlinks, 22 live listings, 22 indexed pages, or 22 authority domains — rejected; recorded as an unverified historical batch instead. Recommending resubmission of any Fiverr-batch directory — rejected; no resubmission recommended. Individually auditing all ~22 Fiverr-batch rows in this task — rejected as the specific time/value tradeoff being declined. Treating Milestone 6 closure as meaning all external authority work is finished — rejected; explicitly recorded as an ongoing operational program with a non-blocking backlog. Blocking Phase 1 progress on remaining authority backlog — rejected; Milestone 7 may proceed. | Milestone 6 complete for current run / ongoing authority ops deferred |
 
 ---
 
@@ -1171,6 +1197,17 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | 2026-09-15 15:51:06 Asia/Jerusalem | Phase 1 Milestone 5 mapping | Bing / IndexNow Foundation repository audit, architecture plan, eligibility model, safety model, owner checks, rollout plan, and success criteria recorded | Owner request to start Milestone 5 as mapping/audit/architecture planning only; current run document; historical Blueprint; official IndexNow documentation; direct repository inspection | Current run Markdown/DOCX; `app/lib/site-config.ts`; `app/sitemap.ts`; `app/robots.ts`; `app/layout.tsx`; `next.config.ts`; `package.json`; `proxy.ts`; public route files; no `.github` directory; no `vercel.json`; `public/` inventory; environment-guard search | Current run Markdown and DOCX only | Confirmed IndexNow implementation absent in application code; no repository-hosted IndexNow key file; Bing property/sitemap/IndexNow setup baseline preserved from Section 23; canonical host is `https://www.text2task.com`; sitemap remains the primary public URL inventory; recommended static root UTF-8 key file plus production-only controlled submission script/workflow using allowlist validation and changed URL mapping; Preview/Staging/private URL submissions must be impossible | Mapping only; no IndexNow key generated; no public key file created; no IndexNow API called; no Bing/Vercel/database/environment/Production change; no commit/push/deploy; no new Decision Log ID because owner has not yet approved implementation architecture | Mapping / implementation plan ready |
 | 2026-09-15 16:49:12 Asia/Jerusalem | Phase 1 Milestone 5 implementation | Bing / IndexNow Foundation implemented locally for owner review | Owner-approved D025 implementation request; owner-supplied Bing Webmaster Tools baseline; Section 49 mapping; official IndexNow and Bing Webmaster Tools documentation | Current run Markdown/DOCX; `app/lib/site-config.ts`; `app/sitemap.ts`; `app/robots.ts`; `package.json`; `public/`; `scripts/indexnow/`; focused tests and verification outputs | `public/bfc07a49eb3f8529250cbcf7e23cce46febab912744d05dd172331de6fc230c6.txt`; `scripts/indexnow/changed-file-mapper.mjs`; `scripts/indexnow/indexnow-config.mjs`; `scripts/indexnow/indexnow-submitter.mjs`; `scripts/indexnow/indexnow.test.ts`; `scripts/indexnow/public-url-inventory.mjs`; `scripts/indexnow/submit-indexnow.mjs`; `scripts/indexnow/url-validator.mjs`; `package.json`; current run Markdown/DOCX | Generated a new stable public IndexNow verification key; added the static root key file; added dry-run-first CLI; added sitemap-derived public URL inventory; added canonical-host allowlist validation and private/asset/noncanonical denylist protections; added changed-file mapper with review-required handling for shared/global and deleted/renamed cases; added official POST-body builder and structured dry-run output; no real request was sent | Focused IndexNow tests 1 file / 32 tests PASS; relevant regression 6 files / 120 tests PASS; typecheck PASS; changed-file ESLint PASS; production build PASS after network-enabled Google Fonts fetch; full lint failed only on unrelated pre-existing Client Share lint error/warnings; `git diff --check` PASS with line-ending warning only; dry-run examples PASS; sitemap inventory remains 33 canonical URLs; private URL redaction tests PASS | Implemented locally / awaiting owner review |
 | 2026-09-15 18:08:15 Asia/Jerusalem | Phase 1 Milestone 5 production verification | PR #10 merge, Preview key-file/no-submit verification, Production key-file verification, and first controlled IndexNow submission recorded | Owner-supplied PR #10 merge/deployment facts, owner Preview and Production key-file verification, owner Preview build-log verification, and first controlled IndexNow submission result | Active run Markdown/DOCX; git branch/status/history; committed IndexNow CLI dry-run/submission output | Current run Markdown and DOCX only | PR #10 merged successfully; implementation commit `8e63c0affe09ce3acb49e1da748e9b3c65b5799d` and merge commit `8e1adf480d78c385f6f7515b2b82c7090a10be97` present on main; Vercel Production READY; Preview key file returned only expected key; Preview build logs showed no automatic `npm run indexnow`, `--submit`, or `api.indexnow.org`; Production key file returned only expected key; first controlled IndexNow request submitted exactly `/solutions/freelancer-project-management-software` and `/features/email-to-tasks`; endpoint returned HTTP 202 and implementation classified `SUBMISSION_ACCEPTED`; retry count 0; elapsed time 1069 ms | Dry-run candidate count 2, accepted count 2, rejected count 0, canonical host `www.text2task.com`, keyLocation exact; no additional URL, Preview URL, private URL, homepage URL, key-file URL, all-site URL, deleted URL, or redirect URL submitted; Bing Webmaster Tools IndexNow still showed Get Started immediately afterward, so Bing UI propagation / verification remains pending; no duplicate resubmission performed | Production deployed / first controlled submission accepted / Bing UI verification pending |
+| 2026-09-15 Asia/Jerusalem | Local Git cleanup | Local Git state verified/synchronized after PR #11 merge; stale Milestone 5 branches confirmed absent | `git status`, `git fetch --prune`, `git branch -a`, `git log`/`git merge-base` ancestry checks | Git metadata only | None | Confirmed local `main` == `origin/main` at `f3937cac004eb4a659129408c95440192cf60ea4` (PR #11 merge commit); confirmed `feat/seo-indexnow-foundation` and `docs/seo-m5-production-verification` absent from both `origin/*` and local branches; no branch deletion needed | Ancestry of implementation commit `8e63c0a`, PR #10 merge `8e1adf4`, docs commit `ef41b0b`, and PR #11 merge `f3937ca` on `main` confirmed via `git merge-base --is-ancestor` | Complete |
+| 2026-09-15 Asia/Jerusalem | Phase 1 Milestone 6 mapping | External Authority Program footprint inventory, entity-consistency audit, authority-gap analysis, competitor pattern map, Google/GEO/AEO opportunity matrix, opportunity tiers, existing-listing optimization queue, backlink strategy, GEO/AEO authority map, community-participation rules, 30/60/90-day roadmap, and KPI framework recorded | Owner request to start Milestone 6 as mapping/audit/strategy only; §22B/§23A/§41.4/§42.2 baseline; historical Blueprint; a read-only external verification sweep (WebSearch/WebFetch against previously identified surfaces and adjacent-category patterns) | Current run Markdown/DOCX; historical Blueprint (read for reconciliation only); no application source files | Current run Markdown and DOCX only | Reconciled Phase 0B baseline against a fresh read-only sweep; several previously-recorded surfaces could not be re-confirmed with live content in this sweep (blocked/expired-certificate/soft-404 responses) and are recorded as UNKNOWN rather than assumed live or removed; new surfaces discovered (GitHub organization profile, PitchWall profile, Stackovery listing, a third-party "fluxble.com" mirror page, a `launches.uicomet.com` URL) and classified; full inventory, consistency findings, tiered opportunities, and roadmap recorded in §51 | No external profile was created, claimed, edited, or contacted; no outreach was sent; no backlink was created or purchased; no IndexNow request was sent; no Bing/Google setting was changed; no application/test/database/environment/configuration/Production file was changed; no commit/push/deploy performed; no new Decision Log ID created because this task surfaced owner decisions for review rather than deciding them | Mapping / audit ready for owner review |
+| 2026-09-15 Asia/Jerusalem | Phase 1 Milestone 6 owner review correction | Owner-reviewed corrections to the Milestone 6 mapping recorded under D026: Fluxble/Target Energy Solutions surfaces reclassified from possible Text2Task mirror to unrelated name collision; G2 ambiguity sharpened (separate Fluxble G2 profile identified); exact URLs recorded for GetApp, Capterra, Uneed, Peerlist, StartupFortune, and UIComet; GetApp platform-support and Capterra pricing-display defects queued for correction; Product Hunt/BetaList handling corrected to prevent duplicate submission; M6.1 canonical-inventory scope, schema, and priority order approved; execution order updated to M6.1-M6.9; community posture approved as SELECTIVE/TRANSPARENT/PROBLEM-LED; several owner decisions explicitly deferred until M6.1 completes | Owner review correction instructions; prior Milestone 6 mapping in §51 | Current run Markdown/DOCX only | Current run Markdown and DOCX only | §51.2, §51.3, §51.7, §51.8, §51.11, §51.14, §51.15, §51.16 corrected in place; new §51.17 correction log added; Decision Log entry D026 added (§33); status changed from MAPPING/AUDIT IN PROGRESS to MAPPING/AUDIT OWNER REVIEWED - M6.1 APPROVED | No external profile was created, claimed, edited, or contacted; no outreach, backlink, directory submission, review, or IndexNow request was sent; no application/test/database/environment/configuration/Production file was changed; no commit/push/deploy performed; git status confirmed only the two run-doc files modified before and after this edit | M6.1 approved / ready for owner-authorized execution |
+| 2026-09-15 Asia/Jerusalem | Phase 1 Milestone 6, M6.1 execution | External Footprint Cleanup & Canonical Inventory built: 25-field-equivalent canonical inventory for all "our Text2Task" surfaces, an ambiguous-surface entry (G2), an entity-collision inventory (Fluxble/Target Energy Solutions/Microsoft Marketplace/AppSource, including two newly discovered surfaces), an issue severity list, and an M6.1 action queue (A-F groups) recorded | Owner-approved D026 M6.1 scope (§51.17); read-only public WebSearch/WebFetch verification sweep against every named surface; no login, no private evidence, no certificate-bypass fetch | Current run Markdown/DOCX only | Current run Markdown and DOCX only | GetApp and Capterra directly re-fetched and confirmed live with their flagged issues reproduced verbatim; PitchWall and `github.com/text2task` directly re-fetched and confirmed live/on-brand; G2 ambiguity sharpened by a newly found separate Fluxble G2 profile and independent evidence that Fluxble's own product feature is itself named "Text2Task"; two new Fluxble/Target Energy name-collision surfaces found (`target.fluxble.com`, `text2task.test.meeraspace.com`); Uneed recorded INCONCLUSIVE (generic category page returned twice, not treated as removal); Peerlist/StartupFortune/UIComet could not be re-fetched this session (HTTP 403) and rest on owner attestation; SaaSHub/FounderDB/Peer Push/Product Hunt/BetaList remain UNKNOWN with no submission created; full detail in §52 | No external profile was logged into, claimed, edited, created, or contacted; no outreach, backlink, directory submission, or community post was made; no application/test/database/environment/configuration/Production file was changed; no commit/push/deploy performed; git status confirmed only the two run-doc files modified before and after this edit; a ZoomInfo snippet naming "Target Energy Solutions" was found but explicitly excluded from evidentiary reliance because it could not be confirmed to refer to the same entity | M6.1 inventory complete / awaiting owner review |
+| 2026-09-15 Asia/Jerusalem | Phase 1 Milestone 6, M6.1 normalization | Authoritative row-level inventory (28 `EXT-###` rows) built to replace non-reconciling ad hoc counts; Relationship Class and Verification Status separated as two independent dimensions per row; Uneed, Product Hunt, and BetaList reclassified per owner correction; entity-collision surfaces (7 rows) moved into a dedicated ENTITY COLLISION MONITORING queue separate from ordinary KEEP/MONITOR; normalized seven-queue action list (A-G) and a recommended first small M6.2 batch recorded, execution not approved | Owner correction instructions identifying the non-reconciling totals; prior M6.1 inventory in §52.2-§52.9 | Current run Markdown/DOCX only | Current run Markdown and DOCX only | §52.11 added with row-level inventory, summary counts (relationship 4/12/2/1/7/2 = 28; verification 7/10/4/6/1 = 28, both reconciling), normalized action queue, and recommended first M6.2 batch; §52.12 final normalization state added; §52.2-§52.9 retained with a superseding notice pointing to §52.11 as authoritative | No external profile was logged into, claimed, edited, or contacted; no outreach, backlink, directory submission, or community post was made; no application/test/database/environment/configuration/Production file was changed; no commit/push/deploy performed; Decision `SEO-2026-09-09-D026` preserved unchanged; no new Decision Log ID created | M6.1 inventory normalized / awaiting final owner approval |
+| 2026-09-16 Asia/Jerusalem | Phase 1 Milestone 6, M6.1 owner approval / M6.2A batch approval | Owner approved the normalized M6.1 inventory as final (28 rows; relationship 4/12/2/1/7/2; verification 7/10/4/6/1, both reconciling); approved the first controlled M6.2 batch M6.2A - Existing Profile Correction / Verification (GetApp, Capterra correction candidates; Uneed, Product Hunt, BetaList verification-only candidates); all other M6 work items explicitly deferred | Owner approval instructions; normalized inventory in §52.11 | Current run Markdown/DOCX only | Current run Markdown and DOCX only | §52.13 added recording the owner-approved final counts, the M6.2A batch definition (5 items, exact scope and constraints), and the explicit deferred-scope list; §52.14 final approval state added | No external profile was logged into, claimed, edited, or contacted; no listing was submitted; no application/test/database/environment/configuration/Production file was changed; no commit/push/deploy performed; Decision `SEO-2026-09-09-D026` preserved unchanged; no new Decision Log ID created | M6.1 complete / owner approved; M6.2A approved for controlled execution, not yet executed |
+| 2026-09-16 Asia/Jerusalem | Phase 1 Milestone 6, EXT-006 Uneed correction | Owner-supplied direct Uneed email evidence (dated 2026-08-19) recorded: free launch removed ~48 hours after scoring below threshold, no automatic waiting-queue return, current URL confirmed by owner to return a 500 error/category-page context; paid relaunch offer (guaranteed publication, guaranteed backlink, permanent do-follow backlink, no upvote threshold) recorded and declined for strategy-alignment reasons | Owner-supplied direct Uneed email evidence dated 2026-08-19; owner direct browser check of the existing Uneed URL | Current run Markdown/DOCX only | Current run Markdown and DOCX only | EXT-006 updated in §52.11.1 from INCONCLUSIVE to new HISTORICALLY VERIFIED / REMOVED AFTER LAUNCH status with REMOVED / NO ACTIVE PRODUCT PAGE CONFIRMED current status; §52.11.2 verification totals updated to 6 categories reconciling to 28; §52.11.3 action queue moved EXT-006 from Group B to Group F with DEFER / DO NOT PAY FOR RELAUNCH action; §52.11.4 and §52.13.2 M6.2A batch items marked resolved/closed for Uneed; new §52.15/§52.16 correction record and final state added | No external party (including Uneed) was contacted by this task; no paid relaunch, submission, or listing edit was performed; no application/test/database/environment/configuration/Production file was changed; no commit/push/deploy performed; Decision `SEO-2026-09-09-D026` preserved unchanged; no new Decision Log ID created | EXT-006 corrected; M6.1 total inventory count unchanged at 28; M6.2A active remaining scope reduced to 4 items |
+| 2026-09-16 Asia/Jerusalem | Phase 1 Milestone 6, EXT-016 Product Hunt correction | Owner-supplied authenticated Product Hunt account screenshots recorded: Text2Task LIVE / POSTED under My products & launches, one Posted launch (2026-05-17), no In Progress/Draft/Scheduled launches, public page `https://www.producthunt.com/products/text2task`, official website `text2task.com`, category AI Workflow Automation, Facebook social link and maker comment present; launch dashboard Position #201, Points 0, Comments 1 recorded as current low referral/discovery engagement | Owner-supplied authenticated Product Hunt account screenshots | Current run Markdown/DOCX only | Current run Markdown and DOCX only | EXT-016 updated in §52.11.1 from UNKNOWN to VERIFIED LIVE with LIVE / POSTED current status and 2026-05-17 launch date; §52.11.2 verification totals updated (VERIFIED LIVE 7->8, UNKNOWN 6->5) still reconciling to 28; §52.11.3 action queue moved EXT-016 from Group B to Group C with KEEP / MONITOR action and duplicate submission PROHIBITED; §52.11.4 and §52.13.2 M6.2A batch items marked resolved/closed for Product Hunt; new §52.17/§52.18 correction record and final state added | No external party (including Product Hunt) was contacted by this task; no listing was submitted, claimed, or edited; no application/test/database/environment/configuration/Production file was changed; no commit/push/deploy performed; Decision `SEO-2026-09-09-D026` preserved unchanged; no new Decision Log ID created | EXT-016 corrected; M6.1 total inventory count unchanged at 28; M6.2A active remaining scope reduced to 3 items |
+| 2026-09-16 Asia/Jerusalem | Phase 1 Milestone 6, EXT-017 BetaList correction | Owner-supplied authenticated BetaList dashboard evidence recorded: Text2Task submission ID #168594 in state DRAFT, started 2026-06-01, not submitted, no Reviewed/Featured state reached, no public product page confirmed, no completed submission exists; BetaList requires payment to complete a submission | Owner-supplied authenticated BetaList dashboard evidence | Current run Markdown/DOCX only | Current run Markdown and DOCX only | EXT-017 updated in §52.11.1 from UNKNOWN to new OWNER-VERIFIED status with DRAFT - NOT SUBMITTED current status, submission ID 168594, started 2026-06-01, public listing NONE CONFIRMED; §52.11.2 verification totals updated (UNKNOWN 5->4, new OWNER-VERIFIED category count 1) still reconciling to 28; §52.11.3 action queue moved EXT-017 from Group B to Group F with DEFER - DO NOT PAY / COMPLETE SUBMISSION YET action; §52.11.4 and §52.13.2 M6.2A batch items marked resolved/closed for BetaList, leaving GetApp and Capterra as the only active M6.2A scope; new §52.19/§52.20 correction record and final state added | No external party (including BetaList) was contacted by this task; no submission was completed, paid for, deleted, or newly created; the existing draft was preserved; no application/test/database/environment/configuration/Production file was changed; no commit/push/deploy performed; Decision `SEO-2026-09-09-D026` preserved unchanged; no new Decision Log ID created | EXT-017 corrected; M6.1 total inventory count unchanged at 28; M6.2A active remaining scope reduced to 2 items (GetApp, Capterra only) |
+| 2026-09-16 Asia/Jerusalem | Phase 1 Milestone 6, EXT-021 G2 correction | Owner-supplied authenticated G2 admin screenshots recorded: profile Claimed, admin/MyG2 Dashboard access confirmed, public URL https://www.g2.com/products/text2task/reviews, description consistent with current product, 0 reviews, 40% profile completeness; separate Fluxble G2 profile (EXT-028) confirmed to remain distinct and not merged | Owner-supplied authenticated G2 admin screenshots | Current run Markdown/DOCX only | Current run Markdown and DOCX only | EXT-021 moved in §52.11.1 from AMBIGUOUS IDENTITY to THIRD-PARTY PROFILE FOR OUR PRODUCT, ownership CLAIMED / ADMIN ACCESS CONFIRMED, verification INCONCLUSIVE -> VERIFIED LIVE / OWNER-CONTROLLED; §52.11.2 relationship totals recalculated (AMBIGUOUS IDENTITY 1->0, THIRD-PARTY PROFILE FOR OUR PRODUCT 12->13) and verification totals recalculated (VERIFIED LIVE 8->9, INCONCLUSIVE 3->2), both still reconciling to 28; §52.11.3 action queue moved EXT-021 from Group B to Group C with KEEP / OPTIMIZE LATER action; new §52.21/§52.22 correction record and final state added | No external party (including G2) was contacted by this task; no profile field was edited, claimed, or newly created; EXT-028 Fluxble G2 profile kept independently classified as UNRELATED NAME COLLISION, not merged; no application/test/database/environment/configuration/Production file was changed; no commit/push/deploy performed; Decision `SEO-2026-09-09-D026` preserved unchanged; no new Decision Log ID created | EXT-021 corrected; M6.1 total inventory count unchanged at 28; relationship and verification totals both recalculated and reconciled |
+| 2026-09-16 Asia/Jerusalem | Phase 1 Milestone 6 closure | Decision D027 recorded: closed Milestone 6 for the current run after canonical inventory, high-value profile verification, entity disambiguation, and correction/verification attempts on important existing profiles; recorded EXT-004 GetApp as a PUBLIC/VENDOR DATA MISMATCH (moved to Group C, MONITOR / REVISIT LATER) and EXT-005 Capterra as CORRECTION ATTEMPTED - BLOCKED BY VENDOR PORTAL BUG - SUPPORT TICKET PENDING; recorded the ~22-row Fiverr historical submission batch as a separate, not-individually-verified tracking table, explicitly not counted as verified backlinks/listings/indexed pages/authority domains and not recommended for resubmission | Owner closure instruction; Decision D027; owner-supplied G2 Digital Markets vendor-console/portal evidence for GetApp and Capterra; owner-supplied Fiverr submission spreadsheet (~22 rows) | Current run Markdown/DOCX only | Current run Markdown and DOCX only | §33 Decision Log D027 added; §52.11.1 EXT-004/EXT-005 rows updated with new vendor evidence; §52.11.3 action queue moved EXT-004 from Group A to Group C, updated EXT-005 description in Group A; new §52.23 (Fiverr batch tracking table) and §52.24 (Milestone 6 closure record) added; top status headers, cover table, and §37 updated to Milestone 6 COMPLETE FOR CURRENT RUN / ONGOING AUTHORITY OPS DEFERRED and Milestone 7 NOT STARTED | No external profile was logged into, claimed, edited, or contacted; no directory was resubmitted; no application/test/database/environment/configuration/Production file was changed; no deploy performed; Decision `SEO-2026-09-09-D026` preserved unchanged; 28-row canonical inventory total unchanged | Milestone 6 complete for current run; M6.1 complete/owner approved; M6.2 high-value existing profile verification complete for current run; Milestone 7 not started |
 
 Phase 1 Milestone 1 changed application code and tests through PR #2. Phase 1 Milestone 2 changed application code, tests, and documentation through PR #4. Phase 1 Milestone 3 changed application code, tests, and documentation through PR #6 and is now production deployed, production content verified, and complete. Phase 1 Milestone 4 changed application code, tests, and documentation through PR #8 and is now production deployed, production verified, and complete. Phase 1 Milestone 5 is production deployed with the first controlled IndexNow submission accepted, and Bing UI verification pending. **Milestone 5 added local IndexNow tooling, a public key file, tests, package script, and run documentation through PR #10. This documentation task changed only the current run Markdown/DOCX. Runtime application pages/routes changed by this task: NO. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production application changed by this documentation task: NO. Google configuration changed: NO. Bing Webmaster Tools setting changed: NO. Duplicate IndexNow resubmission performed by this task: NO. Manual deploy performed by this task: NO. Commit/push/deploy performed by this task: NO.**
 
@@ -1291,11 +1328,12 @@ Documentation files changed:
 **PHASE 1 MILESTONE 3: COMPLETE**
 **PHASE 1 MILESTONE 4: COMPLETE**
 **PHASE 1 MILESTONE 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING**
-**PHASE 1 MILESTONE 6: NOT STARTED**
+**PHASE 1 MILESTONE 6: COMPLETE FOR CURRENT RUN / ONGOING AUTHORITY OPS DEFERRED**
+**PHASE 1 MILESTONE 7: NOT STARTED**
 
 Phase 0A exit criteria (per the run brief) are met and owner-reviewed: exact public route inventory (§9), exact sitemap logic (§12), exact robots policy (§10.1), exact private indexing protection map (§11), exact canonical/host logic (§13), exact metadata inventory (§14), exact structured-data inventory (§15), entity-disambiguation gap analysis (§16), content/intent map (§17), internal-link map (§19), analytics/measurement map (§22), prior-audit reconciliation (§25), confirmed P0/P1/P2 backlog (§26–§28), a proposed next plan (§30), and a verification plan (§32) all exist above.
 
-Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is complete. Milestone 2 is complete. Milestone 3 is complete. Milestone 4 is complete. Milestone 5 is production deployed with the first controlled IndexNow submission accepted, and Bing UI verification pending. Milestone 6 has not started. The owner privacy decision remains preserved: founder identity remains private for now, so Milestone 2 deliberately excludes founder name publication, `Person` schema, founder metadata, personal-profile `sameAs`, and personal social/profile links.
+Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is complete. Milestone 2 is complete. Milestone 3 is complete. Milestone 4 is complete. Milestone 5 is production deployed with the first controlled IndexNow submission accepted, and Bing UI verification pending. Milestone 6 (External Authority Program) is COMPLETE FOR THE CURRENT RUN under Decision `SEO-2026-09-09-D027`, with ongoing authority operations (Fiverr directory-batch verification, Capterra/GetApp follow-up, editorial outreach, review acquisition, community participation, and KPI monitoring) explicitly deferred as non-blocking backlog; see §52.23/§52.24. Milestone 7 (Homepage Performance / CRO) has not started. The owner privacy decision remains preserved: founder identity remains private for now, so Milestone 2 deliberately excludes founder name publication, `Person` schema, founder metadata, personal-profile `sameAs`, and personal social/profile links, and Milestone 6 closure does not revisit or reopen that decision.
 
 **Application code changed: YES â€” Phase 1 Milestones 1, 2, 3, 4, and 5 changed application/repository behavior through merged PRs; this documentation task changed no application/test/IndexNow implementation files. Database changed: NO. Environment changed: NO. Production application changed by this documentation task: NO. Google configuration changed: NO. Bing Webmaster Tools setting changed: NO. First controlled IndexNow API request was accepted with HTTP 202; Bing UI verification remains pending. Manual deploy performed by this task: NO. Commit/push/deploy performed by this task: NO.**
 
@@ -4203,3 +4241,1039 @@ No new Decision Log ID was created for this mapping because no owner-approved im
 - Commit created by this mapping task: NO.
 - Push performed by this mapping task: NO.
 - Deploy performed by this mapping task: NO.
+
+---
+
+## 51. Phase 1 Milestone 6 — External Authority Program (Mapping / Audit)
+
+**Recorded: 2026-09-15 Asia/Jerusalem.**
+**STATUS: MAPPING / AUDIT IN PROGRESS.**
+**Scope of this section: audit and strategy only. No application code, metadata, schema, sitemap, robots.txt, homepage, navigation/footer, IndexNow, database, environment/configuration, or Production change was made. No external profile was created, claimed, or edited. No outreach, backlink, directory submission, Reddit/LinkedIn post, or IndexNow request was made. No Decision Log ID was opened; this section surfaces owner decisions for a future approval gate rather than deciding them.**
+
+### 51.1 Method and Source-of-Truth Reconciliation
+
+This mapping treats §22B (GSC Links baseline), §23A (Phase 0B External Authority/Entity Footprint Baseline), §41.4/§42.2 (Milestone 2 external-profile inventory and final `sameAs` decisions), and the historical Blueprint as the authoritative record of what was previously verified, per the run brief's instruction not to silently replace prior baseline numbers. The GSC Links baseline is unchanged: **3 external link URLs from 2 linking domains** (`reddit.com` × 2, `startupbase.io` × 1), all to the homepage.
+
+In addition, this task ran a read-only external verification sweep (WebSearch/WebFetch, no login, no form submission, no account action) on 2026-09-15 to (a) attempt to re-confirm the previously recorded surfaces and find their exact URLs, which prior sections explicitly recorded as **not captured** (§42.2: "exact canonical URL is not recorded in the repository/current run evidence" for GetApp, Capterra, Uneed, SaaSHub; Peerlist/StartupFortune/UIComet/FounderDB/Peer Push similarly lack recorded URLs), and (b) check for any new surfaces. This sweep has real limitations that this section does not paper over:
+
+- The search tool used here is not a full Google index and its `site:` filtering was frequently unreliable — several known-real listings (GetApp, Capterra, Uneed, Peerlist, SaaSHub, the StartupFortune article, StartupBase.io, the Reddit threads, G2) could **not** be re-confirmed with a working exact URL or live page content in this sweep. This is a tooling limitation, not evidence that these listings are gone. Per the run brief, this is recorded as **UNKNOWN / NOT RE-VERIFIED IN THIS SWEEP**, not as "removed" or "confirmed."
+- Several URLs that were found returned HTTP 403 on fetch (G2, Microsoft Marketplace, UIComet, GitHub raw pages before a retry) or a certificate error (Stackovery). These are recorded as **found-but-content-unverified**, not as confirmed-current or confirmed-dead.
+- A small number of genuinely new surfaces were discovered (GitHub organization profile, PitchWall profile, a Stackovery listing, a `launches.uicomet.com` product URL, a thin third-party mirror at `text2task.workspace.fluxble.com`) and are added to the inventory below, clearly marked as newly observed in this sweep rather than previously known.
+- No new backlink, listing, review, comment, or profile field was created, edited, or submitted anywhere during this verification sweep. It was read-only.
+
+### 51.2 Part A — Current External Footprint Inventory
+
+**Owner review correction pass, 2026-09-15 Asia/Jerusalem (see D026 and §51.17):** the initial mapping's automated verification sweep (§51.1) had two significant errors and several unrecorded URLs. The owner independently re-verified the footprint directly and supplied corrected findings, which supersede the equivalent rows below. This table now reflects the owner-corrected state. The two corrections are:
+
+1. **Fluxble/Target Energy Solutions is NOT a mirror or surface of this Text2Task.** The initial mapping's Group 2 entry for `text2task.workspace.fluxble.com` incorrectly treated it as a possible scraper/mirror of `text2task.com`. It is in fact a surface of the unrelated, older "Text2Task" product tied to Target Energy Solutions (the same entity behind the already-known Microsoft Marketplace listing) via a company/platform called Fluxble. This is corrected below and reclassified into Group 3 (name collision), not Group 2.
+2. **G2 remains AMBIGUOUS**, and this sweep sharpens rather than resolves the ambiguity: Fluxble/Target Energy Solutions has its own G2 profile, which is a second, independent reason not to assume `g2.com/products/text2task` belongs to `www.text2task.com` — the previously-hypothesized product page could equally plausibly belong to the unrelated Fluxble product. Ownership must be verified before any use as authority evidence.
+
+**Group 1 — Verified existing profiles (owner-confirmed live, 2026-09-15)**
+
+| Platform | Exact URL | Category | Live status | Links to text2task.com | Notes / required follow-up | Recommended action |
+|---|---|---|---|---|---|---|
+| LinkedIn — company page | `https://www.linkedin.com/company/text2task/` (from live `Organization.sameAs`, per §42.2) | Company profile / social profile | VERIFIED LIVE (on-site `sameAs` value; not independently re-fetched this pass) | Unknown (company pages typically carry no GSC-countable followable link) | None | KEEP |
+| LinkedIn — founder profile/posts | Not recorded as an exact URL in this document, consistent with the standing owner privacy decision | Social profile / founder mention | VERIFIED — indexed per §23A.1/§23A.3 | Likely yes, in post copy | Owner-only; do not surface the exact URL in on-site content | VERIFY (owner-only) |
+| Facebook business page | `https://www.facebook.com/profile.php?id=61588954785433` (from live `Organization.sameAs`) | Company profile / social profile | VERIFIED LIVE (on-site `sameAs` value) | Unknown | None | KEEP |
+| GetApp | `https://www.getapp.com/all-software/a/text2task/` | SaaS directory / review platform | **VERIFIED LIVE** (owner re-verified 2026-09-15) | Unknown (destination field not confirmed) | Broadly correct positioning and pricing (`Pro $12.90/month`), **but lists supported platforms as Web, Android, and iPhone/iPad — Text2Task is currently web-only**, which is a real platform-support inaccuracy | VERIFY / CORRECT PLATFORM SUPPORT in M6.1 (no edit made yet) |
+| Capterra | `https://www.capterra.com/p/10054810/Text2Task/pricing/` (product ID `10054810`) | SaaS directory / review platform | **VERIFIED LIVE** (owner re-verified 2026-09-15) | Unknown | Free plan is displayed as **"$0.00, Flat Rate, One Time"**, which misleadingly implies a one-time free tier rather than an ongoing `$0/month` free plan alongside `$12.90/month` Pro | PRICING DISPLAY REVIEW REQUIRED in M6.1 (no edit made yet) |
+| Uneed | `https://www.uneed.best/tool/text2task` | Startup/product directory | **VERIFIED LIVE** (owner re-verified 2026-09-15) | Unknown | Correct positioning; Project Management/Productivity context; free tier + paid plan; 3 reviews visible | VERIFIED EXISTING PROFILE — KEEP, re-confirm minor fields during M6.1 |
+| Peerlist | `https://peerlist.io/yaneidelman/project/text2task` | Founder/product database / social profile | **VERIFIED LIVE** (owner re-verified 2026-09-15) | Likely yes, in project copy | Positioning reads "Turn client messages into structured projects and tasks," consistent with current product; page is under the founder's personal Peerlist account, consistent with §23A.3's founder-association finding — no change to the standing on-site privacy decision | VERIFIED EXISTING PROFILE — KEEP |
+| StartupFortune | `https://startupfortune.com/text2task-turns-messy-client-messages-into-structured-projects-and-tasks/` | Editorial mention | **VERIFIED LIVE** (owner re-verified 2026-09-15) | Yes — describes Text2Task, freelancers/small service teams, client communication, structured projects/tasks, and the official domain | This is one of the stronger current entity/authority references because it is independent editorial description, not a self-submitted listing; **editorial coverage is not equivalent to guaranteed rankings or AI citation** | VERIFIED INDEPENDENT EDITORIAL MENTION — KEEP; this resolves the E-7 publish-date question by superseding it with a confirmed live URL (exact date to be read directly during M6.1, not re-guessed here) |
+| SaaSHub | Not recorded | SaaS directory | UNKNOWN — not re-verified in this pass either | Unknown | Still outstanding from the original sweep | VERIFY in M6.1 |
+| UIComet | Exact URL previously found: `https://launches.uicomet.com/products/text2task-dKl2gKK`; owner confirms Text2Task is currently visible in UIComet launch listings | Product launch/discovery page | **VERIFIED DISCOVERY / LAUNCH SURFACE** | Unknown | Confirm the canonical product URL is still current during M6.1 | VERIFIED DISCOVERY / LAUNCH SURFACE — confirm exact URL in M6.1 |
+| FounderDB / Peer Push | Not recorded; not distinguished from each other in any run document | Founder/product database / discovery data | UNKNOWN — not re-verified in this pass | Unknown | Still outstanding | VERIFY in M6.1 (P2) |
+| G2 | `https://www.g2.com/products/text2task` (inferred) / `https://www.g2.com/products/text2task/competitors/alternatives` (found) | Review platform | **AMBIGUOUS / INVESTIGATE** — corrected classification; do not upgrade to verified | Unknown | Current evidence does **not** prove this G2 entity belongs to `www.text2task.com`. Fluxble/Target Energy Solutions has its own separate G2 profile, which is an additional, independent reason this must not be assumed to be this product's page | **VERIFY OWNERSHIP / DOMAIN / PRODUCT DESCRIPTION before claiming, editing, or using as authority evidence — do not classify as our verified profile** |
+| Product Hunt | Not found in this or the prior sweep | Product launch platform | **STATUS CORRECTION:** do not classify as a missing opportunity — prior Text2Task work indicates a submission/listing may already exist | Unknown | During M6.1: verify exact current status, find the exact public URL if live, record indexed/live/pending/approved, and **do not create a duplicate submission** | VERIFY EXACT STATUS in M6.1 — duplicate-submission risk noted |
+| BetaList | Not found in this or the prior sweep | Startup directory | **STATUS CORRECTION:** do not classify as a missing opportunity — prior Text2Task work indicates a submission/listing may already exist | Unknown | Same duplicate-submission caution as Product Hunt | VERIFY EXACT STATUS in M6.1 — duplicate-submission risk noted |
+| Reddit (2 GSC-reported linking URLs) | Not recorded; GSC reports `reddit.com` as a linking domain with 2 URLs, both variants of the same thread (§22B) | Community mention / backlink | UNKNOWN — not re-verified this pass; treat as likely still live since GSC continues to report it | Yes (GSC-confirmed, to the homepage) | Read the actual thread before deciding whether it deserves a genuine, non-promotional reply per §51.11; do not resurface/necro-post it purely for SEO | INVESTIGATE in M6.1 |
+| StartupBase.io (1 GSC-reported linking URL) | Not recorded; GSC reports `startupbase.io` as a linking domain (§22B) | Startup directory / backlink | UNKNOWN — not re-verified this pass | Yes (GSC-confirmed, to the homepage) | This is a different site from "StartupFortune" above; the similar names are easy to conflate and this report deliberately keeps them distinct | VERIFY in M6.1 |
+
+**Group 2 — Newly observed, genuinely ours (owned/likely-owned surfaces, not name collisions)**
+
+| Platform | URL | Category | Live status | Links to text2task.com | Recommended action |
+|---|---|---|---|---|---|
+| GitHub organization profile | `https://github.com/text2task` | Founder/product database / developer-ecosystem profile | Live — fetched successfully in the original sweep | YES — bio field links to `https://text2task.com`; bio text matches current positioning; 0 public repositories | VERIFY / KEEP; owner should confirm the account is company-controlled before any `sameAs` consideration (P2 in M6.1) |
+| PitchWall profile | `https://pitchwall.co/user/text2task` | Founder/product database / startup showcase | **VERIFIED EXISTING SURFACE** (owner-confirmed live 2026-09-15) | Uncertain — no outbound link observed in the original fetch | Ownership/control is **UNKNOWN until owner account control is explicitly verified** — do not claim, edit, or treat as `sameAs`-ready until then (P2 in M6.1) |
+| Stackovery listing | `https://stackovery.com/en/profile/text2task/collections` and `.../en/project/text2task/pricing` | SaaS directory / product database | Unavailable in the original sweep — fetch failed with an expired TLS certificate error; **not addressed in this owner-review pass** | Unknown | INVESTIGATE in M6.1 (P2) — status unchanged from the initial mapping |
+| `github.com/eidelman-products/text2task` | Publicly discoverable via search | Other — this is the application's own source-code repository, not a marketing/authority surface | Live (it is this repository's own `origin` remote) | N/A | INFORMATIONAL ONLY — engineering/security decision outside this SEO audit's scope, not actioned here |
+
+**Group 3 — Name collision / entity confusion (NOT our listings, NOT our backlinks, NOT our mirrors, NOT our profiles)**
+
+**Severity: P0 entity-disambiguation risk.** These surfaces belong to an unrelated, older "Text2Task" product associated with Target Energy Solutions / Fluxble — an Outlook/email-integration tool that uses NLP/machine-learning email detection to automatically create tasks/events inside a "Fluxble workspace" for enterprise employees. This is a different product, a different company, and a different audience from this `www.text2task.com` freelancer/small-team SaaS. No removal action or contact with Target Energy Solutions/Fluxble is taken in this task; the correct response remains strengthening this site's own on-site disambiguation (already addressed in Milestone 2, §42).
+
+| Surface | URL | Classification | Notes |
+|---|---|---|---|
+| Fluxble (parent platform) | `https://fluxble.com/` | UNRELATED NAME COLLISION | Corrected from the initial mapping, which did not identify this as the parent platform behind the previously-flagged mirror-like page |
+| Fluxble "Text2Task" workspace page | `https://text2task.target.fluxble.com/` | UNRELATED NAME COLLISION | **Corrected classification.** The initial mapping's automated sweep found a similarly-structured URL (`text2task.workspace.fluxble.com`) and mis-classified it as a possible thin scraper/mirror of `www.text2task.com` (Group 2, "INVESTIGATE"). It is in fact this unrelated Target Energy Solutions / Fluxble product's own page, not a mirror of anything belonging to this company |
+| Microsoft Marketplace / AppSource "Text2Task" | `https://marketplace.microsoft.com/en-us/product/office/wa200004035` | UNRELATED NAME COLLISION | Unchanged from §23A.4/the initial mapping — same unrelated Target Energy Solutions product, an Outlook/email add-in for enterprises |
+| G2 "Text2Task" (Fluxble-associated profile) | Not recorded — owner reports Fluxble has its own G2 profile under Target Energy Solutions | Contributes to AMBIGUOUS classification of the separate `g2.com/products/text2task` entity above | This is the second, independent reason the `g2.com/products/text2task` page cannot be assumed to belong to `www.text2task.com` without verification |
+
+### 51.3 Part B — Entity / Brand Consistency Audit
+
+Because most listing pages could not be freshly opened in this sweep (§51.1), most of the classic per-field consistency checks (exact description text, exact logo file, exact category taxonomy, exact displayed price) are recorded as **UNKNOWN — requires direct manual review of each live listing**, not fabricated as pass/fail. The consistency issues below are the ones this audit *can* support with evidence available in run documentation, prior verification, or this sweep:
+
+| ID | Issue | Evidence | Severity |
+|---|---|---|---|
+| E-1 | Unrelated "Text2Task" product (Target Energy Solutions / Fluxble, spanning `fluxble.com`, `text2task.target.fluxble.com`, and the Microsoft Marketplace/AppSource listing, an Outlook/email-integration assistant using NLP/ML to auto-create tasks/events for enterprise employees) shares the exact brand name and is live across multiple surfaces | §23A.4; owner-verified 2026-09-15 (see D026, §51.17) | P0 — ongoing entity-disambiguation risk; already the reason Milestone 2 exists; **scope corrected/expanded 2026-09-15** to include the Fluxble parent platform and workspace page, previously mis-scoped as a possible Text2Task mirror |
+| E-2 | No canonical, owner-maintained list exists anywhere (on-site or off-site) of "these are all of Text2Task's official external profiles" | Absence confirmed by this task needing to reconstruct the inventory from three separate run sections | P1 — makes future audits slower and makes it hard to notice a stale/incorrect listing quickly; **addressed by the approved M6.1 scope (§51.17)** |
+| E-3 | Several previously "verified" listings had no exact URL recorded anywhere in the repository or run documentation for six months | §42.2 explicitly noted this; **RESOLVED 2026-09-15** for GetApp, Capterra, Uneed, Peerlist, and StartupFortune, whose exact URLs are now recorded in §51.2 Group 1. SaaSHub and FounderDB/Peer Push remain unresolved | P1 — downgraded to P2 for the now-resolved surfaces; remains P1 for SaaSHub/FounderDB/Peer Push until M6.1 locates them |
+| E-4 | A GitHub organization (`github.com/text2task`) and a GitHub repository (`github.com/eidelman-products/text2task`) are both publicly discoverable and use two different brand handles ("text2task" vs. "eidelman-products/text2task") | Confirmed in the initial sweep | P2 — minor; unlikely to confuse a human, but two different naming surfaces for the same entity is a small, avoidable inconsistency if the org account is intentionally maintained |
+| E-5 | **CORRECTED 2026-09-15 (see D026, §51.17):** the initial mapping mis-classified `text2task.workspace.fluxble.com` as a possible thin scraper/mirror of `www.text2task.com` requiring investigation. It is in fact `https://text2task.target.fluxble.com/`, a surface of the unrelated Target Energy Solutions / Fluxble product (E-1). This is not a mirror, listing, backlink, or profile of this company at all | Owner-verified 2026-09-15 | Reclassified from P2 "investigate our own thin listing" into the P0 name-collision issue (E-1); no separate action needed beyond E-1's disambiguation posture |
+| E-6 | A Stackovery listing could not be loaded due to an expired TLS certificate | Confirmed in the initial sweep; not re-addressed in this owner-review pass | P2 — reputational/trust risk if a user or crawler ever follows a link to it while the certificate is broken; still pending M6.1 investigation |
+| E-7 | Conflicting publish-date signals for the StartupFortune editorial mention ("Aug 20, 2026" per §23A.1 vs. a "May 2026" search-summary artifact from the initial automated sweep) | **RESOLVED 2026-09-15** to the extent that the live article URL is now confirmed (`https://startupfortune.com/text2task-turns-messy-client-messages-into-structured-projects-and-tasks/`, owner-verified live); the exact publish date should still be read directly from the live page during M6.1 rather than re-guessed from either prior figure | P3 — URL ambiguity resolved; date confirmation deferred to M6.1 as a low-severity housekeeping item |
+| E-8 | Pricing and feature claims on third-party listings cannot be assumed accurate without direct reopening | §23A.1 recorded pricing as matching at the time of the Phase 0B sweep | P1 — **two concrete instances now confirmed 2026-09-15:** GetApp lists Android/iPhone/iPad platform support that does not match the current web-only product (see §51.2 Group 1), and Capterra displays the free plan as "$0.00 Flat Rate, One Time" rather than an ongoing $0/month plan alongside $12.90/month Pro. Both are queued for correction in M6.1, not yet edited |
+| E-9 | A G2 entity/page named Text2Task exists, but current evidence does not prove it belongs to `www.text2task.com` — and the unrelated Fluxble/Target Energy Solutions product has its own separate G2 profile, which independently increases the plausibility that the found page belongs to that unrelated product instead | Owner-verified 2026-09-15 (see D026, §51.17) | P1 — **new issue, split out from the general G2 ambiguity already tracked in §51.2/§23A.5** because the Fluxble G2 profile is a distinct, additional reason for caution, not just continued absence of proof; must not be claimed, edited, or cited as authority evidence until ownership is verified |
+
+No P0 entity-consistency defect was found beyond the already-known, already-being-managed name-collision cluster (E-1, now correctly scoped to include Fluxble). Nothing here suggests the on-site canonical entity signals themselves (Organization/WebSite schema, `sameAs`, About-page copy) are wrong — those were verified correct as of Milestone 2 (§42) and were not touched by this audit.
+
+### 51.4 Part C — Authority Gap Analysis
+
+Assessed against the 17 categories in the run brief, scored qualitatively across three distinct value types (a listing can score differently on each):
+
+| Category | Current state | Authority signal | Traffic/referral opportunity | AI/entity discovery value |
+|---|---|---|---|---|
+| 1. Respected SaaS directories | GetApp, Capterra, Uneed, SaaSHub previously verified; exact URLs unrecorded | LOW-MEDIUM (unconfirmed domain authority, but reputable directory class) | LOW-MEDIUM (users do browse these for tool selection) | MEDIUM (structured, consistent listings help AI systems triangulate category/positioning) |
+| 2. Comparison/review sites | G2 ambiguous; no confirmed genuine review platform presence | LOW (unresolved) | LOW currently | LOW currently (ambiguous identity is actively unhelpful for AI disambiguation until resolved) |
+| 3. Startup databases | Uneed, UIComet, PitchWall, FounderDB/Peer Push, StartupBase.io | LOW individually, MEDIUM in aggregate as a discovery cluster | LOW (typically low click-through) | MEDIUM (many small consistent mentions reinforce category/entity association) |
+| 4. Product discovery platforms | UIComet confirmed URL; Product Hunt/BetaList status unresolved | LOW-MEDIUM | LOW-MEDIUM (a real Product Hunt launch, if pursued honestly, can spike referral traffic for one day) | MEDIUM |
+| 5. Freelancer-related resources | None confirmed | GAP | GAP — this is arguably the single most relevant missing category given the product's actual audience | GAP |
+| 6. Productivity/work-management resources | None confirmed | GAP | MEDIUM potential | MEDIUM potential |
+| 7. Email/productivity workflow resources | None confirmed | GAP | MEDIUM-HIGH potential (email-to-task is a core positioning angle) | MEDIUM-HIGH potential |
+| 8. Agency/freelancer communities | Reddit presence exists per GSC but content/quality unverified | UNKNOWN | UNKNOWN | LOW currently |
+| 9. AI workflow/tool directories | None confirmed | GAP | LOW-MEDIUM | MEDIUM (these directories are increasingly crawled/cited by AI answer engines) |
+| 10. Editorial coverage | One verified article (StartupFortune) | LOW-MEDIUM (one data point) | LOW (single article, unclear ongoing traffic) | MEDIUM (independent editorial description is a genuinely useful AI-disambiguation signal) |
+| 11. Founder/product interviews | None confirmed | GAP | GAP | GAP — also blocked by the standing founder-privacy decision unless done without naming the founder |
+| 12. Podcasts/newsletters | None confirmed | GAP | GAP | GAP |
+| 13. Partner/integration ecosystem mentions | None — product currently has no confirmed third-party integrations | GAP (not actionable until product has integrations) | N/A | N/A |
+| 14. Case studies/testimonials | Not confirmed to exist publicly off-site | GAP | MEDIUM potential (genuine testimonials are persuasive) | MEDIUM potential |
+| 15. Genuine community discussions | Reddit only, unverified content | UNKNOWN | UNKNOWN | LOW currently |
+| 16. High-quality resource-page links | None confirmed (§22B: no externally-linked Feature/Solution/Resource money page currently surfaced) | GAP — this is the single most direct lever on the non-brand ranking problem described in §5/§22B | HIGH potential if achieved | MEDIUM |
+| 17. Niche industry citations | None confirmed | GAP | LOW-MEDIUM | LOW-MEDIUM |
+
+**Headline conclusion:** the widest, most consequential gap is not "not enough directory listings" — it is the near-total absence of category-relevant editorial/resource coverage (rows 5–7, 10, 16) that could plausibly link to a Feature/Solution/Resource page rather than only the homepage. This is consistent with, and sharpens, the existing §22B finding that authority-diversity — not raw backlink count — is the real constraint.
+
+### 51.5 Part D — Competitor / Category Authority Patterns
+
+Text2Task's real competitive set for authority-building purposes is the adjacent category named in the run brief — email/message-to-task and client-request-organization tools for freelancers — not general project-management giants. Based on how this category typically earns visibility (qualitative pattern observation, not a scrape of any specific competitor's live backlink profile, which was out of scope for this audit):
+
+- **Directories that repeatedly surface for this category:** general SaaS/startup directories (the same class Text2Task already has an early footprint in), AI-tool-specific directories (a category Text2Task does not yet appear in), and freelancer-tool roundup directories/resource pages.
+- **Review platforms:** Capterra/GetApp/G2-class platforms are standard for this category once a product has enough real users to sustain genuine reviews; fabricated or incentivized reviews are explicitly out of scope here (Part H).
+- **Listicles/comparison content:** "best tools to turn emails/messages into tasks" or "best freelancer client-management tools" style articles are the most direct high-value target, because they are exactly the intent-matched context a Feature/Solution page could earn a link from.
+- **Alternative/comparison pages:** typically authored by adjacent tools themselves (a "vs." page) or by independent bloggers; Text2Task does not need to author aggressive comparison content to benefit — being *included* in someone else's honest comparison is the higher-value, more durable outcome.
+- **Community discussions:** freelancer-focused subreddits, indie-hacker communities, and small-business/agency forums are where this category is organically discussed; the existing Reddit presence (§22B) suggests this channel already has some traction worth understanding before deciding whether to engage further.
+- **Integration pages:** not currently applicable — Text2Task has no confirmed third-party integrations to be listed on a partner's page.
+- **Templates/resources and guest contributions:** a genuinely useful, freely given resource (a template, a short guide, an original data point) placed on someone else's freelancer/agency resource hub is one of the highest-durability, lowest-risk authority patterns available to a small SaaS with no dedicated PR budget.
+- **Statistics/research citations:** currently not applicable — Text2Task has no published original research or usage statistics that a journalist or blogger could cite. This is a real, buildable asset (see Part H).
+
+The goal stated in the run brief is understood and preserved here: study *where* Google and AI systems repeatedly encounter credible entities in this category, not copy any specific competitor's link list.
+
+### 51.6 Part E — Google + AI Authority Matrix
+
+Per the run brief, this uses a transparent qualitative 1–5 scale rather than false mathematical precision. Scored for the *category of opportunity*, not each individual unverified URL (since most individual URLs could not be reopened this sweep):
+
+| Opportunity category | Topical relevance | Domain/editorial authority | Brand/entity value | SEO value | GEO/AEO value | Referral/user value | Acquisition difficulty (1=hard) | Cost (1=high) | Spam risk (1=high risk) | Maintenance burden (1=high) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Existing directory listings, cleaned up (GetApp/Capterra/Uneed/SaaSHub) | 4 | 3 | 3 | 3 | 3 | 2 | 4 (already exist) | 5 (free) | 4 | 3 |
+| Freelancer/productivity resource-page inclusion | 5 | 3–4 | 3 | 4 | 4 | 3 | 2 | 4 | 5 | 3 |
+| Genuine editorial coverage (StartupFortune-class and beyond) | 4 | 3 | 4 | 3 | 4 | 2 | 2 | 4 | 5 | 4 |
+| AI-tool-specific directories | 4 | 2–3 | 3 | 2 | 4 | 2 | 3 | 4 | 4 | 3 |
+| Genuine community participation (Reddit, indie-hacker forums) | 4 | 2 | 3 | 1–2 (rarely a followed link) | 2 | 4 | 3 | 5 | 3 (real risk if done wrong) | 2 |
+| Original data/template asset + outreach | 5 | 4 | 4 | 4 | 4 | 3 | 1 (hardest, most effort) | 3 | 5 | 2 (once built) |
+| G2 identity resolution | 3 (unclear until resolved) | 4 | 2 (negative if left ambiguous) | 2 | 2 | 2 | 3 | 5 | 3 (ambiguity itself is the risk) | 4 |
+| Mass/low-quality directory submissions (reference only — not recommended) | 1 | 1 | 1 | 1 | 1 | 1 | 5 (trivially easy) | 5 | 1 (highest risk) | 1 |
+
+**EXTERNAL AUTHORITY PRIORITY SCORE (qualitative ranking, highest priority first):**
+
+1. Freelancer/productivity/email-workflow resource-page inclusion
+2. Existing-listing cleanup and accuracy (GetApp/Capterra/Uneed/SaaSHub/Peerlist/PitchWall/GitHub org)
+3. Genuine editorial coverage (repeatable version of the StartupFortune pattern)
+4. G2 identity resolution (resolve the ambiguity either way — confirm or explicitly disclaim)
+5. AI-tool-specific directory inclusion
+6. Original data/template asset development (higher effort, higher durability — a 60–90 day initiative, not a 30-day one)
+7. Careful, evidence-based community participation (Part J governs this closely)
+8. Mass/low-quality directory submissions — explicitly **not** prioritized; see Part F, Tier 4
+
+### 51.7 Part F — Opportunity Tiers
+
+**TIER 1 — MUST PURSUE**
+- Clean up and accurately re-verify the existing "known-real" listings: GetApp, Capterra, Uneed, SaaSHub, Peerlist, PitchWall, the GitHub organization profile (owner should first confirm it is company-controlled).
+- Resolve the G2 ambiguity one way or the other (confirm identity and update, or explicitly determine it is not Text2Task and stop tracking it).
+- Pursue inclusion on at least a small number of genuinely relevant freelancer/productivity/email-workflow resource pages, aimed where editorially appropriate at a Feature/Solution/Resource URL rather than only the homepage.
+
+**TIER 2 — SHOULD PURSUE**
+- Pitch the founder/product story to adjacent small-SaaS/indie-maker outlets in the same vein as the existing, now URL-confirmed StartupFortune mention (a repeatable version of a pattern that already worked once).
+- During M6.1, verify the exact current status of Product Hunt and BetaList — prior Text2Task work indicates they may already be handled/submitted, so this is status verification and, if genuinely missing, a considered future launch — not a fresh blind submission, and never a duplicate of an existing one.
+- Investigate AI-tool-specific directories relevant to an "AI task extraction" positioning.
+- Investigate the Stackovery listing (expired-certificate finding) based on what direct manual review finds.
+
+**TIER 3 — OPTIONAL**
+- UIComet/FounderDB/Peer Push-style discovery-only surfaces: low individual value, acceptable to maintain if already free and accurate, not worth active new investment.
+- Community participation on Reddit/indie-hacker forums, strictly under the rules in Part J (community posture: SELECTIVE / TRANSPARENT / PROBLEM-LED, per D026).
+- Original data/template asset development — high potential value but meaningfully more effort; treat as a 60–90 day initiative rather than an immediate priority, and explicitly deferred per D026 until M6.1 is complete.
+
+**TIER 4 — AVOID**
+- Bulk/paid directory submission services ("submit to 100 directories").
+- Any paid or reciprocal link exchange.
+- Fake, incentivized, or founder-authored-as-a-customer reviews on any review platform.
+- Automated outreach blasts (templated cold email to hundreds of blogs/journalists).
+- PBNs or any link-farm-adjacent tactic.
+- Manipulative exact-match anchor-text campaigns.
+- Comment spam or disguised advertising in community threads (see Part J).
+- Treating the Fluxble/Target Energy Solutions name-collision surfaces (§51.2 Group 3) as something to remove, contact, or disavow in this task — they are not ours to act on; the correct response is on-site disambiguation, already addressed in Milestone 2.
+- Preemptively disavowing the low-quality-looking Stackovery finding without first confirming it is actually harmful — reflexive disavowal of an unverified low-authority page is itself a minor anti-pattern.
+
+### 51.8 Part G — Existing Listing Optimization (Action Queue, Not Yet Executed)
+
+**Updated 2026-09-15 per owner review (D026).** Exact URLs are now confirmed for GetApp, Capterra, Uneed, Peerlist, and StartupFortune (§51.2 Group 1); the queue below reflects the specific, owner-identified issues rather than "locate the URL first."
+
+| Listing | What to verify/correct in M6.1 | Why | Priority |
+|---|---|---|---|
+| GetApp | Correct the platform-support field: the listing shows Web, Android, and iPhone/iPad, but Text2Task is currently web-only. Also re-confirm pricing/feature list/logo remain accurate | Owner-identified inaccuracy, 2026-09-15 | P1 |
+| Capterra | Review and correct the free-plan pricing display, which currently reads "$0.00, Flat Rate, One Time" instead of an ongoing $0/month plan alongside $12.90/month Pro | Owner-identified inaccuracy, 2026-09-15 | P1 |
+| Uneed | Re-confirm classification (Project Management/Productivity/CRM), upvote/review count (3 reviews observed), and website field remain accurate | Routine verification; no known defect | P1 |
+| Peerlist | Re-confirm positioning copy still reads "Turn client messages into structured projects and tasks"; be aware the listing sits under the founder's personal account, consistent with the standing privacy posture (no on-site change implied) | Routine verification; no known defect | P1 |
+| SaaSHub | Locate exact URL; confirm listing is current and accurate | Exact URL still not recorded | P1 |
+| StartupFortune | Exact URL now confirmed and owner-verified live; read the live page directly to record the exact publish date | Resolves the remaining low-severity part of E-7 | P1 (low effort) |
+| Product Hunt | Verify exact current status, find the exact public URL if live, and record whether the listing/submission is indexed/live/pending/approved; **do not create a duplicate submission** | Owner correction: prior work indicates this may already be handled, not missing | P1 |
+| BetaList | Same verification as Product Hunt, including the duplicate-submission caution | Owner correction: prior work indicates this may already be handled, not missing | P1 |
+| UIComet | Reopen `https://launches.uicomet.com/products/text2task-dKl2gKK`; confirm description/category/website field and that the canonical URL is still current | Confirmed URL, content not yet directly reopened | P2 |
+| PitchWall | Confirm the account is company-controlled; add the missing website URL field if absent | Ownership/control still unknown | P2 |
+| FounderDB / Peer Push | Locate exact URLs; confirm current and accurate | Still outstanding from the initial mapping | P2 |
+| GitHub organization (`github.com/text2task`) | Confirm the account is company-controlled; if so, consider a short bio/README and confirm the website link stays current | 0 repositories, minimal profile completeness | P2 |
+| G2 | **Verify ownership/domain/product description before claiming, editing, or using as authority evidence.** Do not treat as a Text2Task asset until this is resolved — the separate Fluxble G2 profile is an additional reason for caution | AMBIGUOUS / INVESTIGATE (§51.2, §51.3 E-9) | P0 |
+| Stackovery | Reopen once the certificate issue is confirmed resolved (or confirmed to be a transient fetch issue); do not link to it meanwhile | Expired-certificate finding, unresolved | P2 |
+| Fluxble / Target Energy Solutions surfaces (`fluxble.com`, `text2task.target.fluxble.com`, Microsoft Marketplace) | **No action** — document only; not ours to claim, edit, or contact | P0 name collision, out of scope for edit/removal in this task | P0 (documentation only) |
+
+No field on any listing was changed by this task. This is the action queue for M6.1, which is approved to begin but has not yet executed any listing edit.
+
+### 51.9 Part H — Backlink Acquisition Strategy (Sustainable, Owner-Aligned)
+
+Consistent with the owner's explicit rejection of black-hat SEO, purchased links, spam, fake accounts/reviews, link farms, automated mass outreach, and manipulative exchanges (already the standing policy per §22B/§23A.2), the recommended sustainable tactics, roughly in order of effort-adjusted value:
+
+1. **Relevant resource-page inclusion.** Identify existing "best tools for freelancers/agencies" or "how to manage client emails/requests" articles and pitch genuine inclusion, ideally pointing at `/features/email-to-tasks` or `/solutions/freelancer-project-management-software` rather than the homepage.
+2. **Genuine product-directory presence, kept accurate.** Not new submissions for their own sake — the existing footprint (Tier 1) already covers this class; the work is verification and correction, which is both lower-risk and higher-integrity than new mass submission.
+3. **Founder/product story pitches**, repeating the StartupFortune pattern with other small-SaaS/indie-maker outlets — genuinely newsworthy ("how a freelancer-pain-point tool got built"), not disguised advertising.
+4. **Expert contributions** to genuinely relevant freelancer/agency publications (a guest article or a quoted expert comment), where the by-line/bio naturally links to `text2task.com`.
+5. **An original, free, useful asset** — e.g., a short client-communication or scope-creep template, or small original survey data about freelancer client-management habits — built once and then pitched to relevant resource pages/newsletters as something worth citing. Higher effort, meaningfully more durable than any directory listing.
+6. **Comparison/alternative-page inclusion**, pursued by being genuinely useful to the author of an independent "alternatives to X" post rather than by asking competitors to add a comparison to Text2Task.
+7. **Partner/ecosystem pages** — not currently applicable; revisit once/if Text2Task has real third-party integrations.
+8. **Real user reviews**, solicited only from genuine users through a normal, non-incentivized, non-manipulative review-request flow, on the platforms where Text2Task is already listed.
+9. **Careful community participation** — governed entirely by Part J below; this is a discovery/entity channel first and a backlink channel a distant second.
+
+None of the above was executed by this task. All are proposals for a future, explicitly approved execution milestone.
+
+### 51.10 Part I — AI / GEO / AEO Authority
+
+The run brief is explicit that no specific backlink can be represented as guaranteeing a citation from ChatGPT, Copilot, Gemini, Perplexity, or any other AI answer engine, and this section does not do so. What this audit *can* say, conservatively: independent, consistent, accurate third-party descriptions of what Text2Task is, who it is for, what problem it solves, how it differs, and its official domain are the kind of signal that plausibly *helps* such systems form a correct association — and Text2Task already has one directly relevant, positive data point (§6): Google's own Generative AI feature already surfaced the homepage 24 of 28 times in the observed 3-month window, which is evidence AI-adjacent visibility is not purely theoretical here.
+
+The concrete implication for Milestone 6: prioritize **consistency and correctness** of the existing footprint (Part G) and **genuine category association** (Part D/E) over volume. A confusingly outdated GetApp listing, or an ambiguous G2 page that may or may not be this product, is more likely to *hurt* entity confidence for both search engines and AI systems than to help it. Resolving E-7/E-8-class accuracy issues and the G2 ambiguity is GEO/AEO work, not only a housekeeping task.
+
+### 51.11 Part J — LinkedIn / Reddit / Community Role
+
+**Owner-approved community posture (2026-09-15, D026): SELECTIVE / TRANSPARENT / PROBLEM-LED.** This means: only relevant discussions, genuine value first, no mass posting, no fake user identity, no disguised advertising, no repetitive promotional templates, and community links are treated as discovery/entity signals — not automatically as SEO backlinks. The rules below implement that posture and are unchanged in substance from the initial mapping.
+
+This section distinguishes **genuine brand discovery / referral / entity mentions** from **traditional SEO backlink acquisition**, per the run brief, and does not count every social/community URL as meaningful link authority (most community platforms use `nofollow` and are not primarily an SEO lever).
+
+**Where community participation belongs:** as a discovery, entity-reinforcement, and direct-referral channel, not a backlink strategy. The existing GSC-confirmed Reddit links (§22B, 2 URLs, same underlying thread) are the concrete evidence this channel already produces *something* — the priority is understanding what that thread actually says and whether it represents a healthy, welcomed mention before deciding to engage further in that specific venue.
+
+**Rules for when mentioning Text2Task is appropriate**, consistent with the run brief:
+- The context is a real user problem that Text2Task genuinely solves (e.g., someone asking how to organize client emails/WhatsApp requests) — not a thread about project-management tools in general where Text2Task is a stretch fit.
+- The thread is not a direct-competitor promotion thread being hijacked.
+- The reply adds real, standalone value (a genuine answer to the asker's problem) even if Text2Task were not mentioned at all; the mention should read as incidental to a helpful answer, not as the point of the reply.
+- Any founder/maker affiliation is disclosed where the platform's norms expect it (e.g., "I built a tool for this" on Reddit/indie-hacker forums), consistent with each community's self-promotion norms — this does not require naming the founder personally, and does not reopen the standing on-site founder-privacy decision.
+- No spam: no repeated posting of the same or near-identical templated reply across many threads, no drive-by link-drops with no surrounding value, no astroturfing (creating sock-puppet accounts, upvote manipulation, or fake independent-sounding endorsements).
+
+**Reddit specifically:** treat with real caution. Reddit communities are typically fast to detect and penalize (via downvotes, mod removal, and community backlash) anything that reads as disguised advertising, and reputational damage there is genuinely hard to undo. Recommendation: monitor relevant subreddits for organic opportunities to help (per the rules above) rather than proactively seeding mentions, and do not treat Reddit as a link-building channel — treat it as a discovery/reputation channel where the bar for "is this genuinely helpful" must be met first.
+
+### 51.12 Part K — 30 / 60 / 90 Day Authority Roadmap
+
+**Days 1–30 — Foundational cleanup (Tier 1 focus)**
+
+| Action | Owner | Expected value | Effort | Cost | Prerequisites | Verification | KPI |
+|---|---|---|---|---|---|---|---|
+| Build a single canonical tracking sheet (source/URL/category/status/canonical target URL/anchor-context/owner/follow-up date) for every entry in §51.2 | Site owner (or delegated to Claude Code for a future execution milestone) | Makes every future check faster; directly closes gap E-2/E-3 | Low | Free | This section's inventory | Sheet exists and is populated | Leading indicator |
+| Reopen and verify GetApp, Capterra, Uneed, Peerlist, SaaSHub, GitHub org, PitchWall, UIComet directly | Site owner | Confirms/corrects pricing, description, category, logo, website field | Low-Medium | Free | Access to each platform's edit/claim flow if changes are needed | Each listing manually opened and checked against current product truth | Leading indicator |
+| Resolve the G2 ambiguity | Site owner | Removes a confusing, unresolved entity signal | Low | Free | G2 account access or a definitive read of the live page | Written determination: "this is/is not Text2Task" | Leading indicator |
+| Investigate Stackovery (expired cert) and the `fluxble.com` mirror | Site owner | Confirms whether either poses a real trust/accuracy risk | Low | Free | None | Direct page review completed; risk classified as real or non-issue | Leading indicator |
+| Identify 3+ genuinely relevant freelancer/productivity resource pages as Tier-1 pitch targets (research only, no outreach sent yet) | Site owner / future execution milestone | Builds the actual target list for days 31–60 | Medium | Free | None | Target list with URL, contact path, and fit rationale exists | Leading indicator |
+
+**Days 31–60 — Credible new mentions and review foundation (Tier 1–2 focus)**
+
+| Action | Owner | Expected value | Effort | Cost | Prerequisites | Verification | KPI |
+|---|---|---|---|---|---|---|---|
+| Pitch the 3+ identified resource pages for genuine inclusion, ideally to a Feature/Solution/Resource URL | Site owner | First real non-homepage referring links, directly addressing the §22B gap | Medium | Free-Low | Days 1–30 target list | Replies tracked in the tracking sheet; any accepted placement verified live | Leading (pitches sent) and lagging (placements accepted) |
+| Investigate and, if appropriate, pursue an honest Product Hunt and/or BetaList listing | Site owner | Resolves two "not verified" gaps; potential one-day referral spike if launched | Medium | Free | A real, ready-to-show product state (already true) | Listing live and accurate, or a documented decision not to pursue | Leading/lagging |
+| Solicit a small number of genuine, non-incentivized reviews on already-listed platforms from real users | Site owner | Improves review count/credibility on existing Tier-1 listings | Medium | Free | A short list of consenting real users | Reviews visible and attributable to real accounts | Lagging |
+| Pitch one additional founder/product story article (StartupFortune-pattern repeat) to a different outlet | Site owner | A second independent editorial data point | Medium-High | Free-Low | None | Article published and accurate, or documented no | Lagging |
+
+**Days 61–90 — Higher-value editorial / resource / data-driven work (Tier 1–3 focus)**
+
+| Action | Owner | Expected value | Effort | Cost | Prerequisites | Verification | KPI |
+|---|---|---|---|---|---|---|---|
+| Scope and build one original free asset (template or small original data point) | Site owner / future execution milestone | Highest-durability future citation asset | High | Low-Medium | Days 1–60 groundwork | Asset published on `text2task.com`, quality-reviewed | Leading (asset built) |
+| Pitch the original asset to relevant resource pages/newsletters | Site owner | Converts the asset into actual placements/citations | Medium-High | Free-Low | Asset must exist first | Placements tracked in the sheet | Lagging |
+| Investigate AI-tool-specific directories and pursue accurate inclusion where genuinely relevant | Site owner | Extends GEO/AEO-adjacent footprint | Medium | Free | None | Listings live and accurate | Leading/lagging |
+| Re-check GSC Links, Bing Backlinks (once out of pending-processing), and GA4 referral sessions for measurable movement | Site owner / Claude Code | Confirms whether the program is working | Low | Free | 90 days of elapsed time | Numbers pulled and compared against the Day-0 baseline in this section | Lagging |
+
+### 51.13 Part L — KPI Framework
+
+**Leading indicators** (activity-based, tracked continuously):
+- Number of existing listings re-verified/corrected.
+- Number of new pitches sent (resource pages, editorial, review platforms).
+- Number of genuinely relevant community threads engaged per the Part J rules.
+- Tracking-sheet completeness (every known surface has a current status and follow-up date).
+
+**Lagging outcomes** (results-based, checked at 30/60/90-day and quarterly intervals):
+- Referring domains (GSC Links) — baseline: **2** domains, **3** URLs, both to the homepage.
+- Quality/relevant referring domains specifically (a subset of the above, judged by topical relevance, not count alone).
+- New external mentions confirmed live (from the tracking sheet).
+- Branded search impressions/clicks (GSC, brand-query view) — tracked alongside, not as a Milestone 6-specific metric, since brand search is influenced by many factors.
+- Non-brand impressions (GSC) — baseline: **361** impressions / **0** clicks / **78.1** average position (§5); Milestone 6 success should show gradual, not instant, movement here since authority signals compound slowly.
+- Referral sessions and, where measurable, referral-to-signup activity from directory/profile/editorial sources (GA4).
+- Review count on already-listed platforms.
+- Branded SERP coverage/quality (qualitative — does the first page of results for "Text2Task" correctly and unambiguously represent this product, distinct from the Microsoft Marketplace product).
+- AI citation/mention observations (GSC Generative AI report, and any manually-observed AI answer-engine mention) — baseline: **28** impressions / 3 months, 24 of 28 on the homepage (§6). Record any change conservatively; do not attribute causation to any single Milestone 6 action.
+- Bing AI Performance, once meaningfully populated (currently 0 citations / 0 cited pages per §23.4 — this is a reporting-window limitation, not evidence of zero real mentions).
+- Bing Backlinks, once out of pending-processing (§23.5).
+- Spam/toxic link observations (should stay at zero given the Tier 4 exclusions in Part F).
+
+No vanity target (e.g., "100 backlinks") is set anywhere in this framework, per the run brief.
+
+### 51.14 Part M — Recommended Execution Order
+
+**Superseded 2026-09-15 by the owner-approved sequence below (D026).** The original 8-step order from the initial mapping is retained here struck through for audit-trail purposes and replaced by the owner's 9-step sequence, which splits the original M6.1 into a dedicated cleanup-and-inventory step (new M6.1) plus a separate correct/claim step (new M6.2), and explicitly holds M6.2 onward until M6.1 is owner-reviewed.
+
+~~M6.1 Existing-footprint verification and cleanup; M6.2 Canonical tracking-sheet foundation; M6.3 Freelancer/productivity resource-page outreach; M6.4 Review-platform and Product Hunt/BetaList follow-through; M6.5 Editorial/story pitching; M6.6 Original asset development; M6.7 Community/entity participation; M6.8 Monitoring and measurement.~~ (initial mapping, 2026-09-15 pre-owner-review)
+
+**Approved execution order (2026-09-15, D026):**
+
+- **M6.1 — External footprint cleanup & canonical inventory.** Build the single canonical authority inventory (schema and priority order in §51.17) covering every surface in §51.2; resolve the P0 items (Fluxble/Target Energy documentation, G2 ownership) and the P1 accuracy items (GetApp platform support, Capterra pricing display, exact URLs for remaining unrecorded surfaces, Product Hunt/BetaList status, SaaSHub, Peerlist/Uneed re-confirmation) first. **Approved to begin now. M6.2 does not begin until M6.1 is owner-reviewed.**
+- **M6.2 — Correct/claim high-value existing profiles.** Using the M6.1 inventory, make the actual corrections (GetApp platform support, Capterra pricing display, etc.) and claim/confirm ownership of company-controlled-but-unclaimed surfaces (GitHub org, PitchWall), only once explicitly authorized listing-by-listing.
+- **M6.3 — Identify high-quality missing authority opportunities.** Research (not yet outreach) into the Part C/D gaps — freelancer/productivity/email-workflow resources, AI-tool directories, genuine review platforms.
+- **M6.4 — Resource-page / niche authority outreach.** Pitch the opportunities identified in M6.3, aimed where editorially appropriate at Feature/Solution/Resource URLs.
+- **M6.5 — Reviews and credible launch/discovery platforms.** Genuine, non-incentivized review solicitation on already-listed platforms; considered Product Hunt/BetaList action if M6.1 finds a genuine gap (not a duplicate).
+- **M6.6 — Editorial / founder / product-story outreach.** Repeat the StartupFortune pattern with additional outlets; founder-story pitching decision remains subject to the owner-decision row in §51.15 and does not reopen the on-site privacy decision.
+- **M6.7 — Original useful asset / data / template strategy.** Higher-effort, higher-durability asset development; explicitly deferred per D026 until M6.1 is complete.
+- **M6.8 — Community participation — ongoing.** Governed by Part J and the SELECTIVE / TRANSPARENT / PROBLEM-LED posture at all times; not a discrete one-time step.
+- **M6.9 — Monitoring / authority measurement.** Re-check the Part L KPI set at 30/60/90 days and quarterly thereafter.
+
+This ordering intentionally puts cleanup and measurement infrastructure before new outreach, because the audit found that the previous baseline's biggest practical weakness was not "too few mentions" but "mentions that cannot be quickly located, verified, or kept accurate" (E-2/E-3/E-8), and the owner review reinforced this by finding two further concrete accuracy defects (GetApp, Capterra) and one significant misclassification (Fluxble) on first direct re-check.
+
+### 51.15 Owner Decisions Required
+
+**Updated 2026-09-15 (D026).** Items resolved by this owner-review pass are marked RESOLVED; the remaining items are explicitly deferred until M6.1 is complete, per the owner's instruction not to require them yet.
+
+| Decision | Consequence | Status / Recommended choice | Blocking? |
+|---|---|---|---|
+| Authorize M6.1 (external footprint cleanup & canonical inventory) as the first execution step | Requires the owner (who holds the actual platform logins) to reopen/verify/correct each listing, or to explicitly delegate specific listings for a future execution step to act on with owner-supplied credentials/access | **RESOLVED — YES, approved via D026.** M6.1 may begin; M6.2 waits for owner review of the M6.1 inventory | Was BLOCKING; now CLEARED for M6.1 only |
+| Whether the GitHub organization (`github.com/text2task`) and PitchWall profile are company-controlled | Determines whether they can be improved/claimed or should be flagged as unauthorized/impersonating | Still owner to confirm during M6.1 (P2 priority per §51.17) | BLOCKING for M6.2 items involving these two surfaces only |
+| Whether/how to resolve G2 ownership | Either confirms `g2.com/products/text2task` as a Text2Task asset or confirms it belongs to the unrelated Fluxble product | Owner to verify ownership/domain/product description during M6.1 (P0 priority per §51.17); do not claim or cite as evidence until resolved | BLOCKING for any use of G2 as authority evidence |
+| **DEFERRED per D026 — do not require yet:** whether to invest in an original data/template asset (Part H item 5 / M6.7) | Highest-effort, highest-durability item | Explicitly deferred until the M6.1 inventory is complete | NON-BLOCKING for M6.1–M6.6 |
+| **DEFERRED per D026 — do not require yet:** founder-story outreach posture (Part H item 3 / M6.6) | A founder story can be pitched/told without publishing the founder's name on `text2task.com` itself | Explicitly deferred until the M6.1 inventory is complete; this does **not** reopen or change the on-site founder-privacy decision from Milestone 2 whenever it is revisited | NON-BLOCKING until M6.6 |
+| **DEFERRED per D026 — do not require yet:** major Product Hunt relaunch strategy | Only relevant if M6.1 finds no genuine current presence | Explicitly deferred until M6.1 verifies exact current status | NON-BLOCKING until M6.5 |
+| **DEFERRED per D026 — do not require yet:** broader directory expansion | New, not-yet-identified directories beyond the current inventory | Explicitly deferred until the M6.1 inventory and M6.3 gap research are complete | NON-BLOCKING until M6.3 |
+| **DEFERRED per D026 — do not require yet:** editorial outreach campaign (beyond the single StartupFortune-pattern repeat already in Part H) | A broader, multi-outlet campaign | Explicitly deferred until the M6.1 inventory is complete | NON-BLOCKING until M6.6 |
+| Community participation posture (Part J) | Determines how proactively the owner wants to engage in Reddit/indie-hacker communities | **RESOLVED — SELECTIVE / TRANSPARENT / PROBLEM-LED, approved via D026** (§51.11) | CLEARED |
+
+### 51.16 Final Milestone 6 Mapping State
+
+- Phase 0: COMPLETE / OWNER REVIEWED.
+- Phase 1: IMPLEMENTATION IN PROGRESS.
+- Milestone 1: COMPLETE.
+- Milestone 2: COMPLETE.
+- Milestone 3: COMPLETE.
+- Milestone 4: COMPLETE.
+- Milestone 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING.
+- Milestone 6: **MAPPING / AUDIT OWNER REVIEWED — M6.1 APPROVED.** Not implemented; not complete.
+- Production: UNCHANGED by this task.
+- External profiles created/claimed/edited by this task: NONE.
+- Outreach/backlinks/IndexNow/Bing/Google actions performed by this task: NONE.
+- Directory submissions performed by this task: NONE.
+- Contact with any external party (including Target Energy Solutions/Fluxble) performed by this task: NONE.
+- Application/test/database/environment/configuration files changed by this task: NONE.
+- Commit created by this task: NO.
+- Push performed by this task: NO.
+- Deploy performed by this task: NO.
+
+### 51.17 Owner Review Correction Log — 2026-09-15 (Decision SEO-2026-09-09-D026)
+
+**Decision SEO-2026-09-09-D026:** Milestone 6 direction is approved. Milestone 6 will begin with **M6.1 — External Footprint Cleanup & Canonical Inventory** before any new backlink acquisition, outreach, directory expansion, review campaign, or launch activity. Governing principles: quality over backlink quantity; existing-profile correctness before expansion; canonical entity consistency first; no mass directory submissions; no paid backlink packages; no fake/incentivized reviews; no manipulative link exchanges; no automated mass outreach; no disguised community promotion. See §33 for the formal Decision Log entry.
+
+**What was corrected in this pass, and why:**
+
+1. **Fluxble / Target Energy Solutions (critical correction).** The initial mapping's Group 2 inventory treated `text2task.workspace.fluxble.com` as a possibly-unauthorized thin mirror/scraper of `www.text2task.com`, recommending investigation and a possible future disavow. This was wrong: the surface belongs to an unrelated, older "Text2Task" product tied to Target Energy Solutions and a platform called Fluxble (an Outlook/email-integration tool using NLP/ML to auto-create tasks/events in a "Fluxble workspace" for enterprise employees) — the same entity already known to operate the Microsoft Marketplace listing. Corrected surfaces: `https://fluxble.com/` and `https://text2task.target.fluxble.com/`, both reclassified from Group 2 ("investigate our own listing") to Group 3 ("name collision / entity confusion — not our listing, not our backlink, not our mirror, not our profile"), severity P0. No removal action or contact with Target Energy Solutions/Fluxble is taken; see §51.2 Group 3 and §51.3 E-1/E-5.
+2. **G2 sharpened, not resolved.** The ambiguity already recorded in the initial mapping (§23A.5-derived) is reinforced by a new, independent fact: Fluxble/Target Energy Solutions has its own separate G2 profile. This makes it *more* plausible, not less, that the previously-found `g2.com/products/text2task`-adjacent page could belong to the unrelated product rather than to `www.text2task.com`. Classification remains **AMBIGUOUS / INVESTIGATE**; recommended action is **VERIFY OWNERSHIP / DOMAIN / PRODUCT DESCRIPTION** before any claim, edit, or use as authority evidence. See §51.2 Group 1 (G2 row) and §51.3 E-9.
+3. **Exact URLs now recorded** for GetApp, Capterra (with product ID `10054810`), Uneed, Peerlist, StartupFortune, and UIComet (confirming the URL found in the initial sweep), closing most of entity-consistency issue E-3.
+4. **Two concrete accuracy defects confirmed** (not yet fixed): GetApp's platform-support field incorrectly lists Android/iPhone/iPad for a currently web-only product; Capterra's free-plan pricing display reads "$0.00, Flat Rate, One Time" rather than an ongoing $0/month plan. Both queued into the M6.1 action list (§51.8) as concrete instances of entity-consistency issue E-8.
+5. **Product Hunt / BetaList handling corrected.** These are no longer classified as missing opportunities to pursue from zero. Prior Text2Task work indicates they may already be handled/submitted; M6.1 must verify exact current status, locate exact public URLs if live, and record indexed/live/pending/approved status — explicitly to prevent a duplicate submission.
+6. **PitchWall and UIComet confirmed live**, with PitchWall's company-control ownership still explicitly unknown pending owner verification.
+
+**M6.1 approved scope — canonical authority inventory schema.** M6.1 must produce one canonical authority inventory recording, per surface: platform/site; exact URL; ownership/control; live status; brand name; official website destination; description; category; logo/screenshots; pricing; platform support; review count; backlink presence; destination URL; follow/nofollow/unknown; entity value; SEO value; referral value; AI/GEO value; last verified date; issue severity; required action. Every field uses **VERIFIED**, **UNKNOWN**, **AMBIGUOUS**, or **UNRELATED NAME COLLISION** as appropriate — never a guess.
+
+**M6.1 priority order (owner-approved 2026-09-15):**
+
+- **P0:** (1) Fluxble / Target Energy / Microsoft Marketplace entity-collision documentation; (2) G2 ownership/entity ambiguity.
+- **P1:** (3) GetApp platform-support accuracy; (4) Capterra pricing accuracy; (5) exact canonical URL/ownership inventory for all existing profiles; (6) Product Hunt status verification; (7) BetaList status verification; (8) SaaSHub status verification; (9) Peerlist verification; (10) Uneed verification.
+- **P2:** (11) PitchWall ownership/control; (12) UIComet canonical product page; (13) FounderDB / Peer Push; (14) GitHub public organization/profile consistency; (15) Stackovery investigation.
+
+**Deferred owner decisions (per D026, not required yet):** original research/free asset investment; founder-story outreach; major Product Hunt relaunch strategy; broader directory expansion; editorial outreach campaign. All deferred until the M6.1 inventory is complete (§51.15).
+
+**Community posture approved:** SELECTIVE / TRANSPARENT / PROBLEM-LED (§51.11).
+
+**Scope discipline maintained in this correction pass:** no application code, metadata, schema, sitemap, robots.txt, homepage, navigation/footer, IndexNow, database, environment/configuration, or Production change was made. No external profile was created, claimed, edited, or contacted. No outreach, backlink, directory submission, review, or IndexNow request was sent. No commit, push, or deploy was performed.
+
+---
+
+## 52. Phase 1 Milestone 6, M6.1 — External Footprint Cleanup & Canonical Inventory
+
+**Recorded: 2026-09-15 Asia/Jerusalem.** **Approved under Decision `SEO-2026-09-09-D026` (§33, §51.17).** **STATUS: M6.1 INVENTORY COMPLETE / AWAITING OWNER REVIEW.** This is a research/verification/documentation task only. No external profile was logged into, claimed, edited, created, or contacted. No outreach was sent, no backlink was submitted, no community post was made, no application code was modified, and no commit/push/deploy occurred.
+
+### 52.1 Method and Evidence Limitations
+
+This inventory combines: (a) the owner-supplied corrections recorded in §51.2/§51.17 (treated as verified ground truth per those entries), and (b) a fresh read-only public web-verification pass performed for this task (WebSearch/WebFetch only, no login, no private evidence, no unsafe certificate bypass). Every finding below is labeled by exactly how it was obtained. Consistent with the standing rule, a page that could not be reached (HTTP 403, blocked fetch, no search-index match) is recorded as **UNKNOWN**, never as "removed" or "confirmed absent." One specific evidentiary caution: a search result surfaced a ZoomInfo snippet describing a "Target Energy Solutions" company evaluating "Fluxble" for unrelated PLM-software vendor selection; this is **not relied upon** anywhere in this inventory, because it cannot be confirmed to refer to the same Target Energy Solutions/Fluxble entity behind the known Text2Task name collision rather than a coincidental namesake.
+
+**Normalization notice (2026-09-15, owner review, see §52.11):** §52.2–§52.9 below are the original narrative write-up and are retained for their per-surface detail and reasoning, but they mixed two different dimensions ("ours" vs. "verified") into a single ad hoc grouping, which produced totals that did not reconcile. **§52.11 onward is the authoritative, row-level, ID-stamped inventory** that all counts, totals, and the normalized action queue are derived from. Where §52.2–§52.9 and §52.11 differ on a classification, §52.11 governs.
+
+### 52.2 Canonical Inventory — Verified "Our Text2Task" Surfaces
+
+| # | Platform | Exact URL | Ownership/control | Live status (this session) | Last verified | Brand/description consistency | Pricing/platform consistency | SEO authority | Entity/GEO/AEO value | Referral value | Severity | Action |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | LinkedIn — company page | `https://www.linkedin.com/company/text2task/` | Company-controlled (on-site `Organization.sameAs`) | VERIFIED (on-site source of truth; not independently re-fetched this session) | 2026-09-15 (on-site) | Consistent by definition (it is the canonical `sameAs` value) | N/A | MEDIUM — company pages are widely trusted entity signals even without a GSC-countable followable link | MEDIUM-HIGH — a maintained company profile is a strong, low-effort entity-consistency signal for both search and AI systems | LOW-MEDIUM — occasional direct discovery, not a high-volume referral channel | NONE | KEEP |
+| 2 | LinkedIn — founder profile/posts | Not published in this document (owner privacy decision) | Founder-controlled | VERIFIED per owner attestation (§23A.1/§23A.3); URL intentionally withheld | 2026-09-13 (Phase 0B) | Consistent per owner attestation | N/A | LOW-MEDIUM (personal posts, not a company asset) | MEDIUM — genuine founder↔product association helps disambiguation even while unnamed on-site | LOW-MEDIUM | NONE | VERIFY (owner-only; do not surface URL on-site) |
+| 3 | Facebook business page | `https://www.facebook.com/profile.php?id=61588954785433` | Company-controlled (on-site `Organization.sameAs`) | VERIFIED (on-site source of truth); this session's search additionally surfaced an active video post under the same page ID (`.../videos/turn-client-messages-into-tasks/739120305956616/`), indicating recent content activity | 2026-09-15 | Consistent | N/A | LOW-MEDIUM | MEDIUM | LOW-MEDIUM | NONE | KEEP |
+| 4 | GetApp | `https://www.getapp.com/all-software/a/text2task/` | Unclaimed/unknown claim status | **VERIFIED LIVE — directly re-fetched this session.** Confirmed tagline, Free/$0 + Pro $12.90/month pricing, category "Task Management" under Project Management & Planning Software, 0 reviews, 1 screenshot, logo present | 2026-09-15 (direct fetch) | Description and pricing consistent; **platform-support field verbatim confirmed as "Web, Android, iPhone/iPad,"** which does not match the current web-only product | Pricing consistent; **platform support INCONSISTENT (P1)** | MEDIUM — reputable directory class, though 0 reviews limits current weight | MEDIUM | LOW-MEDIUM (0 reviews suggests limited current click-through) | P1 | UPDATE (correct platform-support field once owner/claim access is available) |
+| 5 | Capterra | `https://www.capterra.com/p/10054810/Text2Task/pricing/` (product ID `10054810`) | Unclaimed/unknown claim status | **VERIFIED LIVE — directly re-fetched this session.** Confirmed Free plan and Pro $12.90/month "Flat Rate, Per Month," CSV export noted as Pro-only, no credit card required, no free trial | 2026-09-15 (direct fetch) | Description/category consistent ("project management and task automation software"); **free-plan pricing verbatim confirmed as "$0.00, Flat Rate, One Time,"** which misrepresents an ongoing $0/month free plan; **no screenshots present on the page** | **Pricing display INCONSISTENT (P1)**; no platform/device field shown to check | MEDIUM — reputable review platform class | MEDIUM | LOW-MEDIUM (no reviews observed) | P1 | UPDATE (correct free-plan pricing display; consider adding screenshots once claimed) |
+| 6 | Uneed | `https://www.uneed.best/tool/text2task` | Unclaimed/unknown claim status | **INCONCLUSIVE this session.** Fetched twice; both times the URL returned Uneed's generic "Business Products" category page (listing unrelated tools) rather than Text2Task-specific content, and no exact match for this URL appeared in web search results either. This is **not** treated as proof of removal — it may reflect a fetch-tool JavaScript-rendering limitation, a changed URL slug, or a genuine listing problem | 2026-09-15 (inconclusive); previously reported live by owner and by the original Phase 0B sweep | UNKNOWN this session (owner previously reported correct positioning, Project Management/Productivity category, free+paid tier, 3 reviews) | UNKNOWN this session | UNKNOWN this session pending direct confirmation | UNKNOWN this session | UNKNOWN this session | **P1 — verification gap**, not a confirmed defect | VERIFY (owner or a normal browser session should open the exact URL directly to confirm it still resolves to the Text2Task listing) |
+| 7 | Peerlist | `https://peerlist.io/yaneidelman/project/text2task` | Founder-controlled personal project page | VERIFIED per owner attestation (2026-09-15); this session's direct fetch returned HTTP 403 and the exact URL did not surface in search results, so tooling could not independently re-confirm | 2026-09-15 (owner attestation) | Consistent per owner attestation ("Turn client messages into structured projects and tasks") | Not applicable (no pricing shown on this surface type) | LOW-MEDIUM | MEDIUM — founder-associated builder-community profile | LOW-MEDIUM | NONE | KEEP (re-open directly to confirm at next opportunity) |
+| 8 | PitchWall | `https://pitchwall.co/user/text2task` | **UNKNOWN — ownership/control not publicly verifiable** | **VERIFIED LIVE — directly re-fetched this session**, consistent tagline ("Turn Messy Client Messages Into Organized Projects") across two independent sessions; no separate dedicated product-page URL found beyond this profile; no outbound website link observed in the page's visible navigation | 2026-09-15 (direct fetch) | Tagline consistent; website destination field appears empty/absent, which is itself a minor inconsistency if this is meant to represent the official site | Website-link field missing (P2) | LOW-MEDIUM | LOW-MEDIUM | LOW-MEDIUM | P2 | VERIFY ownership before any claim; if company-controlled, UPDATE the missing website field |
+| 9 | StartupFortune | `https://startupfortune.com/text2task-turns-messy-client-messages-into-structured-projects-and-tasks/` | Independent editorial (not ours to control) | VERIFIED per owner attestation (2026-09-15); this session's direct fetch returned HTTP 403; WebSearch corroborates the article's existence and general description but did not independently re-confirm the exact publish date or full body text this session | 2026-09-15 (owner attestation); exact publish date still to be read directly | Description matches current positioning per owner attestation | N/A (editorial, not a listing) | MEDIUM — independent editorial description is a genuinely different, higher-trust signal class than a self-submitted listing | MEDIUM-HIGH — independent third-party description is valuable for AI/entity disambiguation | LOW-MEDIUM | NONE | KEEP; confirm exact publish date directly when next opened |
+| 10 | UIComet | `https://launches.uicomet.com/products/text2task-dKl2gKK` | Unclaimed/unknown claim status | URL consistently found via search across two independent sessions; direct fetch returned HTTP 403 both times, so page content remains unconfirmed by tooling; owner confirms Text2Task is currently visible in UIComet launch listings | 2026-09-15 (URL only; content unconfirmed) | UNKNOWN (content not directly readable this session) | UNKNOWN | LOW-MEDIUM | LOW-MEDIUM | LOW-MEDIUM | P2 | VERIFY (open directly in a normal browser to confirm current description/category/website field) |
+| 11 | GitHub organization profile | `https://github.com/text2task` | **UNKNOWN — ownership/control not publicly verifiable**, but content is strongly on-brand | **VERIFIED LIVE — directly re-fetched this session, consistent with the prior session.** Bio: "Text2Task — Turn Messy Client Messages Into Organized Projects"; location: Israel; website: `https://text2task.com`; 0 public repositories, 0 packages, 0 stars | 2026-09-15 (direct fetch, second confirmation) | Bio and website link fully consistent with current brand | N/A | LOW — developer-ecosystem profile, not a traditional authority signal | MEDIUM — a consistent, on-brand developer profile is a small positive entity signal | LOW | P2 (ownership unconfirmed) | VERIFY ownership before any `sameAs` consideration |
+| 12 | `github.com/eidelman-products/text2task` | This repository's own `origin` remote — informational only | Company/developer-controlled (this is the application source repository) | Live; publicly discoverable via search | 2026-09-15 | Not a marketing/authority surface | N/A | N/A | N/A | N/A | NONE (informational) | MONITOR — repository-visibility policy is an engineering/security decision outside this SEO audit's scope |
+
+### 52.3 Ambiguous Surface
+
+| Platform | Exact URL | Classification | Evidence this session | Recommended action |
+|---|---|---|---|---|
+| G2 | `https://www.g2.com/products/text2task` (inferred) / `https://www.g2.com/products/text2task/competitors/alternatives` (found, still returns HTTP 403 on direct fetch) | **AMBIGUOUS / INVESTIGATE — unchanged classification, but evidence shifted this session.** New corroborating evidence found: G2 separately hosts a "Fluxble" product page and alternatives page (`g2.com/products/fluxble`, `.../competitors/alternatives`), and independent web content describes Fluxble's own product as "an AI assistant for users to create tasks or events from text, providing an AI-driven NLP engine and dynamic email handling" — i.e., Fluxble's own feature is itself literally called "Text2Task." This makes it *more* plausible that the ambiguous G2 "text2task" page belongs to Fluxble rather than to `www.text2task.com`, but direct content of the G2 "text2task" page itself remains unread (blocked both sessions), so ownership is still **not proven either way**. | **VERIFY OWNERSHIP / DOMAIN / PRODUCT DESCRIPTION before claiming, editing, or citing as authority evidence.** Do not classify as our verified profile. Recommend the owner open both `g2.com/products/text2task` and `g2.com/products/fluxble` directly in a normal browser and compare vendor/domain fields side by side. |
+
+### 52.4 Entity Collision Inventory — UNRELATED NAME COLLISION (Target Energy Solutions / Fluxble)
+
+**Severity: P0 entity-disambiguation risk for all rows below.** None of these are ours; none were contacted, claimed, or edited; recommended action for every row is **UNRELATED — DO NOT TOUCH**, tracked here only for disambiguation awareness.
+
+| Surface | Exact URL | Distinguishing characteristics found | Confusion risk |
+|---|---|---|---|
+| Fluxble (parent platform) | `https://fluxble.com/` | Parent platform/company behind the unrelated "Text2Task" feature; described elsewhere as a "digital sandbox" / workspace platform | HIGH — identical brand name to our product |
+| Fluxble G2 profile | `https://www.g2.com/products/fluxble` and `.../competitors/alternatives` | Independent G2 presence for Fluxble; found this session; provides corroborating (not conclusive) evidence for the G2 "text2task" ambiguity above | MEDIUM — relevant context, not itself a "Text2Task"-named surface |
+| Fluxble "Text2Task" workspace page | `https://text2task.target.fluxble.com/` | Corrected in the prior owner-review pass from a suspected Text2Task mirror to this unrelated product's own page | HIGH |
+| Fluxble workspace portal | `https://target.fluxble.com/` | **New this session.** Page titled "WORKSPACE"; consistent with the owner's description of a "Fluxble workspace" that auto-creates tasks/events from email | HIGH |
+| Fluxble/Target Energy test deployment | `https://text2task.test.meeraspace.com/` | **New this session.** A near-empty test/staging page (only the string "Text2Task" visible, no branding). `meeraspace.com` also hosts `fluxble-website.dev.meeraspace.com` and `cadre.target.meeraspace.com`, consistent with being the Fluxble/Target Energy Solutions team's own development/hosting infrastructure rather than anything related to `www.text2task.com`. This corrects the second half of the original mapping's mis-scoped "thin mirror" concern | MEDIUM-HIGH — could be mistaken for a scraper of our site by an automated tool, as it initially was in the prior mapping pass |
+| Microsoft Marketplace / AppSource "Text2Task" | `https://marketplace.microsoft.com/en-us/product/office/wa200004035` and the equivalent `https://appsource.microsoft.com/en-us/product/office/wa200004035` | Confirmed this session to be the same underlying listing (product ID `wa200004035`) mirrored across Microsoft's two storefront subdomains; an Outlook/email-integration add-in using NLP to auto-create tasks/events for enterprise employees | HIGH — same product ID confirms this is one listing, not two, reducing (not increasing) the collision surface count |
+
+**Excluded, low-confidence, not relied upon:** a ZoomInfo search snippet describing "Target Energy Solutions" evaluating "Fluxble" for unrelated PLM-software vendor selection. This is not used as evidence anywhere in this inventory because it cannot be confirmed to be the same entities.
+
+### 52.5 Surfaces Still UNKNOWN (Not Found or Not Independently Verifiable This Session)
+
+| Platform | What was tried | Result |
+|---|---|---|
+| SaaSHub | Direct URL search, "text2task saashub.com" search, "site:saashub.com" pattern in the prior session | No exact listing URL found in either sweep. UNKNOWN — not recorded as absent |
+| FounderDB | Domain-pattern search (`founderdb.com`) | No result found in either sweep. UNKNOWN |
+| Peer Push | Domain-pattern search (`peerpush.net`) | The platform itself is confirmed real and live; no Text2Task-specific page found. UNKNOWN |
+| Product Hunt | Multiple search phrasings, no site-restricted match | No specific listing URL found in either sweep, despite the owner's indication that a submission may already exist. **Per instruction, this is not treated as a missing opportunity** — it is recorded as UNKNOWN pending owner or M6.2 direct verification, and no submission should be created without first confirming this |
+| BetaList | Same as Product Hunt | Same result and same caution against duplicate submission |
+| Reddit (2 GSC-linking URLs) | Not independently re-searched this session (GSC is the source of truth for its existence) | UNKNOWN exact URL/content; GSC-confirmed at the domain level only (§22B) |
+| StartupBase.io (1 GSC-linking URL) | Not independently re-searched this session | UNKNOWN exact URL/content; GSC-confirmed at the domain level only (§22B) |
+| Stackovery | Multiple paths found via search (`/en/profile/text2task/collections`, `/en/profile/text2task/likes`, `/en/project/text2task/pricing`); no unsafe certificate bypass attempted, per instruction | Live status/content remains UNKNOWN / RISK FLAG — the expired-certificate finding from the initial mapping was not re-tested this session because doing so would require bypassing a certificate warning, which was explicitly disallowed |
+
+### 52.6 Issue Severity List
+
+- **P0:** Fluxble/Target Energy Solutions/Microsoft Marketplace/AppSource entity-collision cluster (§52.4) — ongoing disambiguation risk, documentation-only response. G2 ownership ambiguity (§52.3) — must not be used as evidence until resolved.
+- **P1:** GetApp platform-support field incorrectly lists Android/iPhone/iPad for a web-only product. Capterra free-plan pricing displayed as "$0.00, Flat Rate, One Time" instead of an ongoing $0/month plan. Uneed listing status is INCONCLUSIVE and needs a direct human re-check, since this is a previously-relied-upon "verified" surface.
+- **P2:** PitchWall and GitHub-org ownership/control unconfirmed (both otherwise on-brand and accurate). Capterra listing has no screenshots. UIComet content unconfirmed by tooling (URL only).
+- **P3:** None newly identified this session beyond what §51.3 already recorded (e.g., minor GitHub-handle naming inconsistency, E-4).
+- **NONE:** LinkedIn company page, Facebook business page, StartupFortune editorial mention — no issue found.
+
+### 52.7 Canonical-Domain, Pricing, Platform, and Brand-Description Consistency Findings
+
+- **Canonical-domain consistency:** No surface checked this session was confirmed to link outbound to a non-canonical or incorrect domain — but several (GetApp, PitchWall) either do not display an outbound website field at all or it could not be confirmed, which is itself a consistency gap worth closing during M6.2 rather than a wrong-domain defect.
+- **Pricing inconsistencies:** Two confirmed — GetApp (platform support, not pricing, is GetApp's issue) and Capterra (free-plan display, confirmed above). No other surface's pricing was directly re-verifiable this session.
+- **Platform/device inconsistencies:** One confirmed — GetApp lists Android and iPhone/iPad support for a currently web-only product.
+- **Brand-description inconsistencies:** None confirmed this session beyond the already-tracked GitHub organization vs. GitHub repository handle difference (E-4, minor/P2).
+
+### 52.8 M6.1 Action Queue
+
+**A. VERIFY OWNERSHIP**
+- G2 (`g2.com/products/text2task`) — verify domain/vendor/product description against `g2.com/products/fluxble` before any use as evidence. Owner login likely helpful but not required (public page comparison may suffice). No manual owner action required beyond viewing. Expected benefit: resolves a P0 ambiguity that currently blocks using G2 as authority evidence either way.
+- PitchWall — confirm account is company-controlled. Owner login to PitchWall likely required to confirm. Expected benefit: unlocks eligibility to correct the missing website field (P2).
+- GitHub organization (`github.com/text2task`) — confirm account is company-controlled. Owner GitHub-org-access check required. Expected benefit: unlocks safe future `sameAs` consideration.
+
+**B. CORRECT EXISTING PROFILE**
+- GetApp — correct platform-support field to Web only. Owner claim/login to GetApp vendor portal required. Expected benefit: removes a P1 factual inaccuracy visible to prospective users and to AI systems reading the listing.
+- Capterra — correct free-plan pricing display to reflect an ongoing $0/month plan. Owner claim/login to Capterra vendor portal required. Expected benefit: removes a P1 pricing-accuracy defect; also consider adding screenshots (P2) while there.
+
+**C. CLAIM IF APPROPRIATE**
+- PitchWall and GitHub organization — claim/confirm control only after ownership is verified (Action Group A). No claim action is being taken now.
+
+**D. KEEP / MONITOR**
+- LinkedIn company page, Facebook business page, StartupFortune editorial mention, Peerlist, UIComet — no correction needed based on current evidence; monitor at the next scheduled review.
+- Microsoft Marketplace / AppSource, Fluxble surfaces, Fluxble G2 profile — monitor only for awareness of the ongoing name collision; no owner login or contact involved.
+
+**E. UNRELATED — DO NOT TOUCH**
+- `fluxble.com`, `text2task.target.fluxble.com`, `target.fluxble.com`, `text2task.test.meeraspace.com`, `marketplace.microsoft.com/.../wa200004035`, `appsource.microsoft.com/.../wa200004035` — no action of any kind; not ours to edit, claim, or contact.
+
+**F. LOW VALUE — IGNORE / INCONCLUSIVE (revisit, do not act on yet)**
+- Uneed — could not be independently re-confirmed this session; revisit with a direct manual browser check before deciding any action; no owner login required for that check.
+- SaaSHub, FounderDB, Peer Push, Product Hunt, BetaList — remain UNKNOWN; no action beyond a future direct-verification pass (M6.2 candidate, §52.9). Explicitly do not create new Product Hunt or BetaList submissions before that verification, per instruction.
+- Stackovery — expired-certificate risk flag from the initial mapping was not re-tested (unsafe to bypass); revisit only with a normal, safe browser check.
+
+### 52.9 Recommended M6.2 Candidates
+
+In priority order, drawing directly from the P0/P1 items above and the owner-approved M6.1 priority order (§51.17):
+
+1. Resolve G2 ownership (Action Group A) — P0, blocks using G2 as evidence either way.
+2. Correct the GetApp platform-support field (Action Group B) — P1, concrete and low-effort once vendor access exists.
+3. Correct the Capterra free-plan pricing display (Action Group B) — P1, concrete and low-effort once vendor access exists.
+4. Directly re-open the Uneed listing URL in a normal browser to resolve the INCONCLUSIVE finding — P1, needed before Uneed can be trusted as "verified" again.
+5. Directly verify current Product Hunt and BetaList status (live/pending/absent) before any future submission decision — P1, explicit duplicate-submission prevention.
+6. Confirm ownership of PitchWall and the GitHub organization profile — P2, unlocks safe future corrections/claims.
+7. Locate exact URLs for SaaSHub, FounderDB, and Peer Push, or confirm they cannot be found — P2.
+8. Re-check the Stackovery listing safely (no certificate bypass) — P2.
+9. Directly open the UIComet launch page to confirm content — P2.
+
+M6.2 (Correct/claim high-value existing profiles) does not begin until this M6.1 inventory is owner-reviewed, per the approved execution order (§51.14).
+
+### 52.10 Final M6.1 State
+
+- Phase 0: COMPLETE / OWNER REVIEWED.
+- Phase 1: IMPLEMENTATION IN PROGRESS.
+- Milestones 1-4: COMPLETE.
+- Milestone 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING.
+- Milestone 6: **M6.1 INVENTORY COMPLETE / AWAITING OWNER REVIEW.** Not complete; M6.2 not started.
+- External profiles logged into, claimed, edited, or created by this task: NONE.
+- External parties contacted by this task (including Target Energy Solutions/Fluxble, GetApp, Capterra, Uneed, PitchWall, G2, Product Hunt, BetaList): NONE.
+- Outreach/backlinks/directory submissions/community posts performed by this task: NONE.
+- Application/test/database/environment/configuration files changed by this task: NONE.
+- Commit created by this task: NO.
+- Push performed by this task: NO.
+- Deploy performed by this task: NO.
+
+---
+
+### 52.11 M6.1 Normalized Canonical Inventory (Owner Review Correction Pass — 2026-09-15)
+
+**Recorded: 2026-09-15 Asia/Jerusalem.** **Preserves Decision `SEO-2026-09-09-D026`; no new Decision Log ID created — this is a data-normalization pass, not a new strategy or architecture decision.** This section is the authoritative, row-level replacement for the ad hoc counting in §52.2–§52.9. Every distinct surface receives exactly one stable ID and exactly one **Relationship Class** (what kind of thing it is) and exactly one **Verification Status** (how confidently that was established this session) — these are deliberately kept as two separate dimensions, per instruction, so that a surface's historical familiarity can never substitute for actual verification.
+
+**Definitions used below:**
+
+- Relationship Class: (1) OUR CONTROLLED SURFACE — an account/page we actively operate; (2) THIRD-PARTY PROFILE FOR OUR PRODUCT — a listing on someone else's platform that evidence shows describes our specific product, regardless of whether we hold login/claim access to it; (3) THIRD-PARTY EDITORIAL / INDEPENDENT MENTION — independent coverage/discussion that references us; (4) AMBIGUOUS IDENTITY — a same-named entity that cannot yet be proven to be ours or someone else's; (5) UNRELATED NAME COLLISION — confirmed or near-confirmed to belong to the unrelated Target Energy Solutions/Fluxble product; (6) UNKNOWN RELATIONSHIP — insufficient evidence to place it in any of the above.
+- Verification Status: VERIFIED LIVE (this session or the on-site source of truth directly confirmed current live/public content); OWNER-ATTESTED (the owner has stated it is live/accurate, but this session's tooling did not independently reproduce that); INCONCLUSIVE (an attempt was made and returned ambiguous/contradictory results); UNKNOWN (no attempt succeeded and no owner attestation exists); UNAVAILABLE / NOT SAFELY VERIFIABLE (verification is currently blocked by a safety concern, e.g., an invalid TLS certificate, not by ordinary access failure); **HISTORICALLY VERIFIED / REMOVED AFTER LAUNCH** (added 2026-09-16 — direct owner-supplied evidence confirms the surface genuinely existed and was later removed by the platform itself; this is distinct from INCONCLUSIVE because the current absence is now explained by hard evidence rather than an unresolved fetch result); **OWNER-VERIFIED** (added 2026-09-16 — the owner directly opened an authenticated account/dashboard and confirmed the exact current internal state, but that confirmed state is itself non-public/non-live, e.g., a draft; distinct from VERIFIED LIVE, which is reserved for a confirmed current live/public state, and distinct from OWNER-ATTESTED, which does not involve direct authenticated account access).
+
+### 52.11.1 Authoritative Row-Level Inventory
+
+| ID | Platform / Surface | Exact URL (if known) | Relationship Class | Verification Status | Recommended Action | Severity |
+|---|---|---|---|---|---|---|
+| EXT-001 | LinkedIn — company page | `https://www.linkedin.com/company/text2task/` | OUR CONTROLLED SURFACE | OWNER-ATTESTED (on-site `Organization.sameAs` source of truth; not independently re-fetched) | KEEP / MONITOR | NONE |
+| EXT-002 | LinkedIn — founder profile/posts | Withheld per standing privacy decision | OUR CONTROLLED SURFACE | OWNER-ATTESTED | KEEP / MONITOR (owner-only) | NONE |
+| EXT-003 | Facebook business page | `https://www.facebook.com/profile.php?id=61588954785433` | OUR CONTROLLED SURFACE | OWNER-ATTESTED (on-site source of truth; a video post under this ID was found via search, corroborating activity but not independently re-fetched) | KEEP / MONITOR | NONE |
+| EXT-004 | GetApp | `https://www.getapp.com/all-software/a/text2task/` | THIRD-PARTY PROFILE FOR OUR PRODUCT (vendor console access confirmed via G2 Digital Markets, the same vendor platform that manages this GetApp listing) | VERIFIED LIVE (direct fetch, 2026-09-15); **updated 2026-09-16 with owner-supplied vendor-console evidence: the G2 Digital Markets vendor console shows Android/iPhone/iPad NOT selected (i.e., already correctly configured as Web-only on the vendor side), while the public GetApp listing previously showed mobile-platform support.** Classified **PUBLIC/VENDOR DATA MISMATCH** — this is a platform-side display/sync issue, not an owner-side misconfiguration | **MONITOR / REVISIT LATER — do not blindly edit.** There is no incorrect vendor-console field to correct; the mismatch is between the (correct) vendor data and a (stale) public display, which is outside direct owner control to fix by re-editing the same already-correct field | P1 (public inaccuracy persists, but the cause is no longer attributable to an editable owner-side field) |
+| EXT-005 | Capterra | `https://www.capterra.com/p/10054810/Text2Task/pricing/` | THIRD-PARTY PROFILE FOR OUR PRODUCT (vendor console access confirmed via G2 Digital Markets) | VERIFIED LIVE (direct fetch, 2026-09-15); **updated 2026-09-16: owner attempted the pricing correction via the G2 Digital Markets vendor portal and hit a portal validation bug — "Currency is required" while USD is already selected — blocking submission. A support email was sent to the vendor** | **CORRECTION ATTEMPTED — BLOCKED BY VENDOR PORTAL BUG — SUPPORT TICKET PENDING.** Not abandoned; awaiting vendor support response before any further attempt | P1 (unresolved public inaccuracy; correction genuinely attempted and blocked, not neglected) |
+| EXT-006 | Uneed | `https://www.uneed.best/tool/text2task` (URL now confirmed non-active; owner directly opened it and received a 500 error / category-page context, not an active Text2Task product page) | THIRD-PARTY PROFILE FOR OUR PRODUCT | **HISTORICALLY VERIFIED / REMOVED AFTER LAUNCH — updated 2026-09-16 with owner-supplied direct Uneed email evidence dated 2026-08-19.** The email confirms Text2Task launched on Uneed the prior day, finished launch day below the score-of-10 threshold, and was removed roughly 48 hours after launch per Uneed's stated policy for free launches scoring below that threshold; the product does not return automatically to a waiting queue. **Current public status: REMOVED / NO ACTIVE PRODUCT PAGE CONFIRMED.** This supersedes the prior INCONCLUSIVE finding (the generic category-page result from the automated sweep is now explained, not merely unresolved). Uneed separately offered a paid relaunch ($15 instead of $29.99 for a chosen date, or Fast Track at $14.99) explicitly advertising guaranteed publication, a guaranteed backlink, a permanent do-follow backlink, and no upvote threshold | **DEFER / DO NOT PAY FOR RELAUNCH FOR SEO PURPOSES** — the paid offer explicitly packages guaranteed publication with a permanent do-follow backlink, which does not fit the approved quality-first External Authority Program (D026); not classified as an active profile, a current backlink, a missing opportunity requiring resubmission, or Tier 1 authority. No claim is made that the paid offer itself is a search-engine penalty or violation — it is simply recorded as misaligned with the approved strategy | P3 |
+| EXT-007 | Peerlist | `https://peerlist.io/yaneidelman/project/text2task` | THIRD-PARTY PROFILE FOR OUR PRODUCT | OWNER-ATTESTED (2026-09-15); this session's fetch returned HTTP 403 | KEEP / MONITOR (re-open directly at next opportunity) | NONE |
+| EXT-008 | PitchWall | `https://pitchwall.co/user/text2task` | THIRD-PARTY PROFILE FOR OUR PRODUCT | VERIFIED LIVE (direct fetch, tagline confirmed, consistent across two sessions) | VERIFY BEFORE ANY EDIT — confirm account ownership/control before any claim | P2 |
+| EXT-009 | StartupFortune | `https://startupfortune.com/text2task-turns-messy-client-messages-into-structured-projects-and-tasks/` | THIRD-PARTY EDITORIAL / INDEPENDENT MENTION | OWNER-ATTESTED (2026-09-15); this session's fetch returned HTTP 403 | EDITORIAL / THIRD-PARTY — KEEP / MONITOR (confirm exact publish date when next opened) | NONE |
+| EXT-010 | UIComet | `https://launches.uicomet.com/products/text2task-dKl2gKK` | THIRD-PARTY PROFILE FOR OUR PRODUCT | OWNER-ATTESTED (owner confirms current visibility in launch listings); direct fetch returned HTTP 403 in two sessions | VERIFY BEFORE ANY EDIT — open directly in a normal browser | P2 |
+| EXT-011 | GitHub organization profile | `https://github.com/text2task` | THIRD-PARTY PROFILE FOR OUR PRODUCT (content directly confirmed to describe our product; account ownership/login access separately unconfirmed) | VERIFIED LIVE (direct fetch, consistent across two sessions: bio, website link, location) | VERIFY BEFORE ANY EDIT — confirm account ownership/control before any claim | P2 |
+| EXT-012 | GitHub repository | `https://github.com/eidelman-products/text2task` | OUR CONTROLLED SURFACE (this repository's own `origin` remote) | VERIFIED LIVE (definitively — it is this repository; publicly discoverable via search) | KEEP / MONITOR (repository-visibility policy is an engineering/security decision outside this audit's scope) | NONE |
+| EXT-013 | SaaSHub | Exact URL not located in any sweep | THIRD-PARTY PROFILE FOR OUR PRODUCT (per Phase 0B owner-supplied research, §23A.1) | OWNER-ATTESTED (2026-09-13, Phase 0B); not independently re-located in two later sweeps | VERIFY BEFORE ANY EDIT — locate exact URL | P2 |
+| EXT-014 | FounderDB | Exact URL not located in any sweep | **UNKNOWN RELATIONSHIP** (Phase 0B described this only as generic "discovery data," not a specific confirmed match) | UNKNOWN | VERIFY BEFORE ANY EDIT — locate exact URL or confirm non-existence | P2 |
+| EXT-015 | Peer Push | Exact URL not located in any sweep | **UNKNOWN RELATIONSHIP** (same reasoning as FounderDB) | UNKNOWN | VERIFY BEFORE ANY EDIT — locate exact URL or confirm non-existence | P2 |
+| EXT-016 | Product Hunt | `https://www.producthunt.com/products/text2task` (owner-confirmed 2026-09-16 via authenticated account screenshots) | THIRD-PARTY PROFILE FOR OUR PRODUCT | **VERIFIED LIVE — updated 2026-09-16 with owner-supplied authenticated-account screenshot evidence.** Owner directly opened the Product Hunt account: Text2Task exists under My products & launches with status LIVE / POSTED; exactly one Posted launch exists (launch date 2026-05-17), with no In Progress, Draft, or Scheduled launches. Official website shown: `text2task.com`. Category/context: AI Workflow Automation. Description consistent with the current Text2Task SaaS. Forum: `p/text2task`. A Facebook social link and an owner maker comment are present. Launch dashboard: Position #201, Points 0, Comments 1 — **current referral/discovery engagement is LOW** | **KEEP / MONITOR.** Not classified as a missing opportunity, pending, removed, or a new-submission candidate. **Duplicate submission: PROHIBITED.** Potential future optimization: review existing listing content before any future relaunch strategy (no relaunch recommended at this stage) | P2 (future optimization review only, not a defect) |
+| EXT-017 | BetaList | No public URL exists (no completed/public submission); internal submission ID `#168594` | **THIRD-PARTY PROFILE / SUBMISSION DRAFT FOR OUR PRODUCT** — updated 2026-09-16 (a sub-type of THIRD-PARTY PROFILE FOR OUR PRODUCT; counted under that relationship class, see §52.11.2) | **OWNER-VERIFIED — updated 2026-09-16 with owner-supplied authenticated BetaList dashboard evidence.** The owner directly opened the authenticated BetaList dashboard and confirmed: Text2Task exists in the account; submission ID `#168594`; submission state **DRAFT**; submission started 2026-06-01; the progress indicator shows the submission was started but NOT submitted; "Continue submission" is available; no Reviewed state reached; no Featured state reached; no public BetaList product page is confirmed; no completed submission exists. BetaList currently requires payment to complete a startup submission. **Current status: DRAFT — NOT SUBMITTED. Public listing: NONE CONFIRMED.** Not classified as LIVE, PUBLISHED, PENDING REVIEW, APPROVED, REJECTED, a current backlink, or an active authority source | **DEFER — DO NOT PAY / COMPLETE SUBMISSION YET.** Milestone 6 prioritizes existing-authority cleanup and high-quality earned authority before paid listing submissions (D026). **Duplicate submission: DO NOT CREATE A NEW SUBMISSION** — preserve the existing draft; do not delete it | P2 (deliberate deferral, not a defect) |
+| EXT-018 | Stackovery | `stackovery.com/en/profile/text2task/...` (multiple paths found: `/collections`, `/likes`; `/en/project/text2task/pricing`) | THIRD-PARTY PROFILE FOR OUR PRODUCT (consistent brand-matched search-result titles across sessions; content never read) | **UNAVAILABLE / NOT SAFELY VERIFIABLE** (expired TLS certificate; not bypassed, per instruction) | RISK — DO NOT BYPASS | P2 |
+| EXT-019 | Reddit (GSC-confirmed linking domain, 2 URLs, same thread) | Exact URL not recorded | THIRD-PARTY EDITORIAL / INDEPENDENT MENTION (GSC confirms a real inbound link to our homepage, implying genuine relevant content) | UNKNOWN (thread content never read) | EDITORIAL / THIRD-PARTY — KEEP / MONITOR (read the thread directly at next opportunity) | NONE |
+| EXT-020 | StartupBase.io (GSC-confirmed linking domain, 1 URL) | Exact URL not recorded | THIRD-PARTY PROFILE FOR OUR PRODUCT (GSC confirms a real inbound link to our homepage from a startup-directory-type domain) | UNKNOWN (page content never read) | EDITORIAL / THIRD-PARTY — KEEP / MONITOR (locate and read directly at next opportunity) | NONE |
+| EXT-021 | G2 — Text2Task product profile | `https://www.g2.com/products/text2task/reviews` (owner-confirmed 2026-09-16 via authenticated admin screenshots) | **THIRD-PARTY PROFILE FOR OUR PRODUCT — updated 2026-09-16, moved out of AMBIGUOUS IDENTITY.** Ownership: **CLAIMED / ADMIN ACCESS CONFIRMED** (owner viewed the page as an administrator; a MyG2 Dashboard management link is available) | **VERIFIED LIVE / OWNER-CONTROLLED — updated 2026-09-16 with owner-supplied authenticated G2 admin screenshots.** Product: Text2Task; description/tagline shown: "Text2Task — Turn Messy Client Messages Into Organized Projects"; profile marked Claimed; pricing section present; current review count **0**; current profile completeness **40%**; completed items shown: Update Logo, Product description, Update Screenshot, Update Pricing; additional features available under paid Starter-level profile functionality. This resolves the ambiguity that this entity might belong to the unrelated Fluxble/Target Energy Solutions product (EXT-028, still kept separately classified as UNRELATED NAME COLLISION, not merged) | **KEEP / OPTIMIZE LATER.** Not classified as ambiguous, the unrelated Fluxble/Target Energy product, unclaimed, or a missing opportunity. Profile is legitimate and controlled; profile completeness (40%) and review foundation (0 reviews) can be improved later | P2 (optimization opportunity, not a defect or risk) |
+| EXT-022 | Fluxble (parent platform) | `https://fluxble.com/` | UNRELATED NAME COLLISION | OWNER-ATTESTED (owner-named); corroborated by repeated search-result appearance; not directly fetched | ENTITY COLLISION MONITORING — DO NOT TOUCH | P0 |
+| EXT-023 | Fluxble "Text2Task" page (owner-named URL) | `https://text2task.target.fluxble.com/` | UNRELATED NAME COLLISION | OWNER-ATTESTED (owner-named exact URL); not independently fetched this session | ENTITY COLLISION MONITORING — DO NOT TOUCH | P0 |
+| EXT-024 | Fluxble "Text2Task" page (tooling-discovered URL) | `https://text2task.workspace.fluxble.com/` | UNRELATED NAME COLLISION | VERIFIED LIVE — directly fetched in the original mapping session (returned a bare "Text2Task" string). **Not confirmed to be identical to EXT-023**; kept as a separate row rather than assumed to be a duplicate | ENTITY COLLISION MONITORING — DO NOT TOUCH | P0 |
+| EXT-025 | Fluxble workspace portal | `https://target.fluxble.com/` | UNRELATED NAME COLLISION | INCONCLUSIVE (found via search this session, page titled "WORKSPACE"; not directly fetched) | ENTITY COLLISION MONITORING — DO NOT TOUCH | P0 |
+| EXT-026 | Fluxble/Target Energy test deployment | `https://text2task.test.meeraspace.com/` | UNRELATED NAME COLLISION | VERIFIED LIVE — directly fetched this session (near-empty stub page); co-hosted alongside `fluxble-website.dev.meeraspace.com` and `cadre.target.meeraspace.com` on the same third-party dev-hosting domain | ENTITY COLLISION MONITORING — DO NOT TOUCH | P0 |
+| EXT-027 | Microsoft Marketplace / AppSource "Text2Task" | `https://marketplace.microsoft.com/en-us/product/office/wa200004035` and `https://appsource.microsoft.com/en-us/product/office/wa200004035` (confirmed same listing, product ID `wa200004035`, counted as one surface) | UNRELATED NAME COLLISION | OWNER-ATTESTED (previously verified live in Phase 0B); this session's direct fetch returned HTTP 403 | ENTITY COLLISION MONITORING — DO NOT TOUCH | P0 |
+| EXT-028 | Fluxble's own G2 profile | `https://www.g2.com/products/fluxble` and `.../competitors/alternatives` | UNRELATED NAME COLLISION | INCONCLUSIVE (existence corroborated via search-result titles; page content not directly fetched) | ENTITY COLLISION MONITORING — DO NOT TOUCH (relevant only as context for EXT-021) | P0 |
+
+### 52.11.2 Authoritative Summary Counts
+
+**A. Total inventory rows: 28**
+
+**Relationship totals (updated 2026-09-16 — EXT-021 moved from AMBIGUOUS IDENTITY to THIRD-PARTY PROFILE FOR OUR PRODUCT per owner-supplied authenticated G2 admin screenshots; see §52.21):**
+
+| Class | Count | Row IDs |
+|---|---:|---|
+| B. OUR CONTROLLED SURFACE | 4 | EXT-001, EXT-002, EXT-003, EXT-012 |
+| C. THIRD-PARTY PROFILE FOR OUR PRODUCT | 13 | EXT-004, EXT-005, EXT-006, EXT-007, EXT-008, EXT-010, EXT-011, EXT-013, EXT-016, EXT-017, EXT-018, EXT-020, EXT-021 |
+| D. THIRD-PARTY EDITORIAL / INDEPENDENT MENTION | 2 | EXT-009, EXT-019 |
+| E. AMBIGUOUS IDENTITY | 0 | none |
+| F. UNRELATED NAME COLLISION | 7 | EXT-022, EXT-023, EXT-024, EXT-025, EXT-026, EXT-027, EXT-028 |
+| G. UNKNOWN RELATIONSHIP | 2 | EXT-014, EXT-015 |
+| **Relationship total** | **28** | **matches row count (YES)** |
+
+**Verification totals (updated 2026-09-16 — EXT-006 moved out of INCONCLUSIVE into a new HISTORICALLY VERIFIED / REMOVED AFTER LAUNCH status per owner-supplied direct Uneed email evidence, see §52.15; EXT-016 moved from UNKNOWN to VERIFIED LIVE per owner-supplied authenticated Product Hunt account screenshots, see §52.17; EXT-017 moved from UNKNOWN to a new OWNER-VERIFIED status per owner-supplied authenticated BetaList dashboard evidence, see §52.19; EXT-021 moved from INCONCLUSIVE to VERIFIED LIVE per owner-supplied authenticated G2 admin screenshots, see §52.21):**
+
+| Status | Count | Row IDs |
+|---|---:|---|
+| 1. VERIFIED LIVE | 9 | EXT-004, EXT-005, EXT-008, EXT-011, EXT-012, EXT-016, EXT-021, EXT-024, EXT-026 |
+| 2. OWNER-ATTESTED | 10 | EXT-001, EXT-002, EXT-003, EXT-007, EXT-009, EXT-010, EXT-013, EXT-022, EXT-023, EXT-027 |
+| 3. INCONCLUSIVE | 2 | EXT-025, EXT-028 |
+| 4. UNKNOWN | 4 | EXT-014, EXT-015, EXT-019, EXT-020 |
+| 5. UNAVAILABLE / NOT SAFELY VERIFIABLE | 1 | EXT-018 |
+| 6. HISTORICALLY VERIFIED / REMOVED AFTER LAUNCH | 1 | EXT-006 |
+| 7. OWNER-VERIFIED | 1 | EXT-017 |
+| **Verification total** | **28** | **matches row count (YES)** |
+
+### 52.11.3 Normalized M6.1 Action Queue
+
+**A. CORRECT NOW IN M6.2 CANDIDATE**
+- **EXT-005 Capterra — updated 2026-09-16.** Correct free-plan pricing representation (currently "$0.00, Flat Rate, One Time"). Owner attempted the correction via the G2 Digital Markets vendor portal and hit a validation bug ("Currency is required" while USD is selected); a support email was sent. Status: **CORRECTION ATTEMPTED — BLOCKED — SUPPORT TICKET PENDING.**
+
+**B. VERIFY BEFORE ANY EDIT**
+- EXT-008 PitchWall — verify account ownership/control before any claim.
+- EXT-011 GitHub organization — verify account ownership/control before any claim.
+- EXT-013 SaaSHub — locate exact URL.
+- EXT-014 FounderDB — locate exact URL or confirm non-existence.
+- EXT-015 Peer Push — locate exact URL or confirm non-existence.
+- EXT-010 UIComet — open directly in a normal browser to confirm content.
+
+**C. KEEP / MONITOR — OUR VALID FOOTPRINT**
+- EXT-001 LinkedIn company page, EXT-002 LinkedIn founder profile/posts, EXT-003 Facebook business page, EXT-007 Peerlist, EXT-012 GitHub repository.
+- **EXT-021 G2 — moved here 2026-09-16.** Owner directly opened the authenticated G2 profile as an administrator: profile marked Claimed, MyG2 Dashboard management link available, public URL `https://www.g2.com/products/text2task/reviews`, description/tagline consistent with the current product, pricing section present, 0 reviews, 40% profile completeness. Not classified as ambiguous, the unrelated Fluxble/Target Energy product, unclaimed, or a missing opportunity. **KEEP / OPTIMIZE LATER.** P2 future-optimization note: profile completeness (40%) and review foundation (0 reviews) can be improved later; no action taken now. The separate Fluxble G2 profile (EXT-028) remains independently classified as UNRELATED NAME COLLISION and is not merged with this row.
+- **EXT-016 Product Hunt — moved here 2026-09-16.** Owner-confirmed via authenticated account: LIVE / POSTED, one Posted launch (2026-05-17), public page `https://www.producthunt.com/products/text2task`, official website `text2task.com`, category AI Workflow Automation, description consistent with current product. Duplicate submission PROHIBITED. Not a missing opportunity, pending, removed, or new-submission candidate. P2 future-optimization note: review existing listing content before any future relaunch strategy (no relaunch recommended now). Current launch engagement is low (Position #201, Points 0, Comments 1); Product Hunt presence supports external entity/discovery signals but does not guarantee rankings, backlinks of material SEO value, or AI citations.
+- **EXT-004 GetApp — moved here 2026-09-16.** Owner confirmed via the G2 Digital Markets vendor console that Android/iPhone/iPad are NOT selected (Web-only is already correctly configured on the vendor side), while the public GetApp listing previously showed mobile-platform support. Classified **PUBLIC/VENDOR DATA MISMATCH** — a platform-side display/sync issue, not an owner-side misconfiguration. **MONITOR / REVISIT LATER; do not blindly edit** an already-correct field.
+
+**D. EDITORIAL / THIRD-PARTY — KEEP / MONITOR**
+- EXT-009 StartupFortune, EXT-019 Reddit, EXT-020 StartupBase.io.
+
+**E. ENTITY COLLISION MONITORING — DO NOT TOUCH**
+- EXT-022 through EXT-028 (all 7 Fluxble/Target Energy Solutions/Microsoft Marketplace/AppSource surfaces). Monitoring action: MONITOR FOR ENTITY CONFUSION. This group is explicitly separate from Group C and must never be merged into the ordinary "our footprint" KEEP/MONITOR list.
+
+**F. LOW VALUE / DEFER**
+- **EXT-006 Uneed — moved here 2026-09-16.** Owner-supplied direct Uneed email evidence (dated 2026-08-19) confirms the original free launch was removed roughly 48 hours after launch for scoring below Uneed's threshold, and does not return to a waiting queue automatically. The current listing is REMOVED / NO ACTIVE PRODUCT PAGE CONFIRMED, consistent with the automated sweep's generic-category-page result. Uneed's paid relaunch offer ($15/$29.99 chosen-date or $14.99 Fast Track) explicitly bundles guaranteed publication with a permanent do-follow backlink, which does not fit the approved quality-first External Authority Program (D026). Recommended action: **DEFER / DO NOT PAY FOR RELAUNCH FOR SEO PURPOSES.** Not classified as an active profile, a current backlink, a missing opportunity requiring resubmission, or Tier 1 authority; no claim is made that the paid offer is itself a search-engine penalty or violation.
+- **EXT-017 BetaList — moved here 2026-09-16.** Owner directly opened the authenticated BetaList dashboard and confirmed submission ID `#168594` in state DRAFT, started 2026-06-01, not submitted (progress indicator shows "Continue submission" available), no Reviewed/Featured state reached, and no public BetaList product page confirmed. BetaList currently requires payment to complete a startup submission. Recommended action: **DEFER — DO NOT PAY / COMPLETE SUBMISSION YET,** because Milestone 6 prioritizes existing-authority cleanup and high-quality earned authority before paid listing submissions (D026). Not classified as LIVE, PUBLISHED, PENDING REVIEW, APPROVED, REJECTED, a current backlink, or an active authority source. **Duplicate submission: DO NOT CREATE A NEW SUBMISSION** — the existing draft is preserved, not deleted.
+
+**G. RISK — DO NOT BYPASS**
+- EXT-018 Stackovery — expired TLS certificate; do not attempt unsafe access.
+
+Every row ID (EXT-001 through EXT-028) appears in exactly one of the seven queues above, so the action-queue totals also reconcile to 28.
+
+### 52.11.4 Recommended First M6.2 Batch (Not Yet Approved)
+
+Per the owner's instruction to recommend only a first small batch rather than the full backlog, and to exclude outreach, backlink acquisition, and new listings entirely, the recommended first M6.2 batch is:
+
+1. **EXT-004 GetApp** — correct the platform/device-support field to Web only.
+2. **EXT-005 Capterra** — correct the free-plan pricing representation to an ongoing $0/month plan.
+3. ~~**EXT-006 Uneed** — verification-only: re-open the listing URL directly in a normal browser to resolve the INCONCLUSIVE status.~~ **RESOLVED 2026-09-16** — owner-supplied direct Uneed email evidence (dated 2026-08-19) established the listing was removed after launch; see §52.15. No further verification action needed; recommended action is now DEFER / DO NOT PAY FOR RELAUNCH.
+4. ~~**EXT-016 / EXT-017 Product Hunt and BetaList** — verification-only, combined: establish current live/pending/absent status for both before any future decision.~~ **EXT-016 Product Hunt RESOLVED 2026-09-16** — owner-supplied authenticated Product Hunt account screenshots established LIVE / POSTED status (launch date 2026-05-17); see §52.17. No further verification action needed; recommended action is now KEEP / MONITOR, duplicate submission PROHIBITED. **EXT-017 BetaList RESOLVED 2026-09-16** — owner-supplied authenticated BetaList dashboard evidence established submission ID `#168594` in DRAFT state, started 2026-06-01, not submitted, no public listing; see §52.19. No further verification action needed; recommended action is now DEFER — DO NOT PAY / COMPLETE SUBMISSION YET; do not create a new submission.
+
+This is a recommendation only. Per instruction, this task does not approve or begin execution of M6.2 — that remains a separate, future owner-approved step.
+
+### 52.12 Final M6.1 Normalization State
+
+- Phase 0: COMPLETE / OWNER REVIEWED.
+- Phase 1: IMPLEMENTATION IN PROGRESS.
+- Milestones 1-4: COMPLETE.
+- Milestone 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING.
+- Milestone 6: **M6.1 INVENTORY NORMALIZED / AWAITING FINAL OWNER APPROVAL.** Not owner-approved yet; not complete; M6.2 not started.
+- Decision `SEO-2026-09-09-D026`: PRESERVED, unchanged.
+- New Decision Log ID created by this task: NO.
+- External profiles logged into, claimed, edited, or created by this task: NONE.
+- External parties contacted by this task: NONE.
+- Outreach/backlinks/directory submissions/community posts performed by this task: NONE.
+- Application/test/database/environment/configuration files changed by this task: NONE.
+- Commit created by this task: NO.
+- Push performed by this task: NO.
+- Deploy performed by this task: NO.
+
+---
+
+### 52.13 M6.1 Owner Approval and M6.2A First Controlled Batch Approval
+
+**Recorded: 2026-09-16 Asia/Jerusalem.** **Preserves Decision `SEO-2026-09-09-D026`; no new Decision Log ID created — this is an approval record, not a new strategy or architecture decision.** This section closes the M6.1 owner-review gate and defines the scope of the first approved M6.2 execution batch. No external action was taken by this task; it records approval only.
+
+#### 52.13.1 M6.1 — Owner Approved
+
+The normalized inventory in §52.11 is accepted as final, with the following counts owner-approved and unchanged from the normalization pass:
+
+**Total inventory rows: 28.**
+
+| Relationship class | Count |
+|---|---:|
+| OUR CONTROLLED SURFACE | 4 |
+| THIRD-PARTY PROFILE FOR OUR PRODUCT | 12 |
+| THIRD-PARTY EDITORIAL / INDEPENDENT MENTION | 2 |
+| AMBIGUOUS IDENTITY | 1 |
+| UNRELATED NAME COLLISION | 7 |
+| UNKNOWN RELATIONSHIP | 2 |
+| **Total** | **28** |
+
+| Verification status | Count |
+|---|---:|
+| VERIFIED LIVE | 7 |
+| OWNER-ATTESTED | 10 |
+| INCONCLUSIVE | 4 |
+| UNKNOWN | 6 |
+| UNAVAILABLE / NOT SAFELY VERIFIABLE | 1 |
+| **Total** | **28** |
+
+Both breakdowns reconcile to the same total inventory row count of 28. **M6.1 status: COMPLETE / OWNER APPROVED.**
+
+#### 52.13.2 M6.2A — Existing Profile Correction / Verification (Approved First Batch)
+
+The owner approved exactly the following five items as the first controlled M6.2 batch. No item outside this list is authorized by this approval.
+
+**Edit candidates:**
+
+1. **GetApp (EXT-004).** Issue: platform/device support currently lists Web / Android / iPhone/iPad. Text2Task's actual product reality is Web SaaS only. Goal: correct the unsupported native-mobile platform claims if vendor controls allow it. Execution not performed by this task.
+2. **Capterra (EXT-005).** Issue: the Free plan is displayed as approximately "$0.00 / Flat Rate / One Time." Goal: correct the presentation so it accurately reflects the real Text2Task Free plan and does not imply a one-time paid license. **Constraint: no billing-frequency value may be invented — the actual available vendor-console fields must be inspected before deciding the exact correction.** Execution not performed by this task.
+
+**Verification-only candidates:**
+
+3. ~~**Uneed (EXT-006).** Re-verify the existing profile directly. No duplicate submission.~~ **RESOLVED 2026-09-16 — see §52.15.** Owner-supplied direct Uneed email evidence (dated 2026-08-19) established the original free launch was removed roughly 48 hours after launch for scoring below Uneed's threshold, and confirmed the current listing URL returns no active product page. This item is closed; no further verification action is needed. Uneed additionally offered a paid relaunch ($15/$29.99 or $14.99 Fast Track) bundling guaranteed publication with a permanent do-follow backlink; the approved action is DEFER / DO NOT PAY FOR RELAUNCH FOR SEO PURPOSES, as this does not fit the quality-first External Authority Program (D026). This is not authorization to pursue, contact Uneed about, or pay for any relaunch.
+4. ~~**Product Hunt (EXT-016).** Verify existing submission/public page state. No duplicate submission.~~ **RESOLVED 2026-09-16 — see §52.17.** Owner-supplied authenticated Product Hunt account screenshots established: Text2Task exists under My products & launches, status LIVE / POSTED, exactly one Posted launch (launch date 2026-05-17), no In Progress/Draft/Scheduled launches, public page `https://www.producthunt.com/products/text2task`, official website `text2task.com`, category AI Workflow Automation. This item is closed; no further verification action is needed. Recommended action is now KEEP / MONITOR; duplicate submission PROHIBITED; not classified as a missing opportunity, pending, removed, or new-submission candidate; no new launch recommended at this stage.
+5. ~~**BetaList (EXT-017).** Verify existing submission/public page state. No duplicate submission.~~ **RESOLVED 2026-09-16 — see §52.19.** Owner directly opened the authenticated BetaList dashboard and confirmed: Text2Task exists in the account; submission ID `#168594`; state DRAFT; started 2026-06-01; not submitted ("Continue submission" available); no Reviewed/Featured state reached; no public BetaList product page confirmed; BetaList currently requires payment to complete a submission. This item is closed; no further verification action is needed. Recommended action is now DEFER — DO NOT PAY / COMPLETE SUBMISSION YET; duplicate submission: DO NOT CREATE A NEW SUBMISSION; the existing draft is preserved, not deleted.
+
+M6.2A active remaining scope after this update: 2 edit candidates (GetApp, Capterra); Uneed, Product Hunt, and BetaList items are all resolved/closed, not pending. No verification-only candidate remains open in M6.2A.
+
+**M6.2 status: FIRST CONTROLLED BATCH APPROVED (M6.2A).** No item in this batch has been executed by this task.
+
+#### 52.13.3 Explicitly Deferred (Not Part of M6.2A)
+
+The following remain later M6 work and are explicitly not authorized by this approval:
+
+- G2 claiming/editing (EXT-021)
+- SaaSHub submission (EXT-013)
+- FounderDB submission (EXT-014)
+- Peer Push submission (EXT-015)
+- New directory expansion
+- Backlink outreach
+- Editorial outreach
+- Product Hunt relaunch (beyond the EXT-016 status verification above)
+- BetaList resubmission (beyond the EXT-017 status verification above)
+- Review solicitation
+- Community promotion
+- Original content asset development
+- Any edit to, or contact with, any Fluxble/Target Energy Solutions/Microsoft Marketplace/AppSource collision surface (EXT-022 through EXT-028)
+
+### 52.14 Final M6.1 / M6.2A Approval State
+
+- Phase 0: COMPLETE / OWNER REVIEWED.
+- Phase 1: IMPLEMENTATION IN PROGRESS.
+- Milestones 1-4: COMPLETE.
+- Milestone 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING.
+- Milestone 6: **M6.1 OWNER APPROVED / M6.2A READY FOR CONTROLLED EXECUTION.** Not complete.
+- M6.1: **COMPLETE / OWNER APPROVED.**
+- M6.2: **FIRST CONTROLLED BATCH APPROVED** (M6.2A, 5 items); not yet executed.
+- Decision `SEO-2026-09-09-D026`: PRESERVED, unchanged.
+- New Decision Log ID created by this task: NO.
+- External profiles logged into, claimed, edited, or created by this task: NONE.
+- External parties contacted by this task: NONE.
+- Listings submitted by this task: NONE.
+- Application/test/database/environment/configuration files changed by this task: NONE.
+- Commit created by this task: NO.
+- Push performed by this task: NO.
+- Deploy performed by this task: NO.
+
+---
+
+### 52.15 EXT-006 Uneed Correction — Owner-Supplied Direct Evidence (2026-09-16)
+
+**Recorded: 2026-09-16 Asia/Jerusalem.** **Preserves Decision `SEO-2026-09-09-D026`; no new Decision Log ID created — this is an evidence-driven inventory correction, not a new strategy or architecture decision.**
+
+**Evidence supplied:** the owner provided direct email evidence from Uneed dated 2026-08-19. The email confirms: Text2Task launched on Uneed the previous day; the launch finished below a score of 10; Uneed removes free launches scoring below that threshold approximately 48 hours after launch; the product does not return automatically to a waiting queue after removal. The owner also directly opened the previously-recorded Uneed URL (`https://www.uneed.best/tool/text2task`) and received a 500 error / generic category-page context rather than an active Text2Task product page — this directly explains, rather than merely repeats, the INCONCLUSIVE finding from the M6.1 automated sweep (§52.11.1, prior state).
+
+**Paid relaunch offer recorded (not pursued):** Uneed's email offered a paid relaunch at $15 instead of $29.99 for a chosen launch date, or a $14.99 Fast Track option, explicitly advertising guaranteed publication, a guaranteed backlink, a permanent do-follow backlink, and no upvote threshold for the paid launch.
+
+**Correction applied to EXT-006 (§52.11.1):**
+
+| Field | Prior state | Corrected state |
+|---|---|---|
+| Relationship Class | THIRD-PARTY PROFILE FOR OUR PRODUCT | Unchanged: THIRD-PARTY PROFILE FOR OUR PRODUCT |
+| Verification Status | INCONCLUSIVE | **HISTORICALLY VERIFIED / REMOVED AFTER LAUNCH** (new status value added to the schema, §52.11 definitions) |
+| Current public status | Not previously recorded as a distinct field | **REMOVED / NO ACTIVE PRODUCT PAGE CONFIRMED** |
+| Severity | P1 (verification gap) | P3 (historical fact recorded; no defect to fix, since the recommended action is a deliberate non-pursuit, not a correction) |
+| Recommended action | VERIFY BEFORE ANY EDIT — REVERIFY DIRECTLY | **DEFER / DO NOT PAY FOR RELAUNCH FOR SEO PURPOSES** |
+| Action queue placement | Group B (Verify Before Any Edit) | Group F (Low Value / Defer) |
+
+**Explicit non-claims preserved, per instruction:** Uneed is not classified as an active profile, a current backlink, a missing opportunity requiring resubmission, or Tier 1 authority. No claim is made that Uneed's paid-relaunch offer constitutes a search-engine penalty or a violation of any platform's guidelines — it is recorded only as misaligned with the owner-approved quality-first External Authority Program (D026), which explicitly excludes paid link packages and guaranteed-backlink offers.
+
+**Downstream updates made:** §52.11.1 (row EXT-006), §52.11.2 (verification-status summary counts, now 6 categories reconciling to 28), §52.11.3 (action queue, EXT-006 moved from Group B to Group F), §52.11.4 (recommended M6.2 batch, item 3 marked resolved), §52.13.2 (approved M6.2A batch, item 3 marked resolved with active remaining scope of 4 items).
+
+**Not changed by this task:** Milestone 6 overall status remains M6.1 OWNER APPROVED / M6.2A READY FOR CONTROLLED EXECUTION; M6.1 remains COMPLETE / OWNER APPROVED; the total inventory row count remains 28; Decision `SEO-2026-09-09-D026` is unchanged; no new Decision Log ID was created.
+
+### 52.16 Final State After Uneed Correction
+
+- Phase 0: COMPLETE / OWNER REVIEWED.
+- Phase 1: IMPLEMENTATION IN PROGRESS.
+- Milestones 1-4: COMPLETE.
+- Milestone 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING.
+- Milestone 6: M6.1 OWNER APPROVED / M6.2A READY FOR CONTROLLED EXECUTION. Not complete.
+- M6.1: COMPLETE / OWNER APPROVED (28 rows, unchanged).
+- M6.2A: FIRST CONTROLLED BATCH APPROVED — active remaining scope 4 items (GetApp, Capterra, Product Hunt, BetaList); Uneed item RESOLVED/CLOSED via owner evidence, not executed as a listing edit.
+- EXT-006 Uneed: HISTORICALLY VERIFIED / REMOVED AFTER LAUNCH; REMOVED / NO ACTIVE PRODUCT PAGE CONFIRMED; recommended action DEFER / DO NOT PAY FOR RELAUNCH FOR SEO PURPOSES.
+- Decision `SEO-2026-09-09-D026`: PRESERVED, unchanged.
+- New Decision Log ID created by this task: NO.
+- Uneed (or any other external party) contacted by this task: NO.
+- Any paid relaunch, submission, or listing edit performed by this task: NO.
+- Application/test/database/environment/configuration files changed by this task: NONE.
+- Commit created by this task: NO.
+- Push performed by this task: NO.
+- Deploy performed by this task: NO.
+
+---
+
+### 52.17 EXT-016 Product Hunt Correction — Owner-Supplied Direct Evidence (2026-09-16)
+
+**Recorded: 2026-09-16 Asia/Jerusalem.** **Preserves Decision `SEO-2026-09-09-D026`; no new Decision Log ID created — this is an evidence-driven inventory correction, not a new strategy or architecture decision.**
+
+**Evidence supplied:** the owner directly opened the authenticated Product Hunt account and provided screenshots. Confirmed: Text2Task exists under My products & launches; product status LIVE / POSTED; launch date May 17, 2026; no In Progress, Draft, or Scheduled launches; exactly one Posted launch exists; a public product page exists at `https://www.producthunt.com/products/text2task`; official website shown is `text2task.com`; category/context is AI Workflow Automation; the product description is consistent with the current Text2Task SaaS; the forum is `p/text2task`; a Facebook social link is present; a maker comment from the owner is present. Launch dashboard evidence: Position #201, Points 0, Comments 1.
+
+**Correction applied to EXT-016 (§52.11.1):**
+
+| Field | Prior state | Corrected state |
+|---|---|---|
+| Relationship Class | THIRD-PARTY PROFILE FOR OUR PRODUCT (per owner attestation that prior work already submitted/handled this) | Unchanged: THIRD-PARTY PROFILE FOR OUR PRODUCT (now directly account-verified rather than attested) |
+| Verification Status | UNKNOWN | **VERIFIED LIVE** |
+| Current public status | Not established | **LIVE / POSTED** |
+| Launch date | Not established | **2026-05-17** |
+| Exact public URL | Not located | `https://www.producthunt.com/products/text2task` |
+| Severity | P1 (duplicate-submission risk pending verification) | P2 (future-optimization review only, not a defect) |
+| Recommended action | VERIFY BEFORE ANY EDIT — VERIFY EXISTING SUBMISSION / PUBLIC PAGE STATUS; duplicate submission PROHIBITED UNTIL VERIFIED | **KEEP / MONITOR; duplicate submission PROHIBITED** (unconditionally, verification is complete) |
+| Action queue placement | Group B (Verify Before Any Edit) | Group C (Keep / Monitor — Our Valid Footprint) |
+
+**Explicit non-claims preserved, per instruction:** Product Hunt is not classified as a missing opportunity, pending, removed, or a new-submission candidate. No new launch recommendation is made at this stage. The single potential future item is a **P2** note: review the existing listing content before any future relaunch strategy is considered — this is not an active recommendation to relaunch.
+
+**Value assessment recorded, using conservative wording per instruction:** SEO authority value MEDIUM; Entity/GEO/AEO value MEDIUM-HIGH; Referral/discovery value LOW CURRENTLY, based on weak launch engagement (Position #201, Points 0, Comments 1). Product Hunt presence supports external entity/discovery signals but does not guarantee rankings, backlinks of material SEO value, or AI citations.
+
+**Downstream updates made:** §52.11.1 (row EXT-016), §52.11.2 (verification-status summary counts: VERIFIED LIVE 7→8, UNKNOWN 6→5, both still reconciling to 28), §52.11.3 (action queue, EXT-016 moved from Group B to Group C), §52.11.4 (recommended M6.2 batch, Product Hunt item marked resolved), §52.13.2 (approved M6.2A batch, Product Hunt item marked resolved; active remaining scope now GetApp, Capterra, BetaList).
+
+**Not changed by this task:** Milestone 6 overall status remains M6.1 OWNER APPROVED / M6.2A READY FOR CONTROLLED EXECUTION; M6.1 remains COMPLETE / OWNER APPROVED; the total inventory row count remains 28; Decision `SEO-2026-09-09-D026` is unchanged; no new Decision Log ID was created; no application/test/database/environment/configuration/Production file was changed; no new Product Hunt submission, edit, claim, or contact was made by this task.
+
+### 52.18 Final State After Product Hunt Correction
+
+- Phase 0: COMPLETE / OWNER REVIEWED.
+- Phase 1: IMPLEMENTATION IN PROGRESS.
+- Milestones 1-4: COMPLETE.
+- Milestone 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING.
+- Milestone 6: M6.1 OWNER APPROVED / M6.2A READY FOR CONTROLLED EXECUTION. Not complete.
+- M6.1: COMPLETE / OWNER APPROVED (28 rows, unchanged).
+- M6.2A: FIRST CONTROLLED BATCH APPROVED — active remaining scope 3 items (GetApp, Capterra, BetaList); Uneed and Product Hunt items RESOLVED/CLOSED via owner evidence, neither executed as a listing edit.
+- EXT-016 Product Hunt: VERIFIED LIVE; LIVE / POSTED, launch date 2026-05-17; recommended action KEEP / MONITOR; duplicate submission PROHIBITED.
+- Decision `SEO-2026-09-09-D026`: PRESERVED, unchanged.
+- New Decision Log ID created by this task: NO.
+- Product Hunt (or any other external party) contacted by this task: NO.
+- Any listing edit, claim, or new submission performed by this task: NO.
+- Application/test/database/environment/configuration files changed by this task: NONE.
+- Commit created by this task: NO.
+- Push performed by this task: NO.
+- Deploy performed by this task: NO.
+
+---
+
+### 52.19 EXT-017 BetaList Correction — Owner-Supplied Direct Evidence (2026-09-16)
+
+**Recorded: 2026-09-16 Asia/Jerusalem.** **Preserves Decision `SEO-2026-09-09-D026`; no new Decision Log ID created — this is an evidence-driven inventory correction, not a new strategy or architecture decision.**
+
+**Evidence supplied:** the owner directly opened the authenticated BetaList dashboard. Confirmed: Text2Task exists in the owner's BetaList account; submission ID `#168594`; submission state DRAFT; submission started June 1, 2026; the progress indicator shows the submission was started but NOT submitted; "Continue submission" is available; no Reviewed state reached; no Featured state reached; no public BetaList product page is confirmed; no completed submission exists. BetaList currently requires payment to complete a startup submission.
+
+**Correction applied to EXT-017 (§52.11.1):**
+
+| Field | Prior state | Corrected state |
+|---|---|---|
+| Relationship Class | THIRD-PARTY PROFILE FOR OUR PRODUCT (per owner attestation that prior work already submitted/handled this) | **THIRD-PARTY PROFILE / SUBMISSION DRAFT FOR OUR PRODUCT** — a sub-type of the same relationship class, still counted under THIRD-PARTY PROFILE FOR OUR PRODUCT for summary-count purposes (§52.11.2) |
+| Verification Status | UNKNOWN | **OWNER-VERIFIED** (new status value added to the schema, §52.11 definitions) |
+| Current status | Not established | **DRAFT — NOT SUBMITTED** |
+| Started | Not established | **2026-06-01** |
+| Submission ID | Not recorded | **168594** |
+| Public listing | Not established | **NONE CONFIRMED** |
+| Severity | P1 (duplicate-submission risk pending verification) | P2 (deliberate deferral, not a defect) |
+| Recommended action | VERIFY BEFORE ANY EDIT — VERIFY EXISTING SUBMISSION / PUBLIC PAGE STATUS; duplicate submission PROHIBITED UNTIL VERIFIED | **DEFER — DO NOT PAY / COMPLETE SUBMISSION YET; DO NOT CREATE A NEW SUBMISSION** |
+| Action queue placement | Group B (Verify Before Any Edit) | Group F (Low Value / Defer) |
+
+**Explicit non-claims preserved, per instruction:** BetaList is not classified as LIVE, PUBLISHED, PENDING REVIEW, APPROVED, REJECTED, a current backlink, or an active authority source. The existing draft is preserved and not deleted. Reason for deferral: Milestone 6 prioritizes existing-authority cleanup and high-quality earned authority before paid listing submissions.
+
+**Downstream updates made:** §52.11.1 (row EXT-017), §52.11.2 (verification-status summary counts: UNKNOWN 5→4, new OWNER-VERIFIED category count 1, still reconciling to 28), §52.11.3 (action queue, EXT-017 moved from Group B to Group F), §52.11.4 (recommended M6.2 batch, BetaList item marked resolved), §52.13.2 (approved M6.2A batch, BetaList item marked resolved; active remaining scope now GetApp and Capterra only — the two edit candidates, with no verification-only candidate remaining open).
+
+**Not changed by this task:** Milestone 6 overall status remains M6.1 OWNER APPROVED / M6.2A READY FOR CONTROLLED EXECUTION; M6.1 remains COMPLETE / OWNER APPROVED; the total inventory row count remains 28; Decision `SEO-2026-09-09-D026` is unchanged; no new Decision Log ID was created; no application/test/database/environment/configuration/Production file was changed; no BetaList submission was completed, paid for, deleted, or newly created by this task.
+
+### 52.20 Final State After BetaList Correction
+
+- Phase 0: COMPLETE / OWNER REVIEWED.
+- Phase 1: IMPLEMENTATION IN PROGRESS.
+- Milestones 1-4: COMPLETE.
+- Milestone 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING.
+- Milestone 6: M6.1 OWNER APPROVED / M6.2A READY FOR CONTROLLED EXECUTION. Not complete.
+- M6.1: COMPLETE / OWNER APPROVED (28 rows, unchanged).
+- M6.2A: FIRST CONTROLLED BATCH APPROVED — active remaining scope 2 items (GetApp, Capterra); Uneed, Product Hunt, and BetaList items RESOLVED/CLOSED via owner evidence, none executed as a listing edit, submission, or payment.
+- EXT-017 BetaList: OWNER-VERIFIED; DRAFT — NOT SUBMITTED; submission ID 168594; started 2026-06-01; public listing NONE CONFIRMED; recommended action DEFER — DO NOT PAY / COMPLETE SUBMISSION YET.
+- Decision `SEO-2026-09-09-D026`: PRESERVED, unchanged.
+- New Decision Log ID created by this task: NO.
+- BetaList (or any other external party) contacted by this task: NO.
+- Any submission completed, paid for, deleted, or newly created by this task: NO.
+- Application/test/database/environment/configuration files changed by this task: NONE.
+- Commit created by this task: NO.
+- Push performed by this task: NO.
+- Deploy performed by this task: NO.
+
+---
+
+### 52.21 EXT-021 G2 Correction — Owner-Supplied Direct Evidence (2026-09-16)
+
+**Recorded: 2026-09-16 Asia/Jerusalem.** **Preserves Decision `SEO-2026-09-09-D026`; no new Decision Log ID created — this is an evidence-driven inventory correction, not a new strategy or architecture decision.**
+
+**Evidence supplied:** the owner directly opened the authenticated G2 Text2Task profile and provided screenshots. Confirmed: public product URL `https://www.g2.com/products/text2task/reviews`; product Text2Task; the owner is viewing the page as an administrator; the profile is marked Claimed; a MyG2 Dashboard management link is available; product description/tagline shown "Text2Task — Turn Messy Client Messages Into Organized Projects"; a pricing section is present; current review count 0; current profile completeness 40%; completed items shown include Update Logo, Product description, Update Screenshot, and Update Pricing; additional profile features are available under paid Starter-level profile functionality.
+
+**Correction applied to EXT-021 (§52.11.1):**
+
+| Field | Prior state | Corrected state |
+|---|---|---|
+| Relationship Class | AMBIGUOUS IDENTITY | **THIRD-PARTY PROFILE FOR OUR PRODUCT** (moved out of AMBIGUOUS IDENTITY entirely) |
+| Ownership | Not established | **CLAIMED / ADMIN ACCESS CONFIRMED** |
+| Verification Status | INCONCLUSIVE / INVESTIGATE | **VERIFIED LIVE / OWNER-CONTROLLED** |
+| Current public status | Not established | **LIVE** |
+| Public URL | Inferred only | `https://www.g2.com/products/text2task/reviews` |
+| Reviews | Not established | **0** |
+| Profile completeness | Not established | **40%** |
+| Severity | P0 | **P2** (optimization opportunity, not a defect or risk) |
+| Recommended action | VERIFY BEFORE ANY EDIT — VERIFY DOMAIN / VENDOR / DESCRIPTION BEFORE CLAIMING OR EDITING | **KEEP / OPTIMIZE LATER** |
+| Action queue placement | Group B (Verify Before Any Edit) | Group C (Keep / Monitor — Our Valid Footprint) |
+
+**Explicit non-claims preserved, per instruction:** G2 (EXT-021) is not classified as ambiguous, the unrelated Fluxble/Target Energy product, unclaimed, or a missing opportunity. The separate Fluxble G2 profile (EXT-028) remains independently classified as **UNRELATED NAME COLLISION / ENTITY COLLISION MONITORING** and has not been merged with EXT-021 — the two G2 entities are confirmed distinct.
+
+**Inventory-wide recalculation (both totals still reconcile to 28 total rows):**
+
+- Relationship totals: OUR CONTROLLED SURFACE 4 (unchanged); THIRD-PARTY PROFILE FOR OUR PRODUCT 12→**13** (EXT-021 added); THIRD-PARTY EDITORIAL/INDEPENDENT MENTION 2 (unchanged); AMBIGUOUS IDENTITY 1→**0** (EXT-021 removed, no rows remain in this class); UNRELATED NAME COLLISION 7 (unchanged, EXT-028 stays here); UNKNOWN RELATIONSHIP 2 (unchanged). Sum: 4+13+2+0+7+2 = 28.
+- Verification totals: VERIFIED LIVE 8→**9** (EXT-021 added); OWNER-ATTESTED 10 (unchanged); INCONCLUSIVE 3→**2** (EXT-021 removed; EXT-025 and EXT-028 remain); UNKNOWN 4 (unchanged); UNAVAILABLE/NOT SAFELY VERIFIABLE 1 (unchanged); HISTORICALLY VERIFIED/REMOVED AFTER LAUNCH 1 (unchanged); OWNER-VERIFIED 1 (unchanged). Sum: 9+10+2+4+1+1+1 = 28.
+
+**Downstream updates made:** §52.11.1 (row EXT-021), §52.11.2 (both relationship and verification summary tables), §52.11.3 (action queue, EXT-021 moved from Group B to Group C). G2 was not part of the approved M6.2A batch (§52.13.2), so no M6.2A batch item required updating.
+
+**Not changed by this task:** Milestone 6 overall status remains M6.1 OWNER APPROVED / M6.2A READY FOR CONTROLLED EXECUTION; M6.1 remains COMPLETE / OWNER APPROVED; the total inventory row count remains 28; Decision `SEO-2026-09-09-D026` is unchanged; no new Decision Log ID was created; no application/test/database/environment/configuration/Production file was changed; no G2 profile field was edited, claimed, or contacted by this task beyond recording the owner's own prior direct evidence.
+
+### 52.22 Final State After G2 Correction
+
+- Phase 0: COMPLETE / OWNER REVIEWED.
+- Phase 1: IMPLEMENTATION IN PROGRESS.
+- Milestones 1-4: COMPLETE.
+- Milestone 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING.
+- Milestone 6: M6.1 OWNER APPROVED / M6.2A READY FOR CONTROLLED EXECUTION. Not complete.
+- M6.1: COMPLETE / OWNER APPROVED (28 rows, unchanged; relationship and verification sub-classifications refined per §52.15/§52.17/§52.19/§52.21).
+- M6.2A: FIRST CONTROLLED BATCH APPROVED — active remaining scope 2 items (GetApp, Capterra); Uneed, Product Hunt, and BetaList items RESOLVED/CLOSED via owner evidence; G2 was never part of the M6.2A batch.
+- EXT-021 G2: VERIFIED LIVE / OWNER-CONTROLLED; CLAIMED / ADMIN ACCESS CONFIRMED; LIVE at `https://www.g2.com/products/text2task/reviews`; 0 reviews; 40% profile completeness; recommended action KEEP / OPTIMIZE LATER.
+- EXT-028 Fluxble G2 profile: unchanged, still UNRELATED NAME COLLISION / ENTITY COLLISION MONITORING, not merged with EXT-021.
+- Relationship totals: 4/13/2/0/7/2 = 28 (reconciled).
+- Verification totals: 9/10/2/4/1/1/1 = 28 (reconciled).
+- Decision `SEO-2026-09-09-D026`: PRESERVED, unchanged.
+- New Decision Log ID created by this task: NO.
+- G2 (or any other external party) contacted by this task: NO.
+- Any profile edit, claim action, or new listing performed by this task: NO.
+- Application/test/database/environment/configuration files changed by this task: NONE.
+- Commit created by this task: NO.
+- Push performed by this task: NO.
+- Deploy performed by this task: NO.
+
+---
+
+### 52.23 Fiverr Historical Submission Batch (Not Individually Verified)
+
+**Recorded: 2026-09-16 Asia/Jerusalem.** **Classification: HISTORICAL SUBMISSION BATCH.** The owner previously purchased a Fiverr directory-submission service. The provided spreadsheet contains approximately 22 submission rows. **This batch is tracked separately from the 28-row authoritative canonical inventory in §52.11 and does not add rows to it** — per Decision `SEO-2026-09-09-D027`, individually auditing each row was evaluated against continuing to the next SEO milestone and deprioritized as lower expected value.
+
+**Explicit non-claims, per instruction:** this batch is **not** treated as 22 verified backlinks, 22 live listings, 22 indexed pages, or 22 authority domains. Some recorded links in the spreadsheet are submission confirmations, dashboards, preview pages, forms, or workflow endpoints rather than confirmed public listings — this distinction was not resolved row-by-row in this task.
+
+| Surface (as listed in the Fiverr spreadsheet) | Already in canonical inventory? | Public/live status | Authority value | Recommended action |
+|---|---|---|---|---|
+| G2 | YES — see EXT-021 (§52.11.1) | Superseded by direct owner verification, §52.21 | See EXT-021 | See EXT-021; no separate batch action |
+| GitHub | YES — see EXT-011/EXT-012 (§52.11.1) | Superseded by direct verification | See EXT-011/EXT-012 | See EXT-011/EXT-012; no separate batch action |
+| Product Hunt | YES — see EXT-016 (§52.11.1) | Superseded by direct owner verification, §52.17 | See EXT-016 | See EXT-016; no separate batch action |
+| PitchWall | YES — see EXT-008 (§52.11.1) | Already directly verified | See EXT-008 | See EXT-008; no separate batch action |
+| Stackovery | YES — see EXT-018 (§52.11.1) | Already tracked (RISK — DO NOT BYPASS, expired certificate) | See EXT-018 | See EXT-018; no separate batch action |
+| Viesearch | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| FreeListingUSA | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| 10words | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| SiteLike | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| SoloLaunches | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| InventList | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| LA Chief | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| Twelve Tools | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| Startup Grind | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| LaunchIt | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| DirectorySection | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| Wakelet | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| PromptZone | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| Open Launch | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| Launch.cab | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| LaunchVibe | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+| Indie Hackers | NOT previously tracked | NOT INDIVIDUALLY VERIFIED IN THIS RUN | UNKNOWN BY DEFAULT | DEFER / REVISIT ONLY IF NEEDED |
+
+**Do not recommend re-submitting any of these directories.** No additional owner time is being spent on them now. This table exists purely as a record of what was purchased/attempted historically, for future reference if a later milestone determines individual verification is justified.
+
+### 52.24 Milestone 6 Closure — Owner Decision D027 (2026-09-16)
+
+**Recorded: 2026-09-16 Asia/Jerusalem.** **Milestone 6 (External Authority Program) is CLOSED FOR THE CURRENT RUN under Decision `SEO-2026-09-09-D027`.**
+
+**What Milestone 6 accomplished in this run:**
+- A canonical external-footprint inventory (28 rows, §52.11), with reconciling relationship and verification totals maintained throughout every correction.
+- High-value profile verification: G2 (EXT-021, VERIFIED LIVE / OWNER-CONTROLLED, CLAIMED, admin access confirmed), Product Hunt (EXT-016, VERIFIED LIVE / POSTED), BetaList (EXT-017, OWNER-VERIFIED DRAFT), Uneed (EXT-006, HISTORICALLY VERIFIED / REMOVED AFTER LAUNCH).
+- Major entity-disambiguation work: the Fluxble/Target Energy Solutions/Microsoft Marketplace/AppSource name-collision cluster (EXT-022 through EXT-028, 7 rows) fully documented and kept separate from the genuine footprint.
+- Correction/verification attempts on important existing profiles: Capterra (EXT-005, correction attempted, blocked by a vendor portal bug, support ticket pending) and GetApp (EXT-004, public/vendor data mismatch identified and understood, not blindly edited).
+- Documentation of unresolved external dependencies: the Fiverr historical submission batch (§52.23), SaaSHub/FounderDB/Peer Push exact-URL gaps, PitchWall/GitHub-org ownership confirmation, UIComet content confirmation, and the Stackovery certificate risk.
+
+**What Milestone 6 explicitly did NOT do, and is not claimed to have done:**
+- Did not individually audit, edit, or optimize the ~22-row Fiverr directory-submission batch.
+- Did not verify all directory submissions or audit all backlinks.
+- Did not optimize all external profiles.
+- Did not complete outreach, review acquisition, an original authority asset, or community participation.
+- External authority remains an ongoing operational program, not a finished project.
+
+**Milestone status set by this closure:**
+- Milestone 6: **COMPLETE FOR CURRENT RUN / ONGOING AUTHORITY OPS DEFERRED.**
+- M6.1: **COMPLETE / OWNER APPROVED** (unchanged from §52.13/§52.14).
+- M6.2: **HIGH-VALUE EXISTING PROFILE VERIFICATION COMPLETE FOR CURRENT RUN.**
+
+**Preserved evidence summary (all previously documented, unchanged by this closure):**
+
+| Surface | Status |
+|---|---|
+| G2 (EXT-021) | VERIFIED LIVE / OWNER-CONTROLLED; CLAIMED; admin access confirmed; `https://www.g2.com/products/text2task/reviews`; 40% profile completeness; 0 reviews; KEEP / OPTIMIZE LATER |
+| Product Hunt (EXT-016) | VERIFIED LIVE / POSTED; `https://www.producthunt.com/products/text2task`; launch date 2026-05-17; Position #201, 0 points, 1 comment; duplicate submission PROHIBITED; KEEP / MONITOR |
+| BetaList (EXT-017) | OWNER-VERIFIED; submission `#168594`; DRAFT; started 2026-06-01; NOT SUBMITTED; paid completion required; DEFER / DO NOT PAY YET |
+| Uneed (EXT-006) | HISTORICALLY VERIFIED / REMOVED AFTER LAUNCH; no active listing confirmed; paid relaunch offer includes guaranteed publication/backlink; DEFER / DO NOT PAY FOR SEO RELAUNCH |
+| Capterra (EXT-005) | Owner-controlled through G2 Digital Markets; pricing correction attempted; portal validation bug ("Currency is required" while USD selected); support email sent; CORRECTION BLOCKED — SUPPORT PENDING |
+| GetApp (EXT-004) | Owner-controlled through G2 Digital Markets; vendor console shows Android/iPhone/iPad NOT selected; public listing previously showed mobile-platform support; PUBLIC/VENDOR DATA MISMATCH; do not blindly edit; MONITOR / REVISIT LATER |
+| PitchWall (EXT-008) | Verified live evidence preserved; ownership/control verification remains open |
+| UIComet (EXT-010) | Current inclusion evidence preserved (owner-attested; content unconfirmed by tooling) |
+| SaaSHub (EXT-013) | Public/index evidence preserved with exact-URL limitation noted |
+| FounderDB / Peer Push (EXT-014/EXT-015) | Indexed-association evidence preserved (weaker evidence, UNKNOWN RELATIONSHIP) |
+| StartupFortune (EXT-009) | Independent editorial mention preserved |
+| Fluxble / Target Energy / Microsoft Marketplace collision group (EXT-022–EXT-028) | Preserved as UNRELATED NAME COLLISION / ENTITY COLLISION MONITORING / DO NOT TOUCH |
+| Fiverr batch (~22 rows) | HISTORICAL SUBMISSION BATCH; NOT INDIVIDUALLY VERIFIED IN THIS RUN; UNKNOWN BY DEFAULT; DEFER / REVISIT ONLY IF NEEDED (§52.23) |
+
+**Remaining external-authority backlog (non-blocking for Phase 1 progress):**
+- Capterra support response (EXT-005).
+- GetApp public/vendor data mismatch follow-up (EXT-004).
+- Optional G2 optimization/reviews (EXT-021).
+- Optional Product Hunt optimization (EXT-016).
+- Fiverr directory batch verification, only if later justified (§52.23).
+- Editorial/resource outreach.
+- Review acquisition.
+- Original authority asset.
+- Community participation.
+- Authority KPI monitoring.
+
+**Phase status preserved (unchanged by this closure):**
+- Milestone 1: COMPLETE.
+- Milestone 2: COMPLETE.
+- Milestone 3: COMPLETE.
+- Milestone 4: COMPLETE.
+- Milestone 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING — Bing UI propagation remains a non-blocking external dependency.
+- Milestone 6: COMPLETE FOR CURRENT RUN / ONGOING AUTHORITY OPS DEFERRED (this closure).
+- Milestone 7 (Homepage Performance / CRO): **NOT STARTED.** The existing Phase 1 Master Implementation Plan entry for Milestone 7 (§38.7) and the known homepage-video performance baseline (§22A) remain authoritative; no Milestone 7 implementation work is performed by this task.
+
+**Not changed by this task:** Decision `SEO-2026-09-09-D026` remains preserved. The 28-row canonical inventory total is unchanged. No external profile was logged into, claimed, edited, or contacted; no directory was resubmitted; no application/test/database/environment/configuration/Production file was changed; no deploy was performed.
