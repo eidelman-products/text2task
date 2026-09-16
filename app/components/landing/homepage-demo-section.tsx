@@ -1,5 +1,3 @@
-import HomepageDemoVideo from "./homepage-demo-video";
-
 const demoSteps = [
   {
     title: "Paste or upload a request",
@@ -36,7 +34,7 @@ export default function HomepageDemoSection() {
             id="homepage-demo-description"
             className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-slate-600"
           >
-            Watch a client request move from message to reviewed project and
+            See a client request move from message to reviewed project and
             organized tasks.
           </p>
         </div>
@@ -70,10 +68,6 @@ export default function HomepageDemoSection() {
             </li>
           ))}
         </ol>
-
-        <div className="mx-auto mt-8 max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:mt-10">
-          <HomepageDemoVideo />
-        </div>
       </div>
     </section>
   );

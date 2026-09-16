@@ -57,7 +57,7 @@ export default function HomepageHero({
                   <span className="text-white">CREATE FREE WORKSPACE</span>
                 </HomepageCtaLink>
                 <Link href="#demo" className={secondaryButtonClassName}>
-                  Watch demo
+                  See how it works
                 </Link>
               </>
             )}
