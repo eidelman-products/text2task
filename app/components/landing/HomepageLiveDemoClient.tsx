@@ -464,12 +464,13 @@ export default function HomepageLiveDemoClient({
       aria-label="Live preview"
     >
       <div className="mx-auto mb-6 w-full max-w-[640px] text-center">
-        <h2 className="homepage-heading text-2xl text-slate-950 sm:text-[1.75rem]">
-          Try it with a client message
+        <span className={styles.badge}>LIVE DEMO · NO SIGNUP</span>
+        <h2 className="homepage-heading mt-3 text-2xl text-slate-950 sm:text-[1.75rem]">
+          Try Text2Task live — no signup
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
-          Paste a request and see the organized project draft before
-          creating an account.
+          Paste a client request and see the organized project draft in
+          seconds.
         </p>
       </div>
 
