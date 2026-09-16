@@ -98,6 +98,8 @@ Phase 1 Milestone 7 production verification update recorded 2026-09-16 Asia/Jeru
 
 Post-M7 CRO enhancement recorded 2026-09-16 Asia/Jerusalem under Decision `SEO-2026-09-09-D029`: this is a new, separate CRO enhancement to the homepage Live Demo, implemented on branch `feat/homepage-live-demo-emphasis` from verified `main` HEAD `6eed662975d9106784983088cbc96cfd9e7ea0a8`. **Milestone 7 (Homepage Performance / CRO) is not reopened and remains PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE.** The owner approved strengthening the Live Demo's visual hierarchy: `app/components/landing/homepage-live-demo.module.css`'s `.shell` background changed from plain white to a subtle light-blue tint (`#eff6ff`) with top/bottom border separation (`#bfdbfe`), reusing colors already present in the same module; a new small uppercase badge/pill ("LIVE DEMO · NO SIGNUP", `#1d4ed8` on `#dbeafe`) was added above the heading in `app/components/landing/HomepageLiveDemoClient.tsx`; the heading changed from "Try it with a client message" to "Try Text2Task live — no signup"; the supporting copy changed from "Paste a request and see the organized project draft before creating an account." to "Paste a client request and see the organized project draft in seconds." No new brand color was introduced, no redesign was performed, and Live Demo behavior/extraction flow/analytics/the "Preview my project" button/"Try another example" were left entirely unchanged. Targeted tests (4 files / 29 tests), typecheck, lint, and `npm run build` all passed with no test-assertion changes required; `git diff --check` passed. Full detail is recorded in §54. No commit, push, or deploy was performed by this task; the change awaits owner visual review.
 
+Post-M7 CRO enhancement production verification recorded 2026-09-16 Asia/Jerusalem under Decision `SEO-2026-09-09-D029`: the owner approved the implementation for commit and push, then merged it to `main` via PR #15 (implementation commit `1122a7d8e305a330ca760f92046a195092781c92`, `feat: emphasize homepage live demo`), and Vercel Production reached READY. **Milestone 7 remains PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE and is not reopened by this closure.** Production visual verification passed on desktop and mobile (~400px): the "LIVE DEMO · NO SIGNUP" badge is visible, the heading reads "Try Text2Task live — no signup", the supporting copy reads "Paste a client request and see the organized project draft in seconds.", the subtle brand-blue section treatment is correct, the demo card remains visually dominant, and no layout regression or horizontal overflow was observed; the hero, hero CTAs, and surrounding homepage sections remain intact. Owner-confirmed functional smoke checks passed for "Try another example" and "Preview my project". No analytics, SEO metadata/schema/canonical, database, or environment/configuration changes were made at any point in this enhancement. The post-M7 Live Demo CRO enhancement is now PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE. See §54.9/§54.10 for the full production verification record. Decision `SEO-2026-09-09-D029` is preserved unchanged; no new Decision Log ID was created; no application code, database, or environment/configuration file was changed by this documentation task; no manual deploy was performed by this task.
+
 ---
 
 ## 1. Cover / Run Metadata
@@ -1222,6 +1224,7 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | 2026-09-16 Asia/Jerusalem | Phase 1 Milestone 7 commit/push | Owner approved the implementation for commit and push to the feature branch only (not merge/Production); re-ran targeted tests/typecheck/lint/build/`git diff --check` before commit, all PASS | Owner approval instruction; re-verification of §53 implementation | Current run Markdown/DOCX not touched by this action (docs already updated in the prior implementation task) | `app/components/landing/homepage-demo-section.tsx`; `app/components/landing/homepage-hero.tsx`; `app/components/landing/homepage-demo-video.tsx` (deleted); `public/landing/text2task-demo.mp4` (deleted); current run Markdown/DOCX | Staged and committed exactly the six expected files as `perf: remove outdated homepage video` (commit `c6d296964d270bf0ed86f501523465b9a62bb63f`); pushed to `origin/feat/seo-m7-homepage-performance`; local HEAD confirmed equal to remote branch HEAD | Re-run: 5 files / 61 tests PASS; typecheck PASS; lint PASS; build PASS (exit 0); `git diff --check` PASS with line-ending advisories only | Implementation pushed / preview verification pending |
 | 2026-09-16 Asia/Jerusalem | Phase 1 Milestone 7 production verification | Implementation merged to `main` and Vercel Production reached READY; Production URL verified `https://www.text2task.com`; fresh PageSpeed Insights Production lab measurements recorded | Owner-supplied Production PageSpeed Insights lab results (Mobile and Desktop) and Production visual verification report | Current run Markdown/DOCX only | Current run Markdown and DOCX only | Mobile Performance 88->98 (LCP ~3.8s->2.3s); Desktop Performance 99->100 (LCP ~1.8s->0.6s); lab data only, no field CWV improvement claimed (insufficient CrUX data); Production visual verification PASS for desktop, mobile (~400px), primary CTA, Live Demo, and workflow section, no broken media placeholder, no empty video column, no layout regression; minor Lighthouse opportunities (render-blocking, ~14 KiB legacy JS, forced reflow, network dependency tree) recorded non-blocking, no further M7 optimization opened | Full detail in §53.10/§53.11; implementation commit `c6d296964d270bf0ed86f501523465b9a62bb63f` confirmed present in `main`; no application/test/database/environment/configuration file changed by this documentation task; no manual deploy performed by this task; Decision `SEO-2026-09-09-D028` preserved, no new Decision Log ID created | Production deployed / production verified / complete |
 | 2026-09-16 Asia/Jerusalem | Post-M7 Live Demo CRO enhancement | New, separate CRO enhancement (not a Milestone 7 reopening) under Decision D029: gave the homepage Live Demo section a subtle light-blue tinted background with top/bottom border separation, added a "LIVE DEMO · NO SIGNUP" badge, and updated the heading/supporting copy to state the no-signup value directly; only existing brand-blue CSS tokens were reused, no new color introduced, no Live Demo behavior/analytics/button changes | Owner-approved CRO direction; direct inspection of `HomepageLiveDemoClient.tsx` and `homepage-live-demo.module.css` | `app/components/landing/HomepageLiveDemoClient.tsx`; `app/components/landing/homepage-live-demo.module.css`; current run Markdown/DOCX | `app/components/landing/HomepageLiveDemoClient.tsx` and `app/components/landing/homepage-live-demo.module.css` edited; current run Markdown and DOCX | Badge, heading, and supporting copy changed exactly as owner-approved; `.shell` background/border updated; no other homepage section, hero, footer, nav, analytics, or Live Demo logic touched; full detail in §54 | Targeted tests 4 files / 29 tests PASS (no assertions referenced the changed copy, so none required updating); `npx tsc --noEmit` PASS; ESLint PASS on the `.tsx` file (CSS module not covered by ESLint config, expected); `npm run build` PASS (exit code 0); `git diff --check` PASS with no warnings | Implemented locally / awaiting owner visual review |
+| 2026-09-16 Asia/Jerusalem | Post-M7 Live Demo CRO production verification | PR #15 merge, Vercel Production READY, and owner production visual/functional verification recorded for Decision D029; Milestone 7 not reopened | Owner-supplied PR #15 merge/deployment facts; owner Production visual verification (desktop, mobile ~400px); owner-confirmed functional smoke ("Try another example", "Preview my project") | Current run Markdown/DOCX only | Current run Markdown and DOCX only | Implementation commit `1122a7d8e305a330ca760f92046a195092781c92` present in `main`; Production visual verification PASS for badge, heading, supporting copy, brand-blue treatment, demo-card dominance, no layout regression, no horizontal overflow, hero/hero CTAs/surrounding sections intact; functional smoke PASS for both interactive checks; no analytics/SEO metadata/schema/database/environment changes at any point | Full detail in §54.9/§54.10; Decision `SEO-2026-09-09-D029` preserved unchanged; no new Decision Log ID created; no application/test/database/environment/configuration/Production file changed by this documentation task; no manual deploy performed by this task | Production deployed / production verified / complete |
 
 Phase 1 Milestone 1 changed application code and tests through PR #2. Phase 1 Milestone 2 changed application code, tests, and documentation through PR #4. Phase 1 Milestone 3 changed application code, tests, and documentation through PR #6 and is now production deployed, production content verified, and complete. Phase 1 Milestone 4 changed application code, tests, and documentation through PR #8 and is now production deployed, production verified, and complete. Phase 1 Milestone 5 is production deployed with the first controlled IndexNow submission accepted, and Bing UI verification pending. **Milestone 5 added local IndexNow tooling, a public key file, tests, package script, and run documentation through PR #10. This documentation task changed only the current run Markdown/DOCX. Runtime application pages/routes changed by this task: NO. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production application changed by this documentation task: NO. Google configuration changed: NO. Bing Webmaster Tools setting changed: NO. Duplicate IndexNow resubmission performed by this task: NO. Manual deploy performed by this task: NO. Commit/push/deploy performed by this task: NO.**
 
@@ -5531,3 +5534,57 @@ The `.inputSurface` demo card already uses a white background with a border and 
 - Commit created by this task: NO.
 - Push performed by this task: NO.
 - Production changed: NO.
+
+---
+
+### 54.9 Production Deployment and Production Verification
+
+**Recorded: 2026-09-16 Asia/Jerusalem.** **Decision `SEO-2026-09-09-D029` remains the governing decision (§33); no new Decision Log ID created.** Implementation commit `1122a7d8e305a330ca760f92046a195092781c92` (`feat: emphasize homepage live demo`) was merged to `main` via PR #15 and Vercel Production reached READY. **This closes out the post-Milestone-7 CRO enhancement only. Milestone 7 is NOT reopened and remains PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE.**
+
+**Production visual verification:**
+
+| Check | Result |
+|---|---|
+| Desktop | PASS |
+| Mobile (~400px) | PASS |
+| "LIVE DEMO · NO SIGNUP" badge visible | PASS |
+| Heading reads "Try Text2Task live — no signup" | PASS |
+| Supporting copy reads "Paste a client request and see the organized project draft in seconds." | PASS |
+| Subtle brand-blue section treatment correct | PASS |
+| Demo card remains visually dominant | PASS |
+| Layout regression | None observed |
+| Horizontal overflow | None observed |
+| Hero | Unchanged |
+| Hero CTAs | Unchanged |
+| Surrounding homepage sections | Intact |
+
+**Owner functional smoke verification (confirmed by owner before this task):**
+
+| Check | Result |
+|---|---|
+| Try another example | PASS |
+| Preview my project | PASS |
+
+**Confirmed unchanged:** Live Demo functionality, analytics events, hero, hero CTAs, trust strip, pricing, navigation/footer, SEO metadata/schema/canonical, database, environment/configuration — none were touched by the implementation (§54.3/§54.4) and none were touched by this production-verification documentation task either.
+
+**Outcome:** Production deployment: READY. The post-Milestone-7 Live Demo CRO enhancement is now **PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE.**
+
+### 54.10 Final State After Production Verification
+
+- Phase 0: COMPLETE / OWNER REVIEWED.
+- Phase 1: IMPLEMENTATION IN PROGRESS (functionally complete except the non-blocking Milestone 5 Bing UI dependency).
+- Milestone 1-6: unchanged from their prior recorded states.
+- Milestone 7: **PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE — unchanged, not reopened by this task.**
+- Post-M7 Live Demo CRO enhancement (`SEO-2026-09-09-D029`): **PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE.**
+- Decision `SEO-2026-09-09-D029`: PRESERVED, unchanged. No new Decision Log ID created.
+- Approved copy confirmed live: badge "LIVE DEMO · NO SIGNUP"; heading "Try Text2Task live — no signup"; supporting copy "Paste a client request and see the organized project draft in seconds."
+- Brand-blue treatment confirmed live, no new color introduced.
+- Hero regression: NONE.
+- Analytics changes: NONE.
+- SEO metadata/schema changes: NONE.
+- Application files changed by this task: NONE (documentation-only task).
+- Database changed: NO.
+- Environment/configuration changed: NO.
+- Manual Production deployment performed by this task: NO (deployment occurred via the already-approved and merged PR #15).
+- Commit created by this task: documentation commit only (see Action Log).
+- Push performed by this task: documentation branch only.
