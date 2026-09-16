@@ -2,9 +2,24 @@
   width: 100%;
   scroll-margin-top: 5.5rem;
   color: #0f172a;
-  background: #ffffff;
-  border-bottom: 1px solid #dbeafe;
+  background: #eff6ff;
+  border-top: 1px solid #bfdbfe;
+  border-bottom: 1px solid #bfdbfe;
   padding: 1.85rem 1.25rem 1.45rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.75rem;
+  color: #1d4ed8;
+  background: #dbeafe;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .shell,
