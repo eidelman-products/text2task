@@ -12,7 +12,7 @@
 **PHASE 1 MILESTONE 2: COMPLETE**
 **PHASE 1 MILESTONE 3: COMPLETE**
 **PHASE 1 MILESTONE 4: PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE**
-**PHASE 1 MILESTONE 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING**
+**PHASE 1 MILESTONE 5: PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE**
 **PHASE 1 MILESTONE 6: COMPLETE FOR CURRENT RUN / ONGOING AUTHORITY OPS DEFERRED**
 **PHASE 1 MILESTONE 7: PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE**
 
@@ -100,6 +100,8 @@ Post-M7 CRO enhancement recorded 2026-09-16 Asia/Jerusalem under Decision `SEO-2
 
 Post-M7 CRO enhancement production verification recorded 2026-09-16 Asia/Jerusalem under Decision `SEO-2026-09-09-D029`: the owner approved the implementation for commit and push, then merged it to `main` via PR #15 (implementation commit `1122a7d8e305a330ca760f92046a195092781c92`, `feat: emphasize homepage live demo`), and Vercel Production reached READY. **Milestone 7 remains PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE and is not reopened by this closure.** Production visual verification passed on desktop and mobile (~400px): the "LIVE DEMO · NO SIGNUP" badge is visible, the heading reads "Try Text2Task live — no signup", the supporting copy reads "Paste a client request and see the organized project draft in seconds.", the subtle brand-blue section treatment is correct, the demo card remains visually dominant, and no layout regression or horizontal overflow was observed; the hero, hero CTAs, and surrounding homepage sections remain intact. Owner-confirmed functional smoke checks passed for "Try another example" and "Preview my project". No analytics, SEO metadata/schema/canonical, database, or environment/configuration changes were made at any point in this enhancement. The post-M7 Live Demo CRO enhancement is now PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE. See §54.9/§54.10 for the full production verification record. Decision `SEO-2026-09-09-D029` is preserved unchanged; no new Decision Log ID was created; no application code, database, or environment/configuration file was changed by this documentation task; no manual deploy was performed by this task.
 
+Phase 1 Milestone 5 final Bing verification recorded 2026-09-16 Asia/Jerusalem under Decision `SEO-2026-09-09-D025` (unchanged): the controlled IndexNow submission previously recorded (§50.6-§50.8) — HTTP 202, `SUBMISSION_ACCEPTED`, for `https://www.text2task.com/solutions/freelancer-project-management-software` and `https://www.text2task.com/features/email-to-tasks` — is now independently corroborated by Bing Webmaster Tools URL Inspection, which reports for **both** URLs: indexed successfully, the URL can appear on Bing, no SEO/GEO issues found, and JSON-LD detected. Bing Webmaster Tools' IndexNow UI still displays the generic "Get Started" screen and does not expose submission history; this UI limitation is recorded as no longer a blocker, since the submitted URLs have been independently verified through Bing URL Inspection rather than through the IndexNow UI itself. **No claim is made that IndexNow caused the indexing** — only that the IndexNow submission was accepted by the API and that both submitted URLs are separately, currently confirmed indexed with no issues. Milestone 5 is now PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE, removing the prior BING UI VERIFICATION PENDING qualifier. Phase 1 is now functionally complete with no remaining blocking external dependencies across Milestones 1-7. See §55 for the full final verification record. Decision `SEO-2026-09-09-D025` is preserved unchanged; no new Decision Log ID was created. No application code was changed, no IndexNow request was sent, no Bing setting was changed, and no database/environment change was made by this task.
+
 ---
 
 ## 1. Cover / Run Metadata
@@ -118,7 +120,7 @@ Post-M7 CRO enhancement production verification recorded 2026-09-16 Asia/Jerusal
 | Phase 1 Milestone 2 | COMPLETE |
 | Phase 1 Milestone 3 | COMPLETE |
 | Phase 1 Milestone 4 | COMPLETE |
-| Phase 1 Milestone 5 | PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING |
+| Phase 1 Milestone 5 | PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE |
 | Phase 1 Milestone 6 | COMPLETE FOR CURRENT RUN / ONGOING AUTHORITY OPS DEFERRED |
 | Phase 1 Milestone 7 | PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE |
 | Author | Claude Code (Sonnet 5), directed by the site owner |
@@ -1225,6 +1227,7 @@ Historical note: existing `2026-09-09/10` values below are retained exactly as h
 | 2026-09-16 Asia/Jerusalem | Phase 1 Milestone 7 production verification | Implementation merged to `main` and Vercel Production reached READY; Production URL verified `https://www.text2task.com`; fresh PageSpeed Insights Production lab measurements recorded | Owner-supplied Production PageSpeed Insights lab results (Mobile and Desktop) and Production visual verification report | Current run Markdown/DOCX only | Current run Markdown and DOCX only | Mobile Performance 88->98 (LCP ~3.8s->2.3s); Desktop Performance 99->100 (LCP ~1.8s->0.6s); lab data only, no field CWV improvement claimed (insufficient CrUX data); Production visual verification PASS for desktop, mobile (~400px), primary CTA, Live Demo, and workflow section, no broken media placeholder, no empty video column, no layout regression; minor Lighthouse opportunities (render-blocking, ~14 KiB legacy JS, forced reflow, network dependency tree) recorded non-blocking, no further M7 optimization opened | Full detail in §53.10/§53.11; implementation commit `c6d296964d270bf0ed86f501523465b9a62bb63f` confirmed present in `main`; no application/test/database/environment/configuration file changed by this documentation task; no manual deploy performed by this task; Decision `SEO-2026-09-09-D028` preserved, no new Decision Log ID created | Production deployed / production verified / complete |
 | 2026-09-16 Asia/Jerusalem | Post-M7 Live Demo CRO enhancement | New, separate CRO enhancement (not a Milestone 7 reopening) under Decision D029: gave the homepage Live Demo section a subtle light-blue tinted background with top/bottom border separation, added a "LIVE DEMO · NO SIGNUP" badge, and updated the heading/supporting copy to state the no-signup value directly; only existing brand-blue CSS tokens were reused, no new color introduced, no Live Demo behavior/analytics/button changes | Owner-approved CRO direction; direct inspection of `HomepageLiveDemoClient.tsx` and `homepage-live-demo.module.css` | `app/components/landing/HomepageLiveDemoClient.tsx`; `app/components/landing/homepage-live-demo.module.css`; current run Markdown/DOCX | `app/components/landing/HomepageLiveDemoClient.tsx` and `app/components/landing/homepage-live-demo.module.css` edited; current run Markdown and DOCX | Badge, heading, and supporting copy changed exactly as owner-approved; `.shell` background/border updated; no other homepage section, hero, footer, nav, analytics, or Live Demo logic touched; full detail in §54 | Targeted tests 4 files / 29 tests PASS (no assertions referenced the changed copy, so none required updating); `npx tsc --noEmit` PASS; ESLint PASS on the `.tsx` file (CSS module not covered by ESLint config, expected); `npm run build` PASS (exit code 0); `git diff --check` PASS with no warnings | Implemented locally / awaiting owner visual review |
 | 2026-09-16 Asia/Jerusalem | Post-M7 Live Demo CRO production verification | PR #15 merge, Vercel Production READY, and owner production visual/functional verification recorded for Decision D029; Milestone 7 not reopened | Owner-supplied PR #15 merge/deployment facts; owner Production visual verification (desktop, mobile ~400px); owner-confirmed functional smoke ("Try another example", "Preview my project") | Current run Markdown/DOCX only | Current run Markdown and DOCX only | Implementation commit `1122a7d8e305a330ca760f92046a195092781c92` present in `main`; Production visual verification PASS for badge, heading, supporting copy, brand-blue treatment, demo-card dominance, no layout regression, no horizontal overflow, hero/hero CTAs/surrounding sections intact; functional smoke PASS for both interactive checks; no analytics/SEO metadata/schema/database/environment changes at any point | Full detail in §54.9/§54.10; Decision `SEO-2026-09-09-D029` preserved unchanged; no new Decision Log ID created; no application/test/database/environment/configuration/Production file changed by this documentation task; no manual deploy performed by this task | Production deployed / production verified / complete |
+| 2026-09-16 Asia/Jerusalem | Phase 1 Milestone 5 final Bing verification | Bing Webmaster Tools URL Inspection independently confirmed both previously-submitted IndexNow URLs as indexed successfully, with no SEO/GEO issues and JSON-LD detected; Bing IndexNow UI limitation (no submission history shown) recorded as no longer a blocker | Owner-supplied Bing Webmaster Tools URL Inspection results for both submitted URLs; prior IndexNow API acceptance evidence (§50.6-§50.8) | Current run Markdown/DOCX only | Current run Markdown and DOCX only | `/solutions/freelancer-project-management-software` and `/features/email-to-tasks` both confirmed: indexed successfully, URL can appear on Bing, no SEO/GEO issues found, JSON-LD detected; IndexNow API acceptance (HTTP 202, `SUBMISSION_ACCEPTED`) preserved as a separate, non-causal fact; no claim made that IndexNow caused the indexing; Milestone 5 status changed to PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE, removing BING UI VERIFICATION PENDING | Full detail in §55; Decision `SEO-2026-09-09-D025` preserved unchanged; no new Decision Log ID created; no application/test/database/environment/configuration/Production file changed; no IndexNow request sent; no Bing setting changed; no commit/push/deploy performed by this task | Production deployed / production verified / complete |
 
 Phase 1 Milestone 1 changed application code and tests through PR #2. Phase 1 Milestone 2 changed application code, tests, and documentation through PR #4. Phase 1 Milestone 3 changed application code, tests, and documentation through PR #6 and is now production deployed, production content verified, and complete. Phase 1 Milestone 4 changed application code, tests, and documentation through PR #8 and is now production deployed, production verified, and complete. Phase 1 Milestone 5 is production deployed with the first controlled IndexNow submission accepted, and Bing UI verification pending. **Milestone 5 added local IndexNow tooling, a public key file, tests, package script, and run documentation through PR #10. This documentation task changed only the current run Markdown/DOCX. Runtime application pages/routes changed by this task: NO. Database changed: NO. Migration required: NO. Environment changed: NO. Vercel configuration changed by this task: NO. Production application changed by this documentation task: NO. Google configuration changed: NO. Bing Webmaster Tools setting changed: NO. Duplicate IndexNow resubmission performed by this task: NO. Manual deploy performed by this task: NO. Commit/push/deploy performed by this task: NO.**
 
@@ -1344,15 +1347,15 @@ Documentation files changed:
 **PHASE 1 MILESTONE 2: COMPLETE**
 **PHASE 1 MILESTONE 3: COMPLETE**
 **PHASE 1 MILESTONE 4: COMPLETE**
-**PHASE 1 MILESTONE 5: PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING**
+**PHASE 1 MILESTONE 5: PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE**
 **PHASE 1 MILESTONE 6: COMPLETE FOR CURRENT RUN / ONGOING AUTHORITY OPS DEFERRED**
 **PHASE 1 MILESTONE 7: PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE**
 
 Phase 0A exit criteria (per the run brief) are met and owner-reviewed: exact public route inventory (§9), exact sitemap logic (§12), exact robots policy (§10.1), exact private indexing protection map (§11), exact canonical/host logic (§13), exact metadata inventory (§14), exact structured-data inventory (§15), entity-disambiguation gap analysis (§16), content/intent map (§17), internal-link map (§19), analytics/measurement map (§22), prior-audit reconciliation (§25), confirmed P0/P1/P2 backlog (§26–§28), a proposed next plan (§30), and a verification plan (§32) all exist above.
 
-Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is complete. Milestone 2 is complete. Milestone 3 is complete. Milestone 4 is complete. Milestone 5 is production deployed with the first controlled IndexNow submission accepted, and Bing UI verification pending. Milestone 6 (External Authority Program) is COMPLETE FOR THE CURRENT RUN under Decision `SEO-2026-09-09-D027`, with ongoing authority operations (Fiverr directory-batch verification, Capterra/GetApp follow-up, editorial outreach, review acquisition, community participation, and KPI monitoring) explicitly deferred as non-blocking backlog; see §52.23/§52.24. Milestone 7 (Homepage Performance / CRO) is PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE under Decision `SEO-2026-09-09-D028`: the outdated ~14.6 MiB homepage demo video was removed rather than optimized, and fresh Production PageSpeed Insights lab measurements taken 2026-09-16 after deployment showed Mobile Performance improving from 88 to 98 (LCP ~3.8s to 2.3s) and Desktop Performance improving from 99 to 100 (LCP ~1.8s to 0.6s); see §53.10. Phase 1 is now functionally complete except for the non-blocking external Bing UI propagation/verification dependency already tracked under Milestone 5. The owner privacy decision remains preserved: founder identity remains private for now, so Milestone 2 deliberately excludes founder name publication, `Person` schema, founder metadata, personal-profile `sameAs`, and personal social/profile links, and Milestone 6/7 work does not revisit or reopen that decision.
+Phase 0B external baseline completion is complete / owner-reviewed. Phase 1 Milestone 1 is complete. Milestone 2 is complete. Milestone 3 is complete. Milestone 4 is complete. Milestone 5 is production deployed and production verified: the controlled IndexNow submission was accepted by the API (HTTP 202, `SUBMISSION_ACCEPTED`), and both submitted URLs are now independently confirmed indexed successfully via Bing URL Inspection, with no SEO/GEO issues reported and JSON-LD detected for either URL; Milestone 5 is complete; see §55. Milestone 6 (External Authority Program) is COMPLETE FOR THE CURRENT RUN under Decision `SEO-2026-09-09-D027`, with ongoing authority operations (Fiverr directory-batch verification, Capterra/GetApp follow-up, editorial outreach, review acquisition, community participation, and KPI monitoring) explicitly deferred as non-blocking backlog; see §52.23/§52.24. Milestone 7 (Homepage Performance / CRO) is PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE under Decision `SEO-2026-09-09-D028`: the outdated ~14.6 MiB homepage demo video was removed rather than optimized, and fresh Production PageSpeed Insights lab measurements taken 2026-09-16 after deployment showed Mobile Performance improving from 88 to 98 (LCP ~3.8s to 2.3s) and Desktop Performance improving from 99 to 100 (LCP ~1.8s to 0.6s); see §53.10. Phase 1 is now functionally complete, with no remaining blocking external dependencies. The owner privacy decision remains preserved: founder identity remains private for now, so Milestone 2 deliberately excludes founder name publication, `Person` schema, founder metadata, personal-profile `sameAs`, and personal social/profile links, and Milestone 6/7 work does not revisit or reopen that decision.
 
-**Application code changed: YES â€” Phase 1 Milestones 1, 2, 3, 4, and 5 changed application/repository behavior through merged PRs; this documentation task changed no application/test/IndexNow implementation files. Database changed: NO. Environment changed: NO. Production application changed by this documentation task: NO. Google configuration changed: NO. Bing Webmaster Tools setting changed: NO. First controlled IndexNow API request was accepted with HTTP 202; Bing UI verification remains pending. Manual deploy performed by this task: NO. Commit/push/deploy performed by this task: NO.**
+**Application code changed: YES â€” Phase 1 Milestones 1, 2, 3, 4, and 5 changed application/repository behavior through merged PRs; this documentation task changed no application/test/IndexNow implementation files. Database changed: NO. Environment changed: NO. Production application changed by this documentation task: NO. Google configuration changed: NO. Bing Webmaster Tools setting changed: NO. First controlled IndexNow API request was accepted with HTTP 202 (`SUBMISSION_ACCEPTED`); both submitted URLs are now independently confirmed indexed successfully via Bing URL Inspection, with no SEO/GEO issues and JSON-LD detected for either URL. The Bing IndexNow UI still does not expose submission history, but this is no longer a blocker since indexing was independently verified through URL Inspection; do not claim IndexNow caused the indexing. Manual deploy performed by this task: NO. Commit/push/deploy performed by this task: NO.**
 
 ---
 
@@ -5588,3 +5591,75 @@ The `.inputSurface` demo card already uses a white background with a border and 
 - Manual Production deployment performed by this task: NO (deployment occurred via the already-approved and merged PR #15).
 - Commit created by this task: documentation commit only (see Action Log).
 - Push performed by this task: documentation branch only.
+
+---
+
+## 55. Phase 1 Milestone 5 — Final Bing Verification and Closure
+
+**Recorded: 2026-09-16 Asia/Jerusalem.** **Decision `SEO-2026-09-09-D025` remains the governing decision (§33); unchanged, not edited by this task.** **No new Decision Log ID was created.** This closes the previously-pending Milestone 5 external verification gate.
+
+### 55.1 Evidence Reconciled
+
+**IndexNow API acceptance (previously recorded, §50.6-§50.8, unchanged):**
+
+| Field | Value |
+|---|---|
+| HTTP status | 202 |
+| Implementation classification | `SUBMISSION_ACCEPTED` |
+| Submitted URLs | `https://www.text2task.com/solutions/freelancer-project-management-software`, `https://www.text2task.com/features/email-to-tasks` |
+| Retry count | 0 |
+
+**Bing Webmaster Tools URL Inspection (new evidence, 2026-09-16):**
+
+| URL | Indexed | Can appear on Bing | SEO/GEO issues | JSON-LD |
+|---|---|---|---|---|
+| `https://www.text2task.com/solutions/freelancer-project-management-software` | Indexed successfully | Yes | None found | Detected |
+| `https://www.text2task.com/features/email-to-tasks` | Indexed successfully | Yes | None found | Detected |
+
+**Bing Webmaster Tools IndexNow UI:** still displays the generic "Get Started" screen and does not expose submission history.
+
+### 55.2 Causality Wording (Conservative, As Instructed)
+
+This section records only the following, and no more:
+
+- The IndexNow submission was **accepted by the API** (a fact about the request/response, not about ranking or indexing outcome).
+- Both submitted URLs are **currently indexed successfully** in Bing, independently confirmed via URL Inspection.
+- **No SEO/GEO issues** are reported for either URL.
+- **JSON-LD is detected** for both URLs.
+- The IndexNow UI **itself still does not show submission history** — this is an unchanged, standing UI limitation.
+- That UI limitation **is no longer a blocker**, because the submitted URLs have been independently verified through Bing URL Inspection rather than through the IndexNow UI.
+- **No claim is made that IndexNow caused the indexing.** The API acceptance and the current indexed state are recorded as two separate, corroborating facts, not as a demonstrated cause-and-effect relationship.
+
+### 55.3 Milestone 5 Status Change
+
+| Field | Prior | Updated |
+|---|---|---|
+| Milestone 5 status | PRODUCTION DEPLOYED / FIRST CONTROLLED SUBMISSION ACCEPTED / BING UI VERIFICATION PENDING | **PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE** |
+| Remaining Milestone 5 closure gate | Bing Webmaster Tools IndexNow post-submission UI verification | **Closed** — independently satisfied via Bing URL Inspection |
+
+Decision `SEO-2026-09-09-D025` (the original IndexNow Foundation implementation decision) is unchanged and not edited by this closure — this section records new external verification evidence against that existing decision, not a new architectural or strategy decision, so no new Decision Log ID was created.
+
+### 55.4 Phase 1 Overall Status After This Closure
+
+- Milestone 1: COMPLETE.
+- Milestone 2: COMPLETE.
+- Milestone 3: COMPLETE.
+- Milestone 4: COMPLETE.
+- Milestone 5: **PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE.**
+- Milestone 6: COMPLETE FOR CURRENT RUN / ONGOING AUTHORITY OPS DEFERRED.
+- Milestone 7: PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE.
+- Post-M7 Live Demo CRO enhancement (D029): PRODUCTION DEPLOYED / PRODUCTION VERIFIED / COMPLETE.
+- Phase 1 is now functionally complete, with no remaining blocking external dependencies across Milestones 1-7.
+
+### 55.5 Final State
+
+- Decision `SEO-2026-09-09-D025`: PRESERVED, unchanged.
+- New Decision Log ID created by this task: NO.
+- Application files changed by this task: NONE (documentation-only task).
+- IndexNow request sent by this task: NO.
+- Bing Webmaster Tools setting changed by this task: NO.
+- Database changed: NO.
+- Environment/configuration changed: NO.
+- Commit created by this task: NO.
+- Push performed by this task: NO.
+- Production changed: NO.
